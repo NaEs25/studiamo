@@ -1,0 +1,55 @@
+# Version control
+.git
+.gitignore
+
+# Secrets: never bake these into an image layer
+.env
+*.env
+vapid_keys.json
+
+# Python
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Per-user data: never bake real user content into an image
+users/
+
+# Local databases (self-hosted dev, not the containerized Postgres)
+*.db
+*.sqlite
+*.sqlite3
+
+# Personal planning material, not part of the app
+karl-privat/
+
+# Agent tooling / editor config
+.agents/
+.claude/
+.claudeignore
+.codex/
+.geminiignore
+.impeccable/
+.vscode/
+.idea/
+AGENTS.md
+CLAUDE.md
+
+# Tailwind: fetched fresh and rebuilt inside the image, not copied in
+bin/tailwindcss
+app/static/css/tailwind-built.css
+
+# Tests / CI artifacts, not needed at runtime
+tests/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Docs, not served by the app
+docs/
+
+# OS cruft
+.DS_Store
+**/.DS_Store

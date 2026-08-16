@@ -1,0 +1,4 @@
+# Dev-only dependencies : not needed to run the app, only to test it.
+# deploy.sh installs from requirements.txt alone, so none of this reaches prod's venv.
+-r requirements.txt
+pytest==9.1.1

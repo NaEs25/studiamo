@@ -1,0 +1,1826 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Studiamo | AI Spaced Repetition & Active Recall System</title>
+    <meta name="description" content="Studiamo is an AI-powered active recall and spaced repetition learning platform. Turn YouTube videos, PDFs, and notes into interactive quizzes and study schedules.">
+    <meta property="og:title" content="Studiamo | AI Spaced Repetition & Active Recall System">
+    <meta property="og:description" content="Turn YouTube videos, PDFs, and notes into interactive quizzes, structured outlines, and automated study schedules.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://studiamo.cloud/">
+    <meta property="og:image" content="https://studiamo.cloud/static/images/favicon.png">
+    <meta name="twitter:card" content="summary_large_image">
+
+    <!-- Schema.org JSON-LD Structured Data for Search & AI Overviews -->
+    <script type="application/ld+json">
+    [
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "Studiamo",
+        "applicationCategory": "EducationalApplication",
+        "operatingSystem": "Web, Cloud, Self-Hosted Docker",
+        "url": "https://studiamo.cloud/",
+        "description": "AI-powered active recall and spaced repetition learning platform that transforms YouTube videos, PDFs, and notes into quizzes, summaries, and retention schedules.",
+        "offers": [
+          {
+            "@type": "Offer",
+            "price": "3.99",
+            "priceCurrency": "USD",
+            "name": "Beta Cloud Subscription",
+            "description": "Full access to AI processing, Telegram bot, push notifications, and 2 GB storage"
+          },
+          {
+            "@type": "Offer",
+            "price": "0.00",
+            "priceCurrency": "USD",
+            "name": "Self-Hosted Open Source",
+            "description": "AGPL-3.0 open-source self-hosted release for Docker"
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What makes Studiamo different from Anki?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Anki is built for manual, high-density deck creation. Studiamo is built for zero-friction video and document learning: paste any YouTube lecture or PDF, and Studiamo instantly generates structured summaries, fact-checked key points, and interactive active recall quizzes automatically."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How does Studiamo convert YouTube videos into active recall quizzes?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Studiamo extracts the official transcript or audio from the YouTube video, analyzes the conceptual hierarchy using Google Gemini models, verifies factual claims against the transcript, and synthesizes interactive active recall quizzes with hints and explanations."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is Studiamo free and open source?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Studiamo is AGPL-3.0 licensed and 100% free to self-host with Docker Compose using your own Google Gemini API key. There is also a fully managed cloud subscription for users who prefer instant setup without managing servers."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the science behind testing myself instead of re-watching?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "In landmark research published in Science, Karpicke and Blunt (2011) showed that retrieval practice produces about a 50% improvement in long-term retention over passive re-reading and note-taking. The researchers noted that 'retrieval is not merely a read-out of knowledge; the act of reconstructing knowledge itself enhances learning.' Even attempting recall and answering incorrectly primes your memory to encode the correct explanation when revealed. Studiamo automates question generation from your videos and notes so you can immediately put retrieval practice to work."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do study notifications work?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Because Studiamo is a web application, it supports optional notification channels including Telegram, web push, and email to alert you when cards are due for review so you can open your study session directly."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What cognitive science research backs Studiamo's method?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Studiamo is grounded in extensive research on practice testing (Dunlosky et al., 2013; Roediger & Karpicke, 2006; Karpicke & Blunt, 2011). These studies demonstrate that active retrieval practice outperforms passive consumption across subjects, overcoming the natural illusion of competence from video watching."
+            }
+          }
+
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "HowTo",
+        "name": "How to Turn an Educational YouTube Video into Spaced Repetition Flashcards",
+        "description": "Learn how to convert any YouTube lecture into structured active recall flashcards in three simple steps with Studiamo.",
+        "step": [
+          {
+            "@type": "HowToStep",
+            "name": "Paste Video URL",
+            "text": "Paste any educational YouTube lecture link into Studiamo."
+          },
+          {
+            "@type": "HowToStep",
+            "name": "Generate AI Active Recall Quizzes",
+            "text": "Studiamo extracts the transcript, fact-checks key claims, and generates interactive quizzes with conceptual hints."
+          },
+          {
+            "@type": "HowToStep",
+            "name": "Review on Spaced Intervals",
+            "text": "Test yourself on Day 1, 3, 7, 14, and 30 via Web, Mobile, or Telegram to lock knowledge into long-term memory."
+          }
+        ]
+      }
+    ]
+    </script>
+
+
+    <!-- Favicon & Brand Icons -->
+    <link rel="icon" type="image/png" href="/static/images/favicon.png">
+    <link rel="shortcut icon" href="/static/images/favicon.ico">
+    <link rel="apple-touch-icon" href="/static/images/apple-touch-icon.png">
+
+    <!-- Logout handler script -->
+    <script>
+        (function () {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('logout') === 'true') {
+                localStorage.removeItem('active_username');
+                sessionStorage.removeItem('profile_password');
+                document.cookie = 'username=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+                document.cookie = 'profile_password=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+                document.cookie = 'yb_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+            }
+        })();
+    </script>
+
+    <!-- Umami Analytics: empty in self-hosted mode unless UMAMI_WEBSITE_ID is set, see app/config.py -->
+    <!-- UMAMI_SCRIPT -->
+
+    <!-- Tailwind CSS (compiled) -->
+    <link rel="stylesheet" href="/static/css/tailwind-built.css">
+    <!-- Custom Style Sheet -->
+    <link rel="stylesheet" href="/static/css/style.css">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        .hero-glow {
+            background: radial-gradient(circle at 50% 12%, rgba(217, 119, 6, 0.13) 0%, rgba(246, 241, 231, 0) 65%);
+        }
+
+        .flashcard-3d {
+            perspective: 1000px;
+        }
+
+        .flashcard-inner {
+            transition: transform 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+        }
+
+        .flashcard-inner.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .flashcard-front,
+        .flashcard-back {
+            backface-visibility: hidden;
+        }
+
+        .flashcard-back {
+            transform: rotateY(180deg);
+        }
+
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.96) translateY(8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .animate-modal {
+            animation: modalFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+    </style>
+</head>
+
+<body class="font-sans bg-[#f6f1e7] text-stone-900 antialiased selection:bg-amber-400 selection:text-stone-950">
+
+    <!-- Top Banner Navigation -->
+    <header class="fixed top-0 left-0 right-0 z-40 bg-[#fdfbf7]/95 backdrop-blur border-b border-[#e7dfd3]">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+            <!-- Brand Logo -->
+            <a href="/" class="flex items-center space-x-3 group shrink-0">
+                <img src="/static/images/logo-icon.png" class="w-9 h-9 rounded-xl shadow-md shadow-amber-500/20 group-hover:scale-105 transition duration-200" alt="Studiamo Logo" />
+                <div class="flex flex-col">
+                    <span class="text-xl font-extrabold tracking-tight text-stone-900 leading-tight">Studiamo</span>
+                    <span
+                        class="text-[10px] font-bold text-[#78350f] uppercase tracking-widest -mt-1">Active
+                        Recall Studio</span>
+                </div>
+            </a>
+
+            <!-- Desktop Navigation Links -->
+            <nav class="hidden lg:flex items-center gap-6 xl:gap-8">
+                <a href="#how-it-works" class="text-sm font-semibold text-stone-600 hover:text-[#78350f] transition">How It Works</a>
+                <a href="#features" class="text-sm font-semibold text-stone-600 hover:text-[#78350f] transition">Features</a>
+                <a href="#faq" class="text-sm font-semibold text-stone-600 hover:text-[#78350f] transition">FAQ</a>
+                <a href="#open-source" class="text-sm font-semibold text-stone-600 hover:text-[#78350f] transition">Self-Host</a>
+                <a href="#compare" class="text-sm font-semibold text-stone-600 hover:text-[#78350f] transition">Compare</a>
+            </nav>
+
+            <!-- Top Banner Sign In Button & Mobile Toggle -->
+            <div class="flex items-center space-x-3 shrink-0">
+                <a href="/app" aria-label="Sign In"
+                    class="btn-primary inline-flex items-center justify-center space-x-2 text-sm font-bold px-4 py-2.5 sm:px-5 rounded-full transition transform hover:-translate-y-0.5 cursor-pointer whitespace-nowrap">
+                    <i data-lucide="log-in" class="w-4 h-4"></i>
+                    <span>Sign In</span>
+                </a>
+                <button type="button" id="mobileMenuToggle" aria-label="Toggle navigation menu"
+                    class="lg:hidden p-2 rounded-xl text-stone-600 hover:text-stone-900 hover:bg-[#f3ebd9] transition flex items-center justify-center">
+                    <i data-lucide="menu" id="mobileMenuOpenIcon" class="w-6 h-6"></i>
+                    <i data-lucide="x" id="mobileMenuCloseIcon" class="w-6 h-6 hidden"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Mobile Navigation Menu -->
+        <div id="mobileNavMenu" class="hidden lg:hidden border-t border-[#e7dfd3] bg-[#fdfbf7] px-4 py-4 space-y-1 shadow-lg">
+            <a href="#story" class="mobile-nav-item block px-3 py-2 rounded-lg text-sm font-semibold text-stone-700 hover:bg-amber-500/10 hover:text-[#78350f] transition">Our Story</a>
+            <a href="#how-it-works" class="mobile-nav-item block px-3 py-2 rounded-lg text-sm font-semibold text-stone-700 hover:bg-amber-500/10 hover:text-[#78350f] transition">How It Works</a>
+            <a href="#features" class="mobile-nav-item block px-3 py-2 rounded-lg text-sm font-semibold text-stone-700 hover:bg-amber-500/10 hover:text-[#78350f] transition">Features</a>
+            <a href="#faq" class="mobile-nav-item block px-3 py-2 rounded-lg text-sm font-semibold text-stone-700 hover:bg-amber-500/10 hover:text-[#78350f] transition">FAQ</a>
+            <a href="#open-source" class="mobile-nav-item block px-3 py-2 rounded-lg text-sm font-semibold text-stone-700 hover:bg-amber-500/10 hover:text-[#78350f] transition">Self-Host vs Cloud</a>
+            <a href="#compare" class="mobile-nav-item block px-3 py-2 rounded-lg text-sm font-semibold text-stone-700 hover:bg-amber-500/10 hover:text-[#78350f] transition">Compare</a>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="pt-20">
+
+        <!-- Hero Section -->
+        <section class="relative pt-16 pb-12 sm:pt-20 sm:pb-16 md:pt-24 md:pb-24 overflow-hidden hero-glow">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
+
+                <!-- Main Heading -->
+                <h1
+                    class="text-4xl sm:text-7xl md:text-8xl font-black text-stone-900 tracking-tight leading-[1.08] max-w-4xl mx-auto">
+                    Learn once.<br>
+                    <span class="text-amberPrimary">Remember forever.</span>
+                </h1>
+
+                <!-- Subtitle -->
+                <p class="mt-8 text-lg sm:text-xl text-stone-700 max-w-2xl mx-auto font-normal leading-relaxed">
+                    Studiamo automatically turns your YouTube videos, PDFs, and lecture notes into active-recall
+                    flashcards using AI, scheduled right before memory fades.
+                </p>
+
+                <!-- Hero CTA Inline Form -->
+                <div id="waitlist-hero" class="mt-10 max-w-lg mx-auto">
+                    <form onsubmit="handleHeroWaitlistSubmit(event)"
+                        class="flex flex-col sm:flex-row items-center gap-3 p-2 bg-white border border-[#e7dfd3] rounded-2xl shadow-lg">
+                        <div class="relative w-full flex-1">
+                            <i data-lucide="mail"
+                                class="w-5 h-5 text-stone-400 absolute left-4 top-1/2 -translate-y-1/2"></i>
+                            <input type="email" id="heroEmailInput" required
+                                placeholder="Enter your email for early access..."
+                                class="w-full bg-[#fcfaf6] border border-[#e7dfd3] focus:border-[#fbbf24] text-stone-900 placeholder-stone-400 text-sm rounded-xl pl-11 pr-4 py-3.5 outline-none transition">
+                        </div>
+                        <div style="position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden;" aria-hidden="true">
+                            <input type="text" id="heroWebsiteInput" name="website" tabindex="-1" autocomplete="off">
+                        </div>
+                        <button type="submit"
+                            class="btn-primary w-full sm:w-auto inline-flex items-center justify-center space-x-2 font-bold text-sm px-6 py-3.5 rounded-xl transition whitespace-nowrap cursor-pointer">
+                            <span>Join Waitlist</span>
+                            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                        </button>
+                    </form>
+
+                    <div
+                        class="mt-4 flex flex-wrap items-center justify-center gap-6 text-xs text-stone-600 font-medium">
+                        <span class="flex items-center space-x-1.5">
+                            <i data-lucide="check" class="w-4 h-4 text-emerald-600"></i>
+                            <span>100% Open Source code</span>
+                        </span>
+                        <span class="flex items-center space-x-1.5">
+                            <i data-lucide="shield-check" class="w-4 h-4 text-[#78350f]"></i>
+                            <span>Zero spam guarantee</span>
+                        </span>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- Founder's Story Section -->
+        <section id="story" class="py-12 sm:py-16 md:py-24 bg-[#fbf8f2] border-y border-[#e7dfd3] relative overflow-hidden">
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+
+                <!-- Minimized Section Title -->
+                <h2 class="text-2xl sm:text-4xl font-extrabold text-stone-900 tracking-tight text-center mb-8">
+                    Why I Built Studiamo
+                </h2>
+
+                <!-- Editorial Story Card -->
+                <div
+                    class="bg-white border border-[#e7dfd3] rounded-3xl p-5 sm:p-10 shadow-lg relative transition-all duration-300">
+
+                    <!-- Author Header Bar -->
+                    <div class="flex items-center justify-between pb-5 sm:pb-6 mb-5 sm:mb-6 border-b border-[#e7dfd3]/70 gap-2">
+                        <div class="flex items-center space-x-2.5 sm:space-x-3">
+                            <div
+                                class="w-10 h-10 sm:w-11 sm:h-11 bg-[#fbbf24] text-[#78350f] rounded-2xl flex items-center justify-center font-black text-base sm:text-lg shadow-md shadow-amber-500/20 shrink-0">
+                                K
+                            </div>
+                            <div>
+                                <h3 class="text-sm sm:text-base font-extrabold text-stone-900 leading-tight">Karl</h3>
+                                <p class="text-[11px] sm:text-xs text-stone-500 font-medium">Creator & Founder of Studiamo</p>
+                            </div>
+                        </div>
+
+                        <!-- Language Switcher & Reading Time Badge -->
+                        <div class="flex items-center space-x-2 sm:space-x-2.5 shrink-0">
+                            <span
+                                class="hidden sm:inline-flex items-center space-x-1.5 px-3 py-1 bg-[#fbf8f2] border border-[#e7dfd3] rounded-xl text-xs font-semibold text-stone-600">
+                                <i data-lucide="clock" class="w-3.5 h-3.5 text-[#78350f]"></i>
+                                <span id="readTimeText">2 min read</span>
+                            </span>
+
+                            <div
+                                class="inline-flex items-center p-1 bg-[#fbf8f2] border border-[#e7dfd3] rounded-xl text-xs font-bold shadow-xs">
+                                <button type="button" onclick="setStoryLang('en')" id="storyLangBtnEN"
+                                    class="px-2.5 py-1 rounded-lg transition-all duration-200 bg-[#fbbf24] text-[#78350f] font-extrabold shadow-xs cursor-pointer">
+                                    EN
+                                </button>
+                                <button type="button" onclick="setStoryLang('de')" id="storyLangBtnDE"
+                                    class="px-2.5 py-1 rounded-lg transition-all duration-200 text-stone-600 hover:text-stone-900 hover:bg-stone-200/50 cursor-pointer">
+                                    DE
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Story Content Box -->
+                    <div id="storyContainer" class="relative pb-6">
+
+                        <!-- ENGLISH STORY WRAPPER -->
+                        <div id="storyLangEN">
+                            <!-- Initial Preview EN -->
+                            <div class="space-y-4 text-stone-800 text-base sm:text-lg leading-relaxed font-normal">
+                                <p>
+                                    It was two weeks before my final exams. I was sitting in the library, surrounded by
+                                    macroeconomics flashcards. My calendar was packed. Suddenly, my phone lit up. A message
+                                    from my favorite client: <span
+                                        class="font-medium text-stone-900 bg-amber-100/60 px-1.5 py-0.5 rounded border border-amber-200/60">"Hey
+                                        Karl, we have a massive new project here. Can you edit a video like this for
+                                        us?"</span>
+                                </p>
+                                <p>
+                                    I opened the reference and froze. The video looked incredible, but it was on a level
+                                    I had never edited before. My first thought: <em>"I can easily pull this off if I
+                                        just watch a few good tutorials."</em>
+                                </p>
+                                <p class="font-medium text-stone-900">
+                                    But when I opened YouTube, reality set in: <strong>I had actually watched a tutorial
+                                        on this exact topic a while ago, and I completely forgot it.</strong> Back then,
+                                    I was thrilled, closed the tab, and now when I actually needed the knowledge, it was
+                                    gone. Just watching without active recall meant nothing stuck.
+                                </p>
+                            </div>
+
+                            <!-- Hidden Expanded Content EN -->
+                            <div id="storyExpandedContentEN"
+                                class="hidden space-y-4 text-stone-800 text-base sm:text-lg leading-relaxed font-normal pt-4 border-t border-[#e7dfd3]/50 mt-4">
+                                <p>
+                                    I had hit my limit. University and video editing, that was all I could handle.
+                                </p>
+                                <p>
+                                    That same evening, I was browsing YouTube again to unwind. A video was recommended
+                                    to me titled <span
+                                        class="italic font-semibold text-stone-900 bg-amber-50 border border-amber-200/50 px-1.5 py-0.5 rounded">"The
+                                        Last Spice Video You’ll Ever Need."</span> I really wanted to learn it <em>(If I
+                                        learn this now, I'll know it for the rest of my life)</em>. But an inner voice
+                                    told me: I'll watch it, feel productive for a moment, and then forget everything
+                                    again.
+                                </p>
+                                <p>
+                                    So I added it to my <em>Watch Later</em> list. The list opened up and overwhelmed me
+                                    with 53 videos I had once planned to watch but had long since forgotten. I realized
+                                    I was shutting down mentally. I stopped letting any new knowledge in, out of fear of
+                                    forgetting what mattered most.
+                                </p>
+                                <p>
+                                    I somehow had to grind through those two weeks to get through both the client video and
+                                    my exams at the same time.
+                                </p>
+                                <p class="font-medium text-stone-900">
+                                    Only after I passed my exams and delivered the finished video did I realize: <strong>I
+                                        needed a system that locks in my knowledge permanently without overloading my
+                                        mind.</strong>
+                                </p>
+                                <p>
+                                    That’s when the idea for the app was born. A place where educational videos don't
+                                    get lost in the feed, but are saved, structured by goals. Featuring short, automated
+                                    quizzes right after watching to anchor the material straight into long-term memory.
+                                </p>
+                                <p>
+                                    During development, there were moments when everything broke. When I split the code
+                                    into smaller files for better organization, the entire codebase collapsed and I ran
+                                    out of AI tokens. I sat there in the middle of the night staring at the ruins of my
+                                    program, having to fight my way back line by line from a backup.
+                                </p>
+                                <p class="font-bold text-stone-950 text-lg">
+                                    But it was worth it.
+                                </p>
+
+                                <p class="font-medium text-stone-900">
+                                    Today, I open my app, learn with focus without a distracting feed, and stay in
+                                    control.
+                                </p>
+                                <p class="font-extrabold text-[#78350f]">
+                                    Passive video watching is entertainment. Active recall is learning.
+                                </p>
+
+                            </div>
+                        </div>
+
+                        <!-- GERMAN STORY WRAPPER (Hidden by default) -->
+                        <div id="storyLangDE" class="hidden">
+                            <!-- Initial Preview DE -->
+                            <div class="space-y-4 text-stone-800 text-base sm:text-lg leading-relaxed font-normal">
+                                <p>
+                                    Es war zwei Wochen vor den Semesterprüfungen. Ich saß in der Bibliothek, umringt von
+                                    Makro Karteikarten. Mein Kalender war randvoll. Auf einmal blinkte mein Handy auf.
+                                    Eine Nachricht von meinem Lieblingskunden: <span
+                                        class="font-medium text-stone-900 bg-amber-100/60 px-1.5 py-0.5 rounded border border-amber-200/60">„Hey
+                                        Karl, wir haben hier ein riesiges neues Projekt. Kannst du so ein Video für uns
+                                        schneiden?“</span>
+                                </p>
+                                <p>
+                                    Ich öffnete die Referenz und mir wurde kalt. Das Video sah genial aus, aber es war
+                                    auf einem Level, das ich so noch nie geschnitten hatte. Mein erster Gedanke:
+                                    <em>„Ich schaffe das locker, wenn ich mir dazu ein paar gute Tutorials
+                                        anschaue.“</em>
+                                </p>
+                                <p class="font-medium text-stone-900">
+                                    Doch als ich YouTube öffnete, kam die Realisation: <strong>Ich hatte mir vor einiger
+                                        Zeit schon einmal genau so ein Tutorial angeschaut und es bereits wieder
+                                        komplett vergessen.</strong> Ich war damals begeistert, schloss den Tab, und als
+                                    ich das Wissen jetzt brauchte, war alles weg. Durch das bloße Schauen ohne aktive
+                                    Wiederholung war nichts hängen geblieben.
+                                </p>
+                            </div>
+
+                            <!-- Hidden Expanded Content DE -->
+                            <div id="storyExpandedContentDE"
+                                class="hidden space-y-4 text-stone-800 text-base sm:text-lg leading-relaxed font-normal pt-4 border-t border-[#e7dfd3]/50 mt-4">
+                                <p>
+                                    Mein Limit war erreicht. Uni und Videos schneiden, mehr ging nicht.
+                                </p>
+                                <p>
+                                    Am selben Tag war ich abends noch einmal auf YouTube unterwegs, um zu entspannen.
+                                    Mir wurde ein Video vorgeschlagen mit dem Titel <span
+                                        class="italic font-semibold text-stone-900 bg-amber-50 border border-amber-200/50 px-1.5 py-0.5 rounded">„Das
+                                        letzte Gewürz-Video, das du jemals brauchst“</span>. Ich wollte es unbedingt
+                                    lernen <em>(Wenn ich das jetzt lerne, kann ich es fürs ganze Leben)</em>. Aber eine
+                                    innere Stimme sagte mir: Ich werde es schauen, mich kurz produktiv fühlen und alles
+                                    wieder vergessen.
+                                </p>
+                                <p>
+                                    Also fügte ich es der <em>„Später ansehen“</em>-Liste hinzu. Die Liste öffnete sich
+                                    und erschlug mich mit 53 Videos, die ich einmal anschauen wollte, aber schon längst
+                                    vergessen hatte. Ich merkte, wie ich innerlich dichtmachte. Ich ließ gar kein neues
+                                    Wissen mehr zu, aus Angst, das Wichtigste zu vergessen.
+                                </p>
+                                <p>
+                                    Ich musste mich irgendwie durch diese zwei Wochen quälen, um das Kundenvideo und die
+                                    Prüfungen gleichzeitig zu überstehen.
+                                </p>
+                                <p class="font-medium text-stone-900">
+                                    Erst als ich die Prüfungen bestanden und das fertige Video geliefert hatte, wurde
+                                    mir klar: <strong>Ich brauche ein System, das mein Wissen dauerhaft sichert, ohne
+                                        meinen Kopf zu belasten.</strong>
+                                </p>
+                                <p>
+                                    Da entstand die Idee für die App. Ein Ort, an dem Lernvideos nicht im Feed
+                                    untergehen, sondern strukturiert nach Zielen gespeichert werden. Mit automatischen,
+                                    kurzen Quizzes nach dem Schauen, um den Stoff sofort im Langzeitgedächtnis zu
+                                    verankern.
+                                </p>
+                                <p>
+                                    Während der Entwicklung gab es Momente, in denen gar nichts mehr ging. Als mir beim
+                                    Aufteilen des Codes in mehrere kleine Dateien der Code komplett zerschoss und die
+                                    KI-Tokens ausgingen, saß ich nachts vor den Trümmern meines Programms und musste
+                                    mich Zeile für Zeile aus einem Backup zurückkämpfen.
+                                </p>
+                                <p class="font-bold text-stone-950 text-lg">
+                                    Aber es hat sich gelohnt.
+                                </p>
+
+                                <p class="font-medium text-stone-900">
+                                    Heute öffne ich meine App, lerne gezielt ohne Ablenkungs-Feed und behalte die
+                                    Kontrolle.
+                                </p>
+                                <p class="font-extrabold text-[#78350f]">
+                                    Passives Videoschauen ist Unterhaltung. Aktive Wiederholung ist Lernen.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Fade Gradient Mask (Visible when collapsed) -->
+                        <div id="storyGradientOverlay"
+                            class="absolute bottom-0 left-0 right-0 h-28 bg-gradient-to-t from-white via-white/90 to-transparent pointer-events-none transition-opacity duration-300">
+                        </div>
+
+                    </div>
+
+                    <!-- Read More / Show Less Button Bar -->
+                    <div class="mt-6 pt-4 border-t border-[#e7dfd3]/60 flex items-center justify-center relative z-10">
+                        <button id="toggleStoryBtn" onclick="toggleStory()"
+                            class="btn-primary inline-flex items-center space-x-2.5 text-sm font-extrabold px-7 py-3.5 rounded-full transition transform hover:-translate-y-0.5 cursor-pointer">
+                            <span id="storyBtnText">Read Full Story</span>
+                            <i data-lucide="chevron-down" id="storyChevron"
+                                class="w-4 h-4 transition-transform duration-300"></i>
+                        </button>
+                    </div>
+
+                </div>
+
+            </div>
+        </section>
+
+        <!-- How Studiamo Works Workflow Pipeline -->
+        <section id="how-it-works" class="py-12 sm:py-16 md:py-24 bg-[#f6f1e7]">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center max-w-3xl mx-auto">
+                    <h2 class="text-3xl sm:text-5xl font-black text-stone-900 tracking-tight">How Studiamo Supercharges
+                        Memory</h2>
+                    <p class="mt-4 text-stone-600 text-base sm:text-lg">From raw content to permanent retention in four
+                        seamless steps.</p>
+                </div>
+
+                <!-- Process Timeline Stream -->
+                <div class="mt-16 grid grid-cols-1 md:grid-cols-4 gap-6 relative">
+
+                    <!-- Step 1 -->
+                    <div
+                        class="bg-white border border-[#e7dfd3] rounded-3xl p-6 shadow-sm flex flex-col justify-between space-y-6 relative">
+                        <div class="space-y-3">
+                            <div
+                                class="w-10 h-10 bg-amber-100 border border-amber-300 text-amber-900 rounded-xl flex items-center justify-center font-bold text-base">
+                                1
+                            </div>
+                            <h3 class="text-lg font-bold text-stone-900">Import Any Media</h3>
+                            <p class="text-xs text-stone-600 leading-relaxed">
+                                Paste a YouTube link, drag & drop a PDF research paper, or type custom Markdown study
+                                notes.
+                            </p>
+                        </div>
+                        <div
+                            class="bg-[#fcfaf6] p-3 rounded-xl border border-[#e7dfd3] text-[11px] font-mono text-stone-600 flex items-center space-x-2 truncate">
+                            <i data-lucide="youtube" class="w-4 h-4 text-red-600 shrink-0"></i>
+                            <span class="truncate">https://youtu.be/v=9...</span>
+                        </div>
+                    </div>
+
+                    <!-- Step 2 -->
+                    <div
+                        class="bg-white border border-[#e7dfd3] rounded-3xl p-6 shadow-sm flex flex-col justify-between space-y-6 relative">
+                        <div class="space-y-3">
+                            <div
+                                class="w-10 h-10 bg-amber-100 border border-amber-300 text-amber-900 rounded-xl flex items-center justify-center font-bold text-base">
+                                2
+                            </div>
+                            <h3 class="text-lg font-bold text-stone-900">AI Breakdown</h3>
+                            <p class="text-xs text-stone-600 leading-relaxed">
+                                Gemini AI extracts high-yield summary points and crafts active-recall quiz questions
+                                automatically.
+                            </p>
+                        </div>
+                        <div
+                            class="bg-[#fcfaf6] p-3 rounded-xl border border-[#e7dfd3] text-[11px] text-amber-900 font-semibold flex items-center space-x-2">
+                            <i data-lucide="sparkles" class="w-4 h-4 text-[#78350f] shrink-0"></i>
+                            <span>Generated 12 Active Flashcards</span>
+                        </div>
+                    </div>
+
+                    <!-- Step 3 -->
+                    <div
+                        class="bg-white border border-[#e7dfd3] rounded-3xl p-6 shadow-sm flex flex-col justify-between space-y-6 relative">
+                        <div class="space-y-3">
+                            <div
+                                class="w-10 h-10 bg-amber-100 border border-amber-300 text-amber-900 rounded-xl flex items-center justify-center font-bold text-base">
+                                3
+                            </div>
+                            <h3 class="text-lg font-bold text-stone-900">Spaced Scheduling</h3>
+                            <p class="text-xs text-stone-600 leading-relaxed">
+                                Flashcards are scheduled across Stage 1 (1 day) to Stage 5 (30 days) before forgetting
+                                occurs.
+                            </p>
+                        </div>
+                        <div
+                            class="bg-[#fcfaf6] p-3 rounded-xl border border-[#e7dfd3] text-[11px] font-mono text-stone-700 flex justify-between items-center">
+                            <span>Stage 3 Review</span>
+                            <span class="font-bold text-[#78350f]">7 Days Later</span>
+                        </div>
+                    </div>
+
+                    <!-- Step 4 -->
+                    <div
+                        class="bg-white border border-[#e7dfd3] rounded-3xl p-6 shadow-sm flex flex-col justify-between space-y-6 relative">
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between">
+                                <div
+                                    class="w-10 h-10 bg-emerald-100 border border-emerald-300 text-emerald-900 rounded-xl flex items-center justify-center font-bold text-base">
+                                    4
+                                </div>
+                                <span class="text-[11px] font-bold text-emerald-900 bg-emerald-100/80 border border-emerald-200 px-2.5 py-0.5 rounded-md flex items-center space-x-1">
+                                    <i data-lucide="sparkles" class="w-3 h-3 text-emerald-700"></i>
+                                    <span>Interactive Demo</span>
+                                </span>
+                            </div>
+                            <h3 class="text-lg font-bold text-stone-900">Practice &amp; Active Recall</h3>
+                            <p class="text-xs text-stone-600 leading-relaxed">
+                                Flip interactive flashcards directly in your web studio to test your memory and master key concepts with active recall.
+                            </p>
+                        </div>
+
+                        <!-- Interactive 3D Flashcard Widget -->
+                        <div class="flashcard-3d relative w-full cursor-pointer group mt-2" onclick="toggleHeroCard()">
+                            <div id="heroCardInner"
+                                class="flashcard-inner relative bg-[#fcfaf6] border border-[#e7dfd3] rounded-2xl p-4 shadow-xs min-h-[175px] flex flex-col justify-between text-left">
+
+                                <!-- Front of Card -->
+                                <div class="flashcard-front space-y-2">
+                                    <div class="flex items-center justify-between gap-1">
+                                        <span class="text-[10px] font-bold text-amber-900 bg-amber-100 border border-amber-200 px-2 py-0.5 rounded">
+                                            Stage 3 Review
+                                        </span>
+                                        <span class="text-[11px] text-stone-500 font-semibold flex items-center space-x-1 group-hover:text-[#78350f] transition">
+                                            <span>Tap to flip</span>
+                                            <i data-lucide="rotate-cw" class="w-3 h-3"></i>
+                                        </span>
+                                    </div>
+                                    <h4 class="text-xs sm:text-sm font-bold text-stone-900 leading-snug">
+                                        How does Raft consensus handle leader crash recovery?
+                                    </h4>
+                                    <div class="pt-1.5 text-[10px] text-[#78350f] font-bold flex items-center justify-between border-t border-[#e7dfd3]/60">
+                                        <span class="truncate pr-1">Distributed Systems</span>
+                                        <span class="whitespace-nowrap">Tap card →</span>
+                                    </div>
+                                </div>
+
+                                <!-- Back of Card -->
+                                <div class="flashcard-back absolute inset-0 bg-[#fbf8f2] border border-[#e7dfd3] rounded-2xl p-4 flex flex-col justify-between text-left">
+                                    <div class="space-y-1.5">
+                                        <div class="flex items-center justify-between gap-1">
+                                            <span class="text-[10px] font-bold text-emerald-900 bg-emerald-100 border border-emerald-200 px-2 py-0.5 rounded">
+                                                AI Answer
+                                            </span>
+                                            <span class="text-[11px] text-stone-500 font-semibold flex items-center space-x-1">
+                                                <span>Flip back</span>
+                                                <i data-lucide="rotate-cw" class="w-3 h-3"></i>
+                                            </span>
+                                        </div>
+                                        <p class="text-[11px] text-stone-800 leading-relaxed font-medium">
+                                            Followers detect timeout, transition to candidate state, increment term counter, & request votes for new leader.
+                                        </p>
+                                    </div>
+                                    <div class="flex items-center justify-between pt-1 border-t border-[#e7dfd3] text-[10px]">
+                                        <span class="px-2 py-0.5 bg-emerald-100 text-emerald-900 border border-emerald-300 font-bold rounded">
+                                            Remembered (+10 XP)
+                                        </span>
+                                        <span class="text-[#78350f] font-bold flex items-center space-x-1">
+                                            <i data-lucide="sparkles" class="w-3 h-3"></i>
+                                            <span>Fact-Checked</span>
+                                        </span>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+        <section id="features" class="py-12 sm:py-16 md:py-24 bg-[#fbf8f2] border-y border-[#e7dfd3]">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center max-w-3xl mx-auto mb-16">
+                    <h2 class="text-3xl sm:text-5xl font-black text-stone-900 tracking-tight">Built for Serious
+                        Cognitive Growth</h2>
+                    <p class="mt-4 text-stone-600 text-base sm:text-lg">No generic templates. Every feature is
+                        engineered for deep focus and recall.</p>
+                </div>
+
+                <!-- Bento Grid Layout -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+
+                    <!-- Bento 1: Wide 2-Column Showcase (Study Studio) -->
+                    <div
+                        class="md:col-span-2 bg-white border border-[#e7dfd3] rounded-3xl p-8 shadow-sm flex flex-col justify-between space-y-6">
+                        <div class="space-y-3">
+                            <div
+                                class="w-10 h-10 bg-amber-100 border border-amber-200 text-[#78350f] rounded-xl flex items-center justify-center">
+                                <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                            </div>
+                            <h3 class="text-2xl font-bold text-stone-900">Side-by-Side Study Studio</h3>
+                            <p class="text-stone-600 text-sm leading-relaxed max-w-xl">
+                                Watch YouTube lectures or read PDF research papers on the left pane while taking
+                                formatted notes and generating flashcards on the right pane simultaneously.
+                            </p>
+                        </div>
+
+                        <!-- Mini Mockup Interface -->
+                        <div
+                            class="bg-[#fbf8f2] border border-[#e7dfd3] rounded-2xl p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div
+                                class="bg-stone-900 rounded-xl aspect-video flex items-center justify-center relative overflow-hidden">
+                                <i data-lucide="play-circle" class="w-10 h-10 text-stone-600"></i>
+                                <span
+                                    class="absolute bottom-2 left-2 bg-black/70 text-[10px] text-white font-mono px-2 py-0.5 rounded">Video
+                                    Player Pane</span>
+                            </div>
+                            <div class="bg-white p-3 rounded-xl border border-[#e7dfd3] space-y-2 text-xs">
+                                <div class="font-bold text-stone-900 border-b border-[#e7dfd3] pb-1">Notes & Active
+                                    Cards</div>
+                                <p class="text-stone-600 text-[11px] leading-tight">Key takeaway: Leader election
+                                    requires majority quorum (N/2 + 1)...</p>
+                                <span
+                                    class="inline-block px-2 py-0.5 bg-amber-100 text-amber-900 text-[10px] font-bold rounded">1
+                                    Card Created</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bento 2: Tall Ebbinghaus Forgetting Curve Chart -->
+                    <div
+                        class="bg-white border border-[#e7dfd3] rounded-3xl p-8 shadow-sm flex flex-col justify-between space-y-6">
+                        <div class="space-y-3">
+                            <div
+                                class="w-10 h-10 bg-amber-100 border border-amber-200 text-[#78350f] rounded-xl flex items-center justify-center">
+                                <i data-lucide="line-chart" class="w-5 h-5"></i>
+                            </div>
+                            <h3 class="text-xl font-bold text-stone-900">The Ebbinghaus Curve</h3>
+                            <p class="text-stone-600 text-xs leading-relaxed">
+                                Without review, 70% of material is lost within 24 hours. Studiamo schedules reviews
+                                precisely when recall probability drops to 80%.
+                            </p>
+                            <div class="pt-1">
+                                <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC4117135/" target="_blank"
+                                    rel="noopener noreferrer"
+                                    class="inline-flex items-center space-x-1.5 text-[11px] font-bold text-[#78350f] hover:text-amber-950 underline underline-offset-2 transition">
+                                    <i data-lucide="book-open" class="w-3.5 h-3.5"></i>
+                                    <span>Ebbinghaus Memory Research (NIH / PMC Study) ↗</span>
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- SVG Curve Chart -->
+                        <div class="bg-[#fbf8f2] p-4 rounded-2xl border border-[#e7dfd3]">
+                            <svg viewBox="0 0 300 150" class="w-full h-auto text-stone-700">
+                                <!-- Grid Lines -->
+                                <line x1="30" y1="20" x2="280" y2="20" stroke="#e7dfd3" stroke-width="1"
+                                    stroke-dasharray="3,3" />
+                                <line x1="30" y1="80" x2="280" y2="80" stroke="#e7dfd3" stroke-width="1"
+                                    stroke-dasharray="3,3" />
+                                <line x1="30" y1="130" x2="280" y2="130" stroke="#e7dfd3" stroke-width="1" />
+
+                                <!-- Axes -->
+                                <line x1="30" y1="10" x2="30" y2="130" stroke="#78716c" stroke-width="1.5" />
+
+                                <!-- Red Forgetting Line -->
+                                <path d="M 30 20 Q 80 120 280 125" fill="none" stroke="#ef4444" stroke-width="2"
+                                    stroke-dasharray="4,4" />
+                                <text x="120" y="115" class="text-[9px] fill-red-600 font-bold">Without SRS</text>
+
+                                <!-- Green SRS Curve Line -->
+                                <path d="M 30 20 Q 60 70 80 20 Q 130 65 150 20 Q 220 50 280 20" fill="none"
+                                    stroke="#10b981" stroke-width="2.5" />
+                                <text x="160" y="45" class="text-[9px] fill-emerald-700 font-bold">Studiamo SRS</text>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <!-- Bento 3: AI Fact-Checking Card -->
+                    <div class="bg-white border border-[#e7dfd3] rounded-3xl p-8 shadow-sm space-y-4">
+                        <div
+                            class="w-10 h-10 bg-emerald-100 border border-emerald-200 text-emerald-800 rounded-xl flex items-center justify-center">
+                            <i data-lucide="shield-check" class="w-5 h-5"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-stone-900">AI Fact-Verification</h3>
+                        <p class="text-stone-600 text-xs leading-relaxed">
+                            Every generated card is cross-referenced with academic knowledge bases to prevent memorizing
+                            inaccuracies or hallucinations.
+                        </p>
+                    </div>
+
+                    <!-- Bento 4: Telegram Integration Card -->
+                    <div class="bg-white border border-[#e7dfd3] rounded-3xl p-8 shadow-sm space-y-4">
+                        <div
+                            class="w-10 h-10 bg-sky-100 border border-sky-200 text-sky-800 rounded-xl flex items-center justify-center">
+                            <i data-lucide="send" class="w-5 h-5"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-stone-900">Telegram Bot Review</h3>
+                        <p class="text-stone-600 text-xs leading-relaxed">
+                            Receive daily review notifications directly on your phone via Telegram. Practice cards in
+                            seconds during commute or breaks.
+                        </p>
+                    </div>
+
+                    <!-- Bento 5: Open Data & Export -->
+                    <div class="bg-white border border-[#e7dfd3] rounded-3xl p-8 shadow-sm space-y-4">
+                        <div
+                            class="w-10 h-10 bg-amber-100 border border-amber-200 text-[#78350f] rounded-xl flex items-center justify-center">
+                            <i data-lucide="download" class="w-5 h-5"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-stone-900">No Data Lock-In</h3>
+                        <p class="text-stone-600 text-xs leading-relaxed">
+                            Export your flashcards, learning statistics, and documents anytime as structured JSON archives. Your
+                            knowledge remains strictly yours.
+                        </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Semantic FAQ Section -->
+        <section id="faq" class="py-12 sm:py-16 md:py-24 bg-[#fbf8f2] border-t border-[#e7dfd3]">
+            <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center max-w-3xl mx-auto mb-16">
+                    <h2 class="text-3xl sm:text-5xl font-black text-stone-900 tracking-tight">
+                        Frequently Asked Questions
+                    </h2>
+                    <p class="mt-4 text-stone-600 text-base sm:text-lg">
+                        Clear answers on algorithms, privacy, open source, and how Studiamo transforms your study routine.
+                    </p>
+                </div>
+
+                <div class="space-y-3 max-w-4xl mx-auto">
+                    <!-- Q1 -->
+                    <details class="group bg-white border border-[#e7dfd3] rounded-2xl shadow-xs transition-all duration-200 hover:border-stone-400 open:border-amber-300">
+                        <summary class="flex items-center justify-between p-5 sm:p-6 cursor-pointer list-none select-none">
+                            <h3 class="text-base sm:text-lg font-bold text-stone-900 flex items-center space-x-3 pr-4">
+                                <i data-lucide="help-circle" class="w-5 h-5 text-[#78350f] shrink-0"></i>
+                                <span>What makes Studiamo different from Anki?</span>
+                            </h3>
+                            <div class="w-8 h-8 rounded-full bg-[#fbf8f2] border border-[#e7dfd3] flex items-center justify-center shrink-0 group-hover:bg-[#f3ebd9] transition-colors">
+                                <i data-lucide="chevron-down" class="w-4 h-4 text-stone-600 transition-transform duration-200 group-open:rotate-180"></i>
+                            </div>
+                        </summary>
+                        <div class="px-5 pb-5 sm:px-6 sm:pb-6 pt-1 text-sm text-stone-600 leading-relaxed border-t border-[#e7dfd3]/60 pl-8 sm:pl-14">
+                            Anki is designed for manual, high-density deck craft with complex configurations. Studiamo is built for zero friction: paste any YouTube lecture link or upload a PDF, and Studiamo instantly generates structured summaries, fact-checks claims against the transcript, and creates interactive active recall quizzes with zero manual card writing.
+                        </div>
+                    </details>
+
+                    <!-- Q2 -->
+                    <details class="group bg-white border border-[#e7dfd3] rounded-2xl shadow-xs transition-all duration-200 hover:border-stone-400 open:border-amber-300">
+                        <summary class="flex items-center justify-between p-5 sm:p-6 cursor-pointer list-none select-none">
+                            <h3 class="text-base sm:text-lg font-bold text-stone-900 flex items-center space-x-3 pr-4">
+                                <i data-lucide="help-circle" class="w-5 h-5 text-[#78350f] shrink-0"></i>
+                                <span>How does Studiamo prevent AI hallucinations in quizzes?</span>
+                            </h3>
+                            <div class="w-8 h-8 rounded-full bg-[#fbf8f2] border border-[#e7dfd3] flex items-center justify-center shrink-0 group-hover:bg-[#f3ebd9] transition-colors">
+                                <i data-lucide="chevron-down" class="w-4 h-4 text-stone-600 transition-transform duration-200 group-open:rotate-180"></i>
+                            </div>
+                        </summary>
+                        <div class="px-5 pb-5 sm:px-6 sm:pb-6 pt-1 text-sm text-stone-600 leading-relaxed border-t border-[#e7dfd3]/60 pl-8 sm:pl-14">
+                            Studiamo extracts verbatim transcripts and document text directly from the source. It uses Google Gemini models instructed to strictly ground recall questions and conceptual explanations in verified transcript quotes, cross-checking key claims before presenting flashcards.
+                        </div>
+                    </details>
+
+                    <!-- Q3 -->
+                    <details class="group bg-white border border-[#e7dfd3] rounded-2xl shadow-xs transition-all duration-200 hover:border-stone-400 open:border-amber-300">
+                        <summary class="flex items-center justify-between p-5 sm:p-6 cursor-pointer list-none select-none">
+                            <h3 class="text-base sm:text-lg font-bold text-stone-900 flex items-center space-x-3 pr-4">
+                                <i data-lucide="help-circle" class="w-5 h-5 text-[#78350f] shrink-0"></i>
+                                <span>Is Studiamo free and open source?</span>
+                            </h3>
+                            <div class="w-8 h-8 rounded-full bg-[#fbf8f2] border border-[#e7dfd3] flex items-center justify-center shrink-0 group-hover:bg-[#f3ebd9] transition-colors">
+                                <i data-lucide="chevron-down" class="w-4 h-4 text-stone-600 transition-transform duration-200 group-open:rotate-180"></i>
+                            </div>
+                        </summary>
+                        <div class="px-5 pb-5 sm:px-6 sm:pb-6 pt-1 text-sm text-stone-600 leading-relaxed border-t border-[#e7dfd3]/60 pl-8 sm:pl-14">
+                            Yes. Studiamo is AGPL-3.0 licensed and 100% free to self-host with Docker Compose using your own Google Gemini API key. There is also a managed cloud subscription ($7.99/month) for users who want a hassle-free, ready-to-use experience without hosting infrastructure.
+                        </div>
+                    </details>
+
+                    <!-- Q4 -->
+                    <details class="group bg-white border border-[#e7dfd3] rounded-2xl shadow-xs transition-all duration-200 hover:border-stone-400 open:border-amber-300">
+                        <summary class="flex items-center justify-between p-5 sm:p-6 cursor-pointer list-none select-none">
+                            <h3 class="text-base sm:text-lg font-bold text-stone-900 flex items-center space-x-3 pr-4">
+                                <i data-lucide="help-circle" class="w-5 h-5 text-[#78350f] shrink-0"></i>
+                                <span>What is the science behind testing myself instead of re-watching?</span>
+                            </h3>
+                            <div class="w-8 h-8 rounded-full bg-[#fbf8f2] border border-[#e7dfd3] flex items-center justify-center shrink-0 group-hover:bg-[#f3ebd9] transition-colors">
+                                <i data-lucide="chevron-down" class="w-4 h-4 text-stone-600 transition-transform duration-200 group-open:rotate-180"></i>
+                            </div>
+                        </summary>
+                        <div class="px-5 pb-5 sm:px-6 sm:pb-6 pt-1 text-sm text-stone-600 leading-relaxed border-t border-[#e7dfd3]/60 pl-8 sm:pl-14">
+                            In landmark research published in <em>Science</em>, Karpicke and Blunt (2011) showed that retrieval practice produces about a 50% improvement in long-term retention over passive re-reading or elaborate note-taking. The researchers found that "retrieval is not merely a read-out of knowledge; the act of reconstructing knowledge itself enhances learning." Even attempting recall and missing an answer primes your memory to encode the correct explanation when revealed. Studiamo applies this by removing the friction of manual card writing, automatically turning your educational videos into instant self-quizzes.
+                        </div>
+                    </details>
+
+                    <!-- Q5 -->
+                    <details class="group bg-white border border-[#e7dfd3] rounded-2xl shadow-xs transition-all duration-200 hover:border-stone-400 open:border-amber-300">
+                        <summary class="flex items-center justify-between p-5 sm:p-6 cursor-pointer list-none select-none">
+                            <h3 class="text-base sm:text-lg font-bold text-stone-900 flex items-center space-x-3 pr-4">
+                                <i data-lucide="help-circle" class="w-5 h-5 text-[#78350f] shrink-0"></i>
+                                <span>How do study reminders and notifications work?</span>
+                            </h3>
+                            <div class="w-8 h-8 rounded-full bg-[#fbf8f2] border border-[#e7dfd3] flex items-center justify-center shrink-0 group-hover:bg-[#f3ebd9] transition-colors">
+                                <i data-lucide="chevron-down" class="w-4 h-4 text-stone-600 transition-transform duration-200 group-open:rotate-180"></i>
+                            </div>
+                        </summary>
+                        <div class="px-5 pb-5 sm:px-6 sm:pb-6 pt-1 text-sm text-stone-600 leading-relaxed border-t border-[#e7dfd3]/60 pl-8 sm:pl-14">
+                            Because Studiamo is a web application, it supports optional notification channels via Telegram, browser web push, and email. When spaced repetition reviews are due, you receive an alert with a link to open your study queue directly in your browser.
+                        </div>
+                    </details>
+
+                    <!-- Q6 -->
+                    <details class="group bg-white border border-[#e7dfd3] rounded-2xl shadow-xs transition-all duration-200 hover:border-stone-400 open:border-amber-300">
+                        <summary class="flex items-center justify-between p-5 sm:p-6 cursor-pointer list-none select-none">
+                            <h3 class="text-base sm:text-lg font-bold text-stone-900 flex items-center space-x-3 pr-4">
+                                <i data-lucide="help-circle" class="w-5 h-5 text-[#78350f] shrink-0"></i>
+                                <span>What cognitive science research backs Studiamo?</span>
+                            </h3>
+                            <div class="w-8 h-8 rounded-full bg-[#fbf8f2] border border-[#e7dfd3] flex items-center justify-center shrink-0 group-hover:bg-[#f3ebd9] transition-colors">
+                                <i data-lucide="chevron-down" class="w-4 h-4 text-stone-600 transition-transform duration-200 group-open:rotate-180"></i>
+                            </div>
+                        </summary>
+                        <div class="px-5 pb-5 sm:px-6 sm:pb-6 pt-1 text-sm text-stone-600 leading-relaxed border-t border-[#e7dfd3]/60 pl-8 sm:pl-14">
+                            Studiamo is grounded in cognitive psychology research on practice testing (Dunlosky et al., 2013; Roediger & Karpicke, 2006; Karpicke & Blunt, 2011). These empirical studies prove that active retrieval practice outperforms passive consumption across subjects, breaking the common "illusion of competence" that comes from video watching.
+                        </div>
+                    </details>
+                </div>
+            </div>
+        </section>
+
+        <!-- Open Source vs Cloud Dual Canvas Section -->
+        <section id="open-source" class="py-12 sm:py-16 md:py-24 bg-[#f6f1e7] border-t border-[#e7dfd3]">
+
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center max-w-3xl mx-auto mb-16">
+                    <h2 class="text-3xl sm:text-5xl font-black text-stone-900 tracking-tight">Your Software, Your Choice
+                    </h2>
+                    <p class="mt-4 text-stone-600 text-base sm:text-lg">Run it free on your own infrastructure or choose
+                        our hassle-free cloud.</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+
+                    <!-- Self-Hosted Canvas -->
+                    <div
+                        class="bg-white border border-[#e7dfd3] rounded-3xl p-8 shadow-sm flex flex-col justify-between space-y-8">
+                        <div class="space-y-4">
+                            <div class="h-7 flex items-center justify-between">
+                                <span
+                                    class="px-3 py-1 bg-stone-100 text-stone-800 border border-stone-300 text-xs font-bold rounded-full">
+                                    Open Source • 100% Free
+                                </span>
+                                <i data-lucide="server" class="w-5 h-5 text-stone-600"></i>
+                            </div>
+                            <h3 class="text-2xl font-bold text-stone-900">Self-Hosted Edition</h3>
+                            <p class="text-stone-600 text-sm leading-relaxed">
+                                For developers, self-hosters, and privacy purists. Run Studiamo locally on Docker,
+                                Raspberry Pi, or your VPS.
+                            </p>
+
+                            <div class="relative overflow-hidden rounded-2xl bg-[#1c1917] p-4 border border-stone-800">
+                                <div
+                                    class="flex items-center justify-between pb-2 mb-2 border-b border-stone-800/80 text-[11px]">
+                                    <span class="text-stone-400 font-mono flex items-center space-x-1.5">
+                                        <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                                        <span>docker-compose.yml</span>
+                                    </span>
+                                    <span
+                                        class="px-2 py-0.5 bg-amber-500/20 border border-amber-500/40 text-amber-400 font-bold text-[10px] uppercase tracking-wider rounded-md">
+                                        Coming Soon
+                                    </span>
+                                </div>
+
+                                <div
+                                    class="space-y-1.5 text-xs font-mono text-stone-300 filter blur-[0.6px] select-none opacity-85">
+                                    <div class="text-stone-500"># Open Source Repo | Launching Soon</div>
+                                    <div><span class="text-amber-500 font-bold select-none">$</span> git clone
+                                        https://github.com/NaEs25/studiamo.git</div>
+                                    <div><span class="text-amber-500 font-bold select-none">$</span> docker compose up -d</div>
+                                </div>
+
+                                <div
+                                    class="absolute inset-0 bg-stone-950/30 backdrop-blur-[1px] flex items-center justify-center pointer-events-none">
+                                    <span
+                                        class="px-3.5 py-1 bg-[#fbbf24] text-[#78350f] font-extrabold text-xs rounded-lg shadow-lg flex items-center space-x-1.5">
+                                        <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+                                        <span>Repository Launching Soon</span>
+                                    </span>
+                                </div>
+                            </div>
+
+                            <ul class="space-y-2 text-xs text-stone-700">
+                                <li class="flex items-center space-x-2">
+                                    <i data-lucide="check" class="w-4 h-4 text-emerald-600"></i>
+                                    <span>Full access to source code on GitHub</span>
+                                </li>
+                                <li class="flex items-center space-x-2">
+                                    <i data-lucide="check" class="w-4 h-4 text-emerald-600"></i>
+                                    <span>Bring your own Gemini API key</span>
+                                </li>
+                                <li class="flex items-center space-x-2">
+                                    <i data-lucide="check" class="w-4 h-4 text-emerald-600"></i>
+                                    <span>Local PostgreSQL database ownership</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <button onclick="openWaitlistModal('selfhosted')"
+                            class="w-full py-3.5 px-6 rounded-xl bg-[#fbf8f2] border border-[#e7dfd3] hover:border-stone-400 text-stone-800 font-bold text-sm transition flex items-center justify-center space-x-2 cursor-pointer">
+                            <i data-lucide="github" class="w-4 h-4"></i>
+                            <span>Get Self-Hosted Release Updates</span>
+                        </button>
+                    </div>
+
+                    <!-- Managed Cloud Canvas -->
+                    <div
+                        class="bg-white border-2 border-[#fbbf24]/60 rounded-3xl p-8 shadow-xl flex flex-col justify-between space-y-8 relative">
+                        <div class="space-y-4">
+                            <div class="h-7 flex items-center justify-between">
+                                <span
+                                    class="px-3 py-1 bg-amber-100 text-amber-900 border border-amber-200 text-xs font-bold rounded-full">
+                                    $7.99 / month
+                                </span>
+                                <i data-lucide="cloud" class="w-5 h-5 text-[#78350f]"></i>
+                            </div>
+                            <h3 class="text-2xl font-bold text-stone-900">Managed Cloud Edition</h3>
+                            <p class="text-stone-600 text-sm leading-relaxed">
+                                For learners who want a ready-to-use solution without managing servers or handling API
+                                keys.
+                            </p>
+
+                            <div class="bg-[#fcfaf6] border border-[#e7dfd3] p-4 rounded-2xl space-y-2 text-xs">
+                                <div class="font-bold text-stone-900 flex items-center space-x-2">
+                                    <i data-lucide="check-circle-2" class="w-4 h-4 text-[#78350f]"></i>
+                                    <span>Zero setup required</span>
+                                </div>
+                                <p class="text-stone-600 text-[11px] leading-relaxed">
+                                    All AI usage, secure storage, and cloud hosting are fully included in one simple
+                                    plan.
+                                </p>
+                            </div>
+
+                            <ul class="space-y-2 text-xs text-stone-700">
+                                <li class="flex items-center space-x-2">
+                                    <i data-lucide="check" class="w-4 h-4 text-[#78350f]"></i>
+                                    <span>One-click Google Sign-In</span>
+                                </li>
+                                <li class="flex items-center space-x-2">
+                                    <i data-lucide="check" class="w-4 h-4 text-[#78350f]"></i>
+                                    <span>Automated cloud backups & instant sync</span>
+                                </li>
+                                <li class="flex items-center space-x-2">
+                                    <i data-lucide="check" class="w-4 h-4 text-[#78350f]"></i>
+                                    <span>Priority feature updates</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <button onclick="openWaitlistModal('cloud')"
+                            class="btn-primary w-full py-3.5 px-6 rounded-xl font-bold text-sm transition flex items-center justify-center space-x-2 cursor-pointer">
+                            <i data-lucide="sparkles" class="w-4 h-4"></i>
+                            <span>Join Cloud Waitlist</span>
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- Feature Comparison Matrix Section -->
+        <section id="compare" class="py-12 sm:py-16 md:py-24 bg-[#fbf8f2] border-t border-[#e7dfd3]">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center max-w-3xl mx-auto mb-16">
+                    <h2 class="text-3xl sm:text-5xl font-black text-stone-900 tracking-tight">
+                        How Studiamo Compares
+                    </h2>
+                    <p class="mt-4 text-stone-600 text-base sm:text-lg">
+                        Designed for zero-friction active recall from real-world educational videos and notes, not manual flashcard busywork.
+                    </p>
+                </div>
+
+                <!-- Mobile View: Responsive Feature Comparison Cards (visible on < md screens) -->
+                <div class="block md:hidden space-y-4 max-w-xl mx-auto">
+                    <!-- Card 1 -->
+                    <div class="bg-white border border-[#e7dfd3] rounded-2xl p-4 shadow-xs space-y-3">
+                        <div>
+                            <h3 class="text-sm font-bold text-stone-900">1-Click YouTube to Quiz</h3>
+                            <p class="text-[11px] text-stone-500 mt-0.5 leading-relaxed">Automated transcript extraction, summaries, and active recall tests</p>
+                        </div>
+                        <div class="bg-amber-50 border border-amber-200/80 rounded-xl p-3 flex items-center justify-between">
+                            <div class="flex items-center space-x-1.5">
+                                <i data-lucide="sparkles" class="w-4 h-4 text-[#78350f]"></i>
+                                <span class="font-extrabold text-xs text-[#78350f]">Studiamo</span>
+                            </div>
+                            <span class="inline-flex items-center space-x-1 text-xs font-bold text-emerald-800 bg-emerald-100/90 border border-emerald-300 px-2.5 py-0.5 rounded-full">
+                                <i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-emerald-600"></i>
+                                <span>Native & Instant</span>
+                            </span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2 text-center pt-0.5">
+                            <div class="bg-[#fbf8f2] border border-[#e7dfd3] rounded-xl p-2 flex flex-col justify-between">
+                                <span class="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Anki</span>
+                                <span class="text-[11px] font-medium text-stone-600 mt-1">Manual plugins</span>
+                            </div>
+                            <div class="bg-[#fbf8f2] border border-[#e7dfd3] rounded-xl p-2 flex flex-col justify-between">
+                                <span class="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Quizlet</span>
+                                <span class="text-[11px] font-medium text-stone-600 mt-1">Basic / Paywall</span>
+                            </div>
+                            <div class="bg-[#fbf8f2] border border-[#e7dfd3] rounded-xl p-2 flex flex-col justify-between">
+                                <span class="text-[10px] font-bold text-stone-400 uppercase tracking-wider">RemNote</span>
+                                <span class="text-[11px] font-medium text-stone-600 mt-1">Manual copy-paste</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 2 -->
+                    <div class="bg-white border border-[#e7dfd3] rounded-2xl p-4 shadow-xs space-y-3">
+                        <div>
+                            <h3 class="text-sm font-bold text-stone-900">Effortless Active Recall Quizzing</h3>
+                            <p class="text-[11px] text-stone-500 mt-0.5 leading-relaxed">Instant self-grading retrieval practice to retain more than passive watching</p>
+                        </div>
+                        <div class="bg-amber-50 border border-amber-200/80 rounded-xl p-3 flex items-center justify-between">
+                            <div class="flex items-center space-x-1.5">
+                                <i data-lucide="sparkles" class="w-4 h-4 text-[#78350f]"></i>
+                                <span class="font-extrabold text-xs text-[#78350f]">Studiamo</span>
+                            </div>
+                            <span class="inline-flex items-center space-x-1 text-xs font-bold text-emerald-800 bg-emerald-100/90 border border-emerald-300 px-2.5 py-0.5 rounded-full">
+                                <i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-emerald-600"></i>
+                                <span>Automated & Instant</span>
+                            </span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2 text-center pt-0.5">
+                            <div class="bg-[#fbf8f2] border border-[#e7dfd3] rounded-xl p-2 flex flex-col justify-between">
+                                <span class="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Anki</span>
+                                <span class="text-[11px] font-medium text-stone-600 mt-1">Manual cards</span>
+                            </div>
+                            <div class="bg-[#fbf8f2] border border-[#e7dfd3] rounded-xl p-2 flex flex-col justify-between">
+                                <span class="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Quizlet</span>
+                                <span class="text-[11px] font-medium text-stone-600 mt-1">Flashcard lists</span>
+                            </div>
+                            <div class="bg-[#fbf8f2] border border-[#e7dfd3] rounded-xl p-2 flex flex-col justify-between">
+                                <span class="text-[10px] font-bold text-stone-400 uppercase tracking-wider">RemNote</span>
+                                <span class="text-[11px] font-medium text-stone-600 mt-1">Note-linked cards</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 3 -->
+                    <div class="bg-white border border-[#e7dfd3] rounded-2xl p-4 shadow-xs space-y-3">
+                        <div>
+                            <h3 class="text-sm font-bold text-stone-900">Automated Fact-Checking</h3>
+                            <p class="text-[11px] text-stone-500 mt-0.5 leading-relaxed">Cross-checks questions against verbatim transcript to prevent hallucinations</p>
+                        </div>
+                        <div class="bg-amber-50 border border-amber-200/80 rounded-xl p-3 flex items-center justify-between">
+                            <div class="flex items-center space-x-1.5">
+                                <i data-lucide="sparkles" class="w-4 h-4 text-[#78350f]"></i>
+                                <span class="font-extrabold text-xs text-[#78350f]">Studiamo</span>
+                            </div>
+                            <span class="inline-flex items-center space-x-1 text-xs font-bold text-emerald-800 bg-emerald-100/90 border border-emerald-300 px-2.5 py-0.5 rounded-full">
+                                <i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-emerald-600"></i>
+                                <span>Transcript-Grounded</span>
+                            </span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2 text-center pt-0.5">
+                            <div class="bg-[#fbf8f2] border border-[#e7dfd3] rounded-xl p-2 flex flex-col items-center justify-center min-h-[50px]">
+                                <span class="text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-1">Anki</span>
+                                <i data-lucide="x" class="w-4 h-4 text-stone-400"></i>
+                            </div>
+                            <div class="bg-[#fbf8f2] border border-[#e7dfd3] rounded-xl p-2 flex flex-col items-center justify-center min-h-[50px]">
+                                <span class="text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-1">Quizlet</span>
+                                <i data-lucide="x" class="w-4 h-4 text-stone-400"></i>
+                            </div>
+                            <div class="bg-[#fbf8f2] border border-[#e7dfd3] rounded-xl p-2 flex flex-col items-center justify-center min-h-[50px]">
+                                <span class="text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-1">RemNote</span>
+                                <i data-lucide="x" class="w-4 h-4 text-stone-400"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 4 -->
+                    <div class="bg-white border border-[#e7dfd3] rounded-2xl p-4 shadow-xs space-y-3">
+                        <div>
+                            <h3 class="text-sm font-bold text-stone-900">Self-Hosting & Open Source</h3>
+                            <p class="text-[11px] text-stone-500 mt-0.5 leading-relaxed">Full data privacy and local database ownership</p>
+                        </div>
+                        <div class="bg-amber-50 border border-amber-200/80 rounded-xl p-3 flex items-center justify-between">
+                            <div class="flex items-center space-x-1.5">
+                                <i data-lucide="sparkles" class="w-4 h-4 text-[#78350f]"></i>
+                                <span class="font-extrabold text-xs text-[#78350f]">Studiamo</span>
+                            </div>
+                            <span class="inline-flex items-center space-x-1 text-xs font-bold text-emerald-800 bg-emerald-100/90 border border-emerald-300 px-2.5 py-0.5 rounded-full">
+                                <i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-emerald-600"></i>
+                                <span>AGPL-3.0 Docker</span>
+                            </span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2 text-center pt-0.5">
+                            <div class="bg-[#fbf8f2] border border-[#e7dfd3] rounded-xl p-2 flex flex-col justify-between">
+                                <span class="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Anki</span>
+                                <span class="text-[11px] font-medium text-stone-600 mt-1">Desktop app</span>
+                            </div>
+                            <div class="bg-[#fbf8f2] border border-[#e7dfd3] rounded-xl p-2 flex flex-col items-center justify-center min-h-[50px]">
+                                <span class="text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-1">Quizlet</span>
+                                <i data-lucide="x" class="w-4 h-4 text-stone-400"></i>
+                            </div>
+                            <div class="bg-[#fbf8f2] border border-[#e7dfd3] rounded-xl p-2 flex flex-col items-center justify-center min-h-[50px]">
+                                <span class="text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-1">RemNote</span>
+                                <i data-lucide="x" class="w-4 h-4 text-stone-400"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 5 -->
+                    <div class="bg-white border border-[#e7dfd3] rounded-2xl p-4 shadow-xs space-y-3">
+                        <div>
+                            <h3 class="text-sm font-bold text-stone-900">Study Due Alerts (Telegram, Push, Email)</h3>
+                            <p class="text-[11px] text-stone-500 mt-0.5 leading-relaxed">Timely reminders when spaced repetition cards are due</p>
+                        </div>
+                        <div class="bg-amber-50 border border-amber-200/80 rounded-xl p-3 flex items-center justify-between">
+                            <div class="flex items-center space-x-1.5">
+                                <i data-lucide="sparkles" class="w-4 h-4 text-[#78350f]"></i>
+                                <span class="font-extrabold text-xs text-[#78350f]">Studiamo</span>
+                            </div>
+                            <span class="inline-flex items-center space-x-1 text-xs font-bold text-emerald-800 bg-emerald-100/90 border border-emerald-300 px-2.5 py-0.5 rounded-full">
+                                <i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-emerald-600"></i>
+                                <span>Multi-Channel</span>
+                            </span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2 text-center pt-0.5">
+                            <div class="bg-[#fbf8f2] border border-[#e7dfd3] rounded-xl p-2 flex flex-col justify-between">
+                                <span class="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Anki</span>
+                                <span class="text-[11px] font-medium text-stone-600 mt-1">Desktop alerts</span>
+                            </div>
+                            <div class="bg-[#fbf8f2] border border-[#e7dfd3] rounded-xl p-2 flex flex-col justify-between">
+                                <span class="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Quizlet</span>
+                                <span class="text-[11px] font-medium text-stone-600 mt-1">App notifs</span>
+                            </div>
+                            <div class="bg-[#fbf8f2] border border-[#e7dfd3] rounded-xl p-2 flex flex-col justify-between">
+                                <span class="text-[10px] font-bold text-stone-400 uppercase tracking-wider">RemNote</span>
+                                <span class="text-[11px] font-medium text-stone-600 mt-1">App notifs</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 6 -->
+                    <div class="bg-white border border-[#e7dfd3] rounded-2xl p-4 shadow-xs space-y-3">
+                        <div>
+                            <h3 class="text-sm font-bold text-stone-900">Card Creation Friction</h3>
+                            <p class="text-[11px] text-stone-500 mt-0.5 leading-relaxed">Time required to turn a 45-minute lecture into flashcards</p>
+                        </div>
+                        <div class="bg-amber-50 border border-amber-200/80 rounded-xl p-3 flex items-center justify-between">
+                            <div class="flex items-center space-x-1.5">
+                                <i data-lucide="sparkles" class="w-4 h-4 text-[#78350f]"></i>
+                                <span class="font-extrabold text-xs text-[#78350f]">Studiamo</span>
+                            </div>
+                            <span class="inline-flex items-center space-x-1 text-xs font-bold text-emerald-800 bg-emerald-100/90 border border-emerald-300 px-2.5 py-0.5 rounded-full">
+                                <i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-emerald-600"></i>
+                                <span>~30 seconds</span>
+                            </span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2 text-center pt-0.5">
+                            <div class="bg-[#fbf8f2] border border-[#e7dfd3] rounded-xl p-2 flex flex-col justify-between">
+                                <span class="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Anki</span>
+                                <span class="text-[11px] font-medium text-stone-600 mt-1">30-60 min</span>
+                            </div>
+                            <div class="bg-[#fbf8f2] border border-[#e7dfd3] rounded-xl p-2 flex flex-col justify-between">
+                                <span class="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Quizlet</span>
+                                <span class="text-[11px] font-medium text-stone-600 mt-1">20-40 min</span>
+                            </div>
+                            <div class="bg-[#fbf8f2] border border-[#e7dfd3] rounded-xl p-2 flex flex-col justify-between">
+                                <span class="text-[10px] font-bold text-stone-400 uppercase tracking-wider">RemNote</span>
+                                <span class="text-[11px] font-medium text-stone-600 mt-1">20-30 min</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Desktop / Tablet Matrix Table (visible on >= md screens) -->
+                <div class="hidden md:block overflow-x-auto rounded-3xl border border-[#e7dfd3] bg-white shadow-xs max-w-5xl mx-auto">
+                    <table class="w-full min-w-[700px] text-left border-collapse text-xs sm:text-sm">
+                        <thead>
+                            <tr class="border-b border-[#e7dfd3] bg-[#fbf8f2]">
+                                <th class="py-5 px-4 sm:px-6 font-bold text-stone-700 w-1/3">Capability</th>
+                                <th class="py-5 px-4 sm:px-6 font-extrabold text-[#78350f] bg-amber-50/80 border-x border-amber-200/60 w-1/4">
+                                    <div class="flex items-center space-x-1.5">
+                                        <i data-lucide="sparkles" class="w-4 h-4 text-[#78350f]"></i>
+                                        <span>Studiamo</span>
+                                    </div>
+                                </th>
+                                <th class="py-5 px-4 sm:px-6 font-semibold text-stone-600">Anki</th>
+                                <th class="py-5 px-4 sm:px-6 font-semibold text-stone-600">Quizlet</th>
+                                <th class="py-5 px-4 sm:px-6 font-semibold text-stone-600">RemNote</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-[#e7dfd3] text-stone-700">
+                            <tr>
+                                <td class="py-4 px-4 sm:px-6 font-semibold text-stone-900">
+                                    1-Click YouTube to Quiz
+                                    <div class="text-[11px] font-normal text-stone-500">Automated transcript extraction, summaries, and active recall tests</div>
+                                </td>
+                                <td class="py-4 px-4 sm:px-6 bg-amber-50/50 border-x border-amber-200/60 font-bold text-[#78350f]">
+                                    <span class="inline-flex items-center space-x-1 text-emerald-700">
+                                        <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600"></i>
+                                        <span>Native & Instant</span>
+                                    </span>
+                                </td>
+                                <td class="py-4 px-4 sm:px-6 text-stone-500">Manual plugins required</td>
+                                <td class="py-4 px-4 sm:px-6 text-stone-500">Basic / Paywalled</td>
+                                <td class="py-4 px-4 sm:px-6 text-stone-500">Manual copy-paste</td>
+                            </tr>
+                            <tr>
+                                <td class="py-4 px-4 sm:px-6 font-semibold text-stone-900">
+                                    Effortless Active Recall Quizzing
+                                    <div class="text-[11px] font-normal text-stone-500">Instant self-grading retrieval practice to retain more than passive watching</div>
+                                </td>
+                                <td class="py-4 px-4 sm:px-6 bg-amber-50/50 border-x border-amber-200/60 font-bold text-[#78350f]">
+                                    <span class="inline-flex items-center space-x-1 text-emerald-700">
+                                        <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600"></i>
+                                        <span>Automated & Instant</span>
+                                    </span>
+                                </td>
+                                <td class="py-4 px-4 sm:px-6 text-stone-600">Manual card creation</td>
+                                <td class="py-4 px-4 sm:px-6 text-stone-500">Flashcard lists</td>
+                                <td class="py-4 px-4 sm:px-6 text-stone-600">Note-linked cards</td>
+                            </tr>
+                            <tr>
+                                <td class="py-4 px-4 sm:px-6 font-semibold text-stone-900">
+                                    Automated Fact-Checking
+                                    <div class="text-[11px] font-normal text-stone-500">Cross-checks questions against verbatim transcript to prevent hallucinations</div>
+                                </td>
+                                <td class="py-4 px-4 sm:px-6 bg-amber-50/50 border-x border-amber-200/60 font-bold text-[#78350f]">
+                                    <span class="inline-flex items-center space-x-1 text-emerald-700">
+                                        <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600"></i>
+                                        <span>Transcript-Grounded</span>
+                                    </span>
+                                </td>
+                                <td class="py-4 px-4 sm:px-6 text-stone-400">
+                                    <i data-lucide="x" class="w-4 h-4 text-stone-400"></i>
+                                </td>
+                                <td class="py-4 px-4 sm:px-6 text-stone-400">
+                                    <i data-lucide="x" class="w-4 h-4 text-stone-400"></i>
+                                </td>
+                                <td class="py-4 px-4 sm:px-6 text-stone-400">
+                                    <i data-lucide="x" class="w-4 h-4 text-stone-400"></i>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="py-4 px-4 sm:px-6 font-semibold text-stone-900">
+                                    Self-Hosting & Open Source
+                                    <div class="text-[11px] font-normal text-stone-500">Full data privacy and local database ownership</div>
+                                </td>
+                                <td class="py-4 px-4 sm:px-6 bg-amber-50/50 border-x border-amber-200/60 font-bold text-[#78350f]">
+                                    <span class="inline-flex items-center space-x-1 text-emerald-700">
+                                        <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600"></i>
+                                        <span>AGPL-3.0 Docker</span>
+                                    </span>
+                                </td>
+                                <td class="py-4 px-4 sm:px-6 text-stone-600">Open-source desktop</td>
+                                <td class="py-4 px-4 sm:px-6 text-stone-400">
+                                    <i data-lucide="x" class="w-4 h-4 text-stone-400"></i>
+                                </td>
+                                <td class="py-4 px-4 sm:px-6 text-stone-400">
+                                    <i data-lucide="x" class="w-4 h-4 text-stone-400"></i>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="py-4 px-4 sm:px-6 font-semibold text-stone-900">
+                                    Study Due Alerts (Telegram, Push, Email)
+                                    <div class="text-[11px] font-normal text-stone-500">Timely reminders when spaced repetition cards are due</div>
+                                </td>
+                                <td class="py-4 px-4 sm:px-6 bg-amber-50/50 border-x border-amber-200/60 font-bold text-[#78350f]">
+                                    <span class="inline-flex items-center space-x-1 text-emerald-700">
+                                        <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600"></i>
+                                        <span>Multi-Channel</span>
+                                    </span>
+                                </td>
+                                <td class="py-4 px-4 sm:px-6 text-stone-500">Desktop / App alerts</td>
+                                <td class="py-4 px-4 sm:px-6 text-stone-500">App notifications</td>
+                                <td class="py-4 px-4 sm:px-6 text-stone-500">App notifications</td>
+                            </tr>
+                            <tr>
+                                <td class="py-4 px-4 sm:px-6 font-semibold text-stone-900">
+                                    Card Creation Friction
+                                    <div class="text-[11px] font-normal text-stone-500">Time required to turn a 45-minute lecture into flashcards</div>
+                                </td>
+                                <td class="py-4 px-4 sm:px-6 bg-amber-50/50 border-x border-amber-200/60 font-bold text-[#78350f]">
+                                    <span class="inline-flex items-center space-x-1 text-emerald-700">
+                                        <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600"></i>
+                                        <span>~30 seconds</span>
+                                    </span>
+                                </td>
+                                <td class="py-4 px-4 sm:px-6 text-stone-600">30 to 60 minutes</td>
+                                <td class="py-4 px-4 sm:px-6 text-stone-600">20 to 40 minutes</td>
+                                <td class="py-4 px-4 sm:px-6 text-stone-600">20 to 30 minutes</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA Bottom Banner -->
+        <section
+            class="py-12 sm:py-16 md:py-24 bg-gradient-to-r from-[#fde68a]/30 via-[#fbf8f2] to-[#fde68a]/30 text-stone-900 relative overflow-hidden border-t border-[#e7dfd3]">
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6 relative z-10">
+                <h2 class="text-4xl sm:text-6xl font-black tracking-tight text-stone-900">Start Retaining What You Learn
+                </h2>
+                <p class="text-stone-700 text-base sm:text-lg max-w-xl mx-auto">
+                    Join our early access list to get notified the moment Managed Cloud & Open Source versions launch.
+                </p>
+                <div class="pt-4 max-w-md mx-auto">
+                    <button onclick="openWaitlistModal()"
+                        class="btn-primary w-full sm:w-auto inline-flex items-center justify-center space-x-3 font-extrabold text-lg px-9 py-4 rounded-2xl transition transform hover:-translate-y-0.5 cursor-pointer">
+                        <i data-lucide="bell" class="w-5 h-5"></i>
+                        <span>Sign Up for Waitlist</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-[#1c1917] border-t border-stone-800 py-10 sm:py-12 text-stone-400 text-xs">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div class="flex items-center space-x-3 text-left">
+                <img src="/static/images/logo-icon.png" class="w-8 h-8 rounded-xl shadow-md shadow-amber-500/20" alt="Studiamo Logo" />
+                <div class="flex flex-col text-left">
+                    <span class="font-bold text-white text-sm leading-tight">Studiamo</span>
+                    <span class="text-stone-400 text-xs mt-0.5">© 2026 Studiamo Learning System</span>
+                    <span class="text-[11px] text-stone-500 font-medium mt-0.5">Made in Basel 🇨🇭</span>
+                </div>
+            </div>
+            <div class="flex flex-wrap items-center justify-center md:justify-end gap-x-6 gap-y-3 w-full md:w-auto">
+                <a href="#story" class="hover:text-amber-400 transition whitespace-nowrap">Our Story</a>
+                <a href="#how-it-works" class="hover:text-amber-400 transition whitespace-nowrap">How It Works</a>
+                <a href="#features" class="hover:text-amber-400 transition whitespace-nowrap">Features</a>
+                <a href="#faq" class="hover:text-amber-400 transition whitespace-nowrap">FAQ</a>
+                <a href="#open-source" class="hover:text-amber-400 transition whitespace-nowrap">Self-Host vs Cloud</a>
+                <a href="#compare" class="hover:text-amber-400 transition whitespace-nowrap">Compare</a>
+                <a href="/app" class="font-semibold text-amber-400 hover:text-amber-300 transition whitespace-nowrap">Sign In</a>
+                <a href="/impressum" class="hover:text-amber-400 transition whitespace-nowrap text-stone-400 font-medium">Legal Notice / Impressum</a>
+                <a href="/privacy" class="hover:text-amber-400 transition whitespace-nowrap text-stone-400 font-medium">Privacy Policy</a>
+                <a href="/terms" class="hover:text-amber-400 transition whitespace-nowrap text-stone-400 font-medium">Terms of Service</a>
+            </div>
+        </div>
+    </footer>
+
+
+    <!-- Interactive Waitlist Modal -->
+    <div id="waitlistModal"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-md hidden transition-opacity duration-200">
+        <!-- Backdrop Click Area -->
+        <div class="absolute inset-0" onclick="closeWaitlistModal()"></div>
+
+        <!-- Modal Content Box -->
+        <div
+            class="relative w-full max-w-lg bg-white border border-[#e7dfd3] rounded-3xl p-6 sm:p-8 shadow-2xl z-10 animate-modal">
+
+            <!-- Close Button (X) -->
+            <button onclick="closeWaitlistModal()"
+                class="absolute top-5 right-5 text-stone-500 hover:text-stone-900 bg-[#fbf8f2] border border-[#e7dfd3] p-2 rounded-xl transition cursor-pointer">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+
+            <!-- Form State (Visible by default) -->
+            <div id="modalFormContent">
+                <div class="space-y-3 mb-6 pr-10 sm:pr-12">
+                    <h3 class="text-xl sm:text-3xl font-extrabold text-stone-900 tracking-tight leading-tight">
+                        Be the first to get notified
+                    </h3>
+                    <p class="text-sm text-stone-600 leading-relaxed">
+                        Studiamo is preparing for launch! Join the waitlist to receive instant updates when our Managed
+                        Cloud & Open Source releases go live.
+                    </p>
+                </div>
+
+                <!-- Form -->
+                <form onsubmit="handleModalWaitlistSubmit(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-2">
+                            Your Email Address <span class="text-[#78350f]">*</span>
+                        </label>
+                        <div class="relative">
+                            <i data-lucide="mail"
+                                class="w-5 h-5 text-stone-400 absolute left-4 top-1/2 -translate-y-1/2"></i>
+                            <input type="email" id="modalEmailInput" required placeholder="you@example.com"
+                                class="w-full bg-[#fcfaf6] border border-[#e7dfd3] focus:border-[#fbbf24] text-stone-900 placeholder-stone-400 text-sm rounded-xl pl-11 pr-4 py-3.5 outline-none transition">
+                        </div>
+                    </div>
+
+                    <div style="position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden;" aria-hidden="true">
+                        <input type="text" id="modalWebsiteInput" name="website" tabindex="-1" autocomplete="off">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-2">
+                            Preferred Option
+                        </label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <label
+                                class="flex items-center space-x-2 p-3 bg-[#fcfaf6] border border-[#e7dfd3] hover:border-[#fbbf24]/60 rounded-xl cursor-pointer text-xs text-stone-800">
+                                <input type="radio" name="modalHostingPref" value="cloud"
+                                    class="accent-[#fbbf24]">
+                                <span class="font-semibold">Managed Cloud</span>
+                            </label>
+                            <label
+                                class="flex items-center space-x-2 p-3 bg-[#fcfaf6] border border-[#e7dfd3] hover:border-[#fbbf24]/60 rounded-xl cursor-pointer text-xs text-stone-800">
+                                <input type="radio" name="modalHostingPref" value="selfhosted" class="accent-[#fbbf24]">
+                                <span class="font-semibold">Self-Hosted (OS)</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <button type="submit"
+                        class="btn-primary w-full py-4 px-6 font-bold text-base rounded-xl transition transform hover:-translate-y-0.5 flex items-center justify-center space-x-2 cursor-pointer">
+                        <span>Join Waitlist</span>
+                        <i data-lucide="send" class="w-4 h-4"></i>
+                    </button>
+                </form>
+
+                <p class="mt-4 text-center text-[11px] text-stone-500">
+                    We respect your privacy. No spam, ever. Unsubscribe at any time.
+                </p>
+            </div>
+
+            <!-- Success State -->
+            <div id="modalSuccessContent" class="hidden text-center py-6 space-y-4">
+                <div
+                    class="w-16 h-16 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-3xl flex items-center justify-center mx-auto shadow-sm">
+                    <i data-lucide="check-circle" class="w-8 h-8"></i>
+                </div>
+                <div class="space-y-2">
+                    <span
+                        class="px-3 py-1 bg-amber-100 text-amber-900 border border-amber-200 text-xs font-extrabold rounded-full">
+                        Position #<span id="waitlistPos">1</span> on the waitlist
+                    </span>
+                    <h4 class="text-2xl font-extrabold text-stone-900" id="modalSuccessTitle">You're on the list!
+                    </h4>
+                    <p class="text-sm text-stone-600 leading-relaxed max-w-sm mx-auto" id="modalSuccessMessage">
+                        Thank you for your interest in Studiamo. We have reserved your spot on the waitlist.
+                    </p>
+                </div>
+                <div class="pt-4">
+                    <button onclick="closeWaitlistModal()"
+                        class="py-3 px-8 bg-[#fbf8f2] border border-[#e7dfd3] hover:border-stone-400 text-stone-800 font-bold text-sm rounded-xl transition cursor-pointer">
+                        Close
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Waitlist & Interactive Frontend Logic -->
+    <script>
+        // Automatic Browser / Device Language Detection
+        const userBrowserLang = (navigator.language || navigator.userLanguage || '').toLowerCase();
+        const initialStoryLang = userBrowserLang.startsWith('de') ? 'de' : 'en';
+        let currentStoryLang = initialStoryLang;
+
+        document.addEventListener('DOMContentLoaded', function () {
+            if (window.lucide) lucide.createIcons();
+            setStoryLang(initialStoryLang);
+        });
+        if (window.lucide) lucide.createIcons();
+
+        function setStoryLang(lang) {
+            currentStoryLang = lang;
+            const blockEN = document.getElementById('storyLangEN');
+            const blockDE = document.getElementById('storyLangDE');
+            const btnEN = document.getElementById('storyLangBtnEN');
+            const btnDE = document.getElementById('storyLangBtnDE');
+            const readTime = document.getElementById('readTimeText');
+            const btnText = document.getElementById('storyBtnText');
+
+            const expandedEN = document.getElementById('storyExpandedContentEN');
+            const expandedDE = document.getElementById('storyExpandedContentDE');
+
+            const isExpanded = (expandedEN && !expandedEN.classList.contains('hidden')) ||
+                (expandedDE && !expandedDE.classList.contains('hidden'));
+
+            if (lang === 'de') {
+                if (blockEN) blockEN.classList.add('hidden');
+                if (blockDE) blockDE.classList.remove('hidden');
+
+                if (isExpanded) {
+                    if (expandedEN) expandedEN.classList.add('hidden');
+                    if (expandedDE) expandedDE.classList.remove('hidden');
+                }
+
+                btnEN.className = "px-2.5 py-1 rounded-lg transition-all duration-200 text-stone-600 hover:text-stone-900 hover:bg-stone-200/50 cursor-pointer";
+                btnDE.className = "px-2.5 py-1 rounded-lg transition-all duration-200 bg-[#fbbf24] text-[#78350f] font-extrabold shadow-xs cursor-pointer";
+
+                if (readTime) readTime.innerText = '2 Min. Lesezeit';
+                if (btnText) btnText.innerText = isExpanded ? 'Weniger anzeigen' : 'Ganze Story lesen';
+            } else {
+                if (blockDE) blockDE.classList.add('hidden');
+                if (blockEN) blockEN.classList.remove('hidden');
+
+                if (isExpanded) {
+                    if (expandedDE) expandedDE.classList.add('hidden');
+                    if (expandedEN) expandedEN.classList.remove('hidden');
+                }
+
+                btnDE.className = "px-2.5 py-1 rounded-lg transition-all duration-200 text-stone-600 hover:text-stone-900 hover:bg-stone-200/50 cursor-pointer";
+                btnEN.className = "px-2.5 py-1 rounded-lg transition-all duration-200 bg-[#fbbf24] text-[#78350f] font-extrabold shadow-xs cursor-pointer";
+
+                if (readTime) readTime.innerText = '2 min read';
+                if (btnText) btnText.innerText = isExpanded ? 'Show Less' : 'Read Full Story';
+            }
+
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function toggleStory() {
+            const expandedEN = document.getElementById('storyExpandedContentEN');
+            const expandedDE = document.getElementById('storyExpandedContentDE');
+            const gradient = document.getElementById('storyGradientOverlay');
+            const btnText = document.getElementById('storyBtnText');
+            const chevron = document.getElementById('storyChevron');
+
+            if (!gradient || !btnText || !chevron) return;
+
+            const targetExpanded = (currentStoryLang === 'de') ? expandedDE : expandedEN;
+            if (!targetExpanded) return;
+
+            const isExpanded = !targetExpanded.classList.contains('hidden');
+
+            if (isExpanded) {
+                expandedEN.classList.add('hidden');
+                expandedDE.classList.add('hidden');
+                gradient.classList.remove('hidden');
+                btnText.innerText = (currentStoryLang === 'de') ? 'Ganze Story lesen' : 'Read Full Story';
+                chevron.classList.remove('rotate-180');
+                const storySec = document.getElementById('story');
+                if (storySec) storySec.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            } else {
+                if (currentStoryLang === 'de') {
+                    expandedDE.classList.remove('hidden');
+                    expandedEN.classList.add('hidden');
+                } else {
+                    expandedEN.classList.remove('hidden');
+                    expandedDE.classList.add('hidden');
+                }
+                gradient.classList.add('hidden');
+                btnText.innerText = (currentStoryLang === 'de') ? 'Weniger anzeigen' : 'Show Less';
+                chevron.classList.add('rotate-180');
+                if (window.lucide) lucide.createIcons();
+            }
+        }
+
+        function toggleHeroCard() {
+            const card = document.getElementById('heroCardInner');
+            if (card) card.classList.toggle('flipped');
+        }
+
+        function openWaitlistModal(preferredMode) {
+            const modal = document.getElementById('waitlistModal');
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+
+            const radios = document.getElementsByName('modalHostingPref');
+            radios.forEach(r => {
+                if (preferredMode && r.value === preferredMode) {
+                    r.checked = true;
+                } else {
+                    r.checked = false;
+                }
+            });
+
+            const savedEmail = localStorage.getItem('Studiamo_waitlist_email');
+            const savedPos = localStorage.getItem('Studiamo_waitlist_pos');
+            if (savedEmail && !preferredMode) {
+                showSuccessState(savedEmail, savedPos || 1, true, "Your email address is already registered on the waitlist!");
+            } else {
+                document.getElementById('modalFormContent').classList.remove('hidden');
+                document.getElementById('modalSuccessContent').classList.add('hidden');
+            }
+        }
+
+        function closeWaitlistModal() {
+            const modal = document.getElementById('waitlistModal');
+            modal.classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') closeWaitlistModal();
+        });
+
+        function showSuccessState(email, pos, alreadyRegistered = false, customMessage = '') {
+            document.getElementById('modalFormContent').classList.add('hidden');
+            document.getElementById('modalSuccessContent').classList.remove('hidden');
+
+            if (pos) {
+                document.getElementById('waitlistPos').innerText = pos;
+            }
+            if (alreadyRegistered) {
+                document.getElementById('modalSuccessTitle').innerText = "Already on the list!";
+                document.getElementById('modalSuccessMessage').innerText = customMessage || "Your email address is already registered on the waitlist. We will get back to you soon!";
+            } else {
+                document.getElementById('modalSuccessTitle').innerText = "You're on the list!";
+                document.getElementById('modalSuccessMessage').innerText = customMessage || "Thank you! Your email address has been saved and confirmation has been queued.";
+            }
+        }
+
+        async function submitWaitlistAPI(email, pref, isHeroSubmit = false, website = '') {
+            const modal = document.getElementById('waitlistModal');
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+
+            if (isHeroSubmit) {
+                document.getElementById('modalFormContent').classList.add('hidden');
+                document.getElementById('modalSuccessContent').classList.remove('hidden');
+                document.getElementById('waitlistPos').innerText = '...';
+            }
+
+            try {
+                const res = await fetch('/api/waitlist', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email, preference: pref || 'not_specified', website: website, referrer: document.referrer || '' })
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    localStorage.setItem('Studiamo_waitlist_email', email);
+                    localStorage.setItem('Studiamo_waitlist_pos', data.position);
+                    showSuccessState(email, data.position, data.already_registered, data.message);
+                    if (window.umami) {
+                        window.umami.track('waitlist-signup', { preference: pref || 'not_specified' });
+                    }
+                } else {
+                    alert(data.detail || 'Error submitting to waitlist. Please try again.');
+                }
+            } catch (err) {
+                console.error('Waitlist submission error:', err);
+                localStorage.setItem('Studiamo_waitlist_email', email);
+                showSuccessState(email, 1, false, "Your email address has been recorded.");
+            }
+        }
+
+        function handleModalWaitlistSubmit(event) {
+            event.preventDefault();
+            const email = document.getElementById('modalEmailInput').value;
+            const website = document.getElementById('modalWebsiteInput').value;
+            const radios = document.getElementsByName('modalHostingPref');
+            let pref = 'not_specified';
+            radios.forEach(r => { if (r.checked) pref = r.value; });
+
+            if (email) {
+                submitWaitlistAPI(email, pref, false, website);
+            }
+        }
+
+        function handleHeroWaitlistSubmit(event) {
+            event.preventDefault();
+            const email = document.getElementById('heroEmailInput').value;
+            const website = document.getElementById('heroWebsiteInput').value;
+            if (email) {
+                submitWaitlistAPI(email, 'not_specified', true, website);
+            }
+        }
+
+        // Mobile Navigation Menu Toggle
+        (function() {
+            const toggleBtn = document.getElementById('mobileMenuToggle');
+            const menu = document.getElementById('mobileNavMenu');
+            const openIcon = document.getElementById('mobileMenuOpenIcon');
+            const closeIcon = document.getElementById('mobileMenuCloseIcon');
+
+            if (!toggleBtn || !menu) return;
+
+            toggleBtn.addEventListener('click', function() {
+                const isClosed = menu.classList.contains('hidden');
+                if (isClosed) {
+                    menu.classList.remove('hidden');
+                    if (openIcon) openIcon.classList.add('hidden');
+                    if (closeIcon) closeIcon.classList.remove('hidden');
+                } else {
+                    menu.classList.add('hidden');
+                    if (openIcon) openIcon.classList.remove('hidden');
+                    if (closeIcon) closeIcon.classList.add('hidden');
+                }
+            });
+
+            // Close mobile menu when a nav link is clicked
+            menu.querySelectorAll('.mobile-nav-item').forEach(function(link) {
+                link.addEventListener('click', function() {
+                    menu.classList.add('hidden');
+                    if (openIcon) openIcon.classList.remove('hidden');
+                    if (closeIcon) closeIcon.classList.add('hidden');
+                });
+            });
+        })();
+    </script>
+</body>
+
+</html>

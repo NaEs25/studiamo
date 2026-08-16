@@ -1,0 +1,53 @@
+User-agent: *
+Allow: /
+Allow: /landing
+Allow: /login
+Allow: /privacy
+Allow: /privacy-policy
+Allow: /terms
+Allow: /terms-of-service
+Allow: /tos
+Allow: /impressum
+Allow: /imprint
+Allow: /legal
+Allow: /science
+Allow: /research
+Allow: /llms.txt
+Allow: /llms-full.txt
+Disallow: /api/
+Disallow: /app
+Disallow: /waitlist-confirmation
+
+# AI & LLM Search Agents
+User-agent: GPTBot
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
+Disallow: /api/
+Disallow: /app
+
+User-agent: PerplexityBot
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
+Disallow: /api/
+Disallow: /app
+
+User-agent: ClaudeBot
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
+Disallow: /api/
+Disallow: /app
+
+User-agent: Google-Extended
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
+Disallow: /api/
+Disallow: /app
+
+Sitemap: https://studiamo.cloud/sitemap.xml
+# LLMs: https://studiamo.cloud/llms.txt
+# LLMs Full: https://studiamo.cloud/llms-full.txt
+

@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Studiamo | Bug Tracker</title>
+    <!-- Tailwind CSS (compiled) -->
+    <link rel="stylesheet" href="/static/css/tailwind-built.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Touch feedback & smooth scrolling */
+        html { scroll-behavior: smooth; }
+        input, select, textarea, button { font-size: 16px !important; } /* Prevents iOS auto-zoom */
+        @media (min-width: 640px) {
+            input, select, textarea, button { font-size: 0.875rem !important; }
+        }
+    </style>
+</head>
+<body class="bg-[#090b10] text-amber-50/90 font-sans min-h-dvh flex flex-col selection:bg-amber-500/30 selection:text-amber-200" data-entry-referer="{{ entry_referer }}">
+
+    <!-- Header -->
+    <header class="border-b border-[#202636] bg-[#0d101a]/95 backdrop-blur-md sticky top-0 z-40 px-3.5 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between shadow-md">
+        <div class="flex items-center space-x-2.5 sm:space-x-3">
+            <div class="p-2 bg-gradient-to-tr from-amber-500 to-yellow-400 rounded-xl shadow-lg shadow-amber-500/25 shrink-0">
+                <i data-lucide="bug" class="w-5 h-5 sm:w-6 sm:h-6 text-slate-950"></i>
+            </div>
+            <div>
+                <div class="flex items-center space-x-1.5 sm:space-x-2">
+                    <h1 class="text-base sm:text-lg font-extrabold tracking-tight bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-200 bg-clip-text text-transparent">
+                        Bug Tracker
+                    </h1>
+                </div>
+                <p class="text-[11px] sm:text-xs text-slate-400 font-medium">Report issues &amp; request features</p>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-2 shrink-0">
+            <button id="btn-admin-toggle" onclick="toggleAdminBar()"
+                class="min-h-[40px] px-3 py-2 bg-slate-900 hover:bg-slate-800 active:scale-95 border border-slate-700/60 rounded-xl text-xs font-semibold text-slate-300 hover:text-white transition flex items-center space-x-1.5">
+                <i data-lucide="lock" class="w-4 h-4"></i>
+                <span class="hidden sm:inline">Admin</span>
+            </button>
+            <a href="/" class="min-h-[40px] px-3 py-2 bg-slate-900 hover:bg-slate-800 active:scale-95 border border-slate-700/60 rounded-xl text-xs font-semibold text-slate-300 hover:text-white transition flex items-center space-x-1.5">
+                <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                <span class="hidden sm:inline">Back to App</span>
+                <span class="sm:hidden">App</span>
+            </a>
+        </div>
+    </header>
+
+    <!-- Admin Bar (hidden until the lock icon is clicked) -->
+    <div id="admin-bar" class="hidden border-b border-[#202636] bg-[#0d101a] px-3.5 sm:px-6 py-3">
+        <div class="max-w-4xl mx-auto">
+            <div id="admin-login-form" class="flex flex-wrap items-center gap-2">
+                <input type="password" id="admin-password-input" placeholder="Admin password..."
+                    onkeydown="if(event.key==='Enter') adminLogin();"
+                    class="min-h-[40px] flex-1 min-w-[180px] bg-slate-950 border border-[#202636] focus:border-amber-500 focus:ring-1 focus:ring-amber-500/40 rounded-xl px-3.5 py-2 text-xs text-slate-200 focus:outline-none transition">
+                <button onclick="adminLogin()" class="min-h-[40px] px-4 py-2 bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-bold rounded-xl text-xs transition">
+                    Log In
+                </button>
+                <span id="admin-login-error" class="hidden text-xs text-red-400"></span>
+            </div>
+            <div id="admin-active-badge" class="hidden flex items-center justify-between">
+                <span class="text-xs font-semibold text-emerald-400 flex items-center space-x-1.5">
+                    <i data-lucide="shield-check" class="w-4 h-4"></i>
+                    <span>Admin mode active &mdash; usernames, context, and edit controls are visible.</span>
+                </span>
+                <button onclick="adminLogout()" class="min-h-[36px] px-3 py-1.5 text-xs font-semibold text-slate-400 hover:text-red-400 transition">
+                    Log Out
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Container -->
+    <main class="flex-grow max-w-4xl w-full mx-auto p-3.5 sm:p-6 space-y-4 sm:space-y-6">
+
+        <!-- Top Switcher (Toggle between Report Bug & Current Bugs) -->
+        <div class="bg-[#11141f] border border-[#202636] p-1.5 rounded-2xl flex items-center shadow-lg">
+            <button id="btn-mode-report" onclick="switchMode('report')"
+                class="min-h-[44px] flex-1 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center space-x-2 transition-all duration-200 bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 shadow-md active:scale-[0.99]">
+                <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                <span>Report Bug</span>
+            </button>
+            <button id="btn-mode-list" onclick="switchMode('list')"
+                class="min-h-[44px] flex-1 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center space-x-2 transition-all duration-200 text-slate-400 hover:text-slate-200 active:scale-[0.99]">
+                <i data-lucide="list-checks" class="w-4 h-4"></i>
+                <span>Current Bugs</span>
+                <span id="badge-total-count" class="ml-1.5 px-2 py-0.5 text-[11px] bg-slate-800 text-amber-400 rounded-full font-mono">0</span>
+            </button>
+        </div>
+
+        <!-- Section 1: Bug Report Form -->
+        <section id="section-report" class="bg-[#11141f] border border-[#202636] rounded-2xl p-4 sm:p-6 shadow-xl space-y-4 sm:space-y-5">
+            <div>
+                <h2 class="text-base font-bold text-amber-200 flex items-center space-x-2">
+                    <i data-lucide="edit-3" class="w-4 h-4 sm:w-5 sm:h-5 text-amber-400 shrink-0"></i>
+                    <span>Report a New Bug or Issue</span>
+                </h2>
+                <p class="text-xs text-slate-400 mt-1">Describe what went wrong or suggest a new feature request.</p>
+            </div>
+
+            <!-- Notification Banner -->
+            <div id="form-alert" class="hidden p-3.5 rounded-xl border text-xs font-medium flex items-center space-x-2"></div>
+
+            <form id="bug-form" onsubmit="submitBug(event)" class="space-y-4">
+
+                <!-- App Category / Area Selection -->
+                <div class="space-y-1.5">
+                    <label class="block text-xs font-semibold text-slate-300">
+                        App Area / Category <span class="text-slate-500 font-normal">(Optional)</span>
+                    </label>
+                    <select id="area-select" onchange="updateContextToggleDefault()"
+                        class="min-h-[44px] w-full bg-slate-950/80 border border-[#202636] focus:border-amber-500 focus:ring-1 focus:ring-amber-500/40 rounded-xl px-3.5 py-2.5 text-xs text-slate-200 focus:outline-none transition">
+                        <option value="General / Other">General / Other</option>
+                        <option value="Feature Request">Feature Request</option>
+                        <option value="Dashboard / Home">Dashboard / Home</option>
+                        <option value="Import">Import</option>
+                        <option value="Quizzes & Flashcards (SRS)">Quizzes &amp; Flashcards (SRS)</option>
+                        <option value="Learning Goals">Learning Goals</option>
+                        <option value="Stats & Leaderboard">Stats &amp; Leaderboard</option>
+                        <option value="Settings & Profiles">Settings &amp; Profiles</option>
+                        <option value="Layout / UI / Design">Layout / UI / Design</option>
+                    </select>
+                </div>
+
+                <!-- Description Textarea -->
+                <div class="space-y-1.5">
+                    <label class="block text-xs font-semibold text-slate-300">
+                        Bug Description / Feature Request Details <span class="text-amber-400">*</span>
+                    </label>
+                    <textarea id="description-input" rows="4" required placeholder="Describe the issue or feature request in detail..."
+                        class="w-full bg-slate-950/80 border border-[#202636] focus:border-amber-500 focus:ring-1 focus:ring-amber-500/40 rounded-xl p-3.5 text-xs text-slate-200 focus:outline-none transition placeholder:text-slate-600 resize-y min-h-[100px]"></textarea>
+                </div>
+
+                <!-- Account Status & Authentication Box -->
+                <div class="space-y-2">
+                    <!-- Case A: Active Session Detected (Logged In) -->
+                    <div id="user-loggedin-box" class="hidden p-3.5 bg-slate-950/90 border border-emerald-500/30 rounded-xl flex items-center justify-between shadow-inner">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-9 h-9 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center font-bold text-xs shrink-0">
+                                <i data-lucide="user-check" class="w-4 h-4"></i>
+                            </div>
+                            <div>
+                                <div class="text-[11px] text-slate-400 font-medium">Logged in as</div>
+                                <div id="active-username-display" class="text-xs sm:text-sm font-bold text-amber-300">...</div>
+                            </div>
+                        </div>
+                        <span class="px-2.5 py-1 text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 rounded-full flex items-center space-x-1 shrink-0">
+                            <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+                            <span>Session Active</span>
+                        </span>
+                    </div>
+
+                    <!-- Case B: Unauthenticated User (Logged Out) -->
+                    <div id="user-login-box" class="space-y-3 p-3.5 sm:p-4 bg-slate-950/80 border border-[#202636] rounded-xl">
+                        <div class="flex items-center justify-between">
+                            <label class="block text-xs font-semibold text-amber-400 flex items-center space-x-1">
+                                <i data-lucide="user" class="w-3.5 h-3.5"></i>
+                                <span>Sign In to Post</span>
+                            </label>
+                            <span class="text-[10px] sm:text-[11px] text-slate-400">Required to post report</span>
+                        </div>
+
+                        <div id="google-error-banner" class="hidden p-2.5 rounded-lg bg-red-500/10 border border-red-500/30 text-[11px] text-red-300">
+                            That Google account doesn't have a Studiamo account yet. Pick a different one, or
+                            <a href="/login" class="underline hover:text-red-200">go to /login to create one</a>.
+                        </div>
+
+                        <!-- Google SSO Option -->
+                        <div id="google-sso-container">
+                            <a href="/api/auth/google?redirect=/dev/bugs&require_existing=true"
+                                class="min-h-[44px] w-full py-2.5 px-4 bg-slate-900 hover:bg-slate-800 active:scale-[0.98] border border-slate-700/80 rounded-xl text-xs font-semibold text-slate-200 hover:text-white transition flex items-center justify-center space-x-2.5 shadow-sm">
+                                <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                                </svg>
+                                <span>Sign in with Google</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Anonymous Submit Toggle -->
+                <div class="min-h-[48px] flex items-center justify-between p-3.5 bg-slate-950/60 border border-[#202636] rounded-xl hover:border-slate-700/80 transition">
+                    <div class="flex items-center space-x-2.5 pr-2">
+                        <div class="p-1.5 bg-amber-500/10 rounded-lg text-amber-400 shrink-0">
+                            <i data-lucide="user-x" class="w-4 h-4"></i>
+                        </div>
+                        <div>
+                            <label for="anonymous-toggle" class="text-xs font-semibold text-slate-200 cursor-pointer select-none">
+                                Submit Anonymously
+                            </label>
+                            <p class="text-[11px] text-slate-400">Display name as "Anonymous" in public list (saved securely in database)</p>
+                        </div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                        <input type="checkbox" id="anonymous-toggle" class="sr-only peer" checked>
+                        <div class="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
+                    </label>
+                </div>
+
+                <!-- Include Diagnostic Info Toggle -->
+                <div class="min-h-[48px] flex items-center justify-between p-3.5 bg-slate-950/60 border border-[#202636] rounded-xl hover:border-slate-700/80 transition">
+                    <div class="flex items-center space-x-2.5 pr-2">
+                        <div class="p-1.5 bg-amber-500/10 rounded-lg text-amber-400 shrink-0">
+                            <i data-lucide="monitor-smartphone" class="w-4 h-4"></i>
+                        </div>
+                        <div>
+                            <label for="include-context-toggle" class="text-xs font-semibold text-slate-200 cursor-pointer select-none">
+                                Include Diagnostic Info
+                            </label>
+                            <p class="text-[11px] text-slate-400">Browser/device, screen size, connection status, and the page you came from &mdash; helps us fix it faster. No location data.</p>
+                        </div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                        <input type="checkbox" id="include-context-toggle" class="sr-only peer" checked>
+                        <div class="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
+                    </label>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" id="btn-submit"
+                    class="min-h-[48px] w-full py-3.5 px-4 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 active:scale-[0.98] text-slate-950 font-bold rounded-xl text-xs sm:text-sm shadow-lg shadow-amber-500/20 transition flex items-center justify-center space-x-2">
+                    <i data-lucide="send" class="w-4 h-4"></i>
+                    <span>Submit Bug Report</span>
+                </button>
+            </form>
+        </section>
+
+        <!-- Section 2: Current Bugs (List) -->
+        <section id="section-list" class="hidden space-y-4">
+            <!-- Filter & Status Bar -->
+            <div class="bg-[#11141f] border border-[#202636] rounded-2xl p-3.5 sm:p-4 flex flex-wrap items-center justify-between gap-2.5 shadow-md">
+                <div class="flex items-center space-x-1.5 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+                    <button onclick="setFilter('all')" id="filter-all" class="min-h-[36px] px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:bg-slate-800 shrink-0">
+                        All (<span id="cnt-all">0</span>)
+                    </button>
+                    <button onclick="setFilter('open')" id="filter-open" class="min-h-[36px] px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 shrink-0">
+                        Open (<span id="cnt-open">0</span>)
+                    </button>
+                    <button onclick="setFilter('resolved')" id="filter-resolved" class="min-h-[36px] px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:bg-slate-800 shrink-0">
+                        Resolved (<span id="cnt-resolved">0</span>)
+                    </button>
+                    <button onclick="setFilter('feature')" id="filter-feature" class="min-h-[36px] px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:bg-slate-800 shrink-0">
+                        Feature Requests (<span id="cnt-feature">0</span>)
+                    </button>
+                </div>
+                
+                <button id="btn-refresh" onclick="refreshBugs()" class="min-h-[36px] text-xs text-slate-400 hover:text-amber-300 flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 disabled:opacity-60">
+                    <i id="refresh-icon" data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                    <span id="refresh-label">Refresh</span>
+                </button>
+            </div>
+
+            <!-- Bug Cards Container -->
+            <div id="bugs-container" class="space-y-3">
+                <!-- Dynamically populated -->
+            </div>
+        </section>
+    </main>
+
+    {% include "partials/_footer.html" %}
+
+    <!-- JS Code -->
+    <script>
+        let currentMode = 'report';
+        let currentFilter = 'open';
+        let allBugs = [];
+        let isAdmin = false;
+        let sessionStatus = { logged_in: false, username: null, google_enabled: true };
+
+        // Maps app.js's switchTab() tab ids to the matching Area/Category option.
+        const TAB_TO_AREA = {
+            dashboard: 'Dashboard / Home',
+            goals: 'Learning Goals',
+            import: 'Import',
+            stats: 'Stats & Leaderboard',
+            settings: 'Settings & Profiles',
+        };
+
+        function preselectAreaFromActiveTab() {
+            const tab = localStorage.getItem('active_studiamo_tab');
+            const matchedArea = TAB_TO_AREA[tab];
+            if (matchedArea) {
+                document.getElementById('area-select').value = matchedArea;
+                updateContextToggleDefault();
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            preselectAreaFromActiveTab();
+            await checkUserSession();
+            await checkAdminStatus();
+            await fetchBugs();
+            lucide.createIcons();
+        });
+
+        function toggleAdminBar() {
+            document.getElementById('admin-bar').classList.toggle('hidden');
+        }
+
+        async function checkAdminStatus() {
+            try {
+                const res = await fetch('/api/dev/bugs/admin/status');
+                const data = await res.json();
+                isAdmin = !!data.is_admin;
+            } catch (e) {
+                console.error("Failed to check admin status:", e);
+                isAdmin = false;
+            }
+            document.getElementById('admin-login-form').classList.toggle('hidden', isAdmin);
+            document.getElementById('admin-active-badge').classList.toggle('hidden', !isAdmin);
+        }
+
+        async function adminLogin() {
+            const input = document.getElementById('admin-password-input');
+            const errorEl = document.getElementById('admin-login-error');
+            errorEl.classList.add('hidden');
+
+            try {
+                const formData = new FormData();
+                formData.append('password', input.value);
+                const res = await fetch('/api/dev/bugs/admin/login', { method: 'POST', body: formData });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || 'Login failed.');
+
+                input.value = '';
+                await checkAdminStatus();
+                await fetchBugs();
+                if (currentMode === 'list') renderBugs();
+            } catch (err) {
+                errorEl.textContent = err.message;
+                errorEl.classList.remove('hidden');
+            }
+        }
+
+        async function adminLogout() {
+            await fetch('/api/dev/bugs/admin/logout', { method: 'POST' });
+            await checkAdminStatus();
+            await fetchBugs();
+            if (currentMode === 'list') renderBugs();
+        }
+
+        async function checkUserSession() {
+            // Trusts only the signed session the backend verifies (GET /api/dev/bugs/me
+            // reads the yb_session cookie) -- no client-supplied username fallback here,
+            // since that would let anyone attribute a report to any existing username.
+            try {
+                const res = await fetch('/api/dev/bugs/me');
+                if (res.ok) {
+                    sessionStatus = await res.json();
+                }
+            } catch (e) {
+                console.error("Failed to check user session:", e);
+            }
+
+            const loggedInBox = document.getElementById('user-loggedin-box');
+            const loginBox = document.getElementById('user-login-box');
+            const usernameDisplay = document.getElementById('active-username-display');
+            const googleContainer = document.getElementById('google-sso-container');
+
+            if (sessionStatus.logged_in && sessionStatus.username) {
+                usernameDisplay.textContent = sessionStatus.username;
+                loggedInBox.classList.remove('hidden');
+                loginBox.classList.add('hidden');
+            } else {
+                loggedInBox.classList.add('hidden');
+                loginBox.classList.remove('hidden');
+            }
+
+            const params = new URLSearchParams(location.search);
+            if (params.get('google_error') === 'no_account') {
+                document.getElementById('google-error-banner').classList.remove('hidden');
+            }
+
+            // Always show Google SSO container in unauthenticated view unless explicitly disabled
+            if (googleContainer) {
+                googleContainer.style.display = (sessionStatus.google_enabled !== false) ? 'block' : 'none';
+            }
+        }
+
+        function switchMode(mode) {
+            currentMode = mode;
+            const btnReport = document.getElementById('btn-mode-report');
+            const btnList = document.getElementById('btn-mode-list');
+            const secReport = document.getElementById('section-report');
+            const secList = document.getElementById('section-list');
+
+            if (mode === 'report') {
+                secReport.classList.remove('hidden');
+                secList.classList.add('hidden');
+                btnReport.className = "min-h-[44px] flex-1 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center space-x-2 transition-all duration-200 bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 shadow-md active:scale-[0.99]";
+                btnList.className = "min-h-[44px] flex-1 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center space-x-2 transition-all duration-200 text-slate-400 hover:text-slate-200 active:scale-[0.99]";
+            } else {
+                secReport.classList.add('hidden');
+                secList.classList.remove('hidden');
+                btnList.className = "min-h-[44px] flex-1 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center space-x-2 transition-all duration-200 bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 shadow-md active:scale-[0.99]";
+                btnReport.className = "min-h-[44px] flex-1 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center space-x-2 transition-all duration-200 text-slate-400 hover:text-slate-200 active:scale-[0.99]";
+                renderBugs();
+            }
+            lucide.createIcons();
+        }
+
+        async function fetchBugs() {
+            try {
+                const res = await fetch('/api/dev/bugs');
+                allBugs = await res.json();
+                
+                const isBugReport = b => b.area !== 'Feature Request';
+                document.getElementById('badge-total-count').textContent = allBugs.length;
+                document.getElementById('cnt-all').textContent = allBugs.filter(isBugReport).length;
+                document.getElementById('cnt-open').textContent = allBugs.filter(b => isBugReport(b) && b.status === 'open').length;
+                document.getElementById('cnt-resolved').textContent = allBugs.filter(b => isBugReport(b) && b.status === 'resolved').length;
+                document.getElementById('cnt-feature').textContent = allBugs.filter(b => b.area === 'Feature Request').length;
+
+                if (currentMode === 'list') renderBugs();
+            } catch (e) {
+                console.error("Error fetching bugs:", e);
+            }
+        }
+
+        async function refreshBugs() {
+            const btn = document.getElementById('btn-refresh');
+            const icon = document.getElementById('refresh-icon');
+            const label = document.getElementById('refresh-label');
+
+            btn.disabled = true;
+            icon.classList.add('animate-spin');
+            label.textContent = 'Refreshing...';
+
+            try {
+                const started = Date.now();
+                await fetchBugs();
+                // Enforce a minimum visible spin duration so the feedback registers even
+                // when the request resolves in a handful of milliseconds.
+                const elapsed = Date.now() - started;
+                if (elapsed < 400) await new Promise(r => setTimeout(r, 400 - elapsed));
+                label.textContent = 'Refreshed';
+            } finally {
+                // Guarantees the spin stops and the button re-enables even if something
+                // above throws, matches the refreshDailyRecommendations() pattern in app.js.
+                icon.classList.remove('animate-spin');
+                setTimeout(() => {
+                    label.textContent = 'Refresh';
+                    btn.disabled = false;
+                }, 900);
+            }
+        }
+
+        function setFilter(filter) {
+            currentFilter = filter;
+            ['all', 'open', 'resolved', 'feature'].forEach(f => {
+                const btn = document.getElementById(`filter-${f}`);
+                if (f === filter) {
+                    btn.className = "min-h-[36px] px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 shrink-0";
+                } else {
+                    btn.className = "min-h-[36px] px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:bg-slate-800 shrink-0";
+                }
+            });
+            renderBugs();
+        }
+
+        function renderBugs() {
+            const container = document.getElementById('bugs-container');
+            // Feature requests live only under the "Feature Requests" filter -- All/Open/
+            // Resolved are scoped to actual bug reports so the two don't mix.
+            let filtered;
+            if (currentFilter === 'feature') {
+                filtered = allBugs.filter(b => b.area === 'Feature Request');
+            } else {
+                filtered = allBugs.filter(b => b.area !== 'Feature Request');
+                if (currentFilter === 'open') filtered = filtered.filter(b => b.status === 'open');
+                if (currentFilter === 'resolved') filtered = filtered.filter(b => b.status === 'resolved');
+            }
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-[#11141f] border border-[#202636] rounded-2xl p-8 text-center space-y-2">
+                        <i data-lucide="check-circle-2" class="w-8 h-8 text-slate-600 mx-auto"></i>
+                        <p class="text-sm font-semibold text-slate-400">No bugs found in this category.</p>
+                    </div>
+                `;
+                lucide.createIcons();
+                return;
+            }
+
+            container.innerHTML = filtered.map(bug => {
+                const isResolved = bug.status === 'resolved';
+                const dateStr = new Date(bug.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+                const isAnon = !!bug.is_anonymous;
+                const displayUser = isAnon ? 'Anonymous' : bug.user;
+                const isFeatureRequest = bug.area === 'Feature Request';
+                const areaBadgeClass = isFeatureRequest
+                    ? 'bg-purple-500/10 text-purple-300 border border-purple-500/30'
+                    : 'bg-amber-500/10 text-amber-400 border border-amber-500/30';
+
+                const userBlock = isAdmin ? `
+                                <span class="text-xs ${isAnon ? 'text-slate-400 font-medium italic' : 'text-slate-400'} flex items-center space-x-1">
+                                    <i data-lucide="${isAnon ? 'user-x' : 'user'}" class="w-3 h-3"></i>
+                                    <span>${displayUser}</span>
+                                </span>` : '';
+
+                const statusBadge = isAdmin ? `
+                            <button onclick="toggleBugStatus('${bug.id}', '${isResolved ? 'open' : 'resolved'}')"
+                                class="min-h-[32px] px-2.5 py-1 text-[11px] font-bold rounded-lg transition flex items-center space-x-1 shrink-0 ${isResolved ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-yellow-500/15 text-yellow-400 border border-yellow-500/30'}">
+                                <i data-lucide="${isResolved ? 'check-circle-2' : 'clock'}" class="w-3.5 h-3.5"></i>
+                                <span>${isResolved ? 'Resolved' : 'Open'}</span>
+                            </button>` : `
+                            <span class="px-2.5 py-1 text-[11px] font-bold rounded-lg flex items-center space-x-1 shrink-0 ${isResolved ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-yellow-500/15 text-yellow-400 border border-yellow-500/30'}">
+                                <i data-lucide="${isResolved ? 'check-circle-2' : 'clock'}" class="w-3.5 h-3.5"></i>
+                                <span>${isResolved ? 'Resolved' : 'Open'}</span>
+                            </span>`;
+
+                const context = bug.context || {};
+                const contextBlock = (isAdmin && (context.user_agent || context.referer || context.viewport || context.active_tab || context.git_commit)) ? `
+                        <div class="pt-2.5 border-t border-slate-800/80 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-500">
+                            ${context.git_commit ? `<span class="flex items-center space-x-1" title="Deployed commit"><i data-lucide="git-commit-horizontal" class="w-3 h-3"></i><span>${context.git_commit}</span></span>` : ''}
+                            ${context.active_tab ? `<span class="flex items-center space-x-1"><i data-lucide="layout-grid" class="w-3 h-3"></i><span>${context.active_tab}</span></span>` : ''}
+                            ${context.viewport ? `<span class="flex items-center space-x-1"><i data-lucide="monitor" class="w-3 h-3"></i><span>${context.viewport}</span></span>` : ''}
+                            ${context.online !== null && context.online !== undefined ? `<span class="flex items-center space-x-1"><i data-lucide="${context.online ? 'wifi' : 'wifi-off'}" class="w-3 h-3"></i><span>${context.online ? 'Online' : 'Offline'}${context.connection_type ? ` (${context.connection_type})` : ''}</span></span>` : ''}
+                            ${context.referer ? `<span class="flex items-center space-x-1 truncate max-w-[240px]"><i data-lucide="link" class="w-3 h-3 shrink-0"></i><span class="truncate">${context.referer}</span></span>` : ''}
+                            ${context.user_agent ? `<span class="flex items-center space-x-1 truncate max-w-[320px]"><i data-lucide="smartphone" class="w-3 h-3 shrink-0"></i><span class="truncate">${context.user_agent}</span></span>` : ''}
+                        </div>` : '';
+
+                const editControls = isAdmin ? `
+                        <div class="pt-2.5 border-t border-slate-800/80 flex items-center justify-between gap-2">
+                            <button onclick="toggleBugStatus('${bug.id}', '${isResolved ? 'open' : 'resolved'}')" class="min-h-[36px] px-2 text-xs text-slate-400 hover:text-amber-300 transition flex items-center space-x-1.5">
+                                <i data-lucide="${isResolved ? 'rotate-ccw' : 'check'}" class="w-3.5 h-3.5"></i>
+                                <span>${isResolved ? 'Mark as Open' : 'Mark as Resolved'}</span>
+                            </button>
+
+                            <button onclick="deleteBug('${bug.id}')" class="min-h-[36px] px-2 text-xs text-slate-500 hover:text-red-400 transition flex items-center space-x-1.5">
+                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                <span>Delete</span>
+                            </button>
+                        </div>` : '';
+
+                return `
+                    <div class="bg-[#11141f] border border-[#202636] rounded-2xl p-4 sm:p-5 space-y-3 shadow-md hover:border-slate-700 transition">
+                        <div class="flex items-start justify-between gap-2.5">
+                            <div class="flex items-center space-x-2 flex-wrap gap-y-1.5">
+                                <span class="px-2.5 py-0.5 text-[11px] font-bold rounded-lg ${areaBadgeClass}">
+                                    ${bug.area || 'General'}
+                                </span>
+                                ${userBlock}
+                                <span class="text-xs text-slate-500 font-mono">${dateStr}</span>
+                            </div>
+
+                            ${statusBadge}
+                        </div>
+
+                        <p class="text-xs sm:text-sm text-slate-200 whitespace-pre-wrap leading-relaxed">${bug.description}</p>
+
+                        ${contextBlock}
+                        ${editControls}
+                    </div>
+                `;
+            }).join('');
+
+            lucide.createIcons();
+        }
+
+        function updateContextToggleDefault() {
+            // Feature requests aren't a "something's broken, help me debug it" report --
+            // device/browser/page context is a lot less useful there, so default it off
+            // rather than making the reporter notice and opt out themselves.
+            const area = document.getElementById('area-select').value;
+            document.getElementById('include-context-toggle').checked = (area !== 'Feature Request');
+        }
+
+        async function submitBug(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btn-submit');
+            const alertBox = document.getElementById('form-alert');
+            alertBox.classList.add('hidden');
+
+            const area = document.getElementById('area-select').value;
+            const description = document.getElementById('description-input').value.trim();
+            const isAnonymous = document.getElementById('anonymous-toggle').checked;
+            const includeContext = document.getElementById('include-context-toggle').checked;
+
+            if (!description) return;
+
+            if (!sessionStatus.logged_in) {
+                alertBox.className = "p-3.5 rounded-xl border text-xs font-medium flex items-center space-x-2 bg-red-500/10 border-red-500/30 text-red-300";
+                alertBox.innerHTML = `<i data-lucide="alert-triangle" class="w-4 h-4 shrink-0"></i> <span>Please sign in with Google to submit a report.</span>`;
+                alertBox.classList.remove('hidden');
+                lucide.createIcons();
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> <span>Submitting...</span>`;
+            lucide.createIcons();
+
+            try {
+                const formData = new FormData();
+                formData.append('area', area);
+                formData.append('description', description);
+                formData.append('is_anonymous', isAnonymous);
+                formData.append('include_context', includeContext);
+                if (includeContext) {
+                    formData.append('viewport', `${window.innerWidth}x${window.innerHeight}`);
+                    formData.append('online', navigator.onLine);
+                    // Captured server-side when this page first loaded (see serve_bugs_page) --
+                    // by submit time the browser is already on /dev/bugs itself, so the POST
+                    // request's own Referer header would just say "/dev/bugs" every time.
+                    formData.append('entry_referer', document.body.dataset.entryReferer || '');
+                    // switchTab() in app.js writes this on every top-level tab change, so it's
+                    // a free "what were they doing" signal -- localStorage is shared across
+                    // same-origin pages, no app.js changes needed to read it here.
+                    formData.append('active_tab', localStorage.getItem('active_studiamo_tab') || '');
+                    // Rough connection-quality class (e.g. "4g", "slow-2g") -- not IP/geo-based,
+                    // just a browser API. Chromium-only (navigator.connection is undefined in
+                    // Safari/Firefox), so this is best-effort and often absent.
+                    formData.append('connection_type', navigator.connection?.effectiveType || '');
+                }
+
+                const res = await fetch('/api/dev/bugs', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await res.json();
+                if (!res.ok) {
+                    throw new Error(data.detail || 'Error submitting bug report.');
+                }
+
+                alertBox.className = "p-3.5 rounded-xl border text-xs font-medium flex items-center space-x-2 bg-emerald-500/10 border-emerald-500/30 text-emerald-300";
+                alertBox.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4 shrink-0"></i> <span>Bug report submitted successfully! Thank you for your feedback.</span>`;
+                alertBox.classList.remove('hidden');
+
+                document.getElementById('description-input').value = '';
+                document.getElementById('anonymous-toggle').checked = true;
+
+                await checkUserSession();
+                await fetchBugs();
+            } catch (err) {
+                alertBox.className = "p-3.5 rounded-xl border text-xs font-medium flex items-center space-x-2 bg-red-500/10 border-red-500/30 text-red-300";
+                alertBox.innerHTML = `<i data-lucide="alert-triangle" class="w-4 h-4 shrink-0"></i> <span>${err.message}</span>`;
+                alertBox.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<i data-lucide="send" class="w-4 h-4"></i> <span>Submit Bug Report</span>`;
+                lucide.createIcons();
+            }
+        }
+
+        async function toggleBugStatus(id, newStatus) {
+            try {
+                const formData = new FormData();
+                formData.append('status', newStatus);
+                const res = await fetch(`/api/dev/bugs/${id}`, {
+                    method: 'PATCH',
+                    body: formData
+                });
+                if (res.ok) {
+                    await fetchBugs();
+                }
+            } catch (e) {
+                console.error("Error updating bug status:", e);
+            }
+        }
+
+        async function deleteBug(id) {
+            if (!confirm("Are you sure you want to delete this bug report?")) return;
+            try {
+                const res = await fetch(`/api/dev/bugs/${id}`, {
+                    method: 'DELETE'
+                });
+                if (res.ok) {
+                    await fetchBugs();
+                }
+            } catch (e) {
+                console.error("Error deleting bug:", e);
+            }
+        }
+    </script>
+</body>
+</html>

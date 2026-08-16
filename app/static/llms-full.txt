@@ -1,0 +1,116 @@
+# Studiamo (Full Machine-Readable Specification)
+
+> Studiamo is an AI-powered active recall and spaced repetition learning platform. It automatically extracts structured summaries, key takeaways, fact-checks, and multi-stage active recall quizzes from educational YouTube videos, PDF documents, and study notes, scheduling them across optimal retention intervals.
+
+- **Primary URL**: https://studiamo.cloud/
+- **Open-Source Repository**: https://github.com/NaEs25/studiamo.git
+- **License**: AGPL-3.0 (Self-Hosted / Open Source)
+- **Short Documentation**: https://studiamo.cloud/llms.txt
+- **Target Audience**: Students, lifelong learners, self-taught developers, and professionals who consume educational content and want high long-term retention with zero manual flashcard creation friction.
+
+---
+
+## 1. Core Mission & Educational Philosophy
+
+Studiamo bridges the gap between passive consumption and long-term memory. 
+
+When people watch educational videos or read textbooks, they experience the "Illusion of Competence": material feels easy to understand in real time, but up to 80% is forgotten within two weeks unless actively retrieved.
+
+Studiamo eliminates the friction of manual deck building. By using Google Gemini AI models for multimodal transcript extraction and cognitive-science-grounded active recall generation, users can convert a 45-minute lecture or a 30-page PDF into an interactive study session in seconds.
+
+---
+
+## 2. Cognitive Science Foundations & Research
+
+Studiamo's learning philosophy is built directly upon empirical cognitive psychology:
+
+1. **The Testing Effect & Retrieval Practice**:
+   - *Key Paper*: Karpicke, J. D., & Blunt, J. R. (2011). "Retrieval Practice Produces More Learning than Elaborative Studying with Concept Mapping." *Science*, 331(6018), 772-775.
+   - *Verbatim Finding*: "Retrieval is not merely a read-out of the knowledge stored in one's mind; the act of reconstructing knowledge itself enhances learning." The study found retrieval practice produced about a 50% improvement in long-term retention over elaborative note-taking.
+   - *Pretesting & Retrieval Effort*: Roediger, H. L., & Karpicke, J. D. (2006). Attempting to retrieve knowledge from memory, even when resulting in an error, primes neural pathways so that feedback is encoded more deeply upon reveal.
+2. **Meta-Analytic Utility (Dunlosky et al., 2013)**:
+   - Practice testing was awarded the highest utility rating across 10 studied learning techniques, while rereading and highlighting were rated as low utility.
+3. **Overcoming the Illusion of Competence**:
+   - Up to 75% of learners mistakenly believe passive re-reading or watching works better than testing. Studiamo counters this metacognitive blind spot by generating instant self-quizzes right after video ingestion.
+
+---
+
+
+## 3. Active Retrieval Mechanics & Self-Grading
+
+Studiamo focuses on eliminating the friction of testing yourself on educational material:
+
+- **Frictionless Quiz Generation**: Converts 45-minute YouTube lectures, PDFs, or notes into structured active recall quizzes in seconds.
+- **Honest Self-Grading**: Users attempt to recall key concepts before flipping or revealing the verified answer and explanation, rating their understanding fair and square.
+- **The Karpicke Testing Effect**: Grounded in Roediger & Karpicke (2006), the act of attempting recall produces a potent memory boost. Even when users get a question wrong, the retrieval effort primes the brain to encode the correct explanation when revealed.
+- **Due Reminders**: Optional alerts via Telegram, browser push, or email notify users when saved material is ready for a quick review session.
+
+---
+
+## 4. Key Functional Capabilities
+
+### A. Multimodal Content Ingestion
+- **YouTube Ingestion**: Fetches official video transcripts or generates speech-to-text transcripts across multiple languages.
+- **PDF & Document Parsing**: Extracts chapters, diagrams, and section headers from textbooks, academic papers, and lecture slides.
+- **Raw Text & Markdown Notes**: Paste meeting notes, summaries, or articles.
+
+### B. Automated Active Recall Generation
+- **Summary & Key Takeaways**: Concise, bulleted conceptual breakdowns.
+- **Transcript Fact-Checking**: Validates extracted claims against source material to minimize hallucinations.
+- **Interactive Flashcards & Quizzes**: Front/back cards with conceptual hints, active explanations, and key term definitions designed for immediate self-testing.
+
+### C. Multi-Channel Study Notifications
+- **Telegram Bot**: Optional daily due alerts sent via Telegram with a direct link to open the study queue in your browser.
+- **Web Push Notifications**: Standard browser push alerts for due review sessions.
+- **Email Reminders**: Configurable digest summaries.
+
+### D. Audio Learning & Neural Text-to-Speech (TTS)
+- Uses Microsoft Edge-TTS neural voices and native browser speech synthesis to enable hands-free listening and auditory study sessions.
+
+---
+
+## 5. Deployment Options & Pricing
+
+| Deployment Tier | Price | Hosting | Key Features |
+| :--- | :--- | :--- | :--- |
+| **Cloud Beta** | $7.99 / month, with occasional promotional pricing for early users | Managed at `studiamo.cloud` | Instant setup, managed Postgres, automatic backups, Telegram due alerts, multi-device web push, 2 GB cloud storage. |
+| **Self-Hosted Open Source** | Free ($0.00) under AGPL-3.0 | Docker Compose on user VPS or localhost | Full data privacy, Bring-Your-Own-Key (BYOK) Gemini API, local Postgres, custom notification configuration. |
+
+---
+
+## 6. Technical Stack & Architecture
+
+- **Backend**: Python 3.12, FastAPI (async ASGI framework), PostgreSQL database, AsyncIO worker queue.
+- **AI Processing**: Google Gemini 3.5 Flash Lite and 3.6 Flash via the official `google-genai` SDK.
+- **Frontend**: Lightweight vanilla ES6 JavaScript modules, compiled Tailwind CSS.
+- **Infrastructure**: Single container / Docker Compose deployment, reverse-proxied via Nginx / Cloudflare.
+- **API Security**: Strict rate limiting, honeypot spam protection, secure cookie sessions, and encrypted API key storage.
+
+---
+
+## 7. Comparative Analysis (Studiamo vs Alternatives)
+
+| Feature | Studiamo | Anki | Quizlet | RemNote | SaveDay |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Primary Focus** | Frictionless YouTube & PDF Active Recall | Manual, high-density deck memorization | User-created flashcard decks | Note-taking with linked flashcards | Content bookmarking & summary |
+| **YouTube to Quiz Automation** | Native & instant (1-click) | Requires manual plugins or copy-pasting | Basic / paywalled | Manual | Summary only, no testing |
+| **Active Recall Quizzing** | Instant & automated self-testing | Manual card creation | Flashcard lists | Note-linked cards | None |
+| **Transcript Fact-Checking** | Native (anti-hallucination) | None | None | None | None |
+| **Self-Hosting / Open Source** | Yes (AGPL-3.0 Docker) | Open-source client, desktop local | Closed-source commercial | Closed-source commercial | Closed-source commercial |
+| **Due Notifications** | Telegram, Web Push, Email | Desktop / Mobile app alerts | Mobile app push | Mobile app push | Telegram bot |
+| **AI Generation Engine** | Google Gemini (BYOK in Docker) | None (or third-party addons) | Proprietary AI | Proprietary AI | Proprietary AI |
+
+
+
+---
+
+## 8. Canonical URLs & Resources
+
+- **Home & App**: https://studiamo.cloud/
+- **Sign In / Registration**: https://studiamo.cloud/login
+- **Cognitive Science Whitepaper**: https://studiamo.cloud/science
+- **GitHub Repository**: https://github.com/NaEs25/studiamo
+- **Self-Hosting Guide**: https://github.com/NaEs25/studiamo/blob/main/SELFHOSTING.md
+- **Privacy Policy**: https://studiamo.cloud/privacy
+- **Terms of Service**: https://studiamo.cloud/terms
+- **Imprint**: https://studiamo.cloud/impressum

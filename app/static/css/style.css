@@ -1,0 +1,522 @@
+/* ============================================================
+   Studiamo, Global Stylesheet
+   Theme: Warm Paper / Sepia (permanent default)
+   ============================================================ */
+
+/* Design Tokens */
+:root {
+    --color-bg:             #f6f1e7;
+    --color-surface:        #ffffff;
+    --color-surface-2:      #fbf8f2;
+    --color-surface-deep:   #f3ebd9;
+    --color-border:         #e7dfd3;
+    --color-border-strong:  #dfd5c5;
+    --color-text:           #1c1917;
+    --color-text-muted:     #78716c;
+    --color-text-faint:     #a8a29e;
+    --color-primary:        #d97706;
+    --color-primary-hover:  #b45309;
+    --color-primary-bg:     #fef3c7;
+    --color-primary-border: #fde68a;
+    --font-sans:            'Outfit', 'Inter', sans-serif;
+
+    /* RGB-triplet mirrors of the tokens above, for Tailwind's
+       rgb(var(...) / <alpha-value>) opacity-modifier syntax (see
+       tailwind.config.js). Keep in sync with the hex values above;
+       they describe the same colors, just in a form Tailwind's
+       color-opacity utilities can consume. */
+    --color-bg-rgb:             246 241 231;
+    --color-surface-rgb:        255 255 255;
+    --color-surface-2-rgb:      251 248 242;
+    --color-surface-deep-rgb:   243 235 217;
+    --color-border-rgb:         231 223 211;
+    --color-border-strong-rgb:  223 213 197;
+    --color-text-rgb:           28 25 23;
+    --color-text-muted-rgb:     120 113 108;
+    --color-primary-rgb:        217 119 6;
+    --color-primary-hover-rgb:  180 83 9;
+}
+
+/* ── Global Reset & Base ────────────────────────────────── */
+html, body {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+/* Accordion details summary reset */
+summary::-webkit-details-marker {
+    display: none;
+}
+summary {
+    list-style: none;
+}
+
+/* Range sliders, Checkboxes, Radio buttons - Warm Amber Accent */
+input[type="range"] {
+    accent-color: #d97706;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #d97706;
+    border: 2px solid #f6f1e7;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+    cursor: pointer;
+}
+
+input[type="range"]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #d97706;
+    border: 2px solid #f6f1e7;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+    cursor: pointer;
+}
+
+input[type="checkbox"], input[type="radio"] {
+    accent-color: #d97706;
+}
+
+/* ── Input & Form Base Defaults ─────────────────────────── */
+input,
+select,
+textarea {
+    background-color: #fcfaf6;
+    border-color: var(--color-border);
+    color: var(--color-text);
+}
+
+input::placeholder,
+textarea::placeholder {
+    color: var(--color-text-faint);
+}
+
+option {
+    background-color: var(--color-surface);
+    color: var(--color-text);
+}
+
+/* ── Amber Tinted Utility Blocks (Token Mapping) ────────── */
+.bg-amber-500\/10,
+.bg-amber-500\/15,
+.bg-amber-500\/20 {
+    background-color: var(--color-primary-bg);
+    border-color: var(--color-primary-border);
+    color: #92400e;
+}
+
+/* ── Scrollbar ──────────────────────────────────────────── */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--color-bg);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--color-border-strong);
+    border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #c8bfb3;
+}
+
+/* ── Bottom Nav States ───────────────────────────────────── */
+/* font-weight stays fixed across states on purpose: the nav row is
+   `flex justify-around` with content-sized buttons, so a weight change
+   on click alters label width and visibly shifts every button. */
+.nav-item {
+    color: var(--color-text-muted);
+    font-weight: 600;
+}
+
+.nav-item i,
+.nav-item svg {
+    color: var(--color-text-muted);
+}
+
+.nav-item:not(.active):hover {
+    color: var(--color-text);
+}
+
+.nav-item:not(.active):hover i,
+.nav-item:not(.active):hover svg {
+    color: var(--color-text);
+}
+
+.nav-item.active {
+    color: var(--color-primary);
+}
+
+.nav-item.active i,
+.nav-item.active svg {
+    color: var(--color-primary);
+    stroke-width: 2.5px;
+}
+
+/* ── Star Importance Badges ─────────────────────────────── */
+.star-rating {
+    display: inline-flex;
+    direction: row;
+}
+.star-rating i {
+    stroke-width: 2px;
+}
+.star-rating i.filled {
+    fill: var(--color-primary);
+    color: var(--color-primary);
+}
+
+/* ── Progress Bar Glow ──────────────────────────────────── */
+.progress-glow {
+    box-shadow: 0 0 14px rgba(217, 119, 6, 0.3);
+}
+
+/* ── Tab Content Fade Animation ─────────────────────────── */
+.tab-content {
+    animation: fadeIn 0.35s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Accordion ──────────────────────────────────────────── */
+.accordion-content {
+    transition: max-height 0.3s ease-out, opacity 0.2s ease-out;
+}
+
+/* ── Contenteditable Placeholder ────────────────────────── */
+[contenteditable=true]:empty:before {
+    content: attr(placeholder);
+    color: var(--color-text-faint);
+    pointer-events: none;
+    display: block;
+}
+
+/* ── 3D Quiz Card ───────────────────────────────────────── */
+.quiz-card-container {
+    perspective: 1200px;
+}
+
+.quiz-card {
+    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    transform-style: preserve-3d;
+}
+
+.quiz-card.flipped {
+    transform: rotateY(180deg);
+}
+
+.card-side {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    left: 0;
+    top: 0;
+    backface-visibility: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 1.5rem;
+}
+
+.card-back {
+    transform: rotateY(180deg);
+}
+
+/* ── Quiz Overlay Contrast ──────────────────────────────── */
+#overlay-quiz {
+    background-color: rgba(246, 241, 231, 0.98);
+}
+
+#overlay-quiz #quiz-source-title,
+#overlay-quiz #quiz-source-title a {
+    color: var(--color-text);
+}
+
+#overlay-quiz #quiz-source-title a:hover {
+    color: var(--color-primary);
+}
+
+#overlay-quiz #quiz-question-number,
+#overlay-quiz #quiz-completion-pct,
+#overlay-quiz label[for="quiz-progress-srs-checkbox"],
+#overlay-quiz label[for="quiz-auto-tts-toggle"] {
+    color: var(--color-text-muted);
+}
+
+#quiz-card {
+    background-color: var(--color-surface);
+    border-color: var(--color-border);
+}
+
+#quiz-card #quiz-question-text {
+    color: var(--color-text);
+}
+
+/* ── Auto-Pause Button States ───────────────────────────── */
+#btn-auto-pause.auto-pause-on {
+    color: #6d6048;
+    border-color: rgba(180, 83, 9, 0.4);
+    background: rgba(254, 243, 199, 0.6);
+}
+#btn-auto-pause.auto-pause-off {
+    color: var(--color-text-muted);
+    border-color: var(--color-border);
+    background: transparent;
+}
+
+/* ── Studio Workspace ───────────────────────────────────── */
+.resize {
+    resize: both;
+    overflow: hidden;
+}
+
+.studio-workspace {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    overflow: hidden;
+}
+
+.studio-pane-left {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    background-color: #000000;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.studio-pane-right {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--color-surface-deep);
+}
+
+/* YouTube Viewport Upscale & Downscale Trick */
+#studio-yt-wrapper,
+.yt-downscale-wrapper {
+    position: relative;
+    overflow: hidden !important;
+    background-color: #000000;
+}
+
+#studio-yt-wrapper #studio-yt-player,
+#studio-yt-wrapper iframe#studio-yt-player,
+#studio-yt-wrapper iframe,
+.yt-downscale-wrapper iframe {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 175% !important;
+    height: 175% !important;
+    transform: scale(0.5714) !important;
+    transform-origin: 0 0 !important;
+    pointer-events: auto !important;
+}
+
+#studio-yt-wrapper #studio-yt-facade {
+    position: absolute;
+    inset: 0;
+    z-index: 30;
+}
+
+/* Mobile: video pane is a fixed size up top, notes pane always fills the rest */
+@media (max-width: 639px) {
+    .studio-pane-left {
+        height: auto;
+    }
+    #studio-doc-wrapper {
+        display: none !important;
+    }
+    #studio-yt-wrapper {
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        max-height: 220px;
+        height: auto;
+        flex: none !important;
+        min-height: 0 !important;
+        transition: height 0.3s ease;
+    }
+    .studio-pane-right {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+    #studio-editor-container {
+        flex: 1;
+        min-height: 0;
+        padding: 1rem;
+        overflow-y: auto;
+    }
+
+    /* Mobile Software Keyboard Mode: the on-screen keyboard covers roughly
+       half the screen, leaving no room for both video and notes - so while
+       typing in notes (see focus/blur binding on #studio-notes-editor), the
+       video pane is removed from layout entirely and notes take the full
+       workspace height. Audio keeps playing in the background. */
+    .studio-keyboard-mode #studio-header {
+        display: none !important;
+    }
+    .studio-keyboard-mode .studio-pane-left {
+        display: none !important;
+    }
+}
+
+/* Notes editor: tighter heading spacing than the typography plugin default */
+#studio-notes-editor :is(h1, h2, h3, h4) {
+    margin-top: 0.5em;
+    margin-bottom: 0.25em;
+}
+
+/* Desktop: side-by-side layout, notes always visible */
+@media (min-width: 640px) {
+    .studio-workspace {
+        flex-direction: row;
+    }
+    .studio-pane-left {
+        width: 42%;
+        height: 100%;
+        border-bottom: none;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        background-color: var(--color-surface-deep);
+    }
+    #studio-yt-wrapper {
+        width: 100% !important;
+        aspect-ratio: 16 / 9;
+        height: auto !important;
+        flex: none !important;
+    }
+    #studio-yt-player {
+        width: 100% !important;
+        height: 100% !important;
+    }
+    #studio-doc-wrapper {
+        flex: 1;
+        height: 0;
+        overflow-y: auto;
+    }
+    .studio-pane-right {
+        width: 58%;
+        height: 100%;
+    }
+}
+
+/* Studio modal responsive adjustments */
+.studio-resizable-modal {
+    min-width: 600px;
+    min-height: 400px;
+}
+
+@media (max-width: 640px) {
+    .studio-resizable-modal {
+        min-width: 0 !important;
+        min-height: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        max-width: 100% !important;
+        max-height: 100% !important;
+        border-radius: 0 !important;
+        resize: none !important;
+    }
+}
+
+/* ── Mini-Player ────────────────────────────────────────── */
+#studio-mini-player {
+    user-select: none;
+    min-width: 220px;
+    min-height: 190px;
+    max-width: 90vw;
+    max-height: 80vh;
+}
+#mini-player-drag-handle:active {
+    cursor: grabbing;
+}
+
+/* ── Misc border utility ────────────────────────────────── */
+.border-slate-850 {
+    border-color: var(--color-border);
+}
+
+/* ── App Mode Conditional Visibility ──────────────────── */
+html[data-app-mode="selfhosted"] [data-mode="cloud"],
+html[data-app-mode="selfhosted"] .cloud-only,
+body[data-app-mode="selfhosted"] [data-mode="cloud"],
+body[data-app-mode="selfhosted"] .cloud-only {
+    display: none !important;
+}
+
+html[data-app-mode="cloud"] [data-mode="selfhosted"],
+html[data-app-mode="cloud"] .selfhosted-only,
+body[data-app-mode="cloud"] [data-mode="selfhosted"],
+body[data-app-mode="cloud"] .selfhosted-only {
+    display: none !important;
+}
+
+/* ── Mobile Safe Area & Accessibility Enhancements ──────── */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+    .pb-safe {
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+}
+
+/* Installed iOS PWA only: apple-mobile-web-app-status-bar-style=black-translucent
+   draws the status bar over the page, so the sticky header needs extra top padding
+   to clear the clock/wifi icons. A regular Safari tab already reserves that space
+   via its own chrome, so this must not apply there, hence display-mode: standalone. */
+@media (display-mode: standalone) {
+    #app-header {
+        padding-top: calc(0.625rem + env(safe-area-inset-top));
+    }
+
+    @media (min-width: 640px) {
+        #app-header {
+            padding-top: calc(0.75rem + env(safe-area-inset-top));
+        }
+    }
+}
+
+:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+.active-press:active,
+button:active:not(:disabled) {
+    transform: scale(0.98);
+}
+
+/* ── Primary CTA Button ─────────────────────────────────── */
+/* Shared color/border/shadow for every primary action button. Change once, */
+/* every button using .btn-primary updates. Padding, radius, font-weight, */
+/* and spacing stay as per-instance Tailwind utility classes. */
+.btn-primary {
+    background-color: #fcd34d; /* amber-300 */
+    color: #78350f; /* amber-900 */
+    border: 2px solid #fbbf24; /* amber-400, just a step darker than the fill */
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+
+.btn-primary:hover {
+    background-color: #fbbf24; /* amber-400 */
+}
+
+

@@ -1,0 +1,33 @@
+# Cloud deployment on a self-managed VPS. Same image as docker-compose.yml (the
+# self-hosted stack), pointed at a managed Postgres (e.g. Supabase) instead of a local
+# `postgres` service, with APP_MODE forced to `cloud` so app/config.py enforces the
+# LEMONSQUEEZY_* and managed-bot env vars (see .env.example) instead of selfhosted
+# defaults. Today's actual cloud prod still runs bare-metal via systemd
+# (scripts/deploy.sh) : this exists for deploying Studiamo Cloud on a different VPS via
+# Docker instead.
+#
+# Usage: docker compose -f docker-compose.cloud.yml up -d
+# Requires a `.env` (based on .env.example) with at minimum: YB_SECRET_KEY,
+# CLOUD_DATABASE_URL (or DATABASE_URL) pointing at your managed Postgres, and the
+# LEMONSQUEEZY_* checkout/webhook vars.
+services:
+  studiamo-web:
+    image: ghcr.io/naes25/studiamo:latest
+    build: .
+    container_name: studiamo-web
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      APP_MODE: cloud
+    ports:
+      - "${PORT:-5004}:5004"
+    volumes:
+      - studiamo_users:/app/users
+      - studiamo_vapid:/app/vapid_keys.json
+
+volumes:
+  studiamo_users:
+    driver: local
+  studiamo_vapid:
+    driver: local

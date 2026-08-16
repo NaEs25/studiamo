@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terms of Service | Studiamo</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/static/images/favicon.png">
+    
+    <!-- Umami Analytics: empty in self-hosted mode unless UMAMI_WEBSITE_ID is set, see app/config.py -->
+    {% if umami_website_id %}<script defer src="{{ umami_script_url }}" data-website-id="{{ umami_website_id }}"></script>{% endif %}
+
+    <!-- Tailwind CSS (compiled) -->
+    <link rel="stylesheet" href="/static/css/tailwind-built.css">
+    <!-- Custom Style Sheet -->
+    <link rel="stylesheet" href="/static/css/style.css">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="font-sans bg-paperBg text-stoneText antialiased min-h-screen flex flex-col justify-between">
+
+    <!-- Header -->
+    {% include "partials/_header.html" %}
+
+    <!-- Main Container -->
+    <main class="max-w-3xl mx-auto px-4 py-12 my-auto w-full">
+        <div class="bg-paperCard border border-paperBorder shadow-xl rounded-3xl p-6 sm:p-10 space-y-8">
+            
+            <div class="border-b border-paperBorder pb-6 space-y-2">
+                <div class="inline-flex items-center space-x-2 px-3 py-1 bg-amber-500/10 border border-amber-500/25 rounded-full text-xs font-extrabold text-amber-900">
+                    <i data-lucide="file-text" class="w-3.5 h-3.5 text-amber-700"></i>
+                    <span>Terms &amp; Conditions</span>
+                </div>
+                <h1 class="text-3xl font-extrabold tracking-tight text-stoneText">Terms of Service</h1>
+                <p class="text-xs text-stoneMuted">Effective Date: August 7, 2026 &bull; Domain: studiamo.cloud</p>
+            </div>
+
+            <div class="space-y-6 text-sm text-stoneText leading-relaxed">
+                
+                <!-- Section 1 -->
+                <section class="space-y-2">
+                    <h2 class="text-base font-bold text-stoneText flex items-center space-x-2">
+                        <i data-lucide="check-circle" class="w-4 h-4 text-amberPrimary"></i>
+                        <span>1. Acceptance of Terms</span>
+                    </h2>
+                    <p class="text-xs text-stoneMuted leading-relaxed">
+                        By accessing or using <strong class="text-stoneText">studiamo.cloud</strong> or any related services provided by Studiamo ("Service"), you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not access or use the Service.
+                    </p>
+                </section>
+
+                <!-- Section 2 -->
+                <section class="space-y-2">
+                    <h2 class="text-base font-bold text-stoneText flex items-center space-x-2">
+                        <i data-lucide="book-open" class="w-4 h-4 text-amberPrimary"></i>
+                        <span>2. Description of Service</span>
+                    </h2>
+                    <p class="text-xs text-stoneMuted leading-relaxed">
+                        Studiamo provides AI-powered active recall flashcard generation, spaced repetition study scheduling, and learning analytics tools to assist users in mastering study materials.
+                    </p>
+                </section>
+
+                <!-- Section 3 -->
+                <section class="space-y-2">
+                    <h2 class="text-base font-bold text-stoneText flex items-center space-x-2">
+                        <i data-lucide="user-check" class="w-4 h-4 text-amberPrimary"></i>
+                        <span>3. Account Responsibilities</span>
+                    </h2>
+                    <p class="text-xs text-stoneMuted leading-relaxed">
+                        You are responsible for maintaining the confidentiality of your account authentication credentials and for all activities that occur under your account. You agree to notify us immediately of any unauthorized use of your account.
+                    </p>
+                </section>
+
+                <!-- Section 4 -->
+                <section class="space-y-2">
+                    <h2 class="text-base font-bold text-stoneText flex items-center space-x-2">
+                        <i data-lucide="alert-triangle" class="w-4 h-4 text-amberPrimary"></i>
+                        <span>4. Acceptable Use Policy</span>
+                    </h2>
+                    <p class="text-xs text-stoneMuted leading-relaxed">
+                        You agree not to misuse the Service, including but not limited to:
+                    </p>
+                    <ul class="list-disc list-inside text-xs text-stoneMuted space-y-1.5 pl-1">
+                        <li>Submitting illegal, abusive, or infringing content.</li>
+                        <li>Attempting to bypass security mechanisms or API rate limits.</li>
+                        <li>Interfering with the proper functioning of the platform or server infrastructure.</li>
+                    </ul>
+                </section>
+
+                <!-- Section 5 -->
+                <section class="space-y-2">
+                    <h2 class="text-base font-bold text-stoneText flex items-center space-x-2">
+                        <i data-lucide="shield" class="w-4 h-4 text-amberPrimary"></i>
+                        <span>5. Intellectual Property</span>
+                    </h2>
+                    <p class="text-xs text-stoneMuted leading-relaxed">
+                        You retain full ownership of any study content, notes, or materials you upload. Studiamo retains all intellectual property rights in the software, algorithms, user interface, and branding of the Service.
+                    </p>
+                    <p class="text-xs text-stoneMuted leading-relaxed">
+                        By uploading any materials, you confirm that you hold all necessary copyright permissions and rights. You agree not to upload content that infringes third-party intellectual property. You are solely responsible for the materials you upload, and Studiamo is not liable for any copyright infringement or other claims arising from content you upload without the necessary rights.
+                    </p>
+                    <p class="text-xs text-stoneMuted leading-relaxed">
+                        If we receive a valid notice that uploaded content infringes someone's copyright, we will remove or disable access to that content.
+                    </p>
+                </section>
+
+                <!-- Section 6 -->
+                <section class="space-y-2">
+                    <h2 class="text-base font-bold text-stoneText flex items-center space-x-2">
+                        <i data-lucide="video" class="w-4 h-4 text-amberPrimary"></i>
+                        <span>6. YouTube API Services &amp; Terms</span>
+                    </h2>
+                    <p class="text-xs text-stoneMuted leading-relaxed">
+                        Studiamo incorporates YouTube API Services to search educational video recommendations and display embedded video materials. By using any YouTube-related features within the Service, you agree to be bound by the <a href="https://www.youtube.com/t/terms" target="_blank" rel="noopener noreferrer" class="font-bold text-amberPrimary hover:underline">YouTube Terms of Service</a> and acknowledge that Google processes data in accordance with the <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" class="font-bold text-amberPrimary hover:underline">Google Privacy Policy</a>.
+                    </p>
+                </section>
+
+                <!-- Section 7 -->
+                <section class="space-y-2">
+                    <h2 class="text-base font-bold text-stoneText flex items-center space-x-2">
+                        <i data-lucide="sparkles" class="w-4 h-4 text-amberPrimary"></i>
+                        <span>7. AI-Generated Content &amp; Accuracy Disclaimer</span>
+                    </h2>
+                    <p class="text-xs text-stoneMuted leading-relaxed">
+                        Studiamo utilizes Google Gemini generative artificial intelligence to synthesize study materials, generate active recall questions, summarize video outlines, and provide factual comparison insights. All AI-generated outputs are provided solely for educational and self-study assistance. While prompts are designed to promote high accuracy, artificial intelligence systems may occasionally produce inaccurate, incomplete, or outdated information. You are encouraged to exercise critical judgment and cross-reference important academic, scientific, or domain concepts with authoritative primary sources.
+                    </p>
+                </section>
+
+                <!-- Section 8 -->
+                <section class="space-y-2">
+                    <h2 class="text-base font-bold text-stoneText flex items-center space-x-2">
+                        <i data-lucide="credit-card" class="w-4 h-4 text-amberPrimary"></i>
+                        <span>8. Subscriptions, Pricing and Billing</span>
+                    </h2>
+                    <p class="text-xs text-stoneMuted leading-relaxed">
+                        Studiamo Cloud is offered as a monthly subscription at <strong class="text-stoneText">$7.99 per month</strong>, inclusive of any applicable sales tax or VAT. Prices are charged in US dollars regardless of your location; your bank may apply its own currency conversion.
+                    </p>
+                    <ul class="list-disc list-inside text-xs text-stoneMuted space-y-1.5 pl-1">
+                        <li><strong class="text-stoneText">Automatic renewal.</strong> The subscription renews automatically each month until you cancel. There is no minimum contract term.</li>
+                        <li><strong class="text-stoneText">Cancellation.</strong> You may cancel at any time from the billing portal linked in your account settings. Cancellation stops future renewals; access continues until the end of the period you have already paid for, and no partial-month refunds are issued for that remaining period.</li>
+                        <li><strong class="text-stoneText">Promotional pricing.</strong> A discount code may reduce the price for a stated number of months. When that period ends, the standard price of $7.99 per month applies automatically. The duration is shown before you complete the purchase.</li>
+                        <li><strong class="text-stoneText">Failed payments.</strong> If a payment fails, we may retry it and will notify you. Access may be suspended if payment cannot be collected.</li>
+                        <li><strong class="text-stoneText">Price changes.</strong> We may change the price of future subscription periods. You will be notified in advance and may cancel before any new price takes effect.</li>
+                    </ul>
+                </section>
+
+                <!-- Section 9 -->
+                <section class="space-y-2">
+                    <h2 class="text-base font-bold text-stoneText flex items-center space-x-2">
+                        <i data-lucide="building-2" class="w-4 h-4 text-amberPrimary"></i>
+                        <span>9. Payment Processing and Merchant of Record</span>
+                    </h2>
+                    <p class="text-xs text-stoneMuted leading-relaxed">
+                        Payments are processed by <strong class="text-stoneText">Lemon Squeezy</strong> (Sold through Link, LLC, 354 Oyster Point Blvd, South San Francisco, CA 94080, USA), which acts as the <strong class="text-stoneText">Merchant of Record</strong> for all purchases. This means Lemon Squeezy is the seller for the transaction, issues your invoice, and is responsible for collecting and remitting applicable sales tax and VAT. Their name may appear on your bank or card statement rather than ours.
+                    </p>
+                    <p class="text-xs text-stoneMuted leading-relaxed">
+                        Studiamo does not receive or store your payment card details at any point.
+                    </p>
+                </section>
+
+                <!-- Section 10 -->
+                <section class="space-y-2">
+                    <h2 class="text-base font-bold text-stoneText flex items-center space-x-2">
+                        <i data-lucide="rotate-ccw" class="w-4 h-4 text-amberPrimary"></i>
+                        <span>10. Right of Withdrawal (EU/EEA Consumers)</span>
+                    </h2>
+                    <p class="text-xs text-stoneMuted leading-relaxed">
+                        If you are a consumer resident in the EU or EEA, you have the right to withdraw from this contract within <strong class="text-stoneText">14 days</strong> without giving any reason. The withdrawal period expires 14 days after the day the contract is concluded.
+                    </p>
+                    <p class="text-xs text-stoneMuted leading-relaxed">
+                        To exercise this right, inform us of your decision by a clear statement sent to <a href="mailto:hello@studiamo.cloud" class="font-bold text-amberPrimary hover:underline">hello@studiamo.cloud</a>. To meet the deadline it is sufficient to send your communication before the withdrawal period expires.
+                    </p>
+                    <p class="text-xs text-stoneMuted leading-relaxed">
+                        Because access to the Service begins immediately on purchase, you expressly request that performance start during the withdrawal period. If you then withdraw, you must pay an amount proportionate to the Service already provided up to the point you informed us, and we will refund the remainder within 14 days using the same means of payment.
+                    </p>
+                </section>
+
+                <!-- Section 11 -->
+                <section class="space-y-2 border-t border-paperBorder pt-4">
+                    <h2 class="text-base font-bold text-stoneText flex items-center space-x-2">
+                        <i data-lucide="mail" class="w-4 h-4 text-amberPrimary"></i>
+                        <span>11. Contact Information</span>
+                    </h2>
+                    <p class="text-xs text-stoneMuted leading-relaxed">
+                        For any legal or terms inquiries, contact us at: <a href="mailto:hello@studiamo.cloud" class="font-bold text-amberPrimary hover:underline">hello@studiamo.cloud</a>.
+                    </p>
+                </section>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    {% include "partials/_footer.html" %}
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.lucide) lucide.createIcons();
+        });
+    </script>
+</body>
+</html>

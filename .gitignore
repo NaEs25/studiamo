@@ -1,0 +1,71 @@
+# Environment & secrets: NEVER commit these
+.env
+*.env
+vapid_keys.json
+
+# Database files: contain user data
+*.db
+*.sqlite
+*.sqlite3
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Logs
+*.log
+
+# Local working material: personal planning notes, TODOs, scratch scripts.
+# Not part of the app; kept off the public repo.
+karl-privat/
+
+# User-uploaded content: contains private files
+users/
+
+# Tailwind CLI standalone binary: platform-specific, ~85MB, fetched by
+# scripts/build_css.sh, not committed
+bin/tailwindcss
+
+# Compiled Tailwind output: regenerated on every service (re)start by
+# scripts/build_css.sh via ExecStartPre, never hand-built or committed
+app/static/css/tailwind-built.css
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*.code-workspace
+
+# Personal workflow instructions: not committed
+AGENTS.md
+CLAUDE.md
+
+# Personal deploy script: hardcodes this machine's paths/service names, no
+# use to self-hosters (who use docker-compose.yml) or contributors
+scripts/deploy.sh
+
+# Testing & coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# AI agent tooling / config: local workflow, not part of the app
+.agents/
+.claude/
+.claudeignore
+.codex/
+.geminiignore
+.impeccable/
+
+

@@ -1,0 +1,11 @@
+title = "gitleaks config for studiamo"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Local-only secret files: gitignored, never committed, live only on disk"
+paths = [
+  '''(^|/)\.env$''',
+  '''(^|/)vapid_keys\.json$''',
+]

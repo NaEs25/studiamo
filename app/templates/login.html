@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Select Profile | Studiamo</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/static/images/favicon.png">
+
+    <!-- Umami Analytics: empty in self-hosted mode unless UMAMI_WEBSITE_ID is set, see app/config.py -->
+    {% if umami_website_id %}<script defer src="{{ umami_script_url }}" data-website-id="{{ umami_website_id }}"></script>{% endif %}
+
+    <!-- Tailwind CSS (compiled) -->
+    <link rel="stylesheet" href="/static/css/tailwind-built.css">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Custom Style Sheet -->
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="font-sans bg-paperBg text-stone-800 antialiased min-h-screen flex flex-col justify-between">
+
+    {% set logo_href = "/landing?logout=true" %}
+    {% include "partials/_header.html" %}
+
+    <!-- Login Container -->
+    <main class="my-auto py-12 px-4">
+        <div class="max-w-lg mx-auto bg-paperCard border border-paperBorder shadow-2xl rounded-3xl p-6 sm:p-8 space-y-8">
+            
+            <div class="text-center space-y-2">
+                <div class="w-14 h-14 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-inner">
+                    <i data-lucide="user-check" class="w-7 h-7"></i>
+                </div>
+                <h1 class="text-2xl font-extrabold text-stone-800 tracking-tight">Welcome to Studiamo</h1>
+                <p class="text-xs text-slate-400 font-medium">Select your profile to start studying, or create a new user profile.</p>
+            </div>
+
+            <!-- Profile Search -->
+            <div class="space-y-3">
+                <label class="block text-xs font-extrabold text-amber-400/80 uppercase tracking-wider">Find Your Profile</label>
+                <div class="relative">
+                    <i data-lucide="search" class="w-4 h-4 text-slate-500 absolute left-3.5 top-3 pointer-events-none"></i>
+                    <input type="text" id="profile-search" autocomplete="off" placeholder="Type your username..."
+                        class="w-full bg-[#fbf8f2] border border-[#e7dfd3] rounded-xl pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:border-amber-500 text-stone-700 placeholder-stone-400 transition"
+                        oninput="handleSearch(this.value)">
+                </div>
+                <div id="users-container" class="space-y-3">
+                    <p class="text-xs text-slate-500 text-center py-2">Start typing to find your profile.</p>
+                </div>
+            </div>
+
+            <!-- Google SSO Button (Cloud mode only) -->
+            <div class="cloud-only space-y-3">
+                <a href="/auth/google"
+                    class="w-full py-3 px-4 bg-white hover:bg-stone-50 border border-[#e7dfd3] rounded-2xl shadow-sm text-sm font-bold text-stone-800 flex items-center justify-center space-x-3 transition hover:shadow-md">
+                    <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                    </svg>
+                    <span>Sign in with Google</span>
+                </a>
+            </div>
+
+            <!-- Divider -->
+            <div class="relative flex py-1 items-center">
+                <div class="flex-grow border-t border-paperBorder"></div>
+                <span class="flex-shrink mx-4 text-slate-500 text-xs font-bold uppercase tracking-wider">Or</span>
+                <div class="flex-grow border-t border-paperBorder"></div>
+            </div>
+
+            <!-- Create New Profile Form -->
+            <div class="space-y-4 bg-[#f3ebd9] p-5 rounded-2xl border border-paperBorder">
+                <h3 class="text-sm font-bold text-stone-800 flex items-center space-x-2">
+                    <i data-lucide="user-plus" class="w-4 h-4 text-amber-400"></i>
+                    <span>Create New Profile</span>
+                </h3>
+
+                <form id="create-user-form" onsubmit="handleCreateUser(event)" class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Username</label>
+                        <input type="text" id="new-username" required placeholder="E.g., Alex, Sarah"
+                            class="w-full bg-[#fbf8f2] border border-[#e7dfd3] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-amber-500 text-stone-800 placeholder-stone-400">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Google AI Studio API Key <span class="text-amber-400 font-bold">*Required</span></label>
+                        <input type="password" id="new-gemini-key" required placeholder="Paste key (starts with AIzaSy...)"
+                            class="w-full bg-[#fbf8f2] border border-[#e7dfd3] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-amber-500 text-stone-800 placeholder-stone-400">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Password <span class="text-amber-400 font-bold">*Required</span></label>
+                        <input type="password" id="new-password" required placeholder="Choose a password"
+                            class="w-full bg-[#fbf8f2] border border-[#e7dfd3] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-amber-500 text-stone-800 placeholder-stone-400"></div>
+                    <button type="submit" id="btn-create-profile"
+                        class="btn-primary w-full py-3 font-bold text-sm rounded-xl transition transform hover:-translate-y-0.5">
+                        Create & Start Studying
+                    </button>
+                </form>
+            </div>
+
+            <!-- Error Banner -->
+            <div id="error-banner" class="hidden p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-xs text-red-400 font-medium"></div>
+
+        </div>
+    </main>
+
+    {% include "partials/_footer.html" %}
+
+    <script>
+        lucide.createIcons();
+
+        let searchTimer = null;
+
+        function handleSearch(value) {
+            clearTimeout(searchTimer);
+            const q = value.trim();
+            if (!q) {
+                document.getElementById('users-container').innerHTML =
+                    '<p class="text-xs text-slate-500 text-center py-2">Start typing to find your profile.</p>';
+                return;
+            }
+            searchTimer = setTimeout(() => fetchUsers(q), 300);
+        }
+
+        async function fetchUsers(q) {
+            const container = document.getElementById('users-container');
+            try {
+                const res = await fetch('/api/users?q=' + encodeURIComponent(q));
+                const data = await res.json();
+                container.innerHTML = '';
+
+                const users = (data.users || []).filter(u => u !== 'default_user');
+
+                if (users.length === 0) {
+                    container.innerHTML = '<p class="text-xs text-slate-500 text-center py-2">No profile found. Try a different name.</p>';
+                    return;
+                }
+
+                users.forEach(username => {
+                    const card = document.createElement('div');
+                    card.className = 'bg-[#fbf8f2] border border-[#e7dfd3] hover:border-amber-500/40 rounded-2xl p-4 transition shadow-sm space-y-3';
+                    const avatarLetter = username.charAt(0).toUpperCase();
+
+                    card.innerHTML = `
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-xl font-bold flex items-center justify-center text-sm shrink-0">
+                                ${avatarLetter}
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-sm text-stone-800">${username}</h4>
+                                <span class="text-[10px] font-semibold text-slate-400 flex items-center space-x-1">
+                                    <i data-lucide="lock" class="w-2.5 h-2.5"></i><span>Password protected</span>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="block text-xs font-semibold text-slate-400">Password</label>
+                            <div class="flex space-x-2">
+                                <input type="password" id="pwd-input-${username}" placeholder="Enter your password"
+                                    class="flex-grow bg-[#fbf8f2] border border-[#e7dfd3] rounded-xl px-3 py-2 text-xs text-stone-800 focus:outline-none focus:border-amber-500"
+                                    onkeydown="if(event.key==='Enter') submitLogin('${username}')">
+                                <button type="button" onclick="submitLogin('${username}')"
+                                    class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl shadow transition">
+                                    Login
+                                </button>
+                            </div>
+                            <p id="err-${username}" class="hidden text-[10px] text-red-400 font-medium"></p>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                    lucide.createIcons();
+                });
+            } catch (e) {
+                console.error(e);
+                container.innerHTML = '<p class="text-xs text-red-400 text-center py-2">Failed to search profiles.</p>';
+            }
+        }
+
+        async function submitLogin(username) {
+            const pwdInput = document.getElementById(`pwd-input-${username}`);
+            const errEl = document.getElementById(`err-${username}`);
+            const pwd = pwdInput ? pwdInput.value : '';
+
+            try {
+                const formData = new FormData();
+                formData.append('username', username);
+                if (pwd) formData.append('password', pwd);
+
+                const res = await fetch('/api/users/verify', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    if (errEl) {
+                        errEl.textContent = err.detail || 'Login failed';
+                        errEl.classList.remove('hidden');
+                    }
+                    if (pwdInput) pwdInput.focus();
+                    return;
+                }
+
+                localStorage.setItem('active_username', username);
+                document.cookie = `username=${encodeURIComponent(username)}; path=/; max-age=31536000`;
+                window.location.href = '/app';
+            } catch (e) {
+                showError(e.message);
+            }
+        }
+
+        async function handleCreateUser(e) {
+            e.preventDefault();
+            const usernameInput = document.getElementById('new-username');
+            const geminiKeyInput = document.getElementById('new-gemini-key');
+            const passwordInput = document.getElementById('new-password');
+
+            const username = usernameInput.value.trim();
+            const geminiKey = geminiKeyInput ? geminiKeyInput.value.trim() : '';
+            const password = passwordInput ? passwordInput.value.trim() : '';
+
+            if (!username || !geminiKey) {
+                showError('Username and Google AI Studio API Key are required.');
+                return;
+            }
+            if (!password) {
+                showError('A password is required to create a profile.');
+                return;
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('username', username);
+                formData.append('gemini_api_key', geminiKey);
+                formData.append('password', password);
+
+                const res = await fetch('/api/users', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || 'Failed to create profile');
+                }
+
+                localStorage.setItem('active_username', username);
+                document.cookie = `username=${encodeURIComponent(username)}; path=/; max-age=31536000`;
+                window.location.href = '/app';
+            } catch (err) {
+                showError(err.message);
+            }
+        }
+
+        function showError(msg) {
+            const errBanner = document.getElementById('error-banner');
+            errBanner.innerText = msg;
+            errBanner.classList.remove('hidden');
+        }
+
+        // Auto-focus search
+        document.getElementById('profile-search').focus();
+    </script>
+</body>
+</html>

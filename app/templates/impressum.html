@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Legal Notice (Impressum) | Studiamo</title>
+
+    <!-- Umami Analytics: empty in self-hosted mode unless UMAMI_WEBSITE_ID is set, see app/config.py -->
+    {% if umami_website_id %}<script defer src="{{ umami_script_url }}" data-website-id="{{ umami_website_id }}"></script>{% endif %}
+
+    <!-- Tailwind CSS (compiled) -->
+    <link rel="stylesheet" href="/static/css/tailwind-built.css">
+    <!-- Custom Style Sheet -->
+    <link rel="stylesheet" href="/static/css/style.css">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body class="bg-[#f6f1e7] text-stone-900 font-sans min-h-screen flex flex-col antialiased selection:bg-amber-500 selection:text-white">
+
+    {% set logo_href = "/" %}
+    {% set back_href = "/" %}
+    {% set back_style = "pill" %}
+    {% set wrapper_class = "max-w-4xl mx-auto" %}
+    {% set header_padding = "py-4 px-4 sm:px-6 lg:px-8" %}
+    {% include "partials/_header.html" %}
+
+    <!-- Main Content -->
+    <main class="flex-grow max-w-4xl w-full mx-auto px-4 sm:px-6 py-12">
+        <div class="bg-white rounded-3xl p-6 sm:p-10 border border-stone-200/80 shadow-xl shadow-stone-950/[0.03] space-y-8">
+            
+            <div class="border-b border-stone-100 pb-6">
+                <h1 class="text-3xl sm:text-4xl font-extrabold text-stone-900 tracking-tight">Legal Notice / Impressum</h1>
+                <p class="text-sm text-stone-500 mt-2">Information according to § 5 DDG (Digitale-Dienste-Gesetz)</p>
+            </div>
+
+            <!-- Provider Info -->
+            <section class="space-y-3">
+                <h2 class="text-lg font-bold text-stone-900 flex items-center gap-2">
+                    <i data-lucide="user" class="w-5 h-5 text-amber-600"></i>
+                    Service Provider &amp; Contact Information
+                </h2>
+                <div class="bg-[#fcfaf6] rounded-2xl p-5 border border-stone-200/60 text-stone-700 text-sm leading-relaxed space-y-1">
+                    <p class="font-bold text-stone-900 text-base">Karl Hildebrand</p>
+                    <p>Zeppelinstr. 8</p>
+                    <p>79540 Lörrach</p>
+                    <p>Germany</p>
+                    <div class="pt-3 flex flex-wrap items-center gap-x-6 gap-y-2 text-stone-600">
+                        <span class="flex items-center gap-1.5">
+                            <i data-lucide="mail" class="w-4 h-4 text-amber-600"></i>
+                            <strong>Email:</strong> <a href="mailto:hello@studiamo.cloud" class="text-amber-700 hover:underline">hello@studiamo.cloud</a>
+                        </span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Responsible for Content -->
+            <section class="space-y-3">
+                <h2 class="text-lg font-bold text-stone-900 flex items-center gap-2">
+                    <i data-lucide="file-text" class="w-5 h-5 text-amber-600"></i>
+                    Responsible for Content
+                </h2>
+                <div class="bg-[#fcfaf6] rounded-2xl p-5 border border-stone-200/60 text-stone-700 text-sm leading-relaxed">
+                    <p class="text-stone-600">Responsible according to § 18 Abs. 2 MStV (Medienstaatsvertrag):</p>
+                    <p class="font-semibold text-stone-900 mt-1">Karl Hildebrand</p>
+                    <p>Zeppelinstr. 8, 79540 Lörrach, Germany</p>
+                </div>
+            </section>
+
+            <!-- Dispute Resolution -->
+            <section class="space-y-3">
+                <h2 class="text-lg font-bold text-stone-900 flex items-center gap-2">
+                    <i data-lucide="scale" class="w-5 h-5 text-amber-600"></i>
+                    Consumer Dispute Resolution
+                </h2>
+                <p class="text-sm text-stone-600 leading-relaxed">
+                    We are neither obligated nor willing to participate in dispute resolution proceedings before a consumer arbitration board.
+                </p>
+            </section>
+
+            <!-- Disclaimer -->
+            <section class="space-y-4 pt-4 border-t border-stone-100">
+                <h2 class="text-xl font-bold text-stone-900">Disclaimer</h2>
+                
+                <div class="space-y-4 text-xs sm:text-sm text-stone-600 leading-relaxed">
+                    <div>
+                        <h3 class="font-semibold text-stone-800 text-sm mb-1">Liability for Content</h3>
+                        <p>
+                            As a service provider, we are responsible for our own content on these pages in accordance with general legislation. However, we are not obligated to monitor transmitted or stored third-party information or to investigate circumstances that indicate illegal activity. Obligations to remove or block the use of information in accordance with general laws remain unaffected.
+                        </p>
+                    </div>
+
+                    <div>
+                        <h3 class="font-semibold text-stone-800 text-sm mb-1">Liability for Links</h3>
+                        <p>
+                            Our site contains links to external websites of third parties, over whose content we have no influence. Therefore, we cannot assume any liability for these external contents. The respective provider or operator of the pages is always responsible for the content of the linked pages.
+                        </p>
+                    </div>
+
+                    <div>
+                        <h3 class="font-semibold text-stone-800 text-sm mb-1">Copyright</h3>
+                        <p>
+                            The content and works created by the site operators on these pages are subject to German copyright law. Duplication, processing, distribution, and any kind of exploitation outside the limits of copyright law require the written consent of the respective author or creator.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    {% include "partials/_footer.html" %}
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+
+</html>

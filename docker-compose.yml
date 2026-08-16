@@ -1,0 +1,51 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: studiamo-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-studiamo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-studiamopassword}
+      POSTGRES_DB: ${POSTGRES_DB:-studiamo}
+    ports:
+      - "5432:5432"
+    volumes:
+      - studiamo_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-studiamo} -d ${POSTGRES_DB:-studiamo}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  studiamo-web:
+    # `image` is tried first (pulls the published build from GHCR, no local compile).
+    # `build` only kicks in if you run `docker compose up -d --build`, e.g. to run from
+    # source instead of the prebuilt image, or to test a local Dockerfile change.
+    image: ghcr.io/naes25/studiamo:latest
+    build: .
+    container_name: studiamo-web
+    restart: unless-stopped
+    # Points at the `postgres` service by its Compose DNS name, not localhost. Anything
+    # else in .env (GEMINI_API_KEY, MAX_SELFHOSTED_USERS, etc.) still comes through as-is,
+    # this only overrides DATABASE_URL so it can't accidentally point outside the network
+    # this stack creates.
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-studiamo}:${POSTGRES_PASSWORD:-studiamopassword}@postgres:5432/${POSTGRES_DB:-studiamo}
+    ports:
+      - "${PORT:-5004}:5004"
+    volumes:
+      - studiamo_users:/app/users
+      - studiamo_vapid:/app/vapid_keys.json
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  studiamo_pgdata:
+    driver: local
+  studiamo_users:
+    driver: local
+  studiamo_vapid:
+    driver: local

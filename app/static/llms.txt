@@ -1,0 +1,45 @@
+# Studiamo
+
+> Studiamo is an AI-powered active recall and spaced repetition learning platform that transforms YouTube videos, PDF documents, and study notes into structured knowledge, quizzes, and automated study schedules.
+
+Full extended documentation: [llms-full.txt](https://studiamo.cloud/llms-full.txt)
+
+## Overview
+
+Studiamo bridges the gap between passive video watching or reading and long-term retention. Using the Google Gemini AI API, Studiamo makes taking active recall quizzes as effortless as possible right after consuming educational material, helping users retain far more through the cognitive testing effect and honest self-grading.
+
+## Key Features
+
+- **Multimodal Content Ingestion**: Import YouTube videos, PDFs, textbooks, and plain text notes.
+- **AI-Powered Active Recall Quizzes**: Automatically generates interactive quizzes and self-test flashcards from transcripts and notes.
+- **Cognitive Science Grounding**: Built on the retrieval testing effect (Roediger & Karpicke, 2006) to break the illusion of passive competence.
+- **Fact-Checking & Outline Extraction**: Analyzes claims in video transcripts to ensure accurate learning material.
+- **Cross-Platform Study Notifications**: Daily study due alerts via Web Push, Telegram Bot, and Email.
+- **Audio Learning & TTS**: Listen to flashcards and summaries using neural Edge-TTS or native browser speech synthesis.
+- **Deployment Flexibility**: Available as a managed cloud service (studiamo.cloud) and as an open-source, self-hosted Docker application.
+
+
+## Pricing & Tiers
+
+- **Cloud Beta**: $7.99/month, with occasional promotional pricing for early users. Includes full AI analysis, Telegram due alerts, multi-device push, and 2 GB storage.
+- **Open-Source / Self-Hosted**: Free and AGPL-3.0 licensed. Deploy locally or on any VPS using Docker Compose with your own Gemini API key.
+
+## Technical Specifications
+
+- **Backend**: Python 3.12, FastAPI, PostgreSQL, AsyncIO Task Queue.
+- **AI Engines**: Google Gemini 3.5 Flash Lite / 3.6 Flash via google-genai SDK.
+- **Frontend**: Vanilla JavaScript (ES6 modules), Tailwind CSS.
+
+- **Repository**: https://github.com/NaEs25/studiamo.git
+
+## Key Links
+
+- [Official Website](https://studiamo.cloud/)
+- [Full LLM Specification](https://studiamo.cloud/llms-full.txt)
+- [Waitlist & Sign In](https://studiamo.cloud/login)
+- [Self-Hosting Documentation](https://github.com/NaEs25/studiamo/blob/main/SELFHOSTING.md)
+- [Cognitive Science & Evidence](https://studiamo.cloud/science)
+- [Privacy Policy](https://studiamo.cloud/privacy)
+- [Terms of Service](https://studiamo.cloud/terms)
+- [Imprint / Impressum](https://studiamo.cloud/impressum)
+

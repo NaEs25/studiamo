@@ -1,0 +1,19 @@
+    <footer class="bg-[#1c1917] border-t border-stone-800 py-8 sm:py-10 text-stone-400 text-xs">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div class="flex items-center space-x-3 text-left">
+                <img src="/static/images/logo-icon.png" class="w-8 h-8 rounded-xl shadow-md shadow-amber-500/20" alt="Studiamo Logo" />
+                <div class="flex flex-col text-left">
+                    <span class="font-bold text-white text-sm leading-tight">Studiamo</span>
+                    <span class="text-stone-400 text-xs mt-0.5">© 2026 Studiamo. All rights reserved.</span>
+                    <span class="text-[11px] text-stone-500 font-medium mt-0.5">Made in Basel 🇨🇭</span>
+                </div>
+            </div>
+            <div class="flex flex-wrap items-center justify-center md:justify-end gap-x-6 gap-y-2 w-full md:w-auto">
+                <a href="/landing" class="hover:text-amber-400 transition whitespace-nowrap">Home</a>
+                <a href="/science" class="hover:text-amber-400 transition whitespace-nowrap{% if current_page == 'science' %} font-semibold text-amber-400{% endif %}">Science &amp; Evidence</a>
+                <a href="/impressum" class="hover:text-amber-400 transition whitespace-nowrap{% if current_page == 'impressum' %} font-semibold text-amber-400{% endif %}">Legal Notice / Impressum</a>
+                <a href="/privacy" class="hover:text-amber-400 transition whitespace-nowrap{% if current_page == 'privacy' %} font-semibold text-amber-400{% endif %}">Privacy Policy</a>
+                <a href="/terms" class="hover:text-amber-400 transition whitespace-nowrap{% if current_page == 'terms' %} font-semibold text-amber-400{% endif %}">Terms of Service</a>
+            </div>
+        </div>
+    </footer>

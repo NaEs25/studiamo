@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Select Profile | Studiamo Self-Hosted</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/static/images/favicon.png">
+
+    <!-- Umami Analytics: empty in self-hosted mode unless UMAMI_WEBSITE_ID is set, see app/config.py -->
+    {% if umami_website_id %}<script defer src="{{ umami_script_url }}" data-website-id="{{ umami_website_id }}"></script>{% endif %}
+
+    <!-- Tailwind CSS (compiled) -->
+    <link rel="stylesheet" href="/static/css/tailwind-built.css">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Custom Style Sheet -->
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="font-sans bg-paperBg text-stoneText antialiased min-h-screen flex flex-col justify-between">
+
+    {% set logo_href = "/" %}
+    {% set show_back_link = false %}
+    {% set badge = "Self-Hosted" %}
+    {% include "partials/_header.html" %}
+
+    <!-- Container -->
+    <main class="my-auto py-12 px-4 w-full">
+        <div class="max-w-lg mx-auto bg-paperCard border border-paperBorder shadow-xl rounded-3xl p-6 sm:p-8 space-y-8">
+            
+            <div class="text-center space-y-2">
+                <img src="/static/images/logo-icon.png" class="w-14 h-14 rounded-2xl shadow-lg shadow-amber-500/25 mx-auto mb-3" alt="Studiamo Logo" />
+                <h1 class="text-2xl font-extrabold text-stoneText tracking-tight">Select Profile</h1>
+                <p class="text-xs text-stoneMuted font-medium">Select your local profile to start studying, or create a new user profile.</p>
+            </div>
+
+            <!-- Profile Search -->
+            <div class="space-y-3">
+                <label class="block text-xs font-extrabold text-amber-800 uppercase tracking-wider">Find Your Profile</label>
+                <div class="relative">
+                    <i data-lucide="search" class="w-4 h-4 text-stone-400 absolute left-3.5 top-3 pointer-events-none"></i>
+                    <input type="text" id="profile-search" autocomplete="off" placeholder="Type your username..."
+                        class="w-full bg-[#fbf8f2] border border-[#e7dfd3] rounded-xl pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:border-amberPrimary text-stoneText placeholder-stone-400 transition"
+                        oninput="handleSearch(this.value)">
+                </div>
+                <div id="users-container" class="space-y-3">
+                    <p class="text-xs text-stoneMuted text-center py-2">Start typing to find your profile.</p>
+                </div>
+            </div>
+
+            <!-- Divider -->
+            <div class="relative flex py-1 items-center">
+                <div class="flex-grow border-t border-paperBorder"></div>
+                <span class="flex-shrink mx-4 text-stoneMuted text-xs font-bold uppercase tracking-wider">Or</span>
+                <div class="flex-grow border-t border-paperBorder"></div>
+            </div>
+
+            <!-- Create New Profile Form -->
+            <div class="space-y-4 bg-[#f3ebd9] p-5 rounded-2xl border border-paperBorder shadow-2xs">
+                <h3 class="text-sm font-bold text-stoneText flex items-center space-x-2">
+                    <i data-lucide="user-plus" class="w-4 h-4 text-amberPrimary"></i>
+                    <span>Create Local Profile</span>
+                </h3>
+
+                <form id="create-user-form" onsubmit="handleCreateUser(event)" class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-stoneText mb-1">Username</label>
+                        <input type="text" id="new-username" required placeholder="E.g., sarah, alex"
+                            class="w-full bg-[#fcfaf6] border border-[#e7dfd3] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-amberPrimary text-stoneText placeholder-stone-400">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-stoneText mb-1">Google AI Studio API Key (BYOK) <span class="text-amberPrimary font-bold">*Required</span></label>
+                        <input type="password" id="new-gemini-key" required placeholder="Paste key (starts with AIzaSy...)"
+                            class="w-full bg-[#fcfaf6] border border-[#e7dfd3] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-amberPrimary text-stoneText placeholder-stone-400">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-stoneText mb-1">Password <span class="text-amberPrimary font-bold">*Required</span></label>
+                        <input type="password" id="new-password" required placeholder="Choose a password"
+                            class="w-full bg-[#fcfaf6] border border-[#e7dfd3] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-amberPrimary text-stoneText placeholder-stone-400">
+                    </div>
+                    <button type="submit" id="btn-create-profile"
+                        class="btn-primary w-full py-3 font-extrabold text-sm rounded-xl transition transform hover:-translate-y-0.5">
+                        Create &amp; Start Studying
+                    </button>
+                </form>
+            </div>
+
+            <!-- Error Banner -->
+            <div id="error-banner" class="hidden p-3.5 bg-red-500/10 border border-red-500/20 rounded-xl text-xs text-red-700 font-semibold text-center"></div>
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="py-4 text-center text-xs text-stoneMuted">
+        <p>&copy; 2026 Studiamo Self-Hosted &bull; Maximum 10 Local Users</p>
+    </footer>
+
+    <script>
+        let searchTimeout;
+
+        async function fetchAPI(url, opts = {}) {
+            const res = await fetch(url, opts);
+            if (!res.ok) {
+                let errText = "Request failed";
+                try {
+                    const errData = await res.json();
+                    errText = errData.detail || errText;
+                } catch(e) {}
+                throw new Error(errText);
+            }
+            return res.json();
+        }
+
+        async function handleSearch(val) {
+            clearTimeout(searchTimeout);
+            const container = document.getElementById('users-container');
+            const term = val.trim();
+            
+            if (!term) {
+                container.innerHTML = '<p class="text-xs text-stoneMuted text-center py-2">Start typing to find your profile.</p>';
+                return;
+            }
+
+            searchTimeout = setTimeout(async () => {
+                try {
+                    const data = await fetchAPI('/api/users?q=' + encodeURIComponent(term));
+                    const users = data.users || [];
+                    
+                    if (users.length === 0) {
+                        container.innerHTML = '<p class="text-xs text-stoneMuted text-center py-2">No matching profile found.</p>';
+                        return;
+                    }
+
+                    container.innerHTML = users.map(u => `
+                        <div onclick="selectUser('${u}')" class="p-3 bg-[#fbf8f2] border border-[#e7dfd3] hover:border-amberPrimary/50 rounded-xl flex items-center justify-between cursor-pointer transition group shadow-2xs hover:shadow-xs">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-900 font-bold flex items-center justify-center text-xs">
+                                    ${u.substring(0, 2).toUpperCase()}
+                                </div>
+                                <span class="text-sm font-extrabold text-stoneText group-hover:text-amberPrimary transition">${u}</span>
+                            </div>
+                            <i data-lucide="chevron-right" class="w-4 h-4 text-stone-400 group-hover:text-amberPrimary transition"></i>
+                        </div>
+                    `).join('');
+
+                    if (window.lucide) lucide.createIcons();
+                } catch(e) {
+                    console.error(e);
+                }
+            }, 250);
+        }
+
+        async function selectUser(username) {
+            const pwd = prompt(`Enter password for profile "${username}":`);
+            if (pwd === null) return;
+            
+            const fd = new FormData();
+            fd.append('username', username);
+            fd.append('password', pwd);
+
+            const errBanner = document.getElementById('error-banner');
+            errBanner.classList.add('hidden');
+
+            try {
+                const res = await fetchAPI('/api/users/verify', { method: 'POST', body: fd });
+                localStorage.setItem('active_username', username);
+                window.location.href = '/';
+            } catch(e) {
+                errBanner.textContent = e.message || 'Incorrect password';
+                errBanner.classList.remove('hidden');
+            }
+        }
+
+        async function handleCreateUser(e) {
+            e.preventDefault();
+            const username = document.getElementById('new-username').value.trim();
+            const geminiKey = document.getElementById('new-gemini-key').value.trim();
+            const password = document.getElementById('new-password').value.trim();
+            const errBanner = document.getElementById('error-banner');
+            errBanner.classList.add('hidden');
+
+            if (!username || !geminiKey || !password) return;
+
+            const btn = document.getElementById('btn-create-profile');
+            btn.disabled = true;
+            btn.textContent = 'Creating Profile...';
+
+            const fd = new FormData();
+            fd.append('username', username);
+            fd.append('gemini_api_key', geminiKey);
+            fd.append('password', password);
+
+            try {
+                await fetchAPI('/api/users', { method: 'POST', body: fd });
+                localStorage.setItem('active_username', username);
+                window.location.href = '/';
+            } catch(e) {
+                errBanner.textContent = e.message || 'Failed to create profile';
+                errBanner.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Create & Start Studying';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.lucide) lucide.createIcons();
+        });
+    </script>
+</body>
+</html>

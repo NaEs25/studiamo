@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>You're on the list | Studiamo Cloud</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/static/images/favicon.png">
+
+    <!-- Umami Analytics: empty in self-hosted mode unless UMAMI_WEBSITE_ID is set, see app/config.py -->
+    {% if umami_website_id %}<script defer src="{{ umami_script_url }}" data-website-id="{{ umami_website_id }}"></script>{% endif %}
+
+    <!-- Tailwind CSS (compiled) -->
+    <link rel="stylesheet" href="/static/css/tailwind-built.css">
+    <!-- Custom Style Sheet -->
+    <link rel="stylesheet" href="/static/css/style.css">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="font-sans bg-paperBg text-stoneText antialiased min-h-screen flex flex-col justify-between">
+
+    <!-- Top Header -->
+    {% include "partials/_header.html" %}
+
+    <!-- Main Content Container -->
+    <main class="my-auto py-12 px-4 w-full">
+        <div class="max-w-md mx-auto bg-paperCard border border-paperBorder shadow-xl rounded-3xl p-7 sm:p-9 space-y-6">
+
+            <div class="text-center space-y-2">
+                <div class="w-14 h-14 rounded-2xl bg-amber-100 text-amberPrimary flex items-center justify-center mx-auto mb-1">
+                    <i data-lucide="clock" class="w-7 h-7"></i>
+                </div>
+                <h1 class="text-2xl font-extrabold text-stoneText tracking-tight">You're on the waitlist</h1>
+                <p class="text-xs text-stoneMuted font-medium leading-relaxed">
+                    No pressure to refer anyone , spots open up regularly as we grow. Referring friends just
+                    moves you up a little faster. Either way, we'll email you the moment you're in.
+                </p>
+            </div>
+
+            <div id="loading-state" class="text-center text-xs text-stoneMuted py-4">Loading your referral info…</div>
+
+            <div id="error-state" class="hidden text-center text-xs text-red-700 bg-red-500/10 border border-red-500/20 rounded-xl p-3.5"></div>
+
+            <div id="ready-state" class="hidden space-y-6">
+                <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-center">
+                    <p class="text-sm font-bold text-stoneText">
+                        You've referred <span id="referral-count">0</span> of 5 friends
+                    </p>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="text-[11px] font-bold text-stoneMuted uppercase tracking-wide">Your referral link</label>
+                    <div class="flex items-center gap-2">
+                        <input id="referral-link" type="text" readonly
+                            class="flex-1 min-w-0 text-xs font-medium bg-stone-50 border border-paperBorder rounded-xl px-3 py-2.5 text-stoneText truncate" />
+                        <button id="copy-link-btn"
+                            class="shrink-0 py-2.5 px-3.5 bg-amberPrimary hover:bg-amberHover text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
+                            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                            <span id="copy-link-label">Copy</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="text-[11px] font-bold text-stoneMuted uppercase tracking-wide">Share message</label>
+                    <div class="flex items-start gap-2">
+                        <p id="share-message" class="flex-1 text-xs text-stoneMuted bg-stone-50 border border-paperBorder rounded-xl px-3 py-2.5 leading-relaxed"></p>
+                        <button id="copy-message-btn"
+                            class="shrink-0 py-2.5 px-3.5 bg-white hover:bg-stone-50 border border-paperBorder text-stoneText rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
+                            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                            <span id="copy-message-label">Copy</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <p class="text-[11px] text-stoneMuted text-center leading-relaxed pt-1">
+                By joining the waitlist, you agree to receive one email when your spot is ready.
+                See our <a href="/privacy" class="underline hover:text-amberPrimary">Privacy Policy</a>.
+            </p>
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    {% include "partials/_footer.html" %}
+
+    <script>
+        function flashCopied(labelEl, original) {
+            labelEl.textContent = 'Copied!';
+            setTimeout(() => { labelEl.textContent = original; }, 1500);
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (window.lucide) lucide.createIcons();
+
+            const params = new URLSearchParams(window.location.search);
+            const ref = (params.get('ref') || '').trim();
+
+            const loadingEl = document.getElementById('loading-state');
+            const errorEl = document.getElementById('error-state');
+            const readyEl = document.getElementById('ready-state');
+
+            function showError(message) {
+                loadingEl.classList.add('hidden');
+                readyEl.classList.add('hidden');
+                errorEl.textContent = message;
+                errorEl.classList.remove('hidden');
+            }
+
+            if (!ref) {
+                showError("We couldn't find your waitlist info. Please use the link from your confirmation email.");
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/waitlist-status?ref=${encodeURIComponent(ref)}`);
+                if (!res.ok) {
+                    showError("We couldn't find your waitlist info. Please use the link from your confirmation email.");
+                    return;
+                }
+                const data = await res.json();
+
+                const referralLink = `${window.location.origin}/join?ref=${ref}`;
+                const shareMessage = `I'm on the waitlist for Studiamo, an AI-powered spaced repetition app for turning YouTube videos into active recall practice. Join me: ${referralLink}`;
+
+                document.getElementById('referral-count').textContent = data.referral_count;
+                document.getElementById('referral-link').value = referralLink;
+                document.getElementById('share-message').textContent = shareMessage;
+
+                loadingEl.classList.add('hidden');
+                readyEl.classList.remove('hidden');
+
+                document.getElementById('copy-link-btn').addEventListener('click', () => {
+                    navigator.clipboard.writeText(referralLink);
+                    flashCopied(document.getElementById('copy-link-label'), 'Copy');
+                });
+                document.getElementById('copy-message-btn').addEventListener('click', () => {
+                    navigator.clipboard.writeText(shareMessage);
+                    flashCopied(document.getElementById('copy-message-label'), 'Copy');
+                });
+            } catch (e) {
+                showError("Something went wrong loading your waitlist info. Please try again shortly.");
+            }
+        });
+    </script>
+</body>
+</html>

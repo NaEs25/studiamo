@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+# Blocks commits that stage likely secrets or internal business figures, since this
+# repository is public (see AGENTS.md, "This Repository Is Public"). Pattern-based on
+# purpose: it must never itself contain a real secret as an example.
+#
+# False positive? Fix the line if you can; if it's genuinely fine, commit with
+# `git commit --no-verify` and say why in the commit message.
+set -euo pipefail
+
+added_lines() {
+    git diff --cached -U0 -- . | grep -E '^\+' | grep -Ev '^\+\+\+'
+}
+
+fail=0
+report() {
+    local label="$1" hits="$2"
+    if [ -n "$hits" ]; then
+        echo "pre-commit: possible $label:"
+        echo "$hits" | sed 's/^/  /'
+        echo
+        fail=1
+    fi
+}
+
+lines="$(added_lines || true)"
+
+# Common API-key / secret token shapes.
+report "API key or secret token" \
+    "$(echo "$lines" | grep -EnI 'AIza[0-9A-Za-z_-]{20,}|sk-[a-zA-Z0-9]{20,}|(xox[baprs]|ghp|gho|ghu|ghs)-[a-zA-Z0-9-]{10,}' || true)"
+
+# A *_KEY / *_SECRET / *_TOKEN / *_PASSWORD / *_WEBHOOK / *_DISCOUNT_CODE env var given a
+# non-empty, non-placeholder default value directly in source, instead of "" or an env lookup.
+report "hardcoded default for a secret-shaped env var" \
+    "$(echo "$lines" | grep -EnI 'os\.(getenv|environ\.get)\(\s*["'"'"'][A-Z_]*(KEY|SECRET|TOKEN|PASSWORD|WEBHOOK|DISCOUNT_CODE)["'"'"']\s*,\s*["'"'"'][^"'"'"']+["'"'"']\s*\)' \
+        | grep -Ev '""|'"''"'|your_[a-z_]+_here|changeme|placeholder' || true)"
+
+# A checkout/payment URL with what looks like a real ID (UUID-shaped) rather than a placeholder.
+report "payment URL with a real-looking ID" \
+    "$(echo "$lines" | grep -EnI 'lemonsqueezy\.com/checkout/buy/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' || true)"
+
+# A dollar figure next to a strictly internal-cost word. Narrow on purpose: "discount"/
+# "promo" alone are normal in customer-facing pricing copy (e.g. terms.html's "a discount
+# code may reduce the price"), so they're not included here.
+report "internal dollar figure (budget/margin/cost-basis)" \
+    "$(echo "$lines" | grep -EnI '\$[0-9]+(\.[0-9]{2})?' | grep -EiI 'budget|margin|cost.?basis' || true)"
+
+# An actual code value written right after "promo code" / "discount code", as opposed to
+# the phrase alone on its own, which is normal in customer-facing pricing copy.
+report "a real-looking promo/discount code" \
+    "$(echo "$lines" | grep -EnI '\b(promo|discount)[[:space:]]+code\b[^.]{0,20}\b[A-Z][A-Z0-9]{3,11}\b' || true)"
+
+# Broader secret detection via gitleaks, catching shapes the patterns above don't name
+# (AWS keys, JWTs, private keys, high-entropy generic strings...). Config/allowlist in
+# .gitleaks.toml. Skips with a warning rather than blocking if neither a native `gitleaks`
+# nor Docker is available -- the checks above remain the enforced floor either way.
+if command -v gitleaks >/dev/null 2>&1; then
+    gitleaks protect --source "$(git rev-parse --show-toplevel)" --staged --redact -v \
+        || { echo "pre-commit: gitleaks found a likely secret in staged changes (see above)."; fail=1; }
+elif command -v docker >/dev/null 2>&1; then
+    # A worktree's real .git data lives in the main checkout, so both directories need to
+    # be mounted at their real host paths, or gitleaks' internal `git diff --staged` silently
+    # fails to detect a repo and reports "no leaks found" either way.
+    repo_root="$(git rev-parse --show-toplevel)"
+    main_dir="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")"
+    docker run --rm \
+        -v "$repo_root:$repo_root" -v "$main_dir:$main_dir" -w "$repo_root" \
+        zricethezav/gitleaks:latest protect --source "$repo_root" --staged --redact -v \
+        || { echo "pre-commit: gitleaks found a likely secret in staged changes (see above)."; fail=1; }
+else
+    echo "pre-commit: gitleaks unavailable (no binary, no docker) -- skipping broader secret scan."
+fi
+
+if [ "$fail" -ne 0 ]; then
+    echo "Commit blocked by pre-commit hook (.githooks/pre-commit)."
+    exit 1
+fi

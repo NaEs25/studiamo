@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy | Studiamo</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/static/images/favicon.png">
+    
+    <!-- Umami Analytics: empty in self-hosted mode unless UMAMI_WEBSITE_ID is set, see app/config.py -->
+    {% if umami_website_id %}<script defer src="{{ umami_script_url }}" data-website-id="{{ umami_website_id }}"></script>{% endif %}
+
+    <!-- Tailwind CSS (compiled) -->
+    <link rel="stylesheet" href="/static/css/tailwind-built.css">
+    <!-- Custom Style Sheet -->
+    <link rel="stylesheet" href="/static/css/style.css">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="font-sans bg-paperBg text-stoneText antialiased min-h-screen flex flex-col justify-between">
+
+    <!-- Header -->
+    {% include "partials/_header.html" %}
+
+    <!-- Main Container -->
+    <main class="max-w-3xl mx-auto px-4 py-12 my-auto w-full">
+        <div class="bg-paperCard border border-paperBorder shadow-xl rounded-3xl p-6 sm:p-10 space-y-8">
+            
+            <div class="border-b border-paperBorder pb-6 space-y-2">
+                <div class="inline-flex items-center space-x-2 px-3 py-1 bg-amber-500/10 border border-amber-500/25 rounded-full text-xs font-extrabold text-amber-900">
+                    <i data-lucide="shield-check" class="w-3.5 h-3.5 text-amber-700"></i>
+                    <span>Privacy &amp; Data Protection</span>
+                </div>
+                <h1 class="text-3xl font-extrabold tracking-tight text-stoneText">Privacy Policy</h1>
+                <p class="text-xs text-stoneMuted">Effective Date: August 7, 2026 &bull; Domain: studiamo.cloud</p>
+            </div>
+
+            <div class="space-y-6 text-sm text-stoneText leading-relaxed">
+                
+                <!-- Section 1 -->
+                <section class="space-y-2">
+                    <h2 class="text-base font-bold text-stoneText flex items-center space-x-2">
+                        <i data-lucide="info" class="w-4 h-4 text-amberPrimary"></i>
+                        <span>1. Overview</span>
+                    </h2>
+                    <p class="text-xs text-stoneMuted leading-relaxed">
+                        Studiamo ("we", "our", or "us") respects your privacy and is committed to protecting the personal data of our users ("you"). This Privacy Policy explains how information is collected, used, disclosed, and safeguarded when you visit or use <strong class="text-stoneText">studiamo.cloud</strong> and our active recall spaced repetition application.
+                    </p>
+                </section>
+
+                <!-- Section 2 -->
+                <section class="space-y-2">
+                    <h2 class="text-base font-bold text-stoneText flex items-center space-x-2">
+                        <i data-lucide="database" class="w-4 h-4 text-amberPrimary"></i>
+                        <span>2. Information We Collect</span>
+                    </h2>
+                    <ul class="list-disc list-inside text-xs text-stoneMuted space-y-1.5 pl-1">
+                        <li><strong class="text-stoneText">Account Information:</strong> When you register or sign in via Google Single Sign-On (SSO), we collect your verified email address, display name, and unique authentication identifier.</li>
+                        <li><strong class="text-stoneText">Study &amp; Learning Progress Data:</strong> Active recall quiz attempts, Spaced Repetition System (SRS) intervals, review histories, study streaks, and earned experience points (XP).</li>
+                        <li><strong class="text-stoneText">User Content:</strong> Study materials, notes, or YouTube URLs submitted for active recall question generation.</li>
+                        <li><strong class="text-stoneText">Waitlist Information:</strong> When you join our pre-launch waitlist, we collect your email address, hosting preference, referring page, approximate country (from your network provider), and browser user agent.</li>
+                    </ul>
+                </section>
+
+                <!-- Section 3 -->
+                <section class="space-y-2">
+                    <h2 class="text-base font-bold text-stoneText flex items-center space-x-2">
+                        <i data-lucide="cpu" class="w-4 h-4 text-amberPrimary"></i>
+                        <span>3. How We Use Your Information</span>
+                    </h2>
+                    <p class="text-xs text-stoneMuted leading-relaxed">
+                        Your information is used strictly to:
+                    </p>
+                    <ul class="list-disc list-inside text-xs text-stoneMuted space-y-1.5 pl-1">
+                        <li>Deliver personalized active recall quizzes and calculate optimal Spaced Repetition review timing.</li>
+                        <li>Display optional leaderboard rankings (which can be toggled to anonymous at any time in Profile settings).</li>
+                        <li>Process AI flashcard generation through secure Google Gemini API interfaces.</li>
+                    </ul>
+                </section>
+
+                <!-- Section 4 -->
+                <section class="space-y-2">
+                    <h2 class="text-base font-bold text-stoneText flex items-center space-x-2">
+                        <i data-lucide="lock" class="w-4 h-4 text-amberPrimary"></i>
+                        <span>4. Third-Party Services &amp; Sub-Processors</span>
+                    </h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                        <div class="p-3.5 bg-[#fbf8f2] border border-paperBorder rounded-2xl space-y-1">
+                            <div class="font-bold text-xs text-stoneText flex items-center space-x-1.5">
+                                <i data-lucide="key" class="w-3.5 h-3.5 text-amberPrimary"></i>
+                                <span>Google OAuth &amp; AI Studio</span>
+                            </div>
+                            <p class="text-[11px] text-stoneMuted">Used for secure Single Sign-On authentication and Gemini AI quiz question generation.</p>
+                        </div>
+                        <div class="p-3.5 bg-[#fbf8f2] border border-paperBorder rounded-2xl space-y-1">
+                            <div class="font-bold text-xs text-stoneText flex items-center space-x-1.5">
+                                <i data-lucide="video" class="w-3.5 h-3.5 text-amberPrimary"></i>
+                                <span>YouTube API Services</span>
+                            </div>
+                            <p class="text-[11px] text-stoneMuted">Used to fetch video metadata, thumbnails, and study video recommendations.</p>
+                        </div>
+                        <div class="p-3.5 bg-[#fbf8f2] border border-paperBorder rounded-2xl space-y-1">
+                            <div class="font-bold text-xs text-stoneText flex items-center space-x-1.5">
+                                <i data-lucide="bar-chart-2" class="w-3.5 h-3.5 text-amberPrimary"></i>
+                                <span>Umami Analytics</span>
+                            </div>
+                            <p class="text-[11px] text-stoneMuted">Privacy-focused, cookie-free web analytics respecting user anonymity.</p>
+                        </div>
+                        <div class="p-3.5 bg-[#fbf8f2] border border-paperBorder rounded-2xl space-y-1">
+                            <div class="font-bold text-xs text-stoneText flex items-center space-x-1.5">
+                                <i data-lucide="database" class="w-3.5 h-3.5 text-amberPrimary"></i>
+                                <span>Supabase</span>
+                            </div>
+                            <p class="text-[11px] text-stoneMuted">Database hosting (EU, Frankfurt) for account and study data on the cloud version.</p>
+                        </div>
+                        <div class="p-3.5 bg-[#fbf8f2] border border-paperBorder rounded-2xl space-y-1">
+                            <div class="font-bold text-xs text-stoneText flex items-center space-x-1.5">
+                                <i data-lucide="credit-card" class="w-3.5 h-3.5 text-amberPrimary"></i>
+                                <span>Lemon Squeezy</span>
+                            </div>
+                            <p class="text-[11px] text-stoneMuted">Merchant of Record for subscriptions (Sold through Link, LLC, USA). Handles checkout, payment and invoicing. Receives your email address and billing details directly. We never see or store your card data.</p>
+                        </div>
+                        <div class="p-3.5 bg-[#fbf8f2] border border-paperBorder rounded-2xl space-y-1">
+                            <div class="font-bold text-xs text-stoneText flex items-center space-x-1.5">
+                                <i data-lucide="mail" class="w-3.5 h-3.5 text-amberPrimary"></i>
+                                <span>Resend</span>
+                            </div>
+                            <p class="text-[11px] text-stoneMuted">Transactional and waitlist email delivery.</p>
+                        </div>
+                    </div>
+                    <div class="space-y-2 pt-2 text-[11px] text-stoneMuted leading-relaxed">
+                        <p>
+                            <strong class="text-stoneText">YouTube API Services &amp; Google Data:</strong> Studiamo uses YouTube API Services to retrieve public video metadata (video titles, creator/channel names, duration, and thumbnail images), search educational video suggestions, and render in-app video study players. By using these features, you acknowledge that public YouTube data is accessed in accordance with the <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" class="font-bold text-amberPrimary hover:underline">Google Privacy Policy</a>. You can manage or revoke access to your Google account permissions at any time via the <a href="https://security.google.com/settings/security/permissions" target="_blank" rel="noopener noreferrer" class="font-bold text-amberPrimary hover:underline">Google Security Settings page</a>.
+                        </p>
+                        <p>
+                            Subscription data we store consists only of your subscription status, renewal
+                            and end dates, and the identifiers Lemon Squeezy uses for your customer and
+                            subscription records. No payment card details are transmitted to or held by us
+                            at any point.
+                        </p>
+                    </div>
+                </section>
+
+                <!-- Section 5 -->
+                <section class="space-y-2">
+                    <h2 class="text-base font-bold text-stoneText flex items-center space-x-2">
+                        <i data-lucide="cookie" class="w-4 h-4 text-amberPrimary"></i>
+                        <span>5. Cookies We Use</span>
+                    </h2>
+                    <p class="text-xs text-stoneMuted leading-relaxed">
+                        We only use cookies that are strictly necessary to provide a service you've explicitly requested (like signing in), never for advertising, cross-site tracking, or profiling. Because of that, these don't require a cookie-consent banner under applicable law (TTDSG §25(2) / ePrivacy Directive Art. 5(3)), but we're listing them here for transparency:
+                    </p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                        <div class="p-3.5 bg-[#fbf8f2] border border-paperBorder rounded-2xl space-y-1">
+                            <div class="font-bold text-xs text-stoneText flex items-center space-x-1.5">
+                                <i data-lucide="key-round" class="w-3.5 h-3.5 text-amberPrimary"></i>
+                                <span>yb_session</span>
+                            </div>
+                            <p class="text-[11px] text-stoneMuted">Keeps you signed in. HttpOnly (not readable by JavaScript). Expires when you log out or after a long period of inactivity.</p>
+                        </div>
+                        <div class="p-3.5 bg-[#fbf8f2] border border-paperBorder rounded-2xl space-y-1">
+                            <div class="font-bold text-xs text-stoneText flex items-center space-x-1.5">
+                                <i data-lucide="user" class="w-3.5 h-3.5 text-amberPrimary"></i>
+                                <span>username</span>
+                            </div>
+                            <p class="text-[11px] text-stoneMuted">Lets the interface show which account is active. Works alongside the session cookie above.</p>
+                        </div>
+                        <div class="p-3.5 bg-[#fbf8f2] border border-paperBorder rounded-2xl space-y-1">
+                            <div class="font-bold text-xs text-stoneText flex items-center space-x-1.5">
+                                <i data-lucide="share-2" class="w-3.5 h-3.5 text-amberPrimary"></i>
+                                <span>ref_code</span>
+                            </div>
+                            <p class="text-[11px] text-stoneMuted">Temporary (24 hours). Holds a referral code so a friend's invite is credited if you sign up after clicking their link. Contains no personal data.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section 6 -->
+                <section class="space-y-2">
+                    <h2 class="text-base font-bold text-stoneText flex items-center space-x-2">
+                        <i data-lucide="user-check" class="w-4 h-4 text-amberPrimary"></i>
+                        <span>6. Your Rights &amp; Data Control</span>
+                    </h2>
+                    <p class="text-xs text-stoneMuted leading-relaxed">
+                        Under applicable privacy regulations (including GDPR), you have the right to access, export, or request deletion of your personal data at any time. You can toggle anonymous leaderboard visibility or modify profile preferences in your account Settings.
+                    </p>
+                </section>
+
+                <!-- Section 7 -->
+                <section class="space-y-2 border-t border-paperBorder pt-4">
+                    <h2 class="text-base font-bold text-stoneText flex items-center space-x-2">
+                        <i data-lucide="mail" class="w-4 h-4 text-amberPrimary"></i>
+                        <span>7. Contact Us</span>
+                    </h2>
+                    <p class="text-xs text-stoneMuted leading-relaxed">
+                        If you have questions about this Privacy Policy or your data protection rights, contact us at: <a href="mailto:hello@studiamo.cloud" class="font-bold text-amberPrimary hover:underline">hello@studiamo.cloud</a>.
+                    </p>
+                </section>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    {% include "partials/_footer.html" %}
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.lucide) lucide.createIcons();
+        });
+    </script>
+</body>
+</html>

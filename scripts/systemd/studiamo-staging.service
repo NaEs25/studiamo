@@ -1,0 +1,23 @@
+[Unit]
+Description=Studiamo Staging (Spaced Repetition Learning System)
+After=network.target
+StartLimitIntervalSec=300
+StartLimitBurst=10
+
+[Service]
+User=naes
+WorkingDirectory=/home/naes/studiamo-staging
+ExecStartPre=/home/naes/studiamo-staging/scripts/build_css.sh
+ExecStart=/home/naes/studiamo-staging/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 5005
+Restart=always
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+
+# Hardware protection limits for co-hosted services (lighter than prod)
+CPUQuota=100%
+MemoryMax=1G
+MemoryHigh=800M
+Nice=10
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Science of Active Recall &amp; Spaced Repetition | Studiamo</title>
+    <meta name="description" content="Discover the cognitive science and empirical research behind Studiamo. Learn why active retrieval practice and spaced repetition dramatically outperform passive studying.">
+    <meta property="og:title" content="The Science of Retention | Studiamo">
+    <meta property="og:description" content="Evidence-based learning: How active recall and spaced repetition strengthen long-term memory retention based on cognitive psychology.">
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://studiamo.cloud/science">
+    <meta property="og:image" content="https://studiamo.cloud/static/images/favicon.png">
+    
+    <!-- Schema.org JSON-LD Structured Data for Academic & AI Search Engines -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "TechArticle",
+      "headline": "The Cognitive Science Behind Active Recall and Spaced Repetition in Studiamo",
+      "description": "An overview of peer-reviewed cognitive psychology research demonstrating the efficacy of practice testing, spaced repetition, and desirable difficulties for long-term knowledge retention.",
+      "author": {
+        "@type": "Organization",
+        "name": "Studiamo"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "Studiamo",
+        "url": "https://studiamo.cloud/"
+      },
+      "about": [
+        {
+          "@type": "Thing",
+          "name": "Testing Effect",
+          "sameAs": "https://en.wikipedia.org/wiki/Testing_effect"
+        },
+        {
+          "@type": "Thing",
+          "name": "Spaced Repetition",
+          "sameAs": "https://en.wikipedia.org/wiki/Spaced_repetition"
+        },
+        {
+          "@type": "Thing",
+          "name": "Desirable Difficulty",
+          "sameAs": "https://en.wikipedia.org/wiki/Desirable_difficulty"
+        }
+      ],
+      "citation": [
+        "https://doi.org/10.1177/1529100612453266",
+        "https://doi.org/10.1111/j.1467-9280.2006.01693.x",
+        "https://doi.org/10.1126/science.1199327",
+        "https://doi.org/10.1037/0033-2909.132.3.354",
+        "https://doi.org/10.1037/0278-7393.31.2.187"
+      ]
+    }
+    </script>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/static/images/favicon.png">
+    
+    <!-- Umami Analytics -->
+    {% if umami_website_id %}<script defer src="{{ umami_script_url }}" data-website-id="{{ umami_website_id }}"></script>{% endif %}
+
+    <!-- Tailwind CSS (compiled) -->
+    <link rel="stylesheet" href="/static/css/tailwind-built.css">
+    <!-- Custom Style Sheet -->
+    <link rel="stylesheet" href="/static/css/style.css">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="font-sans bg-paperBg text-stoneText antialiased min-h-screen flex flex-col justify-between">
+
+    <!-- Header -->
+    {% include "partials/_header.html" %}
+
+    <!-- Main Container -->
+    <main class="max-w-4xl mx-auto px-4 sm:px-6 py-12 w-full space-y-12">
+        
+        <!-- Hero Section -->
+        <div class="text-center space-y-4 max-w-2xl mx-auto">
+            <div class="inline-flex items-center space-x-2 px-3.5 py-1 bg-amber-500/10 border border-amber-500/25 rounded-full text-xs font-extrabold text-amber-900">
+                <i data-lucide="graduation-cap" class="w-3.5 h-3.5 text-amber-700"></i>
+                <span>Cognitive Psychology &amp; Evidence</span>
+            </div>
+            <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-stoneText leading-tight">
+                The Science of Permanent Retention
+            </h1>
+            <p class="text-stoneMuted text-sm sm:text-base leading-relaxed">
+                Why passive watching and highlighting fail, and how active retrieval practice paired with spaced intervals guarantees long-term recall.
+            </p>
+        </div>
+
+        <!-- 3 Key Stat Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-paperCard border border-paperBorder p-6 rounded-2xl shadow-xs space-y-2">
+                <div class="text-3xl font-extrabold text-amberPrimary tracking-tight">+50% Retention</div>
+                <div class="text-xs font-bold text-stoneText uppercase tracking-wider">The Testing Effect</div>
+                <p class="text-xs text-stoneMuted leading-relaxed">
+                    Testing yourself produces vastly superior retention after one week compared to repeated studying (Roediger &amp; Karpicke, 2006).
+                </p>
+            </div>
+            <div class="bg-paperCard border border-paperBorder p-6 rounded-2xl shadow-xs space-y-2">
+                <div class="text-3xl font-extrabold text-amberPrimary tracking-tight">Top Tier (#1)</div>
+                <div class="text-xs font-bold text-stoneText uppercase tracking-wider">Practice Testing &amp; Spacing</div>
+                <p class="text-xs text-stoneMuted leading-relaxed">
+                    Ranked as the only two "High Utility" techniques among 10 evaluated study methods in a landmark meta-analysis (Dunlosky et al., 2013).
+                </p>
+            </div>
+            <div class="bg-paperCard border border-paperBorder p-6 rounded-2xl shadow-xs space-y-2">
+                <div class="text-3xl font-extrabold text-amberPrimary tracking-tight">96% Advantage</div>
+                <div class="text-xs font-bold text-stoneText uppercase tracking-wider">Distributed Practice</div>
+                <p class="text-xs text-stoneMuted leading-relaxed">
+                    Across 254 empirical studies, spacing reviews over time consistently beat massed cramming sessions (Cepeda et al., 2006).
+                </p>
+            </div>
+        </div>
+
+        <!-- The Problem vs Solution Box -->
+        <div class="bg-paperCard border border-paperBorder rounded-3xl p-6 sm:p-8 space-y-6 shadow-sm">
+            <div class="space-y-1">
+                <h2 class="text-xl font-extrabold text-stoneText flex items-center space-x-2">
+                    <i data-lucide="brain-circuit" class="w-5 h-5 text-amberPrimary"></i>
+                    <span>The Illusion of Competence vs. The Active Loop</span>
+                </h2>
+                <p class="text-xs text-stoneMuted">
+                    Why your brain tricks you into feeling prepared during passive consumption.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Passive Approach -->
+                <div class="bg-stone-100/70 border border-stone-200/80 rounded-2xl p-5 space-y-3">
+                    <div class="flex items-center space-x-2 text-stone-700 font-bold text-sm">
+                        <i data-lucide="x-circle" class="w-4 h-4 text-red-500"></i>
+                        <span>Passive Studying (What Most People Do)</span>
+                    </div>
+                    <ul class="text-xs text-stone-600 space-y-2 list-disc list-inside leading-relaxed">
+                        <li>Binge-watching YouTube lectures at 1.5x speed.</li>
+                        <li>Highlighting PDF sentences and rereading slides.</li>
+                        <li>High recognition fluency creates a false sense of mastery (Koriat &amp; Bjork, 2005).</li>
+                        <li>Rapid forgetting curve: 70% to 80% lost within 7 days.</li>
+                    </ul>
+                </div>
+
+                <!-- Studiamo Approach -->
+                <div class="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-5 space-y-3">
+                    <div class="flex items-center space-x-2 text-amber-950 font-bold text-sm">
+                        <i data-lucide="check-circle-2" class="w-4 h-4 text-amber-600"></i>
+                        <span>The Studiamo Active Loop</span>
+                    </div>
+                    <ul class="text-xs text-stone-700 space-y-2 list-disc list-inside leading-relaxed">
+                        <li>Automatic conversion of video and notes into active recall questions.</li>
+                        <li>Effortful retrieval practice creates durable neural pathways (Desirable Difficulties).</li>
+                        <li>Adaptive 5-stage Leitner spaced repetition scheduler.</li>
+                        <li>Multi-channel daily review prompts via Telegram bot and Web Push.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Empirical Studies Detailed Breakdown -->
+        <div class="space-y-6">
+            <div class="space-y-1">
+                <h2 class="text-2xl font-extrabold text-stoneText tracking-tight flex items-center space-x-2">
+                    <i data-lucide="book-open" class="w-6 h-6 text-amberPrimary"></i>
+                    <span>Key Empirical Studies &amp; Citations</span>
+                </h2>
+                <p class="text-xs text-stoneMuted">
+                    Peer-reviewed research supporting our software design and learning workflows.
+                </p>
+            </div>
+
+            <!-- Study 1 -->
+            <div class="bg-paperCard border border-paperBorder rounded-2xl p-6 space-y-3 shadow-2xs">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-paperBorder pb-3">
+                    <h3 class="text-base font-bold text-stoneText">1. The Testing Effect: Memory Tests Build Retention</h3>
+                    <span class="text-xs font-mono text-amber-800 bg-amber-500/10 px-2.5 py-0.5 rounded-full w-fit">Psychological Science (2006)</span>
+                </div>
+                <p class="text-xs text-stoneMuted font-mono">
+                    Roediger, H. L., &amp; Karpicke, J. D. (2006). Test-enhanced learning: Taking memory tests improves long-term retention. <em>Psychological Science</em>, 17(3), 249–255.
+                </p>
+                <p class="text-xs sm:text-sm text-stoneText leading-relaxed">
+                    This landmark study compared students who repeatedly read prose passages with students who tested themselves with active retrieval. While repeated reading showed temporary advantages immediately after study, the testing group achieved dramatically higher recall when tested after one week. Taking a test modifies memory representation, making it resistant to forgetting.
+                </p>
+                <div class="pt-1">
+                    <a href="https://doi.org/10.1111/j.1467-9280.2006.01693.x" target="_blank" rel="noopener noreferrer" class="inline-flex items-center space-x-1.5 text-xs font-bold text-amberPrimary hover:text-amberHover transition">
+                        <span>View Verified Paper (DOI: 10.1111/j.1467-9280.2006.01693.x)</span>
+                        <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Study 2 -->
+            <div class="bg-paperCard border border-paperBorder rounded-2xl p-6 space-y-3 shadow-2xs">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-paperBorder pb-3">
+                    <h3 class="text-base font-bold text-stoneText">2. Meta-Analysis of 10 Learning Techniques</h3>
+                    <span class="text-xs font-mono text-amber-800 bg-amber-500/10 px-2.5 py-0.5 rounded-full w-fit">PSPI (2013)</span>
+                </div>
+                <p class="text-xs text-stoneMuted font-mono">
+                    Dunlosky, J., Rawson, K. A., Marsh, E. J., Nathan, M. J., &amp; Willingham, D. T. (2013). Improving Students' Learning With Effective Learning Techniques. <em>Psychological Science in the Public Interest</em>, 14(1), 4–58.
+                </p>
+                <p class="text-xs sm:text-sm text-stoneText leading-relaxed">
+                    A comprehensive review of the educational literature evaluating 10 commonly used study techniques. Practice testing (active recall) and distributed practice (spaced repetition) were the only two techniques awarded "High Utility", proving effective across all age groups and subjects. Rereading, highlighting, and keyword mnemonics were categorized as "Low Utility".
+                </p>
+                <div class="pt-1">
+                    <a href="https://doi.org/10.1177/1529100612453266" target="_blank" rel="noopener noreferrer" class="inline-flex items-center space-x-1.5 text-xs font-bold text-amberPrimary hover:text-amberHover transition">
+                        <span>View Verified Paper (DOI: 10.1177/1529100612453266)</span>
+                        <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Study 3 -->
+            <div class="bg-paperCard border border-paperBorder rounded-2xl p-6 space-y-3 shadow-2xs">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-paperBorder pb-3">
+                    <h3 class="text-base font-bold text-stoneText">3. Retrieval Practice vs. Elaborative Concept Mapping</h3>
+                    <span class="text-xs font-mono text-amber-800 bg-amber-500/10 px-2.5 py-0.5 rounded-full w-fit">Science (2011)</span>
+                </div>
+                <p class="text-xs text-stoneMuted font-mono">
+                    Karpicke, J. D., &amp; Blunt, J. R. (2011). Retrieval Practice Produces More Learning than Elaborative Studying with Concept Mapping. <em>Science</em>, 331(6018), 772–775.
+                </p>
+                <p class="text-xs sm:text-sm text-stoneText leading-relaxed">
+                    Published in <em>Science</em>, this study showed that active retrieval practice outperformed elaborate concept mapping and detailed note restructuring for both verbatim recall and conceptual inference. Crucially, students incorrectly predicted that concept mapping would produce better results, illustrating a common metacognitive bias.
+                </p>
+                <div class="pt-1">
+                    <a href="https://doi.org/10.1126/science.1199327" target="_blank" rel="noopener noreferrer" class="inline-flex items-center space-x-1.5 text-xs font-bold text-amberPrimary hover:text-amberHover transition">
+                        <span>View Verified Paper (DOI: 10.1126/science.1199327)</span>
+                        <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Study 4 -->
+            <div class="bg-paperCard border border-paperBorder rounded-2xl p-6 space-y-3 shadow-2xs">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-paperBorder pb-3">
+                    <h3 class="text-base font-bold text-stoneText">4. Quantitative Synthesis of Spaced Repetition</h3>
+                    <span class="text-xs font-mono text-amber-800 bg-amber-500/10 px-2.5 py-0.5 rounded-full w-fit">Psychological Bulletin (2006)</span>
+                </div>
+                <p class="text-xs text-stoneMuted font-mono">
+                    Cepeda, N. J., Pashler, H., Vul, E., Wixted, J. T., &amp; Rohrer, D. (2006). Distributed practice in verbal recall tasks: A review and quantitative synthesis. <em>Psychological Bulletin</em>, 132(3), 354–380.
+                </p>
+                <p class="text-xs sm:text-sm text-stoneText leading-relaxed">
+                    A meta-analysis of 317 experiments from 184 articles demonstrating that distributed learning schedules yield significantly higher retention compared to massed study across multiple recall tasks and long retention delays.
+                </p>
+                <div class="pt-1">
+                    <a href="https://doi.org/10.1037/0033-2909.132.3.354" target="_blank" rel="noopener noreferrer" class="inline-flex items-center space-x-1.5 text-xs font-bold text-amberPrimary hover:text-amberHover transition">
+                        <span>View Verified Paper (DOI: 10.1037/0033-2909.132.3.354)</span>
+                        <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- CTA Box -->
+        <div class="bg-gradient-to-br from-[#fbf8f2] to-[#f4ece1] border border-paperBorderStrong rounded-3xl p-8 text-center space-y-4">
+            <h3 class="text-2xl font-extrabold text-stoneText">Put Cognitive Science to Work</h3>
+            <p class="text-xs sm:text-sm text-stoneMuted max-w-xl mx-auto leading-relaxed">
+                Turn your YouTube videos, PDF documents, and lecture notes into active recall flashcards with automated spaced repetition schedules.
+            </p>
+            <div class="flex flex-wrap items-center justify-center gap-4 pt-2">
+                <a href="/login" class="px-6 py-2.5 bg-amberPrimary hover:bg-amberHover text-white text-xs sm:text-sm font-extrabold rounded-xl shadow-md transition">
+                    Try the Cloud Beta
+                </a>
+                <a href="https://github.com/NaEs25/studiamo" target="_blank" rel="noopener noreferrer" class="px-6 py-2.5 bg-paperCard hover:bg-paperSurface border border-paperBorder text-stoneText text-xs sm:text-sm font-bold rounded-xl shadow-2xs transition inline-flex items-center space-x-2">
+                    <i data-lucide="github" class="w-4 h-4"></i>
+                    <span>Self-Host on GitHub</span>
+                </a>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    {% include "partials/_footer.html" %}
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            if (window.lucide) {
+                lucide.createIcons();
+            }
+        });
+    </script>
+</body>
+</html>

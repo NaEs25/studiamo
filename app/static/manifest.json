@@ -1,0 +1,46 @@
+{
+  "name": "Studiamo: Spaced Repetition & AI Studio",
+  "short_name": "Studiamo",
+  "description": "Spaced repetition flashcards & active recall learning platform",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#090b10",
+  "theme_color": "#f59e0b",
+  "icons": [
+    {
+      "src": "/static/images/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/images/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/images/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Review Flashcards",
+      "short_name": "Review",
+      "description": "Jump directly to due active recall reviews",
+      "url": "/#review-section",
+      "icons": [{ "src": "/static/images/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Learning Goals",
+      "short_name": "Goals",
+      "description": "View active learning goals",
+      "url": "/#goals-section",
+      "icons": [{ "src": "/static/images/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

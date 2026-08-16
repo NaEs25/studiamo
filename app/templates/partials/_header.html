@@ -1,0 +1,30 @@
+{% set inner %}
+        <a href="{{ logo_href|default('/landing') }}" class="flex items-center space-x-3 group">
+            <img src="/static/images/logo-icon.png" class="w-9 h-9 rounded-xl shadow-md shadow-amber-500/20{% if wrapper_class %} group-hover:scale-105 transition-transform{% endif %}" alt="Studiamo Logo" />
+            <div class="flex flex-col">
+                <span class="text-xl font-extrabold tracking-tight text-stone-900 leading-tight">Studiamo</span>
+                <span class="text-[10px] font-bold text-[#78350f] uppercase tracking-widest -mt-1">Active Recall Studio</span>
+            </div>
+            {% if badge %}
+            <span class="text-[10px] uppercase tracking-wider font-extrabold bg-amber-500/15 border border-amber-500/30 text-amber-900 px-2 py-0.5 rounded-md">{{ badge }}</span>
+            {% endif %}
+        </a>
+        {% if show_back_link|default(true) %}
+        {% if back_style|default('text') == 'pill' %}
+        <a href="{{ back_href|default(logo_href)|default('/landing') }}" class="inline-flex items-center space-x-2 text-sm font-semibold text-stone-700 hover:text-amber-700 transition-colors bg-stone-200/50 hover:bg-stone-200 px-3.5 py-1.5 rounded-full">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i>
+            <span>{{ back_label|default('Home') }}</span>
+        </a>
+        {% else %}
+        <a href="{{ back_href|default(logo_href)|default('/landing') }}" class="text-xs font-bold text-stone-500 hover:text-amber-600 transition flex items-center space-x-1.5">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i>
+            <span>{{ back_label|default('Home') }}</span>
+        </a>
+        {% endif %}
+        {% endif %}
+{% endset %}
+    <header class="w-full bg-[#fdfbf7]/95 backdrop-blur border-b border-[#e7dfd3] {{ header_position|default('') }} {{ header_padding|default('py-4 px-6') }} shadow-2xs{% if not wrapper_class %} flex items-center justify-between{% endif %}">
+        {% if wrapper_class %}
+        <div class="{{ wrapper_class }} flex items-center justify-between">{{ inner }}</div>
+        {% else %}{{ inner }}{% endif %}
+    </header>
