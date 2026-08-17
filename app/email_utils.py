@@ -21,13 +21,35 @@ logger = logging.getLogger("studiamo")
 
 RESEND_FROM = os.environ.get("SMTP_FROM", "Studiamo <hello@studiamo.cloud>")
 
-from app.config import require_env_for_cloud
+from app.config import require_env_for_cloud, BASE_DIR
 
-# In cloud mode, an unset SECRET_KEY would silently fall back to a fixed
-# string that's now public (quoted in an internal audit), anyone who knows
-# it can forge waitlist-unsubscribe tokens for arbitrary emails. Self-hosted
-# keeps the fallback since it's single-tenant and lower stakes.
-SECRET_KEY = require_env_for_cloud("SECRET_KEY", default="studiamo-waitlist-secret-key-2026")
+_SECRET_KEY_FILE = BASE_DIR / ".waitlist_secret_key"
+
+
+def _ensure_self_hosted_secret_key() -> str:
+    """Persists a random key to disk on first run (mirrors webpush_utils.ensure_vapid_keys),
+    so self-hosted unsubscribe/Telegram-link tokens survive restarts without shipping a
+    fixed literal in source, which anyone reading this public repo would otherwise know."""
+    if _SECRET_KEY_FILE.exists():
+        try:
+            existing = _SECRET_KEY_FILE.read_text(encoding="utf-8").strip()
+            if existing:
+                return existing
+        except Exception as e:
+            logger.warning(f"Failed to read {_SECRET_KEY_FILE}: {e}")
+    import secrets
+    new_key = secrets.token_hex(32)
+    try:
+        _SECRET_KEY_FILE.write_text(new_key, encoding="utf-8")
+    except Exception as e:
+        logger.warning(f"Failed to persist {_SECRET_KEY_FILE}, key will not survive restart: {e}")
+    return new_key
+
+
+# Cloud mode requires SECRET_KEY to be set explicitly (raises otherwise, see
+# require_env_for_cloud). Self-hosted generates and persists a random per-install
+# key on first run instead of using a fixed default.
+SECRET_KEY = require_env_for_cloud("SECRET_KEY") or _ensure_self_hosted_secret_key()
 
 
 def generate_unsubscribe_token(email: str) -> str:

@@ -481,7 +481,7 @@ function initQuizEvents() {
                 
                 if (guess.length > 0 && verdictBox && feedbackEl && verdictLabel) {
                     verdictBox.classList.remove('hidden');
-                    feedbackEl.innerHTML = verification.feedback;
+                    feedbackEl.textContent = verification.feedback;
                     lastVerdictIsCorrect = !!verification.is_correct;
 
                     if (verification.is_correct) {

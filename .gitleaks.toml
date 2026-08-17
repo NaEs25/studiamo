@@ -8,4 +8,5 @@ description = "Local-only secret files: gitignored, never committed, live only o
 paths = [
   '''(^|/)\.env$''',
   '''(^|/)vapid_keys\.json$''',
+  '''(^|/)\.waitlist_secret_key$''',
 ]

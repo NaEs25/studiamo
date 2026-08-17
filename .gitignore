@@ -2,6 +2,7 @@
 .env
 *.env
 vapid_keys.json
+.waitlist_secret_key
 
 # Database files: contain user data
 *.db

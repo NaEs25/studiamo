@@ -1,5 +1,18 @@
 // --- Studiamo Core Module ---
 
+// Escapes a string for safe interpolation into HTML markup built via template literals.
+// Required anywhere user- or third-party-supplied text (titles, descriptions, etc.) is
+// interpolated into an innerHTML/insertAdjacentHTML string rather than set via textContent.
+function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 function parseDate(dateStr) {
     if (!dateStr) return new Date();
     let clean = dateStr;
@@ -374,7 +387,7 @@ class ImportBacklogManager {
                 statusTextHTML = `
                     <div class="text-[10px] bg-red-50 text-red-700 p-2 rounded-lg border border-red-200 mt-1">
                         <p class="font-bold text-red-800">Import Failed</p>
-                        <p class="text-[10px] text-red-600 break-words leading-tight whitespace-normal mt-0.5">${task.error_message || 'Error occurred during processing.'}</p>
+                        <p class="text-[10px] text-red-600 break-words leading-tight whitespace-normal mt-0.5">${escapeHtml(task.error_message) || 'Error occurred during processing.'}</p>
                     </div>
                 `;
             }
@@ -384,7 +397,7 @@ class ImportBacklogManager {
                     <div class="flex items-center justify-between space-x-2">
                         <div class="flex items-center space-x-2 min-w-0 flex-grow">
                             ${mediaPreviewHTML}
-                            <span class="font-bold text-xs text-stone-900 truncate" title="${task.title}">${task.title}</span>
+                            <span class="font-bold text-xs text-stone-900 truncate" title="${escapeHtml(task.title)}">${escapeHtml(task.title)}</span>
                         </div>
                         <div class="flex items-center space-x-1.5 shrink-0">
                             ${actionBtnHTML}

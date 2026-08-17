@@ -14,6 +14,7 @@ unchanged, only the internal module names were renamed for clarity.
 import re
 import uuid
 import logging
+import html
 from typing import Optional
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Request
 from pydantic import BaseModel
@@ -202,18 +203,19 @@ async def unsubscribe_waitlist(email: str = "", token: str = ""):
         is_valid = verify_unsubscribe_token(clean_email, token)
 
     if is_valid:
+        escaped_email = html.escape(clean_email)
         try:
             conn = get_waitlist_db()
             conn.execute("UPDATE landing_waitlist SET unsubscribed = TRUE WHERE email = ?;", (clean_email,))
             conn.commit()
             conn.close()
             title = "You have been unsubscribed"
-            message = f"Your email <strong>{clean_email}</strong> has been removed from our active waitlist notifications. You will not receive any further emails."
+            message = f"Your email <strong>{escaped_email}</strong> has been removed from our active waitlist notifications. You will not receive any further emails."
             icon = "✨"
         except Exception as e:
             logger.error(f"Failed to mark unsubscribed for email={clean_email}: {e}")
             title = "Something Went Wrong"
-            message = f"We encountered an issue updating your preferences for <strong>{clean_email}</strong>. Please reply directly to any email from us and we will remove you manually."
+            message = f"We encountered an issue updating your preferences for <strong>{escaped_email}</strong>. Please reply directly to any email from us and we will remove you manually."
             icon = "⚠️"
     else:
         title = "Invalid Unsubscribe Link"

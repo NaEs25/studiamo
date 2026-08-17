@@ -97,9 +97,9 @@ async function loadGoals() {
                                         <div class="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 font-bold text-xs shrink-0">
                                             #${rankNumber}
                                         </div>
-                                        <h3 class="font-bold text-lg text-stone-900 leading-tight">${g.title}</h3>
+                                        <h3 class="font-bold text-lg text-stone-900 leading-tight">${escapeHtml(g.title)}</h3>
                                     </div>
-                                    ${g.description ? `<p class="text-xs text-stone-500 mt-1 ml-11">${g.description}</p>` : ''}
+                                    ${g.description ? `<p class="text-xs text-stone-500 mt-1 ml-11">${escapeHtml(g.description)}</p>` : ''}
                                 </div>
                                 
                                 <div class="flex items-center space-x-1 shrink-0 bg-stone-100 border border-stone-200 rounded-xl p-1">
@@ -230,8 +230,8 @@ async function loadGoals() {
                     archivedList.innerHTML += `
                         <div class="flex items-center justify-between p-3 bg-stone-50 border border-stone-200 rounded-xl">
                             <div class="min-w-0">
-                                <span class="block text-xs font-bold text-stone-900">${g.title}</span>
-                                ${g.description ? `<p class="text-[10px] text-stone-400 truncate max-w-xs md:max-w-md" title="${g.description}">${g.description}</p>` : ''}
+                                <span class="block text-xs font-bold text-stone-900">${escapeHtml(g.title)}</span>
+                                ${g.description ? `<p class="text-[10px] text-stone-400 truncate max-w-xs md:max-w-md" title="${escapeHtml(g.description)}">${escapeHtml(g.description)}</p>` : ''}
                             </div>
                             <div class="flex items-center space-x-1 shrink-0 ml-4 bg-stone-100 border border-stone-200 rounded-xl p-0.5">
                                 <button onclick="archiveGoal(${g.id})" class="p-1 text-stone-400 hover:text-emerald-500 transition" title="Restore Goal to Active">
@@ -531,7 +531,7 @@ function renderRecommendationCardHTML(v, goalId) {
                 ${durationStr !== 'N/A' ? `<span class="absolute bottom-0.5 right-0.5 bg-stone-900/90 text-amber-300 text-[8px] font-mono px-1 py-0.2 rounded font-bold">${durationStr}</span>` : ''}
             </div>
             <div class="min-w-0 flex-grow pr-1">
-                <h6 class="font-bold text-stone-900 text-xs line-clamp-1 leading-snug hover:text-amber-800 transition" title="${v.title}">${v.title}</h6>
+                <h6 class="font-bold text-stone-900 text-xs line-clamp-1 leading-snug hover:text-amber-800 transition" title="${escapeHtml(v.title)}">${escapeHtml(v.title)}</h6>
                 <div class="flex items-center space-x-1.5 mt-1">
                     <button onclick="previewRecommendedVideo('${encodedUrl}', ${goalId}, '${safeTitle}')" class="px-2 py-0.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-900 border border-amber-200 font-bold rounded-md text-[9.5px] transition flex items-center space-x-1">
                         <i data-lucide="eye" class="w-3 h-3 text-amber-600"></i>

@@ -138,8 +138,8 @@ window.renderGoalBoxes = function(goals) {
                             #${idx + 1}
                         </div>
                         <div class="truncate">
-                            <h6 class="text-xs font-semibold ${isSelected ? 'text-amber-900 font-bold' : 'text-stone-800'} truncate">${g.title}</h6>
-                            <p class="text-[10px] text-stone-500 truncate">${g.description || 'Learning Goal'}</p>
+                            <h6 class="text-xs font-semibold ${isSelected ? 'text-amber-900 font-bold' : 'text-stone-800'} truncate">${escapeHtml(g.title)}</h6>
+                            <p class="text-[10px] text-stone-500 truncate">${escapeHtml(g.description) || 'Learning Goal'}</p>
                         </div>
                     </div>
                     <div class="w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${isSelected ? 'border-amber-500 bg-[#fbbf24] text-[#78350f]' : 'border-stone-400'}">
@@ -493,7 +493,7 @@ function renderVideoCard(video, quizzes, goals) {
         `;
     }
 
-    const titleHTML = `<a href="javascript:void(0)" onclick="openStudyStudio(${video.id})" class="block font-bold text-sm text-stone-900 truncate hover:text-amber-700 transition" title="Open in Study Studio: ${video.title}">${video.title}</a>`;
+    const titleHTML = `<a href="javascript:void(0)" onclick="openStudyStudio(${video.id})" class="block font-bold text-sm text-stone-900 truncate hover:text-amber-700 transition" title="Open in Study Studio: ${escapeHtml(video.title)}">${escapeHtml(video.title)}</a>`;
     
     const stageBadgeHTML = (video.is_temporary === 1 || video.is_temporary === true)
         ? `<span class="text-[9px] bg-amber-500/15 border border-amber-500/30 text-amber-900 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider flex items-center space-x-1" title="Preview mode: expires in ~24h unless imported"><i data-lucide="clock" class="w-3 h-3 text-amber-700"></i><span>24h Preview</span></span>`
@@ -995,7 +995,7 @@ async function openEditVideoModal(id, category, goalId, rating, notes) {
         
         let selectHTML = '<option value="0">-- Unassociated / Quick Review Material --</option>';
         goalsList.forEach(g => {
-            selectHTML += `<option value="${g.id}">Goal: ${g.title}</option>`;
+            selectHTML += `<option value="${g.id}">Goal: ${escapeHtml(g.title)}</option>`;
         });
         goalSelect.innerHTML = selectHTML;
         

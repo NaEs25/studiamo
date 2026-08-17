@@ -150,7 +150,7 @@ async function loadDashboard() {
                                     ${thumbHTML}
                                 </a>
                                 <div class="min-w-0 flex-grow">
-                                    <a href="${titleAction}" class="font-bold text-xs text-stone-800 truncate hover:text-amber-700 block" title="${item.title}">${item.title}</a>
+                                    <a href="${titleAction}" class="font-bold text-xs text-stone-800 truncate hover:text-amber-700 block" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</a>
                                     <p class="text-[10px] text-stone-500 mt-0.5">Stage: ${q.srs_stage} • ${timeStr}${goalStr}</p>
                                 </div>
                             </div>
@@ -203,7 +203,7 @@ async function loadDashboard() {
                         <div class="flex justify-between items-center bg-stone-100 border border-stone-200 rounded-xl p-3 text-xs gap-3">
                             <div class="flex items-center space-x-3 min-w-0 ${vidId ? 'cursor-pointer' : ''}" ${clickAction}>
                                 ${thumbHTML}
-                                <span class="block truncate font-semibold text-stone-900 hover:text-amber-300 transition max-w-[240px]">${item.title}</span>
+                                <span class="block truncate font-semibold text-stone-900 hover:text-amber-300 transition max-w-[240px]">${escapeHtml(item.title)}</span>
                             </div>
                             <div class="flex items-center space-x-2 shrink-0">
                                 <span class="text-[10px] bg-amber-500/10 border border-amber-200 text-amber-700 font-bold px-2 py-0.5 rounded-full shrink-0" title="${formattedDate}">
@@ -381,13 +381,13 @@ async function loadDailyRecommendations() {
                         <div class="space-y-1.5">
                             <h4 class="font-bold text-sm text-stone-900 leading-snug line-clamp-2 hover:text-amber-700 transition-colors cursor-pointer"
                                 onclick="playRecommendedVideo('${ytId}', '${wrapperId}', '${cleanTitle}', '${rec.goal_id || ''}')">
-                                ${rec.title}
+                                ${escapeHtml(rec.title)}
                             </h4>
                             <div class="flex items-center text-xs text-stone-500 pt-0.5">
-                                <span class="flex items-center space-x-1 truncate" title="${rec.channel || ''}">
+                                <span class="flex items-center space-x-1 truncate" title="${escapeHtml(rec.channel) || ''}">
                                     ${rec.channel ? `
                                         <i data-lucide="youtube" class="w-3.5 h-3.5 text-red-600 shrink-0"></i>
-                                        <span class="truncate">${rec.channel}</span>
+                                        <span class="truncate">${escapeHtml(rec.channel)}</span>
                                     ` : ''}
                                 </span>
                             </div>
