@@ -73,6 +73,9 @@
     <script>
         // Initialize Lucide Icons
         document.addEventListener('DOMContentLoaded', () => {
+            try {
+                localStorage.removeItem('active_studiamo_tab');
+            } catch (e) {}
             if (window.lucide) lucide.createIcons();
             const urlParams = new URLSearchParams(window.location.search);
             const err = urlParams.get('error');

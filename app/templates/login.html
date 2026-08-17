@@ -266,6 +266,9 @@
             errBanner.classList.remove('hidden');
         }
 
+        try {
+            localStorage.removeItem('active_studiamo_tab');
+        } catch (e) {}
         // Auto-focus search
         document.getElementById('profile-search').focus();
     </script>

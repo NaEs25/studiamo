@@ -213,6 +213,9 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
+            try {
+                localStorage.removeItem('active_studiamo_tab');
+            } catch (e) {}
             if (window.lucide) lucide.createIcons();
         });
     </script>

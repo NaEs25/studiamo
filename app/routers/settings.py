@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Optional
 
 import psycopg2.errors
-from fastapi import APIRouter, Form, File, UploadFile, HTTPException, Depends, Query, Request
+from fastapi import APIRouter, Form, File, UploadFile, HTTPException, Depends, Request
 from fastapi.responses import FileResponse, JSONResponse
 from starlette.background import BackgroundTask
 
@@ -693,9 +693,9 @@ async def send_test_email_route(username: str = Depends(get_active_username)):
 
 
 @router.post("/test/schedule_due_now")
-async def test_schedule_due_now(user: Optional[str] = Query(None), username: str = Depends(get_active_username)):
-    """Test helper: Marks at least 1 quiz for specified user (or active user) as due right now and triggers test Telegram message."""
-    target_user = user or username
+async def test_schedule_due_now(username: str = Depends(get_active_username)):
+    """Test helper: Marks at least 1 quiz for the active user as due right now and triggers test Telegram message."""
+    target_user = username
     user_uuid = config.get_user_uuid_from_db(target_user)
     if not user_uuid:
         raise HTTPException(status_code=400, detail=f"User UUID for '{target_user}' not found")
@@ -766,9 +766,9 @@ async def unsubscribe_push(request: Request, username: str = Depends(get_active_
 
 
 @router.post("/test/reset_due")
-async def test_reset_due(user: Optional[str] = Query(None), username: str = Depends(get_active_username)):
-    """Resets all quizzes for the user back to future dates so nothing is due."""
-    target_user = user or username
+async def test_reset_due(username: str = Depends(get_active_username)):
+    """Resets all quizzes for the active user back to future dates so nothing is due."""
+    target_user = username
     user_uuid = config.get_user_uuid_from_db(target_user)
     if not user_uuid:
         raise HTTPException(status_code=400, detail="User not found")

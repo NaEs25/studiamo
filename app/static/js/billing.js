@@ -94,6 +94,7 @@ async function logoutFromPaywall() {
         console.warn('Paywall logout request failed; clearing client state anyway:', e);
     }
     localStorage.removeItem('active_username');
+    localStorage.removeItem('active_studiamo_tab');
     sessionStorage.removeItem('profile_password');
     document.cookie = 'username=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
     document.cookie = 'profile_password=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
