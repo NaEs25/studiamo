@@ -17,7 +17,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE_DIR))
 
-from app import database, email_utils
+from app import database, email_utils, landing_waitlist_db
 
 
 def main():
@@ -58,6 +58,11 @@ def main():
             continue
         sent = email_utils.send_promotion_email(recipient)
         status = "email sent" if sent else "email NOT sent (see logs)"
+        if sent:
+            try:
+                landing_waitlist_db.mark_waitlist_email_sent(recipient, "spot_ready")
+            except Exception as e:
+                status += f" (landing_waitlist stamp failed: {e})"
         print(f"  - {username} ({recipient}): {status}")
 
 

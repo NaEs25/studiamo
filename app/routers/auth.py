@@ -274,11 +274,16 @@ async def google_login(request: Request, redirect: Optional[str] = None, require
     ref_code = (request.cookies.get("ref_code") or "").strip()
     if not _REF_CODE_PATTERN.match(ref_code):
         ref_code = ""
+    # Captured here, not in google_callback: this is the last hop where the browser's Referer
+    # header still points at our own site (e.g. /landing). Once we redirect to Google and it
+    # redirects back, the callback's Referer is always accounts.google.com, so the real
+    # originating page has to travel through the signed state instead.
+    referrer = (request.headers.get("referer") or request.headers.get("referrer") or "").strip()
     # require_existing=true (used by the bug tracker's Google button) tells the callback to
     # refuse to sign up a Google identity it's never seen before, instead of silently creating
     # an empty account for whichever Gmail the person happened to click -- see google_callback.
     # The state is cryptographically signed to prevent OAuth CSRF / fixation attacks.
-    signed_state = _sign_oauth_state(target_redirect, ref_code, require_existing)
+    signed_state = _sign_oauth_state(target_redirect, ref_code, require_existing, referrer)
 
     params = {
         "client_id": client_id,
@@ -316,7 +321,7 @@ async def google_callback(
     redirect_uri = get_oauth_redirect_uri(request)
 
     # Decode and verify the cryptographically signed OAuth state parameter
-    dest_path, ref_code, require_existing = _decode_oauth_state(state)
+    dest_path, ref_code, require_existing, origin_referrer = _decode_oauth_state(state)
 
     async with httpx.AsyncClient(timeout=10.0) as client:
         token_res = await client.post(
@@ -485,8 +490,33 @@ async def google_callback(
             target_user_uuid = config.get_user_uuid_from_db(target_username)
 
             if new_status == "waitlist":
-                from app.email_utils import send_waitlist_status_email
-                background_tasks.add_task(send_waitlist_status_email, email, new_referral_code)
+                import logging
+                from app import landing_waitlist_db
+
+                # Record the lead synchronously so it's saved even if the
+                # confirmation email below fails. This is supplementary
+                # tracking only, never let it block the waitlist redirect.
+                # origin_referrer (from the signed OAuth state) is the page that started the
+                # flow; the request's own Referer header at this point is always Google's
+                # consent screen, so it's only used as a fallback for old/legacy state tokens.
+                referrer = (origin_referrer or request.headers.get("referer") or request.headers.get("referrer") or "")[:500] or None
+                country = (request.headers.get("cf-ipcountry") or request.headers.get("x-country") or "")[:10] or None
+                user_agent = (request.headers.get("user-agent") or "")[:500] or None
+                try:
+                    landing_waitlist_db.record_waitlist_lead(email, target_user_uuid, referrer, country, user_agent, preference="google_oauth")
+                except Exception as e:
+                    logging.getLogger("studiamo").warning(f"Failed to record landing_waitlist lead for {email!r}: {e}")
+
+                def _send_and_mark_waitlist_confirmation():
+                    from app.email_utils import send_waitlist_status_email
+                    sent = send_waitlist_status_email(email, new_referral_code)
+                    if sent:
+                        try:
+                            landing_waitlist_db.mark_waitlist_email_sent(email, "confirmation")
+                        except Exception as e:
+                            logging.getLogger("studiamo").warning(f"Failed to mark confirmation sent for {email!r}: {e}")
+
+                background_tasks.add_task(_send_and_mark_waitlist_confirmation)
                 return RedirectResponse(f"/waitlist-confirmation?ref={new_referral_code}", status_code=303)
 
         token = _make_session_token(target_user_uuid)

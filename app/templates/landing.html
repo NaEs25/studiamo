@@ -278,29 +278,43 @@
                     flashcards using AI, scheduled right before memory fades.
                 </p>
 
-                <!-- Hero CTA Inline Form -->
+                <!-- Hero CTA -->
                 <div id="waitlist-hero" class="mt-10 max-w-lg mx-auto">
-                    <form onsubmit="handleHeroWaitlistSubmit(event)"
-                        class="flex flex-col sm:flex-row items-center gap-3 p-2 bg-white border border-[#e7dfd3] rounded-2xl shadow-lg">
-                        <div class="relative w-full flex-1">
-                            <i data-lucide="mail"
-                                class="w-5 h-5 text-stone-400 absolute left-4 top-1/2 -translate-y-1/2"></i>
-                            <input type="email" id="heroEmailInput" required
-                                placeholder="Enter your email for early access..."
-                                class="w-full bg-[#fcfaf6] border border-[#e7dfd3] focus:border-[#fbbf24] text-stone-900 placeholder-stone-400 text-sm rounded-xl pl-11 pr-4 py-3.5 outline-none transition">
-                        </div>
-                        <div style="position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden;" aria-hidden="true">
-                            <input type="text" id="heroWebsiteInput" name="website" tabindex="-1" autocomplete="off">
-                        </div>
-                        <button type="submit"
-                            class="btn-primary w-full sm:w-auto inline-flex items-center justify-center space-x-2 font-bold text-sm px-6 py-3.5 rounded-xl transition whitespace-nowrap cursor-pointer">
-                            <span>Join Waitlist</span>
-                            <i data-lucide="arrow-right" class="w-4 h-4"></i>
-                        </button>
-                    </form>
+                    <!-- Waitlist email form: hidden for now (capacity is open), kept intact so it can
+                         be unhidden again the moment signups need to be gated. Wrapped in a plain
+                         "hidden" div rather than putting the hidden attribute on the form itself:
+                         the form's own "flex" class sets display:flex, and that author-stylesheet
+                         rule beats the browser's built-in [hidden]{display:none} regardless of the
+                         hidden attribute. -->
+                    <div class="hidden">
+                        <form onsubmit="handleHeroWaitlistSubmit(event)"
+                            class="flex flex-col sm:flex-row items-center gap-3 p-2 bg-white border border-[#e7dfd3] rounded-2xl shadow-lg">
+                            <div class="relative w-full flex-1">
+                                <i data-lucide="mail"
+                                    class="w-5 h-5 text-stone-400 absolute left-4 top-1/2 -translate-y-1/2"></i>
+                                <input type="email" id="heroEmailInput" required
+                                    placeholder="Enter your email for early access..."
+                                    class="w-full bg-[#fcfaf6] border border-[#e7dfd3] focus:border-[#fbbf24] text-stone-900 placeholder-stone-400 text-sm rounded-xl pl-11 pr-4 py-3.5 outline-none transition">
+                            </div>
+                            <div style="position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden;" aria-hidden="true">
+                                <input type="text" id="heroWebsiteInput" name="website" tabindex="-1" autocomplete="off">
+                            </div>
+                            <button type="submit"
+                                class="btn-primary w-full sm:w-auto inline-flex items-center justify-center space-x-2 font-bold text-sm px-6 py-3.5 rounded-xl transition whitespace-nowrap cursor-pointer">
+                                <span>Join Waitlist</span>
+                                <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                            </button>
+                        </form>
+                    </div>
+
+                    <a href="/login"
+                        class="btn-primary w-full sm:w-auto inline-flex items-center justify-center space-x-2 font-bold text-base px-8 py-4 rounded-xl transition transform hover:-translate-y-0.5 cursor-pointer shadow-lg">
+                        <span>Cloud Sign Up</span>
+                        <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                    </a>
 
                     <div
-                        class="mt-4 flex flex-wrap items-center justify-center gap-6 text-xs text-stone-600 font-medium">
+                        class="hidden mt-4 flex flex-wrap items-center justify-center gap-6 text-xs text-stone-600 font-medium">
                         <span class="flex items-center space-x-1.5">
                             <i data-lucide="check" class="w-4 h-4 text-emerald-600"></i>
                             <span>100% Open Source code</span>

@@ -104,35 +104,43 @@ def _decode_session_token(token: str) -> Optional[str]:
 _oauth_state_signer = URLSafeSerializer(SECRET_KEY, salt="yb-oauth-state-v1")
 
 
-def _sign_oauth_state(dest_path: str, ref_code: str, require_existing: bool) -> str:
-    """Returns a signed, tamper-proof state string for Google OAuth 2.0 requests."""
+def _sign_oauth_state(dest_path: str, ref_code: str, require_existing: bool, referrer: str = "") -> str:
+    """Returns a signed, tamper-proof state string for Google OAuth 2.0 requests.
+
+    `referrer` carries the page that sent the visitor into the OAuth flow (captured at
+    /auth/google, the last hop where the browser's Referer header still points at our own
+    site, not Google's consent screen) so the callback, which only ever sees Google as its
+    Referer, can still attribute the signup to where it actually started.
+    """
     import time
     payload = {
         "d": dest_path or "/",
         "r": ref_code or "",
         "e": 1 if require_existing else 0,
         "t": int(time.time()),
+        "rf": (referrer or "")[:500],
     }
     return _oauth_state_signer.dumps(payload)
 
 
-def _decode_oauth_state(state_str: Optional[str]) -> tuple[str, str, bool]:
+def _decode_oauth_state(state_str: Optional[str]) -> tuple[str, str, bool, str]:
     """Decodes and validates a signed OAuth state token, rejecting expired (>15 min) or forged states.
     Falls back gracefully to legacy plain string format if needed for backward compatibility."""
     import time
     if not state_str:
-        return "/", "", False
+        return "/", "", False, ""
     try:
         data = _oauth_state_signer.loads(state_str)
         issued_at = data.get("t", 0)
         if time.time() - issued_at > 900:
             logger.warning("[google_oauth] OAuth state parameter expired (>15 minutes old).")
-            return "/", "", False
+            return "/", "", False, ""
         dest_path = str(data.get("d", "/")).strip()
         dest_path = dest_path if dest_path.startswith("/") else "/"
         ref_code = str(data.get("r", "")).strip()
         require_existing = bool(data.get("e", 0))
-        return dest_path, ref_code, require_existing
+        referrer = str(data.get("rf", "")).strip()
+        return dest_path, ref_code, require_existing, referrer
     except (BadSignature, Exception):
         if "|" in state_str:
             raw_dest, _, raw_rest = state_str.partition("|")
@@ -140,9 +148,9 @@ def _decode_oauth_state(state_str: Optional[str]) -> tuple[str, str, bool]:
             dest_path = raw_dest.strip() if raw_dest.strip().startswith("/") else "/"
             ref_code = raw_ref.strip()
             require_existing = raw_require_existing.strip() == "1"
-            return dest_path, ref_code, require_existing
+            return dest_path, ref_code, require_existing, ""
         logger.warning(f"[google_oauth] Invalid or tampered OAuth state parameter: {state_str}")
-        return "/", "", False
+        return "/", "", False, ""
 
 
 
