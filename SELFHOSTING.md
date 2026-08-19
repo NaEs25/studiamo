@@ -6,11 +6,13 @@ Studiamo Cloud at all.
 
 ## Prerequisites
 
-- Docker and Docker Compose (Docker Desktop on Mac/Windows, or `docker` + the `docker compose`
-  plugin on Linux).
-- A free [Google AI Studio](https://aistudio.google.com/apikey) account for a Gemini API key.
-  Optional at the infrastructure level (each user can also bring their own key in Settings),
-  but you'll want at least one key configured before importing your first video or PDF.
+- **Docker & Docker Compose**:
+  - **Windows & macOS**: Install [Docker Desktop](https://www.docker.com/products/docker-desktop/). Make sure Docker Desktop is open and running before executing compose commands.
+  - **Linux (Ubuntu/Debian)**: Install Docker Engine and the Compose plugin via [Docker's official guide](https://docs.docker.com/engine/install/) or via:
+    ```bash
+    sudo apt update && sudo apt install docker.io docker-compose-v2
+    ```
+- **A free Google Gemini API key**: Get one at [Google AI Studio](https://aistudio.google.com/apikey). Optional at the infrastructure level (each user can also bring their own key in Settings), but you will want at least one key configured before importing your first video or PDF.
 
 ## Quickstart
 

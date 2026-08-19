@@ -228,6 +228,7 @@
                 <a href="#faq" class="text-sm font-semibold text-stone-600 hover:text-[#78350f] transition">FAQ</a>
                 <a href="#open-source" class="text-sm font-semibold text-stone-600 hover:text-[#78350f] transition">Self-Host</a>
                 <a href="#compare" class="text-sm font-semibold text-stone-600 hover:text-[#78350f] transition">Compare</a>
+                <a href="#signup" class="text-sm font-semibold text-stone-600 hover:text-[#78350f] transition">Sign Up</a>
             </nav>
 
             <!-- Top Banner Sign In Button & Mobile Toggle -->
@@ -253,6 +254,7 @@
             <a href="#faq" class="mobile-nav-item block px-3 py-2 rounded-lg text-sm font-semibold text-stone-700 hover:bg-amber-500/10 hover:text-[#78350f] transition">FAQ</a>
             <a href="#open-source" class="mobile-nav-item block px-3 py-2 rounded-lg text-sm font-semibold text-stone-700 hover:bg-amber-500/10 hover:text-[#78350f] transition">Self-Host vs Cloud</a>
             <a href="#compare" class="mobile-nav-item block px-3 py-2 rounded-lg text-sm font-semibold text-stone-700 hover:bg-amber-500/10 hover:text-[#78350f] transition">Compare</a>
+            <a href="#signup" class="mobile-nav-item block px-3 py-2 rounded-lg text-sm font-semibold text-stone-700 hover:bg-amber-500/10 hover:text-[#78350f] transition">Sign Up</a>
         </div>
     </header>
 
@@ -384,7 +386,7 @@
                                 <p class="font-medium text-stone-900">
                                     But when I opened YouTube, reality set in: <strong>I had actually watched a tutorial
                                         on this exact topic a while ago, and I completely forgot it.</strong> Back then,
-                                    I was thrilled, closed the tab, and now when I actually needed the knowledge, it was
+                                    I felt productive, and now when I actually needed the knowledge, it was
                                     gone. Just watching without active recall meant nothing stuck.
                                 </p>
                             </div>
@@ -392,9 +394,6 @@
                             <!-- Hidden Expanded Content EN -->
                             <div id="storyExpandedContentEN"
                                 class="hidden space-y-4 text-stone-800 text-base sm:text-lg leading-relaxed font-normal pt-4 border-t border-[#e7dfd3]/50 mt-4">
-                                <p>
-                                    I had hit my limit. University and video editing, that was all I could handle.
-                                </p>
                                 <p>
                                     That same evening, I was browsing YouTube again to unwind. A video was recommended
                                     to me titled <span
@@ -990,30 +989,15 @@
                                 <div
                                     class="flex items-center justify-between pb-2 mb-2 border-b border-stone-800/80 text-[11px]">
                                     <span class="text-stone-400 font-mono flex items-center space-x-1.5">
-                                        <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
                                         <span>docker-compose.yml</span>
                                     </span>
-                                    <span
-                                        class="px-2 py-0.5 bg-amber-500/20 border border-amber-500/40 text-amber-400 font-bold text-[10px] uppercase tracking-wider rounded-md">
-                                        Coming Soon
-                                    </span>
                                 </div>
 
-                                <div
-                                    class="space-y-1.5 text-xs font-mono text-stone-300 filter blur-[0.6px] select-none opacity-85">
-                                    <div class="text-stone-500"># Open Source Repo | Launching Soon</div>
-                                    <div><span class="text-amber-500 font-bold select-none">$</span> git clone
-                                        https://github.com/NaEs25/studiamo.git</div>
-                                    <div><span class="text-amber-500 font-bold select-none">$</span> docker compose up -d</div>
-                                </div>
-
-                                <div
-                                    class="absolute inset-0 bg-stone-950/30 backdrop-blur-[1px] flex items-center justify-center pointer-events-none">
-                                    <span
-                                        class="px-3.5 py-1 bg-[#fbbf24] text-[#78350f] font-extrabold text-xs rounded-lg shadow-lg flex items-center space-x-1.5">
-                                        <i data-lucide="clock" class="w-3.5 h-3.5"></i>
-                                        <span>Repository Launching Soon</span>
-                                    </span>
+                                <div class="space-y-1.5 text-[11px] sm:text-xs font-mono text-stone-300">
+                                    <div class="text-stone-500"># Open Source Repo</div>
+                                    <div class="break-all"><span class="text-amber-500 font-bold select-none">$</span> git clone https://github.com/NaEs25/studiamo.git</div>
+                                    <div class="break-all"><span class="text-amber-500 font-bold select-none">$</span> docker compose up -d</div>
                                 </div>
                             </div>
 
@@ -1033,11 +1017,11 @@
                             </ul>
                         </div>
 
-                        <button onclick="openWaitlistModal('selfhosted')"
-                            class="w-full py-3.5 px-6 rounded-xl bg-[#fbf8f2] border border-[#e7dfd3] hover:border-stone-400 text-stone-800 font-bold text-sm transition flex items-center justify-center space-x-2 cursor-pointer">
+                        <a href="https://github.com/NaEs25/studiamo" target="_blank" rel="noopener noreferrer"
+                            class="w-full py-3.5 px-6 rounded-xl bg-[#fbf8f2] border border-[#e7dfd3] hover:border-stone-400 hover:bg-[#f3ede2] text-stone-800 font-bold text-sm transition flex items-center justify-center space-x-2 cursor-pointer shadow-xs">
                             <i data-lucide="github" class="w-4 h-4"></i>
-                            <span>Get Self-Hosted Release Updates</span>
-                        </button>
+                            <span>Show on GitHub</span>
+                        </a>
                     </div>
 
                     <!-- Managed Cloud Canvas -->
@@ -1084,11 +1068,11 @@
                             </ul>
                         </div>
 
-                        <button onclick="openWaitlistModal('cloud')"
+                        <a href="/login"
                             class="btn-primary w-full py-3.5 px-6 rounded-xl font-bold text-sm transition flex items-center justify-center space-x-2 cursor-pointer">
-                            <i data-lucide="sparkles" class="w-4 h-4"></i>
-                            <span>Join Cloud Waitlist</span>
-                        </button>
+                            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                            <span>Sign Up</span>
+                        </a>
                     </div>
 
                 </div>
@@ -1427,20 +1411,20 @@
         </section>
 
         <!-- CTA Bottom Banner -->
-        <section
+        <section id="signup"
             class="py-12 sm:py-16 md:py-24 bg-gradient-to-r from-[#fde68a]/30 via-[#fbf8f2] to-[#fde68a]/30 text-stone-900 relative overflow-hidden border-t border-[#e7dfd3]">
             <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6 relative z-10">
                 <h2 class="text-4xl sm:text-6xl font-black tracking-tight text-stone-900">Start Retaining What You Learn
                 </h2>
                 <p class="text-stone-700 text-base sm:text-lg max-w-xl mx-auto">
-                    Join our early access list to get notified the moment Managed Cloud & Open Source versions launch.
+                    Check if there are spots available in the cloud version right now.
                 </p>
                 <div class="pt-4 max-w-md mx-auto">
-                    <button onclick="openWaitlistModal()"
+                    <a href="/login"
                         class="btn-primary w-full sm:w-auto inline-flex items-center justify-center space-x-3 font-extrabold text-lg px-9 py-4 rounded-2xl transition transform hover:-translate-y-0.5 cursor-pointer">
-                        <i data-lucide="bell" class="w-5 h-5"></i>
-                        <span>Sign Up for Waitlist</span>
-                    </button>
+                        <span>Sign Up</span>
+                        <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                    </a>
                 </div>
             </div>
         </section>
@@ -1465,6 +1449,7 @@
                 <a href="#faq" class="hover:text-amber-400 transition whitespace-nowrap">FAQ</a>
                 <a href="#open-source" class="hover:text-amber-400 transition whitespace-nowrap">Self-Host vs Cloud</a>
                 <a href="#compare" class="hover:text-amber-400 transition whitespace-nowrap">Compare</a>
+                <a href="#signup" class="hover:text-amber-400 transition whitespace-nowrap">Sign Up</a>
                 <a href="/app" class="font-semibold text-amber-400 hover:text-amber-300 transition whitespace-nowrap">Sign In</a>
                 <a href="/impressum" class="hover:text-amber-400 transition whitespace-nowrap text-stone-400 font-medium">Legal Notice / Impressum</a>
                 <a href="/privacy" class="hover:text-amber-400 transition whitespace-nowrap text-stone-400 font-medium">Privacy Policy</a>

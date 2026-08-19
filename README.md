@@ -78,6 +78,8 @@ environment variable.
 
 ## Quickstart (self-hosted)
 
+Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Windows/macOS) or Docker with the Compose plugin (Linux) installed and running.
+
 ```bash
 git clone https://github.com/NaEs25/studiamo.git
 cd studiamo
@@ -92,7 +94,7 @@ docker compose up -d
 Then open `http://localhost:5004` and create your first account. One command pulls the
 prebuilt image and starts both the app and its Postgres database, the schema creates
 itself on first boot, no separate migration step needed. See
-[`SELFHOSTING.md`](SELFHOSTING.md) if you'd rather build from source.
+[`SELFHOSTING.md`](SELFHOSTING.md) for full setup details, backups, and running without Docker.
 
 Get a free Gemini API key at [Google AI Studio](https://aistudio.google.com/apikey), it
 has a generous free tier and is all you need to run Studiamo self-hosted. Goal/daily
