@@ -791,11 +791,29 @@ class ImportQueueManager:
                 if not processor:
                     raise ValueError(f"No task processor registered for type '{task_type}'.")
 
+                # Claim the task, and only proceed if this worker won it. The `status <>
+                # 'processing'` predicate makes the update the claim: whichever connection
+                # commits first flips the row, the other matches nothing and backs out.
+                #
+                # The in-memory guard above only covers one process, and more than one app
+                # instance can share a database: a second instance picks up a task left
+                # 'pending' when it recovers on startup, and both then upload the same video
+                # inside the same minute and exhaust the per-minute token quota between them.
+                # That is what made retrying an import fail while importing the same video
+                # fresh succeeded.
                 cursor.execute(
-                    "UPDATE import_tasks SET status = 'processing', progress_stage = 'Starting...', updated_at = CURRENT_TIMESTAMP WHERE id = %s AND user_uuid = %s;",
+                    """UPDATE import_tasks
+                          SET status = 'processing', progress_stage = 'Starting...', updated_at = CURRENT_TIMESTAMP
+                        WHERE id = %s AND user_uuid = %s AND status <> 'processing'
+                    RETURNING id;""",
                     (task_id, user_uuid)
                 )
+                claimed = cursor.fetchone()
                 conn.commit()
+                if not claimed:
+                    print(f"[ImportQueueManager] Task #{task_id} is already claimed by another worker, skipping.")
+                    conn.close()
+                    return
 
                 def update_stage_fn(stage_name: str):
                     c = database.get_db_connection(username)
