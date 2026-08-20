@@ -421,6 +421,31 @@ INDEXES_SQL = [
     "CREATE INDEX IF NOT EXISTS idx_user_profile_username ON user_profile (LOWER(username));",
     "CREATE INDEX IF NOT EXISTS idx_user_profile_uuid ON user_profile (user_uuid);",
     "CREATE INDEX IF NOT EXISTS idx_goals_user_uuid ON goals(user_uuid);",
+
+    # One goal title per user, compared case- and whitespace-insensitively, so "Affinity",
+    # "affinity" and " Affinity " cannot coexist. routers/goals.py checks this first to return
+    # a readable message; this index is what makes it true under concurrent requests.
+    #
+    # Guarded rather than a bare CREATE UNIQUE INDEX because this file runs on every boot and
+    # raises on failure: a self-hosted database that already contains duplicate titles would
+    # stop starting the moment it pulled this change. Skipping with a warning keeps it
+    # bootable, and de-duplicating it is a deliberate migration, not an unattended statement
+    # (see this module's docstring).
+    """
+    DO $$
+    BEGIN
+        IF EXISTS (
+            SELECT 1 FROM goals
+             GROUP BY user_uuid, LOWER(TRIM(title))
+            HAVING COUNT(*) > 1
+        ) THEN
+            RAISE WARNING 'Skipping uq_goals_user_title_lower: duplicate goal titles already exist. De-duplicate them, then restart to enforce uniqueness.';
+        ELSE
+            CREATE UNIQUE INDEX IF NOT EXISTS uq_goals_user_title_lower
+                ON goals (user_uuid, LOWER(TRIM(title)));
+        END IF;
+    END $$;
+    """,
     "CREATE INDEX IF NOT EXISTS idx_videos_user_uuid ON videos(user_uuid);",
     "CREATE INDEX IF NOT EXISTS idx_videos_youtube_id ON videos(youtube_id);",
     # POST /api/videos already rejects re-adding a YouTube URL the user has (videos.py,

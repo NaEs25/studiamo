@@ -69,13 +69,51 @@ async def get_goals(include_archived: bool = False, username: str = Depends(requ
     return goals
 
 
+def _assert_title_available(cursor, user_uuid: str, title: str, exclude_goal_id: int = None) -> None:
+    """Rejects a goal title the user already has, compared case- and whitespace-insensitively.
+
+    Backed by the uq_goals_user_title_lower index in schema.py, which is what actually
+    guarantees uniqueness under concurrent requests. This check exists so the common case
+    returns a readable message instead of a database integrity error.
+
+    Archived goals count as taken. Allowing reuse while one is archived would mean
+    un-archiving it later could collide with a goal created in the meantime, and the
+    un-archive is the worse place to discover that.
+    """
+    clean = (title or "").strip()
+    if not clean:
+        raise HTTPException(status_code=400, detail="Give the goal a title.")
+
+    sql = "SELECT id, is_archived FROM goals WHERE user_uuid = %s AND LOWER(TRIM(title)) = LOWER(%s)"
+    params = [user_uuid, clean]
+    if exclude_goal_id is not None:
+        sql += " AND id <> %s"
+        params.append(exclude_goal_id)
+    cursor.execute(sql + " LIMIT 1;", tuple(params))
+
+    existing = cursor.fetchone()
+    if existing:
+        if existing.get("is_archived"):
+            raise HTTPException(
+                status_code=409,
+                detail=f'You already have an archived goal called "{clean}". Restore it from the archive, or pick a different title.'
+            )
+        raise HTTPException(status_code=409, detail=f'You already have a goal called "{clean}".')
+
+
 @router.post("/goals")
 async def create_goal(title: str = Form(...), description: str = Form(""), username: str = Depends(require_app_access)) -> JSONResponse:
     """Creates a new learning goal and saves its JSON file."""
     conn = database.get_db_connection(username)
     user_uuid = conn.user_uuid
     cursor = conn.cursor()
-    
+
+    try:
+        _assert_title_available(cursor, user_uuid, title)
+    except HTTPException:
+        conn.close()
+        raise
+
     cursor.execute("SELECT COALESCE(MAX(order_index), 0) + 1 FROM goals WHERE user_uuid = %s;", (user_uuid,))
     next_order = database.first_val(cursor.fetchone(), default=1)
 
@@ -95,6 +133,13 @@ async def edit_goal(id: int, title: str = Form(...), description: str = Form("")
     conn = database.get_db_connection(username)
     user_uuid = conn.user_uuid
     cursor = conn.cursor()
+
+    try:
+        _assert_title_available(cursor, user_uuid, title, exclude_goal_id=id)
+    except HTTPException:
+        conn.close()
+        raise
+
     cursor.execute("UPDATE goals SET title = %s, description = %s WHERE id = %s AND user_uuid = %s;", (title.strip(), description.strip(), id, user_uuid))
     if cursor.rowcount == 0:
         conn.close()
