@@ -193,6 +193,78 @@ option {
     to   { opacity: 1; transform: translateY(0); }
 }
 
+/* ── Quiz Session Toggles ───────────────────────────────── */
+/* Compact chips replacing a row of bare checkboxes with text labels. The checkbox stays a
+   real input (visually hidden, wrapped by the label) so it keeps native click and keyboard
+   behaviour and quiz.js can still read and set .checked. */
+.quiz-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.65rem;
+    border-radius: 9999px;
+    border: 1px solid var(--color-border-strong);
+    background-color: var(--color-surface-2);
+    color: var(--color-text-muted);
+    font-size: 0.7rem;
+    font-weight: 700;
+    line-height: 1.2;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.quiz-toggle input {
+    position: absolute;
+    width: 0;
+    height: 0;
+    opacity: 0;
+}
+
+.quiz-toggle:hover {
+    background-color: var(--color-surface-deep);
+}
+
+.quiz-toggle:has(input:checked) {
+    background-color: var(--color-primary-bg);
+    border-color: var(--color-primary-border);
+    color: var(--color-primary-hover);
+}
+
+.quiz-toggle:has(input:focus-visible) {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+/* ── Quiz Grading Buttons ───────────────────────────────── */
+/* Keyboard hints on the grade buttons. Hidden on touch widths, where there is no keyboard to
+   press 1 or 2 and the badge is just clutter competing with the label. */
+.quiz-key-hint {
+    display: none;
+    font-size: 10px;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    padding: 0.1rem 0.35rem;
+    border-radius: 6px;
+    background-color: rgb(0 0 0 / 0.06);
+    opacity: 0.75;
+}
+
+@media (min-width: 640px) {
+    .quiz-key-hint {
+        display: inline-block;
+    }
+}
+
+/* Applied by quiz.js to whichever grade the AI verdict points at, so it can highlight one
+   button without rewriting the element's whole class list and discarding its base styling. */
+.quiz-grade-suggested {
+    box-shadow: 0 0 0 2px currentColor;
+}
+
+.quiz-grade-dimmed {
+    opacity: 0.45;
+}
+
 /* ── Quiz Read-Aloud Button ─────────────────────────────── */
 /* Icon-only control that sits beside the text it reads. Shared by the question, answer and
    explanation buttons in the quiz overlay, which previously repeated the same utility chain

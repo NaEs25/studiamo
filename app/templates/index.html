@@ -1663,25 +1663,20 @@
                     <span id="quiz-completion-pct">20% Done</span>
                 </div>
 
-                <!-- Toggle Progress SRS Stage & Auto TTS Options -->
-                <div class="flex items-center space-x-4 pt-1.5">
-                    <div class="flex items-center space-x-1.5">
-                        <input type="checkbox" id="quiz-progress-srs-checkbox" checked
-                            class="w-4 h-4 rounded border-stone-300 bg-white text-amber-600 focus:ring-amber-500">
-                        <label for="quiz-progress-srs-checkbox"
-                            class="text-xs font-semibold text-stone-700 cursor-pointer hover:text-stone-900 select-none">
-                            Progress SRS
-                        </label>
-                    </div>
-                    <div class="flex items-center space-x-1.5 border-l border-stone-300 pl-3">
-                        <input type="checkbox" id="quiz-auto-tts-toggle"
-                            class="w-4 h-4 rounded border-stone-300 bg-white text-amber-600 focus:ring-amber-500">
-                        <label for="quiz-auto-tts-toggle"
-                            class="text-xs font-semibold text-stone-700 cursor-pointer hover:text-amber-700 select-none flex items-center space-x-1">
-                            <i data-lucide="volume-2" class="w-3.5 h-3.5 text-amber-600"></i>
-                            <span>Auto-read Aloud</span>
-                        </label>
-                    </div>
+                <!-- Session toggles as compact chips. The label wraps the input, so clicking
+                     anywhere on the chip toggles it and the checkbox keeps its native
+                     keyboard behaviour. -->
+                <div class="flex items-center gap-2 pt-1">
+                    <label class="quiz-toggle" title="Advance the spaced repetition interval when this session is graded">
+                        <input type="checkbox" id="quiz-progress-srs-checkbox" checked>
+                        <i data-lucide="calendar-check" class="w-3.5 h-3.5 shrink-0"></i>
+                        <span>Progress SRS</span>
+                    </label>
+                    <label class="quiz-toggle" title="Read each question aloud automatically">
+                        <input type="checkbox" id="quiz-auto-tts-toggle">
+                        <i data-lucide="volume-2" class="w-3.5 h-3.5 shrink-0"></i>
+                        <span>Auto-read</span>
+                    </label>
                 </div>
             </div>
 
@@ -1733,52 +1728,43 @@
                             <p id="quiz-ai-feedback" class="text-xs leading-relaxed font-medium"></p>
                         </div>
 
-                        <div class="space-y-1">
-                            <div class="flex items-center justify-between">
-                                <span
-                                    class="text-xs font-bold px-2.5 py-0.5 bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-full inline-block">Correct
-                                    Answer</span>
-                                <button type="button" id="btn-tts-answer" aria-label="Read answer aloud"
-                                    class="quiz-tts-btn" title="Read Answer Aloud">
-                                    <i data-lucide="volume-2" class="w-4 h-4 tts-icon-idle"></i>
-                                    <i data-lucide="pause" class="w-4 h-4 tts-icon-playing hidden"></i>
-                                </button>
-                            </div>
-                            <p id="quiz-correct-answer" class="text-sm text-stone-900 font-medium leading-relaxed"></p>
+                        <!-- No pills: the answer is the dark prominent line, the explanation the
+                             muted one below it, which is distinction enough once the reader has
+                             pressed "Show Correct Answer". -->
+                        <div class="flex items-start justify-between gap-3">
+                            <p id="quiz-correct-answer"
+                                class="text-base text-stone-900 font-semibold leading-relaxed grow"></p>
+                            <button type="button" id="btn-tts-answer" aria-label="Read answer aloud"
+                                class="quiz-tts-btn" title="Read Answer Aloud">
+                                <i data-lucide="volume-2" class="w-4 h-4 tts-icon-idle"></i>
+                                <i data-lucide="pause" class="w-4 h-4 tts-icon-playing hidden"></i>
+                            </button>
                         </div>
 
-                        <div class="space-y-1 border-t border-stone-200 pt-3">
-                            <div class="flex items-center justify-between">
-                                <span
-                                    class="text-xs font-bold px-2.5 py-0.5 bg-amber-100 text-amber-800 border border-amber-300 rounded-full inline-block">AI
-                                    Memory hook / Explanation</span>
-                                <button type="button" id="btn-tts-explanation" aria-label="Read explanation aloud"
-                                    class="quiz-tts-btn" title="Read Explanation Aloud">
-                                    <i data-lucide="volume-2" class="w-4 h-4 tts-icon-idle"></i>
-                                    <i data-lucide="pause" class="w-4 h-4 tts-icon-playing hidden"></i>
-                                </button>
-                            </div>
-                            <p id="quiz-explanation-text" class="text-xs text-stone-600 leading-relaxed font-normal">
-                            </p>
+                        <div class="flex items-start justify-between gap-3 border-t border-stone-200 pt-3">
+                            <p id="quiz-explanation-text" class="text-xs text-stone-600 leading-relaxed grow"></p>
+                            <button type="button" id="btn-tts-explanation" aria-label="Read explanation aloud"
+                                class="quiz-tts-btn" title="Read Explanation Aloud">
+                                <i data-lucide="volume-2" class="w-4 h-4 tts-icon-idle"></i>
+                                <i data-lucide="pause" class="w-4 h-4 tts-icon-playing hidden"></i>
+                            </button>
                         </div>
                     </div>
 
                     <!-- Self Grading Buttons -->
-                    <div class="space-y-3 border-t border-stone-200 pt-3">
-                        <span class="block text-center text-xs font-bold text-stone-600">Rate your recall
-                            performance:</span>
+                    <div class="border-t border-stone-200 pt-3">
                         <div class="grid grid-cols-2 gap-3">
                             <button id="btn-grade-forgot" aria-label="Grade as Forgot"
-                                class="py-3 px-4 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 font-bold rounded-2xl transition flex items-center justify-center space-x-2 active:scale-[0.98] shadow-xs">
-                                <i data-lucide="x-circle" class="w-4 h-4 text-red-600"></i>
+                                class="py-3 px-4 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 font-bold rounded-2xl transition flex items-center justify-center gap-2 active:scale-[0.98] shadow-xs">
+                                <i data-lucide="x-circle" class="w-4 h-4 shrink-0"></i>
                                 <span>I Forgot</span>
-                                <span class="text-[10px] opacity-75 font-mono px-1.5 py-0.5 bg-red-200/60 rounded">1</span>
+                                <span class="quiz-key-hint">1</span>
                             </button>
                             <button id="btn-grade-remembered" aria-label="Grade as Remembered"
-                                class="py-3 px-4 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 font-bold rounded-2xl transition flex items-center justify-center space-x-2 active:scale-[0.98] shadow-xs">
-                                <i data-lucide="check-circle" class="w-4 h-4 text-emerald-600"></i>
+                                class="py-3 px-4 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 font-bold rounded-2xl transition flex items-center justify-center gap-2 active:scale-[0.98] shadow-xs">
+                                <i data-lucide="check-circle" class="w-4 h-4 shrink-0"></i>
                                 <span>I Remembered</span>
-                                <span class="text-[10px] opacity-75 font-mono px-1.5 py-0.5 bg-emerald-200/60 rounded">2</span>
+                                <span class="quiz-key-hint">2</span>
                             </button>
                         </div>
                     </div>

@@ -182,11 +182,18 @@ async function startQuiz(quizId, videoId = null, level = 3) {
         // and the rewatch link was permanently hidden.
         const youtubeId = activeQuizSession.youtube_id;
         if (labelEl) {
-            let fallbackLabel = 'Goal practice session';
+            // Reads "Goal name . Video". The goal and the material type answer different
+            // questions, so showing one instead of the other lost information: material with
+            // no goal used to read only its type, and material with a goal never showed one.
+            let sourceType;
             if (activeQuizSession.quiz_type === 'video') {
-                fallbackLabel = youtubeId ? 'YouTube Video Material' : 'Document Material';
+                sourceType = youtubeId ? 'Video' : 'Document';
+            } else {
+                sourceType = 'Goal practice';
             }
-            labelEl.textContent = activeQuizSession.goal_title || fallbackLabel;
+            labelEl.textContent = [activeQuizSession.goal_title, sourceType]
+                .filter(Boolean)
+                .join(' • ');
         }
 
         const rewatch = document.getElementById('quiz-rewatch-link');
@@ -465,8 +472,12 @@ function initQuizEvents() {
             if (verdictBox) verdictBox.classList.add('hidden');
             if (feedbackEl) feedbackEl.innerHTML = '';
             
-            if (btnForgot) btnForgot.className = "py-3 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 font-bold rounded-2xl transition flex items-center justify-center space-x-1.5";
-            if (btnRemembered) btnRemembered.className = "py-3 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-bold rounded-2xl transition flex items-center justify-center space-x-1.5";
+            // Clear only the verdict emphasis. This used to reassign .className outright,
+            // which threw away the buttons' own styling from the template and replaced it with
+            // a second, drifted copy maintained here.
+            [btnForgot, btnRemembered].forEach(b => {
+                if (b) b.classList.remove('quiz-grade-suggested', 'quiz-grade-dimmed');
+            });
             
             try {
                 const formData = new FormData();
@@ -492,14 +503,14 @@ function initQuizEvents() {
                         verdictLabel.textContent = "AI Evaluation: Conceptually Correct";
                         verdictLabel.className = "text-[9px] font-bold uppercase tracking-wider text-emerald-450";
                         verdictBox.className = "p-3 rounded-xl border border-emerald-500/30 bg-emerald-950/10 flex flex-col space-y-1";
-                        if (btnRemembered) btnRemembered.className = "py-3 bg-emerald-550 text-stone-900 font-bold rounded-2xl transition flex items-center justify-center space-x-1.5 ring-2 ring-emerald-400 shadow-lg shadow-emerald-500/20";
-                        if (btnForgot) btnForgot.className = "py-3 bg-stone-100 border border-stone-200 text-stone-500 font-bold rounded-2xl transition flex items-center justify-center space-x-1.5 opacity-60";
+                        if (btnRemembered) btnRemembered.classList.add('quiz-grade-suggested');
+                        if (btnForgot) btnForgot.classList.add('quiz-grade-dimmed');
                     } else {
                         verdictLabel.textContent = "AI Evaluation: Incorrect / Needs Review";
                         verdictLabel.className = "text-[9px] font-bold uppercase tracking-wider text-red-450";
                         verdictBox.className = "p-3 rounded-xl border border-red-500/30 bg-red-950/10 flex flex-col space-y-1";
-                        if (btnForgot) btnForgot.className = "py-3 bg-red-550 text-stone-900 font-bold rounded-2xl transition flex items-center justify-center space-x-1.5 ring-2 ring-red-400 shadow-lg shadow-red-500/20";
-                        if (btnRemembered) btnRemembered.className = "py-3 bg-stone-100 border border-stone-200 text-stone-500 font-bold rounded-2xl transition flex items-center justify-center space-x-1.5 opacity-60";
+                        if (btnForgot) btnForgot.classList.add('quiz-grade-suggested');
+                        if (btnRemembered) btnRemembered.classList.add('quiz-grade-dimmed');
                     }
                 }
             } catch (e) {
