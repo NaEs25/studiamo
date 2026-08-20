@@ -3,6 +3,8 @@ from google.genai import types
 from datetime import datetime, timedelta, timezone
 import logging
 import os
+import random
+import re
 import struct
 import subprocess
 import tempfile
@@ -233,82 +235,215 @@ def log_ai_usage(model: str, prompt_tokens: int, completion_tokens: int, action_
         print(f"Error logging AI usage for user {username}: {e}")
 
 
-# Helper for calling Gemini with automatic retries for transient errors (503/429)
+class AIServiceUnavailable(Exception):
+    """Raised when Gemini could not be reached, carrying copy that is safe to show a user.
+
+    Import failures write str(exception) straight into videos.status_error, which the
+    dashboard renders (see import_manager's failure handler). Raising this instead of the
+    provider's exception is what keeps a raw
+    `429 RESOURCE_EXHAUSTED {'error': {'code': 429, ...}}` blob off the user's screen.
+    """
+
+    def __init__(self, kind: str, message: str, original: Exception = None):
+        self.kind = kind
+        self.original = original
+        super().__init__(message)
+
+
+# Attempts per model for errors that a plain retry can actually fix (server-side overload).
+_MAX_OVERLOAD_RETRIES = 3
+# Never block an import worker longer than this on a single provider-supplied backoff.
+_MAX_RETRY_SLEEP_SECONDS = 90
+# Used when Google reports a per-minute limit without saying how long to wait. Sized to clear
+# a whole minute window rather than to feel responsive: this workload is token-bound, not
+# request-bound (a video import is 50k-400k tokens against a 15 requests-per-minute ceiling),
+# so an unlabelled 429 here is far more likely a token limit than a request one. Waiting out
+# the window on the cheap tier beats escalating to one that costs several times more.
+_DEFAULT_RATE_LIMIT_SLEEP_SECONDS = 60
+
+_RETRY_DELAY_PATTERN = re.compile(r"retrydelay['\"]?\s*[:=]\s*['\"]?(\d+(?:\.\d+)?)s", re.IGNORECASE)
+
+
+def _normalise_err(err) -> str:
+    """Lowercases an exception and strips separators, so quota identifiers match regardless of
+    whether Google spells them GenerateContentInputTokensPerModelPerMinute or
+    generate_content_input_tokens_per_model_per_minute."""
+    return re.sub(r"[\s\-_]", "", str(err).lower())
+
+
+def _parse_retry_delay(err) -> float:
+    """Returns the retryDelay Google attached to a 429, in seconds, or None.
+
+    Honouring the provider's own number beats guessing: it knows when the window rolls over."""
+    match = _RETRY_DELAY_PATTERN.search(str(err))
+    if not match:
+        return None
+    try:
+        return min(float(match.group(1)), _MAX_RETRY_SLEEP_SECONDS)
+    except (TypeError, ValueError):
+        return None
+
+
+def _classify_api_error(err) -> str:
+    """Buckets a Gemini exception so the caller can pick a recovery that can actually work.
+
+    'overloaded'  , 503/UNAVAILABLE. Server-side and short lived, a plain retry usually wins.
+    'rate_limit'  , 429 against a per-minute *request* quota. A short wait clears it.
+    'token_quota' , 429 against a per-minute *token* quota. Retrying the same payload cannot
+                    succeed until the window rolls over, and every attempt spends more of the
+                    very quota that is exhausted. This is the case that must never be hammered:
+                    three blind retries of a 120k-token video is 360k tokens against a 250k
+                    per-minute ceiling, which turns one recoverable failure into a guaranteed
+                    outage for the rest of the minute.
+    'quota_daily' , 429 against a per-day quota. Nothing clears within this request.
+    'model_error' , the model name was rejected. Worth trying the next one in the cascade.
+    'fatal'       , bad schema, safety block, auth. Identical on a retry, so stop.
+    """
+    s = _normalise_err(err)
+
+    if any(x in s for x in ("503", "unavailable", "overloaded", "highdemand", "temporary", "busy")):
+        return "overloaded"
+
+    if any(x in s for x in ("429", "resourceexhausted", "quota", "ratelimit")):
+        if "perday" in s:
+            return "quota_daily"
+        if "inputtokens" in s or "tokencount" in s or "tokensperminute" in s:
+            return "token_quota"
+        return "rate_limit"
+
+    if any(x in s for x in ("notfound", "404", "isnotsupported", "unsupportedmodel")):
+        return "model_error"
+
+    return "fatal"
+
+
+_USER_FACING_AI_ERRORS = {
+    "token_quota": (
+        "The AI service hit its per-minute token limit for this account. Wait about a minute "
+        "and try again. If it keeps happening, the API key's quota needs raising."
+    ),
+    "quota_daily": (
+        "This API key has used up its daily AI quota. It resets tomorrow, or you can raise the "
+        "limit in Google AI Studio."
+    ),
+    "rate_limit": (
+        "The AI service is rate limiting this account right now. Wait a moment and try again."
+    ),
+    "overloaded": (
+        "The AI service is temporarily overloaded. Please try again in a few minutes."
+    ),
+}
+_GENERIC_AI_ERROR = "The AI service could not process this request. Please try again."
+
+
+def _build_generation_config(response_schema, temperature: float):
+    return types.GenerateContentConfig(
+        response_mime_type="application/json",
+        response_schema=response_schema,
+        temperature=temperature,
+        # Pins low media resolution (~66 tokens/frame). This is a cost *guard*, not a
+        # cost *cut*: measured 2026-08-10 against gemini-3.5-flash-lite, native YouTube
+        # ingestion already defaults to low, so LOW and MEDIUM both measure identical
+        # to sending nothing (19,388 prompt tokens for a 3:33 video) while HIGH costs
+        # 61,562 (+217%). Setting it explicitly means a change to that undocumented
+        # default can't silently triple our per-video bill. Harmless on the text-only
+        # callers of this helper. Requires google-genai >= 1.x: 0.3.0 hardcoded a
+        # "not supported in Google AI" rejection in its Gemini-Developer-API path,
+        # which is what broke every video import the last time this was tried.
+        media_resolution="MEDIA_RESOLUTION_LOW"
+    )
+
+
 def generate_content_with_retry(client: genai.Client, model: str, contents, response_schema, temperature: float, action_type: str, username: str = "default_user") -> str:
+    """Calls Gemini, retrying only where a retry can actually help, then falling back a tier.
+
+    Retrying is not free here: `contents` usually carries a whole video, so every attempt
+    re-uploads it and re-spends the per-minute token quota. The recovery is therefore chosen
+    from the error class (see _classify_api_error) rather than applied blindly to anything
+    that looks transient.
+
+    Note that failed attempts never reach log_ai_usage, because there is no usage metadata to
+    record and Google does not bill them. They do consume quota though, so ai_usage_logs will
+    always understate what Google counted. That gap is why a burst of retries could exhaust a
+    quota while the usage table showed a single call.
+    """
     enforce_usage_limits(username)
 
-    max_retries = 3
-    for attempt in range(max_retries):
-        try:
-            response = client.models.generate_content(
-                model=model,
-                contents=contents,
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    response_schema=response_schema,
-                    temperature=temperature,
-                    # Pins low media resolution (~66 tokens/frame). This is a cost *guard*, not a
-                    # cost *cut*: measured 2026-08-10 against gemini-3.5-flash-lite, native YouTube
-                    # ingestion already defaults to low, so LOW and MEDIUM both measure identical
-                    # to sending nothing (19,388 prompt tokens for a 3:33 video) while HIGH costs
-                    # 61,562 (+217%). Setting it explicitly means a change to that undocumented
-                    # default can't silently triple our per-video bill. Harmless on the text-only
-                    # callers of this helper. Requires google-genai >= 1.x: 0.3.0 hardcoded a
-                    # "not supported in Google AI" rejection in its Gemini-Developer-API path,
-                    # which is what broke every video import the last time this was tried.
-                    media_resolution="MEDIA_RESOLUTION_LOW"
-                )
+    # Current-generation tiers, cheapest first. A different model has its own quota bucket, so
+    # falling back can clear a rate limit, but 3.6-flash costs 5x the input and 3x the output
+    # of 3.5-flash-lite (see _FALLBACK_MODEL_PRICING), so it is a last resort and is logged.
+    cascade = [model] + [m for m in ("gemini-3.5-flash-lite", "gemini-3.6-flash") if m != model]
+
+    last_error = None
+    last_kind = "fatal"
+
+    for model_index, candidate in enumerate(cascade):
+        if model_index > 0:
+            logger.warning(
+                f"[AI Fallback] Escalating '{action_type}' from {cascade[model_index - 1]} to "
+                f"{candidate} after {last_kind}. This tier may cost several times more per token."
             )
-            
-            # Log usage
-            usage = response.usage_metadata
-            prompt_tokens = usage.prompt_token_count if usage else 0
-            completion_tokens = usage.candidates_token_count if usage else 0
-            log_ai_usage(model, prompt_tokens, completion_tokens, action_type, username=username)
-            
-            return response.text
-            
-        except Exception as e:
-            err_str = str(e).lower()
-            is_transient = any(x in err_str for x in ["503", "429", "unavailable", "high demand", "temporary", "busy", "exhausted", "quota", "rate limit", "resource_exhausted"])
-            
-            if attempt < max_retries - 1 and is_transient:
-                sleep_time = 3 * (attempt + 1)
-                print(f"Gemini API rate limit / busy (attempt {attempt+1}/{max_retries}). Retrying in {sleep_time}s...")
-                time.sleep(sleep_time)
-                continue
-            
-            # Fallback cascade across current-generation Gemini 3 tiers.
-            fallback_models = [
-                "gemini-3.5-flash-lite",
-                "gemini-3.6-flash",
-            ]
-            for fb_model in fallback_models:
-                if fb_model == model:
-                    continue
-                print(f"[AI Fallback] {model} failed. Trying fallback model '{fb_model}'...")
-                try:
-                    response = client.models.generate_content(
-                        model=fb_model,
-                        contents=contents,
-                        config=types.GenerateContentConfig(
-                            response_mime_type="application/json",
-                            response_schema=response_schema,
-                            temperature=temperature,
-                            media_resolution="MEDIA_RESOLUTION_LOW"
-                        )
+
+        for attempt in range(_MAX_OVERLOAD_RETRIES):
+            try:
+                response = client.models.generate_content(
+                    model=candidate,
+                    contents=contents,
+                    config=_build_generation_config(response_schema, temperature)
+                )
+
+                usage = response.usage_metadata
+                prompt_tokens = usage.prompt_token_count if usage else 0
+                completion_tokens = usage.candidates_token_count if usage else 0
+                log_ai_usage(candidate, prompt_tokens, completion_tokens, action_type, username=username)
+
+                return response.text
+
+            except Exception as e:
+                last_error = e
+                last_kind = _classify_api_error(e)
+
+                if last_kind == "fatal":
+                    # Same request, same rejection. Re-sending it to another tier would just
+                    # buy a second identical failure at a higher price.
+                    logger.error(f"[AI] '{action_type}' failed on {candidate}, not retryable: {e}")
+                    raise AIServiceUnavailable("fatal", _GENERIC_AI_ERROR, original=e) from e
+
+                if last_kind == "overloaded" and attempt < _MAX_OVERLOAD_RETRIES - 1:
+                    sleep_for = min(2 ** (attempt + 1) + random.uniform(0, 1), _MAX_RETRY_SLEEP_SECONDS)
+                    logger.warning(
+                        f"[AI] {candidate} overloaded on '{action_type}' "
+                        f"(attempt {attempt + 1}/{_MAX_OVERLOAD_RETRIES}), retrying in {sleep_for:.1f}s."
                     )
-                    
-                    usage = response.usage_metadata
-                    prompt_tokens = usage.prompt_token_count if usage else 0
-                    completion_tokens = usage.candidates_token_count if usage else 0
-                    log_ai_usage(fb_model, prompt_tokens, completion_tokens, action_type, username=username)
-                    
-                    return response.text
-                except Exception as fallback_err:
-                    print(f"[AI Fallback] Fallback to {fb_model} failed: {fallback_err}")
-            
-            raise e
+                    time.sleep(sleep_for)
+                    continue
+
+                if last_kind in ("rate_limit", "token_quota") and attempt == 0:
+                    # Per-minute limits clear on their own. Wait the window out and try this
+                    # model exactly once more, honouring the delay Google supplied when it gave
+                    # one, since it knows when the window rolls over. One retry, not three: each
+                    # attempt re-spends the quota that is already exhausted, and the point of
+                    # waiting is to stop stacking attempts inside the same minute.
+                    sleep_for = _parse_retry_delay(e) or _DEFAULT_RATE_LIMIT_SLEEP_SECONDS
+                    logger.warning(
+                        f"[AI] {candidate} hit a {last_kind} on '{action_type}', waiting "
+                        f"{sleep_for:.1f}s before a single retry."
+                    )
+                    time.sleep(sleep_for)
+                    continue
+
+                # quota_daily, model_error, or the single retry above already used: stop hitting
+                # this model. A daily quota will not clear within this request at all, so waiting
+                # for it would only stall the import.
+                logger.warning(f"[AI] {candidate} gave up on '{action_type}' ({last_kind}): {e}")
+                break
+
+    logger.error(f"[AI] '{action_type}' exhausted every model tier. Last error: {last_error}")
+    raise AIServiceUnavailable(
+        last_kind,
+        _USER_FACING_AI_ERRORS.get(last_kind, _GENERIC_AI_ERROR),
+        original=last_error
+    ) from last_error
 
 # --- Raw JSON Schemas to bypass all Pydantic v2 and SDK serialization bugs ---
 
