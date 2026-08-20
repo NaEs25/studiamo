@@ -73,9 +73,20 @@ EXCLUDED = {
 }
 
 
+# The internal admin panel lives in karl-privat/, which is gitignored, and main.py mounts it
+# only when that directory is present. Its routes therefore exist on a maintainer's machine and
+# nowhere else: not in a clean checkout, not in CI, not in any deployment built from this
+# repository. This suite cannot vouch for code it cannot see, and failing on a machine where
+# the panel happens to be checked out would make the whole file environment-dependent, so those
+# routes are skipped rather than declared safe.
+ADMIN_PREFIX = "/admin"
+
+
 def _iter_routes():
     from app.main import app
     for route in app.routes:
+        if getattr(route, "path", "").startswith(ADMIN_PREFIX):
+            continue
         methods = getattr(route, "methods", None)
         if not methods:
             continue
