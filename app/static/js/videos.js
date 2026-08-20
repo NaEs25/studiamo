@@ -548,7 +548,15 @@ function renderFocusStatus() {
 
 async function openFocusModal(videoId) {
     const overlay = document.getElementById('overlay-focus');
-    if (!overlay) return;
+    if (!overlay) {
+        // Returning quietly here meant a click did nothing at all, with no way to tell why.
+        // The markup ships with the page, so its absence means the document is older than
+        // this script: either a stale cached page, or a server that did not render the
+        // include.
+        console.error('Focus overlay markup (#overlay-focus) is not in the page.');
+        showToast('Please reload the page to finish loading this feature.', 'failed', 5000);
+        return;
+    }
 
     try {
         const data = await fetchAPI(`/api/videos/${videoId}/concept-pool`);
