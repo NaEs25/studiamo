@@ -18,6 +18,8 @@ from app.dependencies import (
     adjust_next_review,
     parse_bool,
     require_app_access,
+    build_concept_pool,
+    select_stage_questions,
 )
 
 logger = logging.getLogger("studiamo")
@@ -102,10 +104,10 @@ async def get_quiz(id: int, username: str = Depends(require_app_access)):
             "srs_stage": srs_stage,
             "next_review_at": next_review_at,
             "questions": ai_quiz_data.get("quiz", []),
-            "stages": ai_quiz_data.get("stages", {}),
             "importance_level": level
         }
         storage.save_quiz_json(id, quiz_json_payload, username=username)
+        database.save_quiz_concept_pool(id, build_concept_pool(ai_quiz_data), username=username)
         quiz_data = quiz_json_payload
         
     srs_stage = 0
@@ -123,22 +125,16 @@ async def get_quiz(id: int, username: str = Depends(require_app_access)):
     user_config = config.load_user_config(username)
     q_counts = get_question_counts(user_config)
     target_count = q_counts.get(level, 5)
-    
-    stages = quiz_data.get("stages", {}) if isinstance(quiz_data, dict) else {}
-    stage_key = f"stage_{min(max(srs_stage, 0), 4)}"
-    
-    questions_pool = []
-    if isinstance(stages, dict) and stage_key in stages and stages[stage_key]:
-        questions_pool = stages[stage_key]
-        
+
+    # The stage-appropriate questions come from quizzes.concept_pool, which holds every
+    # generated question tagged with its stage, filtered by whatever topics the user selected
+    # in the Focus overlay. Quizzes created before that column existed have an empty pool and
+    # fall through to questions_json, which is the stage-0 set they have always been served.
+    concept_pool, focus_topics = database.get_quiz_pool_and_focus(id, username=username)
+    questions_pool = select_stage_questions(concept_pool, srs_stage, focus_topics)
+
     if not questions_pool and isinstance(quiz_data, dict):
         questions_pool = quiz_data.get("questions") or quiz_data.get("quiz") or []
-        
-    if not questions_pool and isinstance(stages, dict):
-        for s_k in ["stage_0", "stage_1", "stage_2", "stage_3", "stage_4"]:
-            if stages.get(s_k):
-                questions_pool = stages[s_k]
-                break
 
     def _is_valid_q(q):
         if isinstance(q, str) and q.strip():
@@ -176,13 +172,26 @@ async def get_quiz(id: int, username: str = Depends(require_app_access)):
                     questions_pool = ai_quiz_data.get("quiz", [])
                     if isinstance(quiz_data, dict):
                         quiz_data["questions"] = questions_pool
-                        quiz_data["stages"] = ai_quiz_data.get("stages", {})
                         storage.save_quiz_json(id, quiz_data, username=username)
+                    database.save_quiz_concept_pool(id, build_concept_pool(ai_quiz_data), username=username)
             except Exception as e:
                 logger.error(f"Auto-repair quiz {id} failed: {e}")
 
+    # Prefix slice, never a sample: verify-guess and quiz_attempts.question_index both address
+    # questions by position, so the served list has to be a stable prefix of the stored one.
+    active_questions = questions_pool[:target_count] if questions_pool else []
+
+    # Keep questions_json in step with what is actually being served this session, so a typed
+    # guess is verified against the question the user is looking at.
+    stored_questions = quiz_data.get("questions") if isinstance(quiz_data, dict) else None
+    if active_questions and active_questions != stored_questions:
+        try:
+            database.save_quiz_active_questions(id, active_questions, username=username)
+        except Exception as e_sync:
+            logger.warning(f"Could not materialize active questions for quiz {id}: {e_sync}")
+
     response_payload = dict(quiz_data) if isinstance(quiz_data, dict) else {}
-    response_payload["questions"] = questions_pool[:target_count] if questions_pool else []
+    response_payload["questions"] = active_questions
     response_payload["srs_stage"] = srs_stage
     response_payload["importance_level"] = level
     response_payload["in_progress_index"] = db_row["in_progress_index"] if (db_row and "in_progress_index" in db_row.keys() and db_row["in_progress_index"] is not None) else (quiz_data.get("in_progress_index") if isinstance(quiz_data, dict) else 0)

@@ -302,6 +302,91 @@ def get_question_counts(user_config: dict) -> dict:
     return {k: min(15, max(1, v)) for k, v in raw.items()}
 
 
+STAGE_KEYS = ["stage_0", "stage_1", "stage_2", "stage_3", "stage_4"]
+
+
+def _stage_of(item: dict) -> int:
+    """Reads an item's stage index defensively, since it round-trips through JSONB."""
+    try:
+        return max(0, min(int(item.get("stage", 0)), len(STAGE_KEYS) - 1))
+    except (TypeError, ValueError):
+        return 0
+
+
+def build_concept_pool(analysis: dict) -> list:
+    """Flattens an AI analysis result's five per-stage quiz sets into one flat pool.
+
+    Each item keeps the fields the model produced and gains an integer `stage`. This is the
+    shape `quizzes.concept_pool` holds: one flat array rather than the nested `stages` object,
+    so a topic selection can filter across stages in a single pass.
+
+    Every caller used to drop everything but stage 0 on the floor here, because the only
+    persisted field was `questions_json` and it holds a flat list.
+    """
+    if not isinstance(analysis, dict):
+        return []
+
+    pool = []
+    stages = analysis.get("stages") or {}
+    if isinstance(stages, dict):
+        for stage_index, key in enumerate(STAGE_KEYS):
+            for item in (stages.get(key) or []):
+                if isinstance(item, dict) and item.get("question"):
+                    entry = dict(item)
+                    entry["stage"] = stage_index
+                    pool.append(entry)
+
+    # generate_topic_quiz's fallback path and any older analysis return only a flat `quiz`
+    # list, which is the stage-0 set. Without this the pool would be empty for them and every
+    # stage would fall through to questions_json, which is the behaviour this column replaces.
+    if not pool:
+        for item in (analysis.get("quiz") or []):
+            if isinstance(item, dict) and item.get("question"):
+                entry = dict(item)
+                entry["stage"] = 0
+                pool.append(entry)
+
+    return pool
+
+
+def select_stage_questions(concept_pool, srs_stage, focus_topics=None, limit=None) -> list:
+    """Picks the active questions for one SRS stage out of a concept pool.
+
+    Applies the user's saved topic selection for that stage when there is one, then takes the
+    first `limit` items. The slice must stay a *prefix*: POST /api/quiz/verify-guess and
+    quiz_attempts.question_index both address questions by position in the stored list, so a
+    random sample would grade an answer against a different question than the one displayed.
+    """
+    if not isinstance(concept_pool, list) or not concept_pool:
+        return []
+
+    try:
+        stage = max(0, min(int(srs_stage or 0), len(STAGE_KEYS) - 1))
+    except (TypeError, ValueError):
+        stage = 0
+
+    items = [q for q in concept_pool if isinstance(q, dict) and _stage_of(q) == stage]
+
+    # A stage the model returned nothing for falls back to the nearest lower stage that has
+    # questions, rather than opening an empty quiz.
+    if not items:
+        for fallback in range(stage - 1, -1, -1):
+            items = [q for q in concept_pool if isinstance(q, dict) and _stage_of(q) == fallback]
+            if items:
+                break
+
+    selected = focus_topics.get(STAGE_KEYS[stage]) if isinstance(focus_topics, dict) else None
+    if selected:
+        filtered = [q for q in items if q.get("topic") in selected]
+        # An empty result means the saved topics no longer match the pool, for example after a
+        # re-import produced different topic names. Serving the unfiltered stage beats handing
+        # the user an empty quiz.
+        if filtered:
+            items = filtered
+
+    return items[:limit] if limit else items
+
+
 def get_srs_intervals(cursor, user_uuid: Optional[str] = None) -> list:
     """Fetches SRS stage day intervals from database for user or defaults."""
     from app.config import DEFAULT_SRS_INTERVALS

@@ -15,6 +15,7 @@ from app.dependencies import (
     get_preferred_hour,
     adjust_next_review,
     require_app_access,
+    build_concept_pool,
 )
 
 import logging
@@ -559,9 +560,9 @@ async def generate_goal_practice_quiz(
         "srs_stage": 0,
         "next_review_at": next_review,
         "questions": ai_quiz_data.get("quiz", []),
-        "stages": ai_quiz_data.get("stages", {}),
         "importance_level": 3
     }
     storage.save_quiz_json(quiz_id, quiz_json_payload, username=username)
+    database.save_quiz_concept_pool(quiz_id, build_concept_pool(ai_quiz_data), username=username)
 
     return {"status": "success", "quiz_id": quiz_id}

@@ -64,6 +64,7 @@ from app.dependencies import (
     get_srs_intervals,
     get_preferred_hour,
     adjust_next_review,
+    build_concept_pool,
 )
 
 
@@ -176,12 +177,13 @@ class YouTubeTaskProcessor(IImportTaskProcessor):
 
             q_list = [dict(q) for q in quiz_items]
             q_json = json.dumps(q_list)
+            pool_json = json.dumps(build_concept_pool(analysis))
 
             cursor.execute(
-                """INSERT INTO quizzes 
-                   (user_uuid, video_id, quiz_type, srs_stage, next_review_at, notified, importance_level, questions_json)
-                   VALUES (%s, %s, 'video', 0, %s, 0, %s, %s::jsonb) RETURNING id;""",
-                (user_uuid, video_id, next_review.isoformat(), importance_rating, q_json)
+                """INSERT INTO quizzes
+                   (user_uuid, video_id, quiz_type, srs_stage, next_review_at, notified, importance_level, questions_json, concept_pool)
+                   VALUES (%s, %s, 'video', 0, %s, 0, %s, %s::jsonb, %s::jsonb) RETURNING id;""",
+                (user_uuid, video_id, next_review.isoformat(), importance_rating, q_json, pool_json)
             )
             res = cursor.fetchone()
             quiz_id = res["id"] if isinstance(res, dict) and "id" in res else res[0]
@@ -221,7 +223,6 @@ class YouTubeTaskProcessor(IImportTaskProcessor):
                 "srs_stage": 0,
                 "next_review_at": next_review.isoformat(),
                 "questions": [dict(q) for q in quiz_items],
-                "stages": quiz_stages,
                 "importance_level": importance_rating
             }
             storage.save_quiz_json(quiz_id, quiz_json_payload, username=username)
@@ -365,12 +366,13 @@ class DocumentTaskProcessor(IImportTaskProcessor):
 
             q_list = [dict(q) for q in quiz_items]
             q_json = json.dumps(q_list)
+            pool_json = json.dumps(build_concept_pool(analysis))
 
             cursor.execute(
                 """INSERT INTO quizzes
-                   (user_uuid, video_id, quiz_type, srs_stage, next_review_at, notified, importance_level, questions_json)
-                   VALUES (%s, %s, 'video', 0, %s, 0, %s, %s::jsonb) RETURNING id;""",
-                (user_uuid, video_id, next_review.isoformat(), importance_rating, q_json)
+                   (user_uuid, video_id, quiz_type, srs_stage, next_review_at, notified, importance_level, questions_json, concept_pool)
+                   VALUES (%s, %s, 'video', 0, %s, 0, %s, %s::jsonb, %s::jsonb) RETURNING id;""",
+                (user_uuid, video_id, next_review.isoformat(), importance_rating, q_json, pool_json)
             )
             res = cursor.fetchone()
             quiz_id = res["id"] if isinstance(res, dict) and "id" in res else res[0]
@@ -403,7 +405,6 @@ class DocumentTaskProcessor(IImportTaskProcessor):
                 "srs_stage": 0,
                 "next_review_at": next_review.isoformat(),
                 "questions": [dict(q) for q in quiz_items],
-                "stages": quiz_stages,
                 "importance_level": importance_rating
             }
             storage.save_quiz_json(quiz_id, quiz_json_payload, username=username)
@@ -491,12 +492,13 @@ class NotesTaskProcessor(IImportTaskProcessor):
 
             q_list = [dict(q) for q in quiz_items]
             q_json = json.dumps(q_list)
+            pool_json = json.dumps(build_concept_pool(analysis))
 
             cursor.execute(
                 """INSERT INTO quizzes
-                   (user_uuid, video_id, quiz_type, srs_stage, next_review_at, notified, importance_level, questions_json)
-                   VALUES (%s, %s, 'video', 0, %s, 0, %s, %s::jsonb) RETURNING id;""",
-                (user_uuid, video_id, next_review.isoformat(), importance_rating, q_json)
+                   (user_uuid, video_id, quiz_type, srs_stage, next_review_at, notified, importance_level, questions_json, concept_pool)
+                   VALUES (%s, %s, 'video', 0, %s, 0, %s, %s::jsonb, %s::jsonb) RETURNING id;""",
+                (user_uuid, video_id, next_review.isoformat(), importance_rating, q_json, pool_json)
             )
             res = cursor.fetchone()
             quiz_id = res["id"] if isinstance(res, dict) and "id" in res else res[0]
@@ -529,7 +531,6 @@ class NotesTaskProcessor(IImportTaskProcessor):
                 "srs_stage": 0,
                 "next_review_at": next_review.isoformat(),
                 "questions": [dict(q) for q in quiz_items],
-                "stages": quiz_stages,
                 "importance_level": importance_rating
             }
             storage.save_quiz_json(quiz_id, quiz_json_payload, username=username)
@@ -624,12 +625,13 @@ class GoalQuizProcessor(IImportTaskProcessor):
 
             q_list = [dict(q) for q in quiz_items]
             q_json = json.dumps(q_list)
+            pool_json = json.dumps(build_concept_pool(analysis))
 
             cursor.execute(
-                """INSERT INTO quizzes 
-                   (user_uuid, video_id, goal_id, quiz_type, srs_stage, next_review_at, notified, importance_level, questions_json)
-                   VALUES (%s, NULL, %s, 'goal', 0, %s, 0, 3, %s::jsonb) RETURNING id;""",
-                (user_uuid, goal_id, next_review.isoformat(), q_json)
+                """INSERT INTO quizzes
+                   (user_uuid, video_id, goal_id, quiz_type, srs_stage, next_review_at, notified, importance_level, questions_json, concept_pool)
+                   VALUES (%s, NULL, %s, 'goal', 0, %s, 0, 3, %s::jsonb, %s::jsonb) RETURNING id;""",
+                (user_uuid, goal_id, next_review.isoformat(), q_json, pool_json)
             )
             res = cursor.fetchone()
             quiz_id = res["id"] if isinstance(res, dict) and "id" in res else res[0]

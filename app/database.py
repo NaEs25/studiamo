@@ -2,6 +2,7 @@
 Database module for Studiamo, Supabase PostgreSQL Integration
 Provides unified connection pool & parameter wrapping for clean execution across the app.
 """
+import json
 import os
 import sys
 import logging
@@ -169,6 +170,82 @@ def get_db_connection(username: str):
     raw_conn = get_pooled_raw_connection()
     raw_conn.autocommit = True
     return ConnectionWrapper(raw_conn, user_uuid=user_uuid)
+
+def save_quiz_concept_pool(quiz_id: int, concept_pool: list, username: str) -> None:
+    """Persists a quiz's full multi-stage question pool.
+
+    Deliberately a narrow, explicitly-keyed write rather than another field on
+    storage.save_quiz_json: that function persists a hardcoded column list and silently drops
+    anything else in the payload it is handed, which is why every stage above 0 was discarded
+    for as long as it existed. Keying on the primary key means this cannot miss its row.
+    """
+    conn = get_db_connection(username)
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE quizzes SET concept_pool = %s::jsonb WHERE id = %s AND user_uuid = %s;",
+            (json.dumps(concept_pool or []), quiz_id, conn.user_uuid)
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def save_quiz_active_questions(quiz_id: int, questions: list, username: str) -> None:
+    """Materializes the questions a quiz is currently serving into questions_json.
+
+    questions_json is the positional contract for the rest of the app: POST
+    /api/quiz/verify-guess looks a question up by its index in this list, and
+    quiz_attempts.question_index records answers against it. Once GET /api/quiz started
+    drawing stage-appropriate questions from concept_pool, leaving questions_json holding the
+    stage-0 set would mean verifying a typed guess against a different question than the one
+    on screen. Writing back what was served keeps the two in step.
+
+    Deliberately narrow: storage.save_quiz_json would also overwrite in_progress_index, which
+    would drop a half-finished session.
+    """
+    conn = get_db_connection(username)
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE quizzes SET questions_json = %s::jsonb WHERE id = %s AND user_uuid = %s;",
+            (json.dumps(questions or []), quiz_id, conn.user_uuid)
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def get_quiz_pool_and_focus(quiz_id: int, username: str) -> tuple:
+    """Returns (concept_pool, focus_topics) for a quiz, both already decoded from JSONB."""
+    conn = get_db_connection(username)
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT concept_pool, focus_topics FROM quizzes WHERE id = %s AND user_uuid = %s LIMIT 1;",
+            (quiz_id, conn.user_uuid)
+        )
+        row = cursor.fetchone()
+    finally:
+        conn.close()
+
+    if not row:
+        return [], {}
+
+    pool = row.get("concept_pool") or []
+    focus = row.get("focus_topics") or {}
+    if isinstance(pool, str):
+        try:
+            pool = json.loads(pool)
+        except (TypeError, ValueError):
+            pool = []
+    if isinstance(focus, str):
+        try:
+            focus = json.loads(focus)
+        except (TypeError, ValueError):
+            focus = {}
+    return (pool if isinstance(pool, list) else []), (focus if isinstance(focus, dict) else {})
+
 
 def first_val(row, default=0):
     """Safely extracts the first column value whether row is a dict, tuple, or Row."""

@@ -211,6 +211,21 @@ TABLES_SQL = [
     ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS questions_json JSONB DEFAULT '[]'::jsonb;
     ALTER TABLE quizzes DROP COLUMN IF EXISTS json_path;
     ALTER TABLE quizzes DROP COLUMN IF EXISTS user_id;
+
+    -- Every question the AI extracted, across all SRS stages, as a flat array of items
+    -- carrying their own `stage`. questions_json holds only the questions active for the
+    -- current stage; this holds the pool they are drawn from.
+    --
+    -- Before this column existed, ai.analyze_youtube_video generated all five stage sets on
+    -- every import (see its prompt) and storage.save_quiz_json persisted only the stage-0
+    -- ones, so four fifths of the generated questions were paid for and discarded, and every
+    -- SRS stage re-served the same stage-0 questions.
+    ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS concept_pool JSONB DEFAULT '[]'::jsonb;
+
+    -- Per-stage topic selection made by the user in the Focus overlay, shaped
+    -- {"stage_0": ["topic a", "topic b"], ...}. Empty means "use what the AI recommended",
+    -- which is what every pre-existing quiz row reads as.
+    ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS focus_topics JSONB DEFAULT '{}'::jsonb;
     """,
     """
     CREATE TABLE IF NOT EXISTS ai_usage_logs (
