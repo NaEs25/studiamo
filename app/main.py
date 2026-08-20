@@ -148,6 +148,23 @@ app.include_router(bugs.router)
 app.include_router(billing.router)
 app.include_router(landing_waitlist.router)
 
+# Mount internal admin panel if available in karl-privat
+_admin_panel_dir = Path(__file__).resolve().parent.parent / "karl-privat" / "admin-panel"
+if (_admin_panel_dir / "router.py").exists():
+    try:
+        import sys
+        _admin_dir_str = str(_admin_panel_dir)
+        if _admin_dir_str not in sys.path:
+            sys.path.insert(0, _admin_dir_str)
+        import router as _admin_router_mod
+        app.include_router(_admin_router_mod.router)
+        _admin_static = _admin_panel_dir / "static"
+        if _admin_static.exists():
+            app.mount("/admin/static", NoCacheStaticFiles(directory=_admin_static), name="admin_static")
+    except Exception as _e_admin:
+        logger.warning(f"Could not load internal admin panel: {_e_admin}")
+
+
 
 
 @app.get("/api/config")
