@@ -236,6 +236,100 @@ option {
     outline-offset: 2px;
 }
 
+/* ── Quiz Answer Mode Switch ────────────────────────────── */
+.quiz-mode-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.3rem 0.6rem;
+    border-radius: 9999px;
+    border: 1px solid transparent;
+    background-color: transparent;
+    color: var(--color-text-faint);
+    font-size: 0.7rem;
+    font-weight: 700;
+    line-height: 1.2;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.quiz-mode-btn:hover {
+    color: var(--color-text-muted);
+    background-color: var(--color-surface-2);
+}
+
+.quiz-mode-btn[aria-pressed="true"] {
+    background-color: var(--color-primary-bg);
+    border-color: var(--color-primary-border);
+    color: var(--color-primary-hover);
+}
+
+/* ── Quiz Multiple-Choice Options ───────────────────────── */
+.quiz-option {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    width: 100%;
+    padding: 0.7rem 0.9rem;
+    border-radius: 14px;
+    border: 1px solid var(--color-border-strong);
+    background-color: var(--color-surface-2);
+    color: var(--color-text-main);
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-align: left;
+    transition: background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+}
+
+.quiz-option:hover:not(:disabled) {
+    background-color: var(--color-surface-deep);
+    border-color: var(--color-primary-border);
+}
+
+.quiz-option:disabled {
+    cursor: default;
+}
+
+/* Marker carrying A/B/C/D, so the options stay scannable without numbering the text. */
+.quiz-option-key {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.35rem;
+    height: 1.35rem;
+    border-radius: 7px;
+    background-color: var(--color-surface-deep);
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--color-text-muted);
+}
+
+.quiz-option.is-correct {
+    background-color: #ecfdf5;
+    border-color: #6ee7b7;
+    color: #065f46;
+}
+
+.quiz-option.is-correct .quiz-option-key {
+    background-color: #a7f3d0;
+    color: #065f46;
+}
+
+.quiz-option.is-wrong {
+    background-color: #fef2f2;
+    border-color: #fca5a5;
+    color: #991b1b;
+}
+
+.quiz-option.is-wrong .quiz-option-key {
+    background-color: #fecaca;
+    color: #991b1b;
+}
+
+.quiz-option.is-muted {
+    opacity: 0.45;
+}
+
 /* ── Quiz Grading Buttons ───────────────────────────────── */
 /* Keyboard hints on the grade buttons. Hidden on touch widths, where there is no keyboard to
    press 1 or 2 and the badge is just clutter competing with the label. */

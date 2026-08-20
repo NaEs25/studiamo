@@ -256,6 +256,118 @@ async function startQuiz(quizId, videoId = null, level = 3) {
     }
 }
 
+// --- Answer modes ---------------------------------------------------------------------------
+// 'flip'   read, flip, grade yourself. No typing, no AI call.
+// 'choice' pick one of the question's four options, graded locally against correct_index.
+// 'recall' type an answer and have the AI evaluate it. The only mode that costs anything.
+const QUIZ_MODES = ['flip', 'choice', 'recall'];
+const QUIZ_MODE_KEY = 'studiamo_quiz_mode';
+
+function getQuizMode() {
+    const stored = localStorage.getItem(QUIZ_MODE_KEY);
+    return QUIZ_MODES.includes(stored) ? stored : 'recall';
+}
+
+function setQuizMode(mode) {
+    if (!QUIZ_MODES.includes(mode)) return;
+    localStorage.setItem(QUIZ_MODE_KEY, mode);
+    syncQuizModeUI();
+    // Re-render so the current question switches presentation immediately rather than on the
+    // next one, which is how the auto-read toggle used to misbehave.
+    if (activeQuizSession) renderQuizQuestion();
+}
+
+function syncQuizModeUI() {
+    const mode = getQuizMode();
+    document.querySelectorAll('[data-quiz-mode]').forEach(btn => {
+        btn.setAttribute('aria-pressed', String(btn.dataset.quizMode === mode));
+    });
+}
+
+// A question can only be answered by choice if the model actually produced options for it.
+// Older material predates them, so choice mode falls back to flip rather than dead-ending.
+function questionSupportsChoice(q) {
+    return !!(q && Array.isArray(q.options) && q.options.length >= 2
+        && Number.isInteger(q.correct_index)
+        && q.correct_index >= 0 && q.correct_index < q.options.length);
+}
+
+function effectiveQuizMode(question) {
+    const mode = getQuizMode();
+    if (mode === 'choice' && !questionSupportsChoice(question)) return 'flip';
+    return mode;
+}
+
+function renderQuizOptions(question) {
+    const wrap = document.getElementById('quiz-options');
+    if (!wrap) return;
+
+    wrap.innerHTML = question.options.map((opt, i) => `
+        <button type="button" class="quiz-option" data-option-index="${i}">
+            <span class="quiz-option-key">${String.fromCharCode(65 + i)}</span>
+            <span class="grow">${escapeHtml(opt)}</span>
+        </button>
+    `).join('');
+
+    wrap.querySelectorAll('[data-option-index]').forEach(btn => {
+        btn.addEventListener('click', () => handleOptionPick(parseInt(btn.dataset.optionIndex, 10), question));
+    });
+}
+
+function handleOptionPick(index, question) {
+    const wrap = document.getElementById('quiz-options');
+    if (!wrap) return;
+
+    const correct = index === question.correct_index;
+    wrap.querySelectorAll('[data-option-index]').forEach(btn => {
+        const i = parseInt(btn.dataset.optionIndex, 10);
+        btn.disabled = true;
+        if (i === question.correct_index) btn.classList.add('is-correct');
+        else if (i === index) btn.classList.add('is-wrong');
+        else btn.classList.add('is-muted');
+    });
+
+    // Record what was picked so the graded attempt keeps the learner's actual answer, the way
+    // a typed guess does, rather than logging an empty string.
+    window._lastFeedback = correct
+        ? 'Picked the correct option.'
+        : `Picked "${question.options[index]}" instead of "${question.options[question.correct_index]}".`;
+    lastVerdictIsCorrect = correct;
+    window._lastPickedOption = question.options[index];
+
+    // Brief pause so the green/red registers before the answer replaces it.
+    setTimeout(() => showQuizBack({ suggest: correct ? 'remembered' : 'forgot' }), 650);
+}
+
+// Reveals the answer side and, when a verdict is known, points at the matching grade.
+function showQuizBack({ suggest } = {}) {
+    const frontCard = document.getElementById('quiz-card-front');
+    const backCard = document.getElementById('quiz-card-back');
+    if (frontCard) frontCard.classList.add('hidden');
+    if (backCard) backCard.classList.remove('hidden');
+
+    const btnForgot = document.getElementById('btn-grade-forgot');
+    const btnRemembered = document.getElementById('btn-grade-remembered');
+    [btnForgot, btnRemembered].forEach(b => {
+        if (b) b.classList.remove('quiz-grade-suggested', 'quiz-grade-dimmed');
+    });
+    if (suggest === 'remembered') {
+        if (btnRemembered) btnRemembered.classList.add('quiz-grade-suggested');
+        if (btnForgot) btnForgot.classList.add('quiz-grade-dimmed');
+    } else if (suggest === 'forgot') {
+        if (btnForgot) btnForgot.classList.add('quiz-grade-suggested');
+        if (btnRemembered) btnRemembered.classList.add('quiz-grade-dimmed');
+    }
+
+    renderIcons();
+
+    const autoTts = document.getElementById('quiz-auto-tts-toggle');
+    const answerEl = document.getElementById('quiz-correct-answer');
+    if (autoTts && autoTts.checked && answerEl) {
+        setTimeout(() => speakText(answerEl.textContent, document.getElementById('btn-tts-answer')), 300);
+    }
+}
+
 function renderQuizQuestion() {
     stopCurrentSpeech();
     if (!activeQuizSession || !activeQuizSession.questions || activeQuizSession.questions.length === 0) {
@@ -266,6 +378,7 @@ function renderQuizQuestion() {
     
     window._lastFeedback = "";
     window._lastExplanation = "";
+    window._lastPickedOption = null;
     lastVerdictIsCorrect = null;
 
     if (activeQuizSession && activeQuizSession.id) {
@@ -289,7 +402,27 @@ function renderQuizQuestion() {
 
     const guessInput = document.getElementById('quiz-guess-input');
     if (guessInput) guessInput.value = '';
-    
+
+    // Present the question according to the active mode.
+    const mode = effectiveQuizMode(currentQ);
+    const optionsWrap = document.getElementById('quiz-options');
+    const guessWrap = document.getElementById('quiz-guess-wrap');
+    const btnShow = document.getElementById('btn-show-answer');
+
+    if (guessWrap) guessWrap.classList.toggle('hidden', mode !== 'recall');
+    if (optionsWrap) {
+        optionsWrap.classList.toggle('hidden', mode !== 'choice');
+        optionsWrap.innerHTML = '';
+        if (mode === 'choice') renderQuizOptions(currentQ);
+    }
+    if (btnShow) {
+        // In choice mode the option itself reveals the answer, so the button would be a second
+        // way to skip past the question.
+        btnShow.classList.toggle('hidden', mode === 'choice');
+        btnShow.textContent = mode === 'recall' ? 'Show Correct Answer' : 'Show Answer';
+    }
+    syncQuizModeUI();
+
     const frontCard = document.getElementById('quiz-card-front');
     const backCard = document.getElementById('quiz-card-back');
     if (frontCard) frontCard.classList.remove('hidden');
@@ -337,7 +470,12 @@ async function gradeQuestion(grade) {
         const questions = activeQuizSession.questions;
         const currentQ = questions[currentQuestionIndex];
         const guessInput = document.getElementById('quiz-guess-input');
-        const guess = guessInput ? guessInput.value : "";
+        // In choice mode the picked option is the learner's answer, so it is what gets stored
+        // on the attempt. Otherwise quiz_attempts would show an empty given_answer for every
+        // multiple-choice question ever answered.
+        const guess = (window._lastPickedOption != null)
+            ? window._lastPickedOption
+            : (guessInput ? guessInput.value : "");
         
         const progressCheckbox = document.getElementById('quiz-progress-srs-checkbox');
         const progressSrs = progressCheckbox ? progressCheckbox.checked : true;
@@ -464,7 +602,19 @@ function initQuizEvents() {
         btnShow.addEventListener('click', async () => {
             const guessInput = document.getElementById('quiz-guess-input');
             const guess = guessInput ? guessInput.value.trim() : '';
-            
+
+            // Flipping without a typed guess has nothing for the AI to evaluate. The endpoint
+            // already short-circuits an empty guess, so this only skipped a pointless round
+            // trip, but it is what makes flip mode genuinely instant.
+            const currentQ = activeQuizSession.questions[currentQuestionIndex];
+            if (!guess) {
+                window._lastFeedback = '';
+                window._lastExplanation = currentQ ? (currentQ.explanation || '') : '';
+                lastVerdictIsCorrect = null;
+                showQuizBack();
+                return;
+            }
+
             const originalText = btnShow.textContent;
             btnShow.disabled = true;
             btnShow.textContent = "Verifying guess conceptually...";
@@ -503,14 +653,10 @@ function initQuizEvents() {
                         verdictLabel.textContent = "AI Evaluation: Conceptually Correct";
                         verdictLabel.className = "text-[9px] font-bold uppercase tracking-wider text-emerald-450";
                         verdictBox.className = "p-3 rounded-xl border border-emerald-500/30 bg-emerald-950/10 flex flex-col space-y-1";
-                        if (btnRemembered) btnRemembered.classList.add('quiz-grade-suggested');
-                        if (btnForgot) btnForgot.classList.add('quiz-grade-dimmed');
                     } else {
                         verdictLabel.textContent = "AI Evaluation: Incorrect / Needs Review";
                         verdictLabel.className = "text-[9px] font-bold uppercase tracking-wider text-red-450";
                         verdictBox.className = "p-3 rounded-xl border border-red-500/30 bg-red-950/10 flex flex-col space-y-1";
-                        if (btnForgot) btnForgot.classList.add('quiz-grade-suggested');
-                        if (btnRemembered) btnRemembered.classList.add('quiz-grade-dimmed');
                     }
                 }
             } catch (e) {
@@ -520,19 +666,39 @@ function initQuizEvents() {
                 btnShow.textContent = originalText;
             }
             
-            const frontCard = document.getElementById('quiz-card-front');
-            const backCard = document.getElementById('quiz-card-back');
-            if (frontCard) frontCard.classList.add('hidden');
-            if (backCard) backCard.classList.remove('hidden');
-            renderIcons();
+            // The verdict is passed through rather than applied above, because showQuizBack
+            // clears the grade emphasis before applying its own.
+            showQuizBack({
+                suggest: lastVerdictIsCorrect === true ? 'remembered'
+                    : lastVerdictIsCorrect === false ? 'forgot'
+                    : undefined
+            });
+        });
+    }
 
-            // Auto-read the answer aloud if the toggle is enabled (mirrors the
-            // auto-read of the question on the front card).
-            const autoTts = document.getElementById('quiz-auto-tts-toggle');
-            const answerEl = document.getElementById('quiz-correct-answer');
-            if (autoTts && autoTts.checked && answerEl) {
-                setTimeout(() => speakText(answerEl.textContent, document.getElementById('btn-tts-answer')), 300);
+    const modeSwitch = document.getElementById('quiz-mode-switch');
+    if (modeSwitch) {
+        modeSwitch.querySelectorAll('[data-quiz-mode]').forEach(btn => {
+            btn.addEventListener('click', () => setQuizMode(btn.dataset.quizMode));
+        });
+        syncQuizModeUI();
+    }
+
+    // Auto-read was only consulted while rendering a question, so switching it on mid-question
+    // stayed silent until the next one appeared and looked broken. Turning it on now reads
+    // whichever side of the card is currently showing.
+    const autoTtsToggle = document.getElementById('quiz-auto-tts-toggle');
+    if (autoTtsToggle) {
+        autoTtsToggle.addEventListener('change', () => {
+            if (!autoTtsToggle.checked) {
+                stopCurrentSpeech();
+                return;
             }
+            const front = document.getElementById('quiz-card-front');
+            const showingFront = front && !front.classList.contains('hidden');
+            const textEl = document.getElementById(showingFront ? 'quiz-question-text' : 'quiz-correct-answer');
+            const readBtn = document.getElementById(showingFront ? 'btn-tts-question' : 'btn-tts-answer');
+            if (textEl && textEl.textContent.trim()) speakText(textEl.textContent, readBtn);
         });
     }
 

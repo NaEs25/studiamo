@@ -1634,7 +1634,7 @@
     <!-- Overlay 2: Quiz Player Overlay -->
     <!-- Overlay 2: SRS Flashcard Active Recall Quiz -->
     <div id="overlay-quiz" role="dialog" aria-modal="true" aria-labelledby="quiz-source-title"
-        class="hidden fixed inset-0 bg-stone-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        class="hidden fixed inset-0 bg-stone-950/80 backdrop-blur-md z-50 flex items-start sm:items-center justify-center p-4 overflow-y-auto">
         <div class="max-w-md w-full flex flex-col space-y-6">
             <!-- Quiz Progress and Title -->
             <div class="space-y-2">
@@ -1666,6 +1666,20 @@
                 <!-- Session toggles as compact chips. The label wraps the input, so clicking
                      anywhere on the chip toggles it and the checkbox keeps its native
                      keyboard behaviour. -->
+                <!-- How the learner answers. Flip and Choice are graded locally with no AI
+                     call; Recall sends the typed guess for evaluation. -->
+                <div id="quiz-mode-switch" class="flex items-center gap-1 pt-1" role="group" aria-label="Answer mode">
+                    <button type="button" data-quiz-mode="flip" class="quiz-mode-btn" title="Read, flip, grade yourself">
+                        <i data-lucide="repeat" class="w-3.5 h-3.5 shrink-0"></i><span>Flip</span>
+                    </button>
+                    <button type="button" data-quiz-mode="choice" class="quiz-mode-btn" title="Pick from four options">
+                        <i data-lucide="list-checks" class="w-3.5 h-3.5 shrink-0"></i><span>Choice</span>
+                    </button>
+                    <button type="button" data-quiz-mode="recall" class="quiz-mode-btn" title="Type an answer and let the AI evaluate it">
+                        <i data-lucide="pen-line" class="w-3.5 h-3.5 shrink-0"></i><span>Recall</span>
+                    </button>
+                </div>
+
                 <div class="flex items-center gap-2 pt-1">
                     <label class="quiz-toggle" title="Advance the spaced repetition interval when this session is graded">
                         <input type="checkbox" id="quiz-progress-srs-checkbox" checked>
@@ -1681,7 +1695,7 @@
             </div>
 
             <!-- Quiz Main Card (Flat Layout) -->
-            <div class="w-full bg-white border border-stone-300 rounded-3xl p-6 md:p-8 flex flex-col shadow-2xl relative"
+            <div class="w-full bg-white border border-stone-300 rounded-3xl px-6 pb-6 pt-4 md:px-8 md:pb-8 md:pt-5 flex flex-col shadow-2xl relative"
                 id="quiz-card">
                 <!-- Front side (Question & Guess box) -->
                 <div id="quiz-card-front" class="space-y-5 flex flex-col justify-between">
@@ -1697,8 +1711,12 @@
                         </button>
                     </div>
 
-                    <div class="space-y-2">
-                        <label class="block text-xs font-semibold text-stone-600">Type your recall guess (helps solidify
+                    <!-- Multiple choice. Rendered by quiz.js from the question's own options,
+                         hidden entirely in the other two modes. -->
+                    <div id="quiz-options" class="hidden space-y-2"></div>
+
+                    <div id="quiz-guess-wrap" class="space-y-2">
+                        <label for="quiz-guess-input" class="block text-xs font-semibold text-stone-600">Type your recall guess (helps solidify
                             memory):</label>
                         <textarea id="quiz-guess-input" rows="3" placeholder="I think this means..."
                             class="w-full bg-stone-50 border border-stone-300 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900 placeholder-stone-400"></textarea>
@@ -1755,13 +1773,13 @@
                     <div class="border-t border-stone-200 pt-3">
                         <div class="grid grid-cols-2 gap-3">
                             <button id="btn-grade-forgot" aria-label="Grade as Forgot"
-                                class="py-3 px-4 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 font-bold rounded-2xl transition flex items-center justify-center gap-2 active:scale-[0.98] shadow-xs">
+                                class="py-3 px-3 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 font-bold text-sm whitespace-nowrap rounded-2xl transition flex items-center justify-center gap-1.5 active:scale-[0.98] shadow-xs">
                                 <i data-lucide="x-circle" class="w-4 h-4 shrink-0"></i>
                                 <span>I Forgot</span>
                                 <span class="quiz-key-hint">1</span>
                             </button>
                             <button id="btn-grade-remembered" aria-label="Grade as Remembered"
-                                class="py-3 px-4 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 font-bold rounded-2xl transition flex items-center justify-center gap-2 active:scale-[0.98] shadow-xs">
+                                class="py-3 px-3 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 font-bold text-sm whitespace-nowrap rounded-2xl transition flex items-center justify-center gap-1.5 active:scale-[0.98] shadow-xs">
                                 <i data-lucide="check-circle" class="w-4 h-4 shrink-0"></i>
                                 <span>I Remembered</span>
                                 <span class="quiz-key-hint">2</span>
