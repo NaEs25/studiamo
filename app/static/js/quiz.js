@@ -176,19 +176,23 @@ async function startQuiz(quizId, videoId = null, level = 3) {
                 titleEl.textContent = 'Active recall session';
             }
         }
+        // `youtube_id`, not `video_filename`: GET /api/quiz builds its payload from
+        // storage.get_quiz_json, which never returned a video_filename key, so this was
+        // always undefined. Every YouTube quiz therefore labelled itself "Document Material"
+        // and the rewatch link was permanently hidden.
+        const youtubeId = activeQuizSession.youtube_id;
         if (labelEl) {
-            const isYoutubeVideo = activeQuizSession.video_filename && !activeQuizSession.video_filename.startsWith('doc_');
             let fallbackLabel = 'Goal practice session';
             if (activeQuizSession.quiz_type === 'video') {
-                fallbackLabel = isYoutubeVideo ? 'YouTube Video Material' : 'Document Material';
+                fallbackLabel = youtubeId ? 'YouTube Video Material' : 'Document Material';
             }
             labelEl.textContent = activeQuizSession.goal_title || fallbackLabel;
         }
 
         const rewatch = document.getElementById('quiz-rewatch-link');
         if (rewatch) {
-            if (activeQuizSession.video_filename && !activeQuizSession.video_filename.startsWith('doc_')) {
-                rewatch.href = `https://youtube.com/watch?v=${activeQuizSession.video_filename}`;
+            if (youtubeId) {
+                rewatch.href = `https://youtube.com/watch?v=${youtubeId}`;
                 rewatch.classList.remove('hidden');
             } else {
                 rewatch.classList.add('hidden');

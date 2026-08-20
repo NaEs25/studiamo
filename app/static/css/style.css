@@ -193,6 +193,33 @@ option {
     to   { opacity: 1; transform: translateY(0); }
 }
 
+/* ── Quiz Read-Aloud Button ─────────────────────────────── */
+/* Icon-only control that sits beside the text it reads. Shared by the question, answer and
+   explanation buttons in the quiz overlay, which previously repeated the same utility chain
+   with a redundant "Read" label. Sized to stay a comfortable tap target. */
+.quiz-tts-btn {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 10px;
+    border: 1px solid var(--color-border-strong);
+    background-color: var(--color-surface-2);
+    color: var(--color-text-muted);
+    transition: background-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+
+.quiz-tts-btn:hover {
+    background-color: var(--color-surface-deep);
+    color: var(--color-primary);
+}
+
+.quiz-tts-btn:active {
+    transform: scale(0.95);
+}
+
 /* ── Newly Imported Card Highlight ──────────────────────── */
 /* Applied briefly by scrollToVideoCard (videos.js) after an import is queued, so the card
    the user just created is identifiable once the dashboard scrolls to it. */
