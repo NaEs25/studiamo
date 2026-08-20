@@ -271,9 +271,22 @@ const QUIZ_MODE_KEY = 'studiamo_quiz_mode';
 // four-option prompt would hand most of it back.
 const MIXED_CHOICE_MAX_STAGE = 1;
 
+// The in-quiz mode switcher is hidden for now. The mode is derived from each question's stage
+// instead (see effectiveQuizMode), which keeps the overlay from carrying a control most
+// learners would set once and never touch.
+//
+// The switcher, its handlers and the per-mode rendering are all still live, so re-enabling is
+// two edits: flip this to true, and drop the `hidden` class from #quiz-mode-switch in
+// index.html. The likely home for it is Settings, as a saved per-user preference, rather than
+// inside the quiz overlay.
+const QUIZ_MODE_SWITCHER_ENABLED = false;
+
 function getQuizMode() {
+    // While the switcher is hidden, a value left in localStorage by an earlier session would
+    // be unreachable and unchangeable, so it is ignored rather than honoured.
+    if (!QUIZ_MODE_SWITCHER_ENABLED) return 'mixed';
     const stored = localStorage.getItem(QUIZ_MODE_KEY);
-    return QUIZ_MODES.includes(stored) ? stored : 'recall';
+    return QUIZ_MODES.includes(stored) ? stored : 'mixed';
 }
 
 function setQuizMode(mode) {
@@ -755,6 +768,24 @@ function handleQuizKeydown(e) {
         || (activeTag === 'INPUT' && active.type === 'checkbox'));
 
     if (isFrontVisible) {
+        // A-D pick a multiple-choice option, matching the letter shown on each one. Guarded
+        // only against typing in a text field: unlike Space, a letter key does nothing native
+        // on a focused button, so it stays available after tabbing through the options.
+        const optionsWrap = document.getElementById('quiz-options');
+        if (optionsWrap && !optionsWrap.classList.contains('hidden')) {
+            const typingText = activeTag === 'TEXTAREA'
+                || (activeTag === 'INPUT' && active.type !== 'checkbox');
+            const key = e.key.length === 1 ? e.key.toLowerCase() : '';
+            if (!typingText && key >= 'a' && key <= 'd') {
+                const option = optionsWrap.querySelector(`[data-option-index="${key.charCodeAt(0) - 97}"]`);
+                if (option && !option.disabled) {
+                    e.preventDefault();
+                    option.click();
+                }
+                return;
+            }
+        }
+
         const btnShow = document.getElementById('btn-show-answer');
         if (e.key === 'Enter' && isSafeToHijack) {
             e.preventDefault();

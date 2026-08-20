@@ -1668,7 +1668,12 @@
                      keyboard behaviour. -->
                 <!-- How the learner answers. Flip and Choice are graded locally with no AI
                      call; Recall sends the typed guess for evaluation. -->
-                <div id="quiz-mode-switch" class="flex items-center gap-1 pt-1 overflow-x-auto" role="group"
+                <!-- Hidden for now: the answer mode is derived from each question's SRS stage
+                     instead, so this control is not needed in the overlay. Kept rather than
+                     deleted because it is expected to return in Settings as a saved
+                     preference. To re-enable, remove `hidden` here and set
+                     QUIZ_MODE_SWITCHER_ENABLED = true in quiz.js. -->
+                <div id="quiz-mode-switch" class="hidden items-center gap-1 pt-1 overflow-x-auto" role="group"
                     aria-label="Answer mode">
                     <button type="button" data-quiz-mode="flip" class="quiz-mode-btn" title="Read, flip, grade yourself">
                         <i data-lucide="repeat" class="w-3.5 h-3.5 shrink-0"></i><span>Flip</span>
