@@ -675,6 +675,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (typeof initQuizEvents === 'function') initQuizEvents();
     if (typeof initGoalsModal === 'function') initGoalsModal();
     if (typeof initEditVideoEvents === 'function') initEditVideoEvents();
+    if (typeof initFocusModalEvents === 'function') initFocusModalEvents();
     
     const savedTab = localStorage.getItem('active_studiamo_tab') || 'dashboard';
     switchTab(savedTab);

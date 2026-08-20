@@ -456,6 +456,186 @@ function initImportTab() {
     }
 }
 
+// --- Learning Focus overlay ---------------------------------------------------------------
+// Lets the user pick which topics feed their active recall quiz, per SRS stage. Everything is
+// local once the pool is fetched: the questions already exist in quizzes.concept_pool, so
+// changing focus costs no AI call and no regeneration.
+
+let focusState = null;
+
+function renderFocusStageTabs() {
+    const tabs = document.getElementById('focus-stage-tabs');
+    if (!tabs || !focusState) return;
+
+    tabs.innerHTML = focusState.stages.map(s => {
+        const active = s.stage === focusState.activeStage;
+        const cls = active
+            ? 'bg-amber-100 border-amber-300 text-amber-900'
+            : 'bg-white border-[#e7dfd3] text-stone-600 hover:bg-stone-50';
+        return `<button data-stage-tab="${s.stage}" title="${escapeHtml(s.label)}"
+            class="shrink-0 px-3 py-1.5 rounded-lg border text-[11px] font-bold transition ${cls}">
+            Stage ${s.stage}
+        </button>`;
+    }).join('');
+
+    tabs.querySelectorAll('[data-stage-tab]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            focusState.activeStage = parseInt(btn.dataset.stageTab, 10);
+            renderFocusStageTabs();
+            renderFocusTopics();
+        });
+    });
+}
+
+function currentFocusStage() {
+    if (!focusState) return null;
+    return focusState.stages.find(s => s.stage === focusState.activeStage) || null;
+}
+
+function renderFocusTopics() {
+    const list = document.getElementById('focus-topic-list');
+    const stage = currentFocusStage();
+    if (!list || !stage) return;
+
+    list.innerHTML = stage.topics.map((t, i) => `
+        <label class="flex items-center justify-between gap-2 p-2.5 rounded-xl border border-[#e7dfd3] hover:bg-stone-50 cursor-pointer transition">
+            <span class="flex items-center gap-2.5 min-w-0">
+                <input type="checkbox" data-topic-index="${i}" ${t.selected ? 'checked' : ''}
+                    class="w-4 h-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500 shrink-0">
+                <span class="text-xs font-semibold text-stone-800 truncate">${escapeHtml(t.topic)}</span>
+            </span>
+            <span class="flex items-center gap-1.5 shrink-0">
+                ${t.recommended ? '<span class="text-[9px] font-bold uppercase tracking-wider text-amber-700 bg-amber-100 border border-amber-200 rounded px-1.5 py-0.5">AI</span>' : ''}
+                <span class="text-[10px] text-stone-500 font-medium">${t.count} ${t.count === 1 ? 'question' : 'questions'}</span>
+            </span>
+        </label>
+    `).join('');
+
+    list.querySelectorAll('[data-topic-index]').forEach(box => {
+        box.addEventListener('change', () => {
+            stage.topics[parseInt(box.dataset.topicIndex, 10)].selected = box.checked;
+            renderFocusStatus();
+        });
+    });
+
+    renderFocusStatus();
+}
+
+function renderFocusStatus() {
+    const el = document.getElementById('focus-status');
+    const stage = currentFocusStage();
+    if (!el || !stage) return;
+
+    const selected = stage.topics.filter(t => t.selected).reduce((n, t) => n + t.count, 0);
+    const target = focusState.targetCount;
+
+    // Selecting more than the star rating serves is fine, the quiz takes the first `target`.
+    // Selecting fewer is the case worth warning about, because it shortens the session.
+    let cls, text;
+    if (selected === 0) {
+        cls = 'bg-red-50 border-red-200 text-red-700';
+        text = 'No topics selected. Pick at least one to keep reviewing this material.';
+    } else if (selected < target) {
+        cls = 'bg-amber-50 border-amber-200 text-amber-800';
+        text = `Only ${selected} question${selected === 1 ? '' : 's'} selected. This material is set to ${target} per session.`;
+    } else {
+        cls = 'bg-emerald-50 border-emerald-200 text-emerald-800';
+        text = `${selected} questions selected. The ${target} best-fitting will be used each session.`;
+    }
+    el.className = `text-xs font-semibold rounded-xl px-3 py-2 border ${cls}`;
+    el.textContent = text;
+}
+
+async function openFocusModal(videoId) {
+    const overlay = document.getElementById('overlay-focus');
+    if (!overlay) return;
+
+    try {
+        const data = await fetchAPI(`/api/videos/${videoId}/concept-pool`);
+        if (!data.stages || data.stages.length === 0) {
+            showToast('No topics were extracted for this material.', 'failed', 3500);
+            return;
+        }
+
+        focusState = {
+            videoId: videoId,
+            targetCount: data.target_count,
+            stages: data.stages,
+            // Open on the stage the learner is actually on, not always stage 0.
+            activeStage: data.stages.some(s => s.stage === data.current_stage)
+                ? data.current_stage
+                : data.stages[0].stage
+        };
+
+        const subtitle = document.getElementById('focus-modal-subtitle');
+        if (subtitle) subtitle.textContent = data.title || '';
+
+        overlay.classList.remove('hidden');
+        renderFocusStageTabs();
+        renderFocusTopics();
+        renderIcons();
+    } catch (e) {
+        showToast('Could not load topics: ' + (e.detail || e.message || e), 'failed', 4000);
+    }
+}
+
+function closeFocusModal() {
+    const overlay = document.getElementById('overlay-focus');
+    if (overlay) overlay.classList.add('hidden');
+    focusState = null;
+}
+
+async function saveFocusSelection() {
+    if (!focusState) return;
+    const btn = document.getElementById('btn-focus-save');
+
+    const payload = {};
+    focusState.stages.forEach(s => {
+        payload[`stage_${s.stage}`] = s.topics.filter(t => t.selected).map(t => t.topic);
+    });
+
+    if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+    try {
+        const form = new FormData();
+        form.append('focus_topics', JSON.stringify(payload));
+        const res = await fetchAPI(`/api/videos/${focusState.videoId}/focus`, { method: 'POST', body: form });
+        showToast(`Focus saved, ${res.active_questions} question${res.active_questions === 1 ? '' : 's'} active.`, 'saved', 3000);
+        closeFocusModal();
+        if (typeof loadDashboard === 'function') loadDashboard();
+    } catch (e) {
+        showToast('Could not save focus: ' + (e.detail || e.message || e), 'failed', 4000);
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Save focus'; }
+    }
+}
+
+function resetFocusToRecommendation() {
+    if (!focusState) return;
+    focusState.stages.forEach(s => s.topics.forEach(t => { t.selected = t.recommended; }));
+    renderFocusTopics();
+}
+
+function initFocusModalEvents() {
+    const close = document.getElementById('btn-close-focus');
+    const save = document.getElementById('btn-focus-save');
+    const reset = document.getElementById('btn-focus-reset');
+    const overlay = document.getElementById('overlay-focus');
+
+    if (close) close.addEventListener('click', closeFocusModal);
+    if (save) save.addEventListener('click', saveFocusSelection);
+    if (reset) reset.addEventListener('click', resetFocusToRecommendation);
+    if (overlay) {
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) closeFocusModal();
+        });
+    }
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        const ov = document.getElementById('overlay-focus');
+        if (ov && !ov.classList.contains('hidden')) closeFocusModal();
+    });
+}
+
 // Brings a freshly queued import's card into view and flashes it, so the user can see where
 // the material landed instead of hunting for it in the list.
 //
@@ -683,12 +863,20 @@ function toggleVideoMenu(event, id) {
     const isWatchlist = cardData ? cardData.is_watchlist : false;
     const isArchived = cardData ? cardData.is_archived : false;
     const isImported = !cardData || (cardData.status !== 'processing' && cardData.status !== 'failed');
+    // Material imported before topic extraction existed has an empty concept_pool, and its
+    // overlay would have nothing to show, so the entry is hidden rather than opening empty.
+    const hasConceptPool = !!(cardData && cardData.has_concept_pool);
 
     const portal = document.createElement('div');
     portal.id = 'video-context-menu-portal';
     portal.dataset.forId = String(id);
     portal.className = 'fixed w-56 rounded-xl bg-white border border-[#e7dfd3] shadow-2xl z-[9999] overflow-hidden';
     portal.innerHTML = `<div class="py-1">
+        ${isImported && hasConceptPool ? `
+        <button data-focus-video="${id}" class="flex items-center space-x-2.5 w-full text-left px-4 py-2.5 text-xs text-stone-700 hover:bg-stone-50 hover:text-stone-900 transition">
+            <i data-lucide="target" class="w-4 h-4 text-amber-600"></i><span>Adjust Learning Focus</span>
+        </button>
+        ` : ''}
         ${isImported ? `
         <button onclick="closeVideoMenu(); showFactCheck(${id})" class="flex items-center space-x-2.5 w-full text-left px-4 py-2.5 text-xs text-stone-700 hover:bg-stone-50 hover:text-stone-900 transition">
             <i data-lucide="shield-alert" class="w-4 h-4 text-amber-500"></i><span>Verify Accuracy</span>
@@ -718,9 +906,21 @@ function toggleVideoMenu(event, id) {
     </div>`;
     
     document.body.appendChild(portal);
+
+    const focusBtn = portal.querySelector('[data-focus-video]');
+    if (focusBtn) {
+        focusBtn.addEventListener('click', () => {
+            closeVideoMenu();
+            openFocusModal(id);
+        });
+    }
+
     renderIcons();
-    
-    const menuH = 250;
+
+    // Measured rather than assumed. This was a hardcoded 250px, which silently stopped
+    // matching the moment the menu gained or lost an entry, flipping it to the wrong side
+    // of the button near a viewport edge.
+    const menuH = portal.offsetHeight || 250;
     const spaceBelow = window.innerHeight - rect.bottom;
     const spaceAbove = rect.top;
     if (spaceBelow >= menuH || spaceBelow >= spaceAbove) {
@@ -1963,6 +2163,9 @@ window.handleStudyButtonClick = handleStudyButtonClick;
 window.initImportTab = initImportTab;
 window.renderVideoCard = renderVideoCard;
 window.scrollToVideoCard = scrollToVideoCard;
+window.openFocusModal = openFocusModal;
+window.closeFocusModal = closeFocusModal;
+window.initFocusModalEvents = initFocusModalEvents;
 window.toggleVideoDetails = toggleVideoDetails;
 window.toggleVideoMenu = toggleVideoMenu;
 window.closeVideoMenu = closeVideoMenu;
