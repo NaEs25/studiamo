@@ -257,11 +257,12 @@ async function startQuiz(quizId, videoId = null, level = 3) {
 }
 
 // --- Answer modes ---------------------------------------------------------------------------
-// 'flip'   read, flip, grade yourself. No typing, no AI call.
 // 'choice' pick one of the question's four options, graded locally against correct_index.
 // 'recall' type an answer and have the AI evaluate it. The only mode that costs anything.
-// 'mixed'  follows the SRS ladder: recognition early, production later.
-const QUIZ_MODES = ['flip', 'choice', 'mixed', 'recall'];
+// 'mixed' follows the SRS ladder: recognition early, production later. There is no separate
+// flip mode: recall already covers it, since leaving the box empty and pressing the button
+// just turns the card over without calling the AI.
+const QUIZ_MODES = ['choice', 'mixed', 'recall'];
 const QUIZ_MODE_KEY = 'studiamo_quiz_mode';
 
 // In mixed mode, stages up to and including this one are answered by picking an option;
@@ -271,20 +272,7 @@ const QUIZ_MODE_KEY = 'studiamo_quiz_mode';
 // four-option prompt would hand most of it back.
 const MIXED_CHOICE_MAX_STAGE = 1;
 
-// The in-quiz mode switcher is hidden for now. The mode is derived from each question's stage
-// instead (see effectiveQuizMode), which keeps the overlay from carrying a control most
-// learners would set once and never touch.
-//
-// The switcher, its handlers and the per-mode rendering are all still live, so re-enabling is
-// two edits: flip this to true, and drop the `hidden` class from #quiz-mode-switch in
-// index.html. The likely home for it is Settings, as a saved per-user preference, rather than
-// inside the quiz overlay.
-const QUIZ_MODE_SWITCHER_ENABLED = false;
-
 function getQuizMode() {
-    // While the switcher is hidden, a value left in localStorage by an earlier session would
-    // be unreachable and unchangeable, so it is ignored rather than honoured.
-    if (!QUIZ_MODE_SWITCHER_ENABLED) return 'mixed';
     const stored = localStorage.getItem(QUIZ_MODE_KEY);
     return QUIZ_MODES.includes(stored) ? stored : 'mixed';
 }
@@ -296,6 +284,13 @@ function setQuizMode(mode) {
     // Re-render so the current question switches presentation immediately rather than on the
     // next one, which is how the auto-read toggle used to misbehave.
     if (activeQuizSession) renderQuizQuestion();
+}
+
+function closeQuizSettingsMenu() {
+    const menu = document.getElementById('quiz-settings-menu');
+    const btn = document.getElementById('btn-quiz-settings');
+    if (menu) menu.classList.add('hidden');
+    if (btn) btn.setAttribute('aria-expanded', 'false');
 }
 
 function syncQuizModeUI() {
@@ -326,7 +321,7 @@ function effectiveQuizMode(question) {
     if (mode === 'mixed') {
         mode = questionStage(question) <= MIXED_CHOICE_MAX_STAGE ? 'choice' : 'recall';
     }
-    if (mode === 'choice' && !questionSupportsChoice(question)) return 'flip';
+    if (mode === 'choice' && !questionSupportsChoice(question)) return 'recall';
     return mode;
 }
 
@@ -451,7 +446,6 @@ function renderQuizQuestion() {
         // In choice mode the option itself reveals the answer, so the button would be a second
         // way to skip past the question.
         btnShow.classList.toggle('hidden', mode === 'choice');
-        btnShow.textContent = mode === 'recall' ? 'Show Correct Answer' : 'Show Answer';
     }
     syncQuizModeUI();
 
@@ -711,10 +705,31 @@ function initQuizEvents() {
     const modeSwitch = document.getElementById('quiz-mode-switch');
     if (modeSwitch) {
         modeSwitch.querySelectorAll('[data-quiz-mode]').forEach(btn => {
-            btn.addEventListener('click', () => setQuizMode(btn.dataset.quizMode));
+            btn.addEventListener('click', () => {
+                setQuizMode(btn.dataset.quizMode);
+                closeQuizSettingsMenu();
+            });
         });
         syncQuizModeUI();
     }
+
+    const settingsBtn = document.getElementById('btn-quiz-settings');
+    if (settingsBtn) {
+        settingsBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const menu = document.getElementById('quiz-settings-menu');
+            if (!menu) return;
+            const willOpen = menu.classList.contains('hidden');
+            menu.classList.toggle('hidden', !willOpen);
+            settingsBtn.setAttribute('aria-expanded', String(willOpen));
+            if (willOpen) renderIcons();
+        });
+    }
+
+    // Clicking a checkbox row must not close the menu, so only outside clicks do.
+    const settingsMenu = document.getElementById('quiz-settings-menu');
+    if (settingsMenu) settingsMenu.addEventListener('click', (e) => e.stopPropagation());
+    document.addEventListener('click', closeQuizSettingsMenu);
 
     // Auto-read was only consulted while rendering a question, so switching it on mid-question
     // stayed silent until the next one appeared and looked broken. Turning it on now reads
@@ -753,6 +768,18 @@ function initQuizEvents() {
 function handleQuizKeydown(e) {
     const overlay = document.getElementById('overlay-quiz');
     if (!overlay || overlay.classList.contains('hidden')) return;
+
+    const settingsMenu = document.getElementById('quiz-settings-menu');
+    if (settingsMenu && !settingsMenu.classList.contains('hidden')) {
+        // While the options menu is open it owns the keyboard, so Escape closes it rather
+        // than the whole session and A-D do not fire underneath it.
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            closeQuizSettingsMenu();
+        }
+        return;
+    }
+
     if (!activeQuizSession) return;
 
     const frontCard = document.getElementById('quiz-card-front');

@@ -532,17 +532,40 @@ def generate_content_with_retry(client: genai.Client, model: str, contents, resp
 
 # --- Raw JSON Schemas to bypass all Pydantic v2 and SDK serialization bugs ---
 
+_QUIZ_ITEM_BASE_PROPERTIES = {
+    "topic": {
+        "type": "STRING",
+        "description": "The umbrella topic this question belongs to, 2-5 words. Reuse the SAME string verbatim for every question covering that topic, including across different stages, because these strings are grouped and counted."
+    },
+    "question": { "type": "STRING", "description": "An open-ended active recall question." },
+    "answer": { "type": "STRING", "description": "A concise correct answer." },
+    "explanation": { "type": "STRING", "description": "A brief memory hook or explanation." },
+    "timestamp_seconds": { "type": "INTEGER", "description": "Timestamp in seconds where this topic is explained in the video." },
+    "ai_recommended": {
+        "type": "BOOLEAN",
+        "description": "True for the highest-value questions for this learner's stated goal. Mark roughly the best third of each stage."
+    }
+}
+_QUIZ_ITEM_BASE_REQUIRED = ["topic", "question", "answer", "explanation", "timestamp_seconds", "ai_recommended"]
+
+# Questions without multiple-choice options, used for stages 2 and up.
 quiz_item_schema = {
     "type": "OBJECT",
+    "properties": dict(_QUIZ_ITEM_BASE_PROPERTIES),
+    "required": list(_QUIZ_ITEM_BASE_REQUIRED)
+}
+
+# Questions that also carry four options, used for stages 0 and 1 only.
+#
+# Restricting them there is worth roughly 2,400 output tokens per import, about $0.006 or a
+# ninth of the bill, measured across real imports. The quiz answers stages 0 and 1 by picking
+# an option and stages 2 and up by typing (see MIXED_CHOICE_MAX_STAGE in quiz.js), because by
+# then the questions ask for synthesis and a four-option prompt would hand most of the answer
+# back. Distractors for those stages were generated, paid for, and never displayed.
+quiz_item_mc_schema = {
+    "type": "OBJECT",
     "properties": {
-        "topic": {
-            "type": "STRING",
-            "description": "The umbrella topic this question belongs to, 2-5 words. Reuse the SAME string verbatim for every question covering that topic, including across different stages, because these strings are grouped and counted."
-        },
-        "question": { "type": "STRING", "description": "An open-ended active recall question." },
-        "answer": { "type": "STRING", "description": "A concise correct answer." },
-        "explanation": { "type": "STRING", "description": "A brief memory hook or explanation." },
-        "timestamp_seconds": { "type": "INTEGER", "description": "Timestamp in seconds where this topic is explained in the video." },
+        **_QUIZ_ITEM_BASE_PROPERTIES,
         "options": {
             "type": "ARRAY",
             "items": { "type": "STRING" },
@@ -551,20 +574,16 @@ quiz_item_schema = {
         "correct_index": {
             "type": "INTEGER",
             "description": "0-based index into options of the correct one. Vary this across questions."
-        },
-        "ai_recommended": {
-            "type": "BOOLEAN",
-            "description": "True for the highest-value questions for this learner's stated goal. Mark roughly the best third of each stage."
         }
     },
-    "required": ["topic", "question", "answer", "explanation", "timestamp_seconds", "options", "correct_index", "ai_recommended"]
+    "required": _QUIZ_ITEM_BASE_REQUIRED + ["options", "correct_index"]
 }
 
 stages_schema = {
     "type": "OBJECT",
     "properties": {
-        "stage_0": { "type": "ARRAY", "items": quiz_item_schema, "description": "Stage 0 (Immediate Review): Core definitions, foundational key facts, and basic comprehension." },
-        "stage_1": { "type": "ARRAY", "items": quiz_item_schema, "description": "Stage 1 (1 Day Later): Main concepts, core mechanics, and key structural relationships." },
+        "stage_0": { "type": "ARRAY", "items": quiz_item_mc_schema, "description": "Stage 0 (Immediate Review): Core definitions, foundational key facts, and basic comprehension." },
+        "stage_1": { "type": "ARRAY", "items": quiz_item_mc_schema, "description": "Stage 1 (1 Day Later): Main concepts, core mechanics, and key structural relationships." },
         "stage_2": { "type": "ARRAY", "items": quiz_item_schema, "description": "Stage 2 (3 Days Later): Cause-and-effect reasoning, practical logic, and 'how/why' analysis." },
         "stage_3": { "type": "ARRAY", "items": quiz_item_schema, "description": "Stage 3 (7 Days Later): Complex scenario synthesis, edge cases, and comparative evaluation." },
         "stage_4": { "type": "ARRAY", "items": quiz_item_schema, "description": "Stage 4 (14-30 Days Later): High-level mastery transfer, critical judgment, and real-world application." }
@@ -741,10 +760,14 @@ def _stage_ladder_block(question_count: int) -> str:
        - 'topic': the umbrella topic it belongs to, 2-5 words. Group the material into roughly
          4-7 topics total and reuse each topic string EXACTLY, across all five stages, so the
          same subject is recognisably one topic rather than five near-duplicates.
+       - 'ai_recommended': true for roughly the strongest third of each stage.
+
+       Stages 0 and 1 additionally carry:
        - 'options': exactly 4 choices, one correct and three plausibly wrong. Wrong options must
          be defensible mistakes a learner could actually make, not obvious filler.
        - 'correct_index': which option is right, varied between questions rather than always 0.
-       - 'ai_recommended': true for roughly the strongest third of each stage."""
+       Do not produce options for stages 2, 3 and 4. Those are answered from memory, so a list
+       of choices would give the answer away."""
 
 
 def analyze_youtube_video(youtube_url: str, question_count: int, username: str = "default_user", goal_title: str = "", goal_description: str = "") -> dict:

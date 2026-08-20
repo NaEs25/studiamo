@@ -1663,46 +1663,6 @@
                     <span id="quiz-completion-pct">20% Done</span>
                 </div>
 
-                <!-- Session toggles as compact chips. The label wraps the input, so clicking
-                     anywhere on the chip toggles it and the checkbox keeps its native
-                     keyboard behaviour. -->
-                <!-- How the learner answers. Flip and Choice are graded locally with no AI
-                     call; Recall sends the typed guess for evaluation. -->
-                <!-- Hidden for now: the answer mode is derived from each question's SRS stage
-                     instead, so this control is not needed in the overlay. Kept rather than
-                     deleted because it is expected to return in Settings as a saved
-                     preference. To re-enable, remove `hidden` here and set
-                     QUIZ_MODE_SWITCHER_ENABLED = true in quiz.js. -->
-                <div id="quiz-mode-switch" class="hidden items-center gap-1 pt-1 overflow-x-auto" role="group"
-                    aria-label="Answer mode">
-                    <button type="button" data-quiz-mode="flip" class="quiz-mode-btn" title="Read, flip, grade yourself">
-                        <i data-lucide="repeat" class="w-3.5 h-3.5 shrink-0"></i><span>Flip</span>
-                    </button>
-                    <button type="button" data-quiz-mode="choice" class="quiz-mode-btn" title="Pick from four options">
-                        <i data-lucide="list-checks" class="w-3.5 h-3.5 shrink-0"></i><span>Choice</span>
-                    </button>
-                    <button type="button" data-quiz-mode="mixed" class="quiz-mode-btn"
-                        title="Multiple choice while the material is new, typed recall from stage 2 on">
-                        <i data-lucide="shuffle" class="w-3.5 h-3.5 shrink-0"></i><span>Mixed</span>
-                    </button>
-                    <button type="button" data-quiz-mode="recall" class="quiz-mode-btn"
-                        title="Type an answer and let the AI evaluate it">
-                        <i data-lucide="pen-line" class="w-3.5 h-3.5 shrink-0"></i><span>Recall</span>
-                    </button>
-                </div>
-
-                <div class="flex items-center gap-2 pt-1">
-                    <label class="quiz-toggle" title="Advance the spaced repetition interval when this session is graded">
-                        <input type="checkbox" id="quiz-progress-srs-checkbox" checked>
-                        <i data-lucide="calendar-check" class="w-3.5 h-3.5 shrink-0"></i>
-                        <span>Progress SRS</span>
-                    </label>
-                    <label class="quiz-toggle" title="Read each question aloud automatically">
-                        <input type="checkbox" id="quiz-auto-tts-toggle">
-                        <i data-lucide="volume-2" class="w-3.5 h-3.5 shrink-0"></i>
-                        <span>Auto-read</span>
-                    </label>
-                </div>
             </div>
 
             <!-- Quiz Main Card (Flat Layout) -->
@@ -1715,11 +1675,64 @@
                     <div class="flex items-start justify-between gap-3">
                         <p id="quiz-question-text"
                             class="text-base md:text-lg font-bold text-stone-900 leading-relaxed grow"></p>
-                        <button type="button" id="btn-tts-question" aria-label="Read question aloud"
-                            class="quiz-tts-btn" title="Read Question Aloud">
-                            <i data-lucide="volume-2" class="w-4 h-4 tts-icon-idle"></i>
-                            <i data-lucide="pause" class="w-4 h-4 tts-icon-playing hidden"></i>
-                        </button>
+                        <div class="relative flex flex-col items-center gap-1 shrink-0">
+                            <button type="button" id="btn-tts-question" aria-label="Read question aloud"
+                                class="quiz-tts-btn" title="Read Question Aloud">
+                                <i data-lucide="volume-2" class="w-4 h-4 tts-icon-idle"></i>
+                                <i data-lucide="pause" class="w-4 h-4 tts-icon-playing hidden"></i>
+                            </button>
+                            <button type="button" id="btn-quiz-settings" aria-label="Session options"
+                                aria-haspopup="true" aria-expanded="false" class="quiz-tts-btn" title="Session options">
+                                <i data-lucide="more-vertical" class="w-4 h-4"></i>
+                            </button>
+
+                            <!-- Session options, out of the way rather than filling the header
+                                 with controls most learners set once. -->
+                            <div id="quiz-settings-menu"
+                                class="hidden absolute right-0 top-full mt-2 z-30 w-60 rounded-2xl bg-white border border-[#e7dfd3] shadow-2xl p-2">
+                                <label class="quiz-menu-row" title="Advance the spaced repetition interval when this session is graded">
+                                    <span class="flex items-center gap-2">
+                                        <i data-lucide="calendar-check" class="w-3.5 h-3.5 shrink-0 text-amber-600"></i>
+                                        <span>Progress SRS</span>
+                                    </span>
+                                    <input type="checkbox" id="quiz-progress-srs-checkbox" checked
+                                        class="w-4 h-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500">
+                                </label>
+                                <label class="quiz-menu-row" title="Read each question aloud automatically">
+                                    <span class="flex items-center gap-2">
+                                        <i data-lucide="volume-2" class="w-3.5 h-3.5 shrink-0 text-amber-600"></i>
+                                        <span>Auto-read aloud</span>
+                                    </span>
+                                    <input type="checkbox" id="quiz-auto-tts-toggle"
+                                        class="w-4 h-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500">
+                                </label>
+
+                                <div class="border-t border-[#e7dfd3] my-1.5"></div>
+                                <p class="px-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-stone-400">
+                                    Answering</p>
+                                <div id="quiz-mode-switch" role="group" aria-label="Answer mode">
+                                    <button type="button" data-quiz-mode="mixed" class="quiz-menu-row quiz-mode-btn">
+                                        <span class="flex items-center gap-2">
+                                            <i data-lucide="shuffle" class="w-3.5 h-3.5 shrink-0"></i>
+                                            <span>Adaptive</span>
+                                        </span>
+                                        <span class="text-[10px] text-stone-400 font-medium">by stage</span>
+                                    </button>
+                                    <button type="button" data-quiz-mode="choice" class="quiz-menu-row quiz-mode-btn">
+                                        <span class="flex items-center gap-2">
+                                            <i data-lucide="list-checks" class="w-3.5 h-3.5 shrink-0"></i>
+                                            <span>Multiple choice</span>
+                                        </span>
+                                    </button>
+                                    <button type="button" data-quiz-mode="recall" class="quiz-menu-row quiz-mode-btn">
+                                        <span class="flex items-center gap-2">
+                                            <i data-lucide="pen-line" class="w-3.5 h-3.5 shrink-0"></i>
+                                            <span>Recall</span>
+                                        </span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Multiple choice. Rendered by quiz.js from the question's own options,

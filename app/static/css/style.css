@@ -236,30 +236,32 @@ option {
     outline-offset: 2px;
 }
 
-/* ── Quiz Answer Mode Switch ────────────────────────────── */
-.quiz-mode-btn {
-    display: inline-flex;
+/* ── Quiz Session Options Menu ──────────────────────────── */
+/* One row inside the quiz overlay's options menu: a label on the left, its control or hint on
+   the right. Shared by the checkbox rows and the answer-mode rows so they line up. */
+.quiz-menu-row {
+    display: flex;
     align-items: center;
-    gap: 0.3rem;
-    padding: 0.3rem 0.6rem;
-    border-radius: 9999px;
-    border: 1px solid transparent;
-    background-color: transparent;
-    color: var(--color-text-faint);
-    font-size: 0.7rem;
-    font-weight: 700;
-    line-height: 1.2;
-    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    justify-content: space-between;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.45rem 0.55rem;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-text-main);
+    text-align: left;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.15s ease, color 0.15s ease;
 }
 
-.quiz-mode-btn:hover {
-    color: var(--color-text-muted);
+.quiz-menu-row:hover {
     background-color: var(--color-surface-2);
 }
 
 .quiz-mode-btn[aria-pressed="true"] {
     background-color: var(--color-primary-bg);
-    border-color: var(--color-primary-border);
     color: var(--color-primary-hover);
 }
 
