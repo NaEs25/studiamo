@@ -260,8 +260,16 @@ async function startQuiz(quizId, videoId = null, level = 3) {
 // 'flip'   read, flip, grade yourself. No typing, no AI call.
 // 'choice' pick one of the question's four options, graded locally against correct_index.
 // 'recall' type an answer and have the AI evaluate it. The only mode that costs anything.
-const QUIZ_MODES = ['flip', 'choice', 'recall'];
+// 'mixed'  follows the SRS ladder: recognition early, production later.
+const QUIZ_MODES = ['flip', 'choice', 'mixed', 'recall'];
 const QUIZ_MODE_KEY = 'studiamo_quiz_mode';
+
+// In mixed mode, stages up to and including this one are answered by picking an option;
+// everything above it switches to typed recall. Multiple choice is recognition, which is the
+// easier retrieval and fine while the terms are still new. From stage 2 the questions move to
+// cause-and-effect and synthesis, where producing the answer unaided is the point, and a
+// four-option prompt would hand most of it back.
+const MIXED_CHOICE_MAX_STAGE = 1;
 
 function getQuizMode() {
     const stored = localStorage.getItem(QUIZ_MODE_KEY);
@@ -292,8 +300,19 @@ function questionSupportsChoice(q) {
         && q.correct_index >= 0 && q.correct_index < q.options.length);
 }
 
+// Which SRS stage a question belongs to. Items carry their own stage since they come from
+// concept_pool; the session's stage is the fallback for older rows that predate it.
+function questionStage(question) {
+    if (question && Number.isInteger(question.stage)) return question.stage;
+    const sessionStage = activeQuizSession && activeQuizSession.srs_stage;
+    return Number.isInteger(sessionStage) ? sessionStage : 0;
+}
+
 function effectiveQuizMode(question) {
-    const mode = getQuizMode();
+    let mode = getQuizMode();
+    if (mode === 'mixed') {
+        mode = questionStage(question) <= MIXED_CHOICE_MAX_STAGE ? 'choice' : 'recall';
+    }
     if (mode === 'choice' && !questionSupportsChoice(question)) return 'flip';
     return mode;
 }
