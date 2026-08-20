@@ -326,6 +326,13 @@ def build_concept_pool(analysis: dict) -> list:
     if not isinstance(analysis, dict):
         return []
 
+    # ai._normalise_analysis already flattens the model's response and tags each item with its
+    # stage, so a fresh analysis arrives with this filled in. The reconstruction below is the
+    # fallback for payloads that predate it, or that came from somewhere other than an AI call.
+    prebuilt = analysis.get("concept_pool")
+    if isinstance(prebuilt, list) and prebuilt:
+        return [dict(item) for item in prebuilt if isinstance(item, dict) and item.get("question")]
+
     pool = []
     stages = analysis.get("stages") or {}
     if isinstance(stages, dict):

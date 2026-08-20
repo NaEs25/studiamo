@@ -263,6 +263,10 @@ _DEFAULT_RATE_LIMIT_SLEEP_SECONDS = 60
 
 _RETRY_DELAY_PATTERN = re.compile(r"retrydelay['\"]?\s*[:=]\s*['\"]?(\d+(?:\.\d+)?)s", re.IGNORECASE)
 
+# The five SRS review stages, in order. Index in this list is the stage number stored on each
+# concept_pool item; app.dependencies holds the matching list for the read side.
+STAGE_KEYS = ["stage_0", "stage_1", "stage_2", "stage_3", "stage_4"]
+
 
 def _normalise_err(err) -> str:
     """Lowercases an exception and strips separators, so quota identifiers match regardless of
@@ -336,6 +340,80 @@ _USER_FACING_AI_ERRORS = {
 _GENERIC_AI_ERROR = "The AI service could not process this request. Please try again."
 
 
+def _extract_json_text(response) -> str:
+    """Returns the model's text, failing loudly when it stopped before finishing.
+
+    A response cut off at the output-token ceiling still arrives as a normal 200 carrying a
+    truncated JSON body, so the json.loads in the callers raises a decode error that says
+    nothing about the real cause. Every extra required field in the response schema makes this
+    more likely, so it is checked rather than discovered.
+    """
+    finish_reason = ""
+    candidates = getattr(response, "candidates", None) or []
+    if candidates:
+        finish_reason = str(getattr(candidates[0], "finish_reason", "") or "").upper()
+
+    if "MAX_TOKENS" in finish_reason:
+        raise AIServiceUnavailable(
+            "truncated",
+            "This material produced more content than the AI could return at once. Try a "
+            "shorter video, or lower the questions-per-level setting."
+        )
+    if "SAFETY" in finish_reason or "RECITATION" in finish_reason or "PROHIBITED" in finish_reason:
+        raise AIServiceUnavailable(
+            "blocked",
+            "The AI declined to analyze this material. Try different content."
+        )
+
+    text = getattr(response, "text", None)
+    if not text or not text.strip():
+        raise AIServiceUnavailable(
+            "empty",
+            "The AI returned an empty response. Please try again."
+        )
+    return text
+
+
+def _normalise_analysis(result: dict) -> dict:
+    """Fills in the derived views of a parsed analysis, in place.
+
+    The model is asked for `stages` only. `quiz` (the stage-0 set) and `concept_pool` (every
+    question flattened, each tagged with its stage) are computed here so the model never spends
+    output tokens writing the same questions two or three times.
+
+    Also tolerates an older-shaped response that carries `quiz` but no `stages`, so a fallback
+    model or a cached payload does not come back empty.
+    """
+    if not isinstance(result, dict):
+        return result
+
+    stages = result.get("stages")
+    if not isinstance(stages, dict):
+        stages = {}
+
+    pool = []
+    for stage_index, key in enumerate(STAGE_KEYS):
+        for item in (stages.get(key) or []):
+            if isinstance(item, dict) and item.get("question"):
+                entry = dict(item)
+                entry["stage"] = stage_index
+                pool.append(entry)
+
+    if not pool:
+        for item in (result.get("quiz") or []):
+            if isinstance(item, dict) and item.get("question"):
+                entry = dict(item)
+                entry["stage"] = 0
+                pool.append(entry)
+        if pool:
+            stages = {STAGE_KEYS[0]: [dict(p) for p in pool]}
+            result["stages"] = stages
+
+    result["concept_pool"] = pool
+    result["quiz"] = [dict(q) for q in pool if q.get("stage") == 0]
+    return result
+
+
 def _build_generation_config(response_schema, temperature: float):
     return types.GenerateContentConfig(
         response_mime_type="application/json",
@@ -397,7 +475,14 @@ def generate_content_with_retry(client: genai.Client, model: str, contents, resp
                 completion_tokens = usage.candidates_token_count if usage else 0
                 log_ai_usage(candidate, prompt_tokens, completion_tokens, action_type, username=username)
 
-                return response.text
+                # Billed and logged above before validating: a truncated or blocked response
+                # still consumed the tokens, so it belongs in the usage record either way.
+                return _extract_json_text(response)
+
+            except AIServiceUnavailable:
+                # A finished call whose content is unusable. Retrying or escalating a tier
+                # would re-upload the same request for the same outcome.
+                raise
 
             except Exception as e:
                 last_error = e
@@ -450,12 +535,29 @@ def generate_content_with_retry(client: genai.Client, model: str, contents, resp
 quiz_item_schema = {
     "type": "OBJECT",
     "properties": {
+        "topic": {
+            "type": "STRING",
+            "description": "The umbrella topic this question belongs to, 2-5 words. Reuse the SAME string verbatim for every question covering that topic, including across different stages, because these strings are grouped and counted."
+        },
         "question": { "type": "STRING", "description": "An open-ended active recall question." },
         "answer": { "type": "STRING", "description": "A concise correct answer." },
         "explanation": { "type": "STRING", "description": "A brief memory hook or explanation." },
-        "timestamp_seconds": { "type": "INTEGER", "description": "Timestamp in seconds where this topic is explained in the video." }
+        "timestamp_seconds": { "type": "INTEGER", "description": "Timestamp in seconds where this topic is explained in the video." },
+        "options": {
+            "type": "ARRAY",
+            "items": { "type": "STRING" },
+            "description": "Exactly 4 answer options for multiple-choice mode. One matches the answer; the other three are plausible and wrong for a specific reason, never filler."
+        },
+        "correct_index": {
+            "type": "INTEGER",
+            "description": "0-based index into options of the correct one. Vary this across questions."
+        },
+        "ai_recommended": {
+            "type": "BOOLEAN",
+            "description": "True for the highest-value questions for this learner's stated goal. Mark roughly the best third of each stage."
+        }
     },
-    "required": ["question", "answer", "explanation", "timestamp_seconds"]
+    "required": ["topic", "question", "answer", "explanation", "timestamp_seconds", "options", "correct_index", "ai_recommended"]
 }
 
 stages_schema = {
@@ -495,7 +597,8 @@ fact_check_schema = {
                     "claim": { "type": "STRING", "description": "The specific claim made in the video." },
                     "actual_consensus": { "type": "STRING", "description": "The scientifically or historically accepted consensus fact." },
                     "severity": { "type": "STRING", "description": "Severity: Minor oversight, Major contradiction, or Falsehood." },
-                    "source_citation": { "type": "STRING", "description": "Standard authority, domain reference, or publication source for consensus if applicable." }
+                    "source_citation": { "type": "STRING", "description": "Standard authority, domain reference, or publication source for consensus if applicable." },
+                    "timestamp_seconds": { "type": "INTEGER", "description": "Timestamp in seconds where the claim is made. Use 0 when analyzing text rather than a video." }
                 },
                 "required": ["claim", "actual_consensus", "severity"]
             },
@@ -507,7 +610,8 @@ fact_check_schema = {
                 "type": "OBJECT",
                 "properties": {
                     "claim": { "type": "STRING", "description": "Key claim made in the video that was verified to be correct/accurate." },
-                    "evidence": { "type": "STRING", "description": "Supporting evidence or explanation of why it is factually correct." }
+                    "evidence": { "type": "STRING", "description": "Supporting evidence or explanation of why it is factually correct." },
+                    "timestamp_seconds": { "type": "INTEGER", "description": "Timestamp in seconds where the claim is made. Use 0 when analyzing text rather than a video." }
                 },
                 "required": ["claim", "evidence"]
             },
@@ -534,29 +638,22 @@ video_analysis_schema = {
             "items": outline_item_schema,
             "description": "Structural chapters/outline of the video with start timestamps."
         },
-        "quiz": {
-            "type": "ARRAY",
-            "items": quiz_item_schema,
-            "description": "Primary active recall questions (Stage 0 set)."
-        },
         "stages": stages_schema,
         "fact_check": fact_check_schema
     },
-    "required": ["category", "summary", "outline", "quiz", "stages", "fact_check"]
+    # Note the absence of a `quiz` field. It used to be requested alongside `stages` and was
+    # defined as "the stage_0 set", so the model wrote every stage-0 question twice and we paid
+    # output rates for the copy. It is derived from stages instead, in _normalise_analysis.
+    "required": ["category", "summary", "outline", "stages", "fact_check"]
 }
 
 topic_quiz_schema = {
     "type": "OBJECT",
     "properties": {
         "category": { "type": "STRING", "description": "Broad category of the topic." },
-        "quiz": {
-            "type": "ARRAY",
-            "items": quiz_item_schema,
-            "description": "Primary active recall questions."
-        },
         "stages": stages_schema
     },
-    "required": ["category", "quiz", "stages"]
+    "required": ["category", "stages"]
 }
 
 goal_recs_schema = {
@@ -593,7 +690,54 @@ quiz_verification_schema = {
 
 # --- AI Methods ---
 
-def analyze_youtube_video(youtube_url: str, question_count: int, username: str = "default_user") -> dict:
+def _goal_focus_block(goal_title: str = "", goal_description: str = "", active_goals: list = None) -> str:
+    """Renders the learner's goal as an attention filter for the top of a prompt.
+
+    Placed first deliberately: it is meant to bias what the model considers worth extracting,
+    which only works if it is read before the instructions rather than appended after them.
+    Returns an empty string when there is no goal, so an unfiled import reads exactly as it
+    did before.
+    """
+    if goal_title:
+        described = f": {goal_description.strip()}" if goal_description and goal_description.strip() else ""
+        return (
+            f"THE LEARNER'S GOAL: \"{goal_title.strip()}\"{described}\n"
+            "Weight everything below toward that goal. Prefer the parts of this material that\n"
+            "move the learner toward it, and mark those questions ai_recommended. Do not invent\n"
+            "content that is not present just because the goal mentions it.\n\n"
+        )
+
+    titles = [g.get("title", "").strip() for g in (active_goals or []) if g.get("title")]
+    if titles:
+        listed = ", ".join(f'"{t}"' for t in titles[:6])
+        return (
+            f"THE LEARNER'S ACTIVE GOALS: {listed}\n"
+            "Where this material touches any of them, prefer that angle and mark those\n"
+            "questions ai_recommended.\n\n"
+        )
+    return ""
+
+
+def _stage_ladder_block(question_count: int) -> str:
+    """The shared description of the five SRS stages and the per-item requirements."""
+    return f"""       Generate EXACTLY {question_count} questions for EACH stage (stage_0 through stage_4).
+       - 'stage_0' (Immediate Review): Core definitions, foundational key facts, and basic term comprehension.
+       - 'stage_1' (1 Day Later): Main concepts, core mechanics, and key structural relationships.
+       - 'stage_2' (3 Days Later): Cause-and-effect reasoning, practical logic, and 'how/why' analysis.
+       - 'stage_3' (7 Days Later): Complex scenario synthesis, edge cases, and comparative evaluation.
+       - 'stage_4' (14-30 Days Later): High-level mastery transfer, critical judgment, and real-world application.
+
+       Every question must additionally carry:
+       - 'topic': the umbrella topic it belongs to, 2-5 words. Group the material into roughly
+         4-7 topics total and reuse each topic string EXACTLY, across all five stages, so the
+         same subject is recognisably one topic rather than five near-duplicates.
+       - 'options': exactly 4 choices, one correct and three plausibly wrong. Wrong options must
+         be defensible mistakes a learner could actually make, not obvious filler.
+       - 'correct_index': which option is right, varied between questions rather than always 0.
+       - 'ai_recommended': true for roughly the strongest third of each stage."""
+
+
+def analyze_youtube_video(youtube_url: str, question_count: int, username: str = "default_user", goal_title: str = "", goal_description: str = "") -> dict:
     """Uses Gemini's native YouTube multimodal URI integration (Part.from_uri) to process
     the YouTube video directly using Gemini 3.5 Flash-Lite without downloading any transcripts.
     Runs at low media resolution (see generate_content_with_retry) to keep the visual-frame
@@ -621,25 +765,18 @@ def analyze_youtube_video(youtube_url: str, question_count: int, username: str =
         if video_truncated else ""
     )
 
-    prompt = f"""{truncation_note}
-    Analyze this YouTube video directly.
+    prompt = f"""{truncation_note}{_goal_focus_block(goal_title, goal_description)}    Analyze this YouTube video directly.
 
     Perform the following operations in a single pass:
     1. Categorize it into a broad, single-word category (e.g. Science, Coding, History, Business, Health, Design).
     2. Write a dynamic summary tailored to the video's content length (short content: 3-5 concise bullets, longer content: 6-10 structured key takeaways).
     3. Extract the video's structural outline/chapters with start timestamps in seconds, section titles, and brief summaries.
     4. Generate multi-stage active recall quiz sets for all 5 Spaced Repetition (SRS) stages AT ONCE:
-       - Generate EXACTLY {question_count} questions for EACH stage (stage_0, stage_1, stage_2, stage_3, stage_4).
-       - 'stage_0' (Immediate Review): Core definitions, foundational key facts, and basic term comprehension.
-       - 'stage_1' (1 Day Later): Main concepts, core mechanics, and key structural relationships.
-       - 'stage_2' (3 Days Later): Cause-and-effect reasoning, practical logic, and 'how/why' analysis.
-       - 'stage_3' (7 Days Later): Complex scenario synthesis, edge cases, and comparative evaluation.
-       - 'stage_4' (14-30 Days Later): High-level mastery transfer, critical judgment, and real-world application.
-       - Populates 'quiz' with the stage_0 questions for backward compatibility.
+{_stage_ladder_block(question_count)}
        CRITICAL: Every question must focus on applicable knowledge and conceptual understanding based strictly on the video content. Each question MUST include `timestamp_seconds` indicating where in the video this topic is explained.
-    5. Perform a detail-oriented fact-check comparison against scientific, historical, or domain consensus. Include standard consensus sources or reference citations for disputed claims if applicable.
+    5. Perform a detail-oriented fact-check comparison against scientific, historical, or domain consensus. Include standard consensus sources or reference citations for disputed claims if applicable, and a `timestamp_seconds` for where each claim is made.
     """
-    
+
     model_name = "gemini-3.5-flash-lite"
 
     response_text = generate_content_with_retry(
@@ -652,7 +789,7 @@ def analyze_youtube_video(youtube_url: str, question_count: int, username: str =
         username=username
     )
 
-    result = json.loads(response_text)
+    result = _normalise_analysis(json.loads(response_text))
     result["video_truncated"] = video_truncated
     result["duration_seconds"] = duration_seconds
     return result
@@ -667,20 +804,19 @@ def analyze_video_transcript(transcript_text: str, question_count: int, active_g
     
     transcript_text = truncate_transcript(transcript_text)
     
-    prompt = f"""
-    Analyze this text content. Perform the following operations:
+    prompt = f"""{_goal_focus_block(active_goals=active_goals)}    Analyze this text content. Perform the following operations:
     1. Categorize it into a broad, single-word category.
     2. Write a dynamic summary tailored to the text length (3-8 key takeaway bullets).
     3. Extract a structural outline with section titles, timestamps (set to 0 if text has no timing), and summaries.
     4. Generate multi-stage active recall quiz sets for all 5 Spaced Repetition (SRS) stages AT ONCE:
-       - Generate EXACTLY {question_count} questions for EACH stage (stage_0 through stage_4).
+{_stage_ladder_block(question_count)}
        - Each question MUST include `timestamp_seconds` (set to 0 for text documents).
     5. Perform a fact-check comparison against general knowledge consensus.
-    
+
     Content:
     {transcript_text}
     """
-    
+
     model_name = "gemini-3.5-flash-lite"
     response_text = generate_content_with_retry(
         client=client,
@@ -691,26 +827,20 @@ def analyze_video_transcript(transcript_text: str, question_count: int, active_g
         action_type="video_analysis",
         username=username
     )
-    
-    return json.loads(response_text)
+
+    return _normalise_analysis(json.loads(response_text))
 
 def generate_topic_quiz(topic: str, description: str, question_count: int, username: str = "default_user") -> dict:
     client = get_gemini_client(username=username)
     
-    prompt = f"""
-    Generate an active recall quiz on the following topic across all 5 Spaced Repetition (SRS) review stages AT ONCE.
+    prompt = f"""{_goal_focus_block(goal_title=topic, goal_description=description)}    Generate an active recall quiz on the following topic across all 5 Spaced Repetition (SRS) review stages AT ONCE.
     Topic: {topic}
     Description/Context: {description}
-    
-    Required: Generate EXACTLY {question_count} quiz items for EACH stage (stage_0 through stage_4).
-    - 'stage_0': Foundational terms & direct definitions.
-    - 'stage_1': Conceptual mechanisms & structural logic.
-    - 'stage_2': Cause-and-effect reasoning & practical scenarios.
-    - 'stage_3': Synthesis & edge-case problem solving.
-    - 'stage_4': Real-world mastery transfer & critical judgment.
-    - Populate 'quiz' with stage_0 questions for backward compatibility.
+
+{_stage_ladder_block(question_count)}
+    Set `timestamp_seconds` to 0, since there is no video to point into.
     """
-    
+
     model_name = "gemini-3.5-flash-lite"
     response_text = generate_content_with_retry(
         client=client,
@@ -721,8 +851,8 @@ def generate_topic_quiz(topic: str, description: str, question_count: int, usern
         action_type="topic_quiz",
         username=username
     )
-    
-    return json.loads(response_text)
+
+    return _normalise_analysis(json.loads(response_text))
 
 
 import struct

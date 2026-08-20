@@ -129,7 +129,34 @@ class YouTubeTaskProcessor(IImportTaskProcessor):
 
         update_stage_fn("Step 2/2: Gemini Analyzing Video & Generating Quizzes...")
 
-        analysis = ai.analyze_youtube_video(url, question_count, username=username)
+        # Read the goal before the AI call, not after: it is passed into the prompt as an
+        # attention filter, so it has to be known up front. The post-analysis lookup further
+        # down still runs, because it also renames the video's category.
+        goal_title, goal_description = "", ""
+        if learning_goal_id:
+            conn_goal = database.get_db_connection(username)
+            try:
+                cur_goal = conn_goal.cursor()
+                cur_goal.execute(
+                    "SELECT title, description FROM goals WHERE id = %s AND user_uuid = %s;",
+                    (learning_goal_id, conn_goal.user_uuid)
+                )
+                g_row = cur_goal.fetchone()
+                if g_row:
+                    goal_title = g_row.get("title") or ""
+                    goal_description = g_row.get("description") or ""
+            except Exception as e_goal:
+                print(f"[YouTubeTaskProcessor] Could not read goal {learning_goal_id} for prompt focus: {e_goal}")
+            finally:
+                conn_goal.close()
+
+        analysis = ai.analyze_youtube_video(
+            url,
+            question_count,
+            username=username,
+            goal_title=goal_title,
+            goal_description=goal_description
+        )
 
         t_ai = time.time()
         gemini_ai_analysis_sec = round(t_ai - t_meta, 2)
