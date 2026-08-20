@@ -354,14 +354,28 @@ function initImportTab() {
                     goalForm.append('title', newTitle);
                     if (newDesc) goalForm.append('description', newDesc);
                     const newGoal = await fetchAPI('/api/goals', { method: 'POST', body: goalForm });
-                    if (newGoal && newGoal.id) {
-                        learningGoalId = newGoal.id;
+                    // POST /api/goals returns the new id as `goal_id`, not `id` (see the
+                    // recommended-goal call further down, which reads the right one). Reading
+                    // the wrong key left learningGoalId as the literal string 'new', which the
+                    // guard below then skipped, so the material imported with no goal attached
+                    // and turned up under Unassociated.
+                    const newGoalId = newGoal && (newGoal.goal_id ?? newGoal.id);
+                    if (newGoalId) {
+                        learningGoalId = newGoalId;
+                    } else {
+                        console.error('Goal created but no id in response:', newGoal);
+                        if (typeof showToast === 'function') {
+                            showToast('Goal created, but the material could not be linked to it.', 'failed', 4000);
+                        }
                     }
                 } catch (errGoal) {
+                    // Surface the server's reason, which since goal titles became unique is
+                    // usually "You already have a goal called X" rather than a real failure.
+                    const reason = errGoal.detail || errGoal.message || errGoal;
                     if (typeof showToast === 'function') {
-                        showToast('Failed to create learning goal', 'failed');
+                        showToast('Could not create the goal: ' + reason, 'failed', 4000);
                     } else {
-                        alert('Failed to create new learning goal: ' + (errGoal.detail || errGoal.message || errGoal));
+                        alert('Failed to create new learning goal: ' + reason);
                     }
                     hideLoader();
                     return;
