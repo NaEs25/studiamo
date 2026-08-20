@@ -727,6 +727,16 @@ def _stage_ladder_block(question_count: int) -> str:
        - 'stage_3' (7 Days Later): Complex scenario synthesis, edge cases, and comparative evaluation.
        - 'stage_4' (14-30 Days Later): High-level mastery transfer, critical judgment, and real-world application.
 
+       Every question must stand on its own, understandable weeks later by someone who cannot
+       re-open the material. Never lean on its structure, ordering or delivery: no "according
+       to tip 8", "in the first section", "as the speaker explains", "in this video". Which
+       numbered tip an idea appeared under is not knowledge worth carrying, and a learner
+       reading the question later has no way to resolve the reference. Name the actual concept
+       instead: not "What does tip 8 say about being a business partner for the platform?" but
+       "What does it mean to act as a business partner to a social platform, and why does that
+       change how the algorithm treats an account?". The same applies to answers and
+       explanations.
+
        Every question must additionally carry:
        - 'topic': the umbrella topic it belongs to, 2-5 words. Group the material into roughly
          4-7 topics total and reuse each topic string EXACTLY, across all five stages, so the

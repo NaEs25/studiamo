@@ -529,15 +529,16 @@ function renderFocusStatus() {
     const selected = stage.topics.filter(t => t.selected).reduce((n, t) => n + t.count, 0);
     const target = focusState.targetCount;
 
-    // Selecting more than the star rating serves is fine, the quiz takes the first `target`.
-    // Selecting fewer is the case worth warning about, because it shortens the session.
+    // Phrased around what saving does, not what is ticked. A saved selection is honoured
+    // exactly, so picking fewer than the star rating genuinely shortens the session, whereas
+    // leaving it untouched lets the AI's picks be topped up to the full length.
     let cls, text;
     if (selected === 0) {
         cls = 'bg-red-50 border-red-200 text-red-700';
-        text = 'No topics selected. Pick at least one to keep reviewing this material.';
+        text = 'No topics selected. Pick at least one before saving.';
     } else if (selected < target) {
         cls = 'bg-amber-50 border-amber-200 text-amber-800';
-        text = `Only ${selected} question${selected === 1 ? '' : 's'} selected. This material is set to ${target} per session.`;
+        text = `Saving now gives ${selected} question${selected === 1 ? '' : 's'} per session, fewer than the ${target} this material is set to.`;
     } else {
         cls = 'bg-emerald-50 border-emerald-200 text-emerald-800';
         text = `${selected} questions selected. The ${target} best-fitting will be used each session.`;

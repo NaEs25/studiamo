@@ -389,9 +389,19 @@ def select_stage_questions(concept_pool, srs_stage, focus_topics=None, limit=Non
         # re-import produced different topic names. Serving the unfiltered stage beats handing
         # the user an empty quiz.
         if filtered:
-            items = filtered
+            # A saved selection is an explicit instruction, so it is honoured exactly, even
+            # when it yields fewer questions than the star rating asks for. The overlay warns
+            # about that before saving; silently topping it back up would undo the choice.
+            return filtered[:limit] if limit else filtered
 
-    return items[:limit] if limit else items
+    # No saved selection means "use what the AI recommended", which is what the focus overlay
+    # shows pre-ticked. Ordering by that flag rather than filtering on it keeps two properties
+    # at once: the recommended questions come first, and the session still reaches the
+    # configured length when the model marked fewer than that (a stage with 4 recommended
+    # questions and a 5-question setting yields those 4 plus the next best one). Sorting is
+    # stable, so the model's own ordering survives within each group.
+    ordered = sorted(items, key=lambda q: not q.get("ai_recommended"))
+    return ordered[:limit] if limit else ordered
 
 
 def get_srs_intervals(cursor, user_uuid: Optional[str] = None) -> list:
