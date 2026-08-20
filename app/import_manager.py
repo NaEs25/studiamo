@@ -918,7 +918,24 @@ class ImportQueueManager:
             )
             conn.commit()
 
-            cursor.execute("SELECT id FROM import_tasks WHERE status IN ('pending', 'processing') AND user_uuid = %s;", (user_uuid,))
+            # Only tasks that have gone quiet. A running task touches updated_at at every
+            # progress step, so anything newer than this is being worked on right now, either
+            # by this process or by another instance sharing the database.
+            #
+            # Recovering those was actively harmful: this resets status to 'pending' before
+            # relaunching, which also defeats the claim in _run_task_async, so a restart during
+            # an import produced a second worker for a task already in flight. Both then
+            # uploaded the same video within the same minute and exhausted the per-minute token
+            # quota between them. A failing import is the most exposed, because its backoff
+            # keeps it alive for two minutes rather than the fifty seconds a successful one
+            # takes.
+            cursor.execute(
+                """SELECT id FROM import_tasks
+                    WHERE status IN ('pending', 'processing')
+                      AND user_uuid = %s
+                      AND updated_at < CURRENT_TIMESTAMP - INTERVAL '15 minutes';""",
+                (user_uuid,)
+            )
             rows = cursor.fetchall()
             for r in rows:
                 tid = r["id"]
