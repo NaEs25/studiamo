@@ -415,7 +415,7 @@ async def get_fact_check(id: int, username: str = Depends(require_app_access)):
         # confidently-worded verdict for content it never actually reviewed.
         raise HTTPException(status_code=409, detail="No content available to fact-check yet. Wait for the video's summary to finish generating.")
 
-    fact_check = ai.generate_fact_check(row["title"], text_content, username=username)
+    fact_check = ai.generate_fact_check(row["title"], text_content, video_id=id, username=username)
     video_json["fact_check"] = fact_check
     storage.save_video_json(yt_id, video_json, username=username)
     return fact_check

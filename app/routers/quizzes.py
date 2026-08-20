@@ -516,7 +516,8 @@ async def verify_quiz_guess(
         }
         
     try:
-        res = ai.verify_user_guess(question_text, correct_answer, user_guess, username=username)
+        video_id = quiz_data.get("video_id") if isinstance(quiz_data, dict) else None
+        res = ai.verify_user_guess(question_text, correct_answer, user_guess, quiz_id=quiz_id, video_id=video_id, username=username)
         return res
     except Exception as e:
         logger.error(f"Error in verify_quiz_guess: {e}")

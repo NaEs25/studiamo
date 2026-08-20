@@ -235,8 +235,23 @@ TABLES_SQL = [
         model TEXT NOT NULL,
         prompt_tokens INTEGER DEFAULT 0,
         completion_tokens INTEGER DEFAULT 0,
-        action_type TEXT NOT NULL
+        action_type TEXT NOT NULL,
+        cached_tokens INTEGER DEFAULT 0,
+        duration_ms INTEGER,
+        video_id INTEGER,
+        quiz_id INTEGER,
+        status TEXT DEFAULT 'success',
+        error_kind TEXT,
+        attempts INTEGER DEFAULT 1
     );
+
+    ALTER TABLE ai_usage_logs ADD COLUMN IF NOT EXISTS cached_tokens INTEGER DEFAULT 0;
+    ALTER TABLE ai_usage_logs ADD COLUMN IF NOT EXISTS duration_ms INTEGER;
+    ALTER TABLE ai_usage_logs ADD COLUMN IF NOT EXISTS video_id INTEGER;
+    ALTER TABLE ai_usage_logs ADD COLUMN IF NOT EXISTS quiz_id INTEGER;
+    ALTER TABLE ai_usage_logs ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'success';
+    ALTER TABLE ai_usage_logs ADD COLUMN IF NOT EXISTS error_kind TEXT;
+    ALTER TABLE ai_usage_logs ADD COLUMN IF NOT EXISTS attempts INTEGER DEFAULT 1;
     """,
     """
     CREATE TABLE IF NOT EXISTS srs_settings (

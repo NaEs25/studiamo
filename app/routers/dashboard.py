@@ -187,7 +187,12 @@ async def get_ai_stats(username: str = Depends(require_app_access)):
     user_uuid = conn.user_uuid
     try:
         cursor = conn.cursor()
-        cursor.execute("SELECT timestamp, action_type, model, prompt_tokens, completion_tokens FROM ai_usage_logs WHERE user_uuid = %s ORDER BY timestamp DESC LIMIT 100;", (user_uuid,))
+        cursor.execute(
+            """SELECT timestamp, action_type, model, prompt_tokens, completion_tokens,
+                      cached_tokens, duration_ms, video_id, quiz_id, status, attempts
+               FROM ai_usage_logs WHERE user_uuid = %s ORDER BY timestamp DESC LIMIT 100;""",
+            (user_uuid,)
+        )
         rows = cursor.fetchall()
         logs = []
         for r in rows:
@@ -199,7 +204,13 @@ async def get_ai_stats(username: str = Depends(require_app_access)):
                 "action_type": r.get("action_type") or "ai_call",
                 "model": r.get("model") or "gemini-3.5-flash-lite",
                 "prompt_tokens": r.get("prompt_tokens") or 0,
-                "completion_tokens": r.get("completion_tokens") or 0
+                "completion_tokens": r.get("completion_tokens") or 0,
+                "cached_tokens": r.get("cached_tokens") or 0,
+                "duration_ms": r.get("duration_ms"),
+                "video_id": r.get("video_id"),
+                "quiz_id": r.get("quiz_id"),
+                "status": r.get("status") or "success",
+                "attempts": r.get("attempts") or 1
             })
         return {
             "total_calls": len(logs),

@@ -219,15 +219,34 @@ def get_gemini_client(username: str = "default_user") -> genai.Client:
         raise ValueError("Gemini API key is not configured. Please set GEMINI_API_KEY in settings.")
     return genai.Client(api_key=api_key)
 
-def log_ai_usage(model: str, prompt_tokens: int, completion_tokens: int, action_type: str, username: str = "default_user"):
-    """Saves API token usage into Supabase PostgreSQL."""
+def log_ai_usage(
+    model: str,
+    prompt_tokens: int,
+    completion_tokens: int,
+    action_type: str,
+    cached_tokens: int = 0,
+    duration_ms: int = None,
+    video_id: int = None,
+    quiz_id: int = None,
+    status: str = "success",
+    error_kind: str = None,
+    attempts: int = 1,
+    username: str = "default_user"
+):
+    """Saves API token usage and performance metrics into Supabase PostgreSQL."""
     try:
         conn = get_db_connection(username)
         user_uuid = conn.user_uuid
         cursor = conn.cursor()
         cursor.execute(
-            "INSERT INTO ai_usage_logs (user_uuid, model, prompt_tokens, completion_tokens, action_type) VALUES (%s, %s, %s, %s, %s);",
-            (user_uuid, model, prompt_tokens, completion_tokens, action_type)
+            """INSERT INTO ai_usage_logs (
+                user_uuid, model, prompt_tokens, completion_tokens, action_type,
+                cached_tokens, duration_ms, video_id, quiz_id, status, error_kind, attempts
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);""",
+            (
+                user_uuid, model, prompt_tokens, completion_tokens, action_type,
+                cached_tokens, duration_ms, video_id, quiz_id, status, error_kind, attempts
+            )
         )
         conn.commit()
         conn.close()
@@ -432,18 +451,13 @@ def _build_generation_config(response_schema, temperature: float):
     )
 
 
-def generate_content_with_retry(client: genai.Client, model: str, contents, response_schema, temperature: float, action_type: str, username: str = "default_user") -> str:
+def generate_content_with_retry(client: genai.Client, model: str, contents, response_schema, temperature: float, action_type: str, video_id: int = None, quiz_id: int = None, username: str = "default_user") -> str:
     """Calls Gemini, retrying only where a retry can actually help, then falling back a tier.
 
     Retrying is not free here: `contents` usually carries a whole video, so every attempt
     re-uploads it and re-spends the per-minute token quota. The recovery is therefore chosen
     from the error class (see _classify_api_error) rather than applied blindly to anything
     that looks transient.
-
-    Note that failed attempts never reach log_ai_usage, because there is no usage metadata to
-    record and Google does not bill them. They do consume quota though, so ai_usage_logs will
-    always understate what Google counted. That gap is why a burst of retries could exhaust a
-    quota while the usage table showed a single call.
     """
     enforce_usage_limits(username)
 
@@ -454,6 +468,8 @@ def generate_content_with_retry(client: genai.Client, model: str, contents, resp
 
     last_error = None
     last_kind = "fatal"
+    start_time = time.perf_counter()
+    total_attempts = 0
 
     for model_index, candidate in enumerate(cascade):
         if model_index > 0:
@@ -463,6 +479,7 @@ def generate_content_with_retry(client: genai.Client, model: str, contents, resp
             )
 
         for attempt in range(_MAX_OVERLOAD_RETRIES):
+            total_attempts += 1
             try:
                 response = client.models.generate_content(
                     model=candidate,
@@ -473,7 +490,22 @@ def generate_content_with_retry(client: genai.Client, model: str, contents, resp
                 usage = response.usage_metadata
                 prompt_tokens = usage.prompt_token_count if usage else 0
                 completion_tokens = usage.candidates_token_count if usage else 0
-                log_ai_usage(candidate, prompt_tokens, completion_tokens, action_type, username=username)
+                cached_tokens = getattr(usage, "cached_content_token_count", 0) or 0
+                duration_ms = int((time.perf_counter() - start_time) * 1000)
+
+                log_ai_usage(
+                    candidate,
+                    prompt_tokens,
+                    completion_tokens,
+                    action_type,
+                    cached_tokens=cached_tokens,
+                    duration_ms=duration_ms,
+                    video_id=video_id,
+                    quiz_id=quiz_id,
+                    status="success",
+                    attempts=total_attempts,
+                    username=username
+                )
 
                 # Billed and logged above before validating: a truncated or blocked response
                 # still consumed the tokens, so it belongs in the usage record either way.
@@ -492,6 +524,21 @@ def generate_content_with_retry(client: genai.Client, model: str, contents, resp
                     # Same request, same rejection. Re-sending it to another tier would just
                     # buy a second identical failure at a higher price.
                     logger.error(f"[AI] '{action_type}' failed on {candidate}, not retryable: {e}")
+                    duration_ms = int((time.perf_counter() - start_time) * 1000)
+                    log_ai_usage(
+                        candidate,
+                        0,
+                        0,
+                        action_type,
+                        cached_tokens=0,
+                        duration_ms=duration_ms,
+                        video_id=video_id,
+                        quiz_id=quiz_id,
+                        status="failed",
+                        error_kind=last_kind,
+                        attempts=total_attempts,
+                        username=username
+                    )
                     raise AIServiceUnavailable("fatal", _GENERIC_AI_ERROR, original=e) from e
 
                 if last_kind == "overloaded" and attempt < _MAX_OVERLOAD_RETRIES - 1:
@@ -524,6 +571,21 @@ def generate_content_with_retry(client: genai.Client, model: str, contents, resp
                 break
 
     logger.error(f"[AI] '{action_type}' exhausted every model tier. Last error: {last_error}")
+    duration_ms = int((time.perf_counter() - start_time) * 1000)
+    log_ai_usage(
+        cascade[-1],
+        0,
+        0,
+        action_type,
+        cached_tokens=0,
+        duration_ms=duration_ms,
+        video_id=video_id,
+        quiz_id=quiz_id,
+        status="failed",
+        error_kind=last_kind,
+        attempts=total_attempts,
+        username=username
+    )
     raise AIServiceUnavailable(
         last_kind,
         _USER_FACING_AI_ERRORS.get(last_kind, _GENERIC_AI_ERROR),
@@ -831,7 +893,7 @@ def truncate_transcript(text: str, max_words: int = 999999) -> str:
     """Returns the complete transcript text without truncation to ensure full video context is sent."""
     return text
 
-def analyze_video_transcript(transcript_text: str, question_count: int, active_goals: list = None, username: str = "default_user") -> dict:
+def analyze_video_transcript(transcript_text: str, question_count: int, active_goals: list = None, video_id: int = None, username: str = "default_user") -> dict:
     """Fallback function for document text processing."""
     client = get_gemini_client(username=username)
     
@@ -858,12 +920,13 @@ def analyze_video_transcript(transcript_text: str, question_count: int, active_g
         response_schema=video_analysis_schema,
         temperature=0.2,
         action_type="video_analysis",
+        video_id=video_id,
         username=username
     )
 
     return _normalise_analysis(json.loads(response_text))
 
-def generate_topic_quiz(topic: str, description: str, question_count: int, username: str = "default_user") -> dict:
+def generate_topic_quiz(topic: str, description: str, question_count: int, quiz_id: int = None, username: str = "default_user") -> dict:
     client = get_gemini_client(username=username)
     
     prompt = f"""{_goal_focus_block(goal_title=topic, goal_description=description)}    Generate an active recall quiz on the following topic across all 5 Spaced Repetition (SRS) review stages AT ONCE.
@@ -882,6 +945,7 @@ def generate_topic_quiz(topic: str, description: str, question_count: int, usern
         response_schema=topic_quiz_schema,
         temperature=0.3,
         action_type="topic_quiz",
+        quiz_id=quiz_id,
         username=username
     )
 
@@ -997,7 +1061,7 @@ def generate_speech_audio(text: str, speed: float = 1.0) -> tuple[bytes, str]:
 
     raise ValueError("TTS audio generation failed.")
 
-def fact_check_transcript(transcript_text: str, username: str = "default_user") -> dict:
+def fact_check_transcript(transcript_text: str, video_id: int = None, username: str = "default_user") -> dict:
     """Compares the transcript content against general knowledge/scientific consensus to detect contradictions."""
     client = get_gemini_client(username=username)
     
@@ -1024,17 +1088,18 @@ def fact_check_transcript(transcript_text: str, username: str = "default_user") 
         response_schema=fact_check_schema,
         temperature=0.1,
         action_type="fact_check",
+        video_id=video_id,
         username=username
     )
     
     return json.loads(response_text)
 
-def generate_fact_check(title: str, transcript_text: str, username: str = "default_user") -> dict:
+def generate_fact_check(title: str, transcript_text: str, video_id: int = None, username: str = "default_user") -> dict:
     """Alias for fact_check_transcript."""
-    return fact_check_transcript(transcript_text, username=username)
+    return fact_check_transcript(transcript_text, video_id=video_id, username=username)
 
 
-def verify_user_guess(question: str, correct_answer: str, user_guess: str, username: str = "default_user") -> dict:
+def verify_user_guess(question: str, correct_answer: str, user_guess: str, quiz_id: int = None, video_id: int = None, username: str = "default_user") -> dict:
     """Uses Gemini Flash to conceptually evaluate a user's guess against the correct answer."""
     client = get_gemini_client(username=username)
     
@@ -1062,6 +1127,8 @@ def verify_user_guess(question: str, correct_answer: str, user_guess: str, usern
         response_schema=quiz_verification_schema,
         temperature=0.1,
         action_type="quiz_verification",
+        video_id=video_id,
+        quiz_id=quiz_id,
         username=username
     )
     
