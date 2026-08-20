@@ -193,6 +193,23 @@ option {
     to   { opacity: 1; transform: translateY(0); }
 }
 
+/* ── Newly Imported Card Highlight ──────────────────────── */
+/* Applied briefly by scrollToVideoCard (videos.js) after an import is queued, so the card
+   the user just created is identifiable once the dashboard scrolls to it. */
+.video-card-arriving {
+    animation: cardArrive 2.2s ease-out;
+}
+
+@keyframes cardArrive {
+    0%   { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.55); }
+    35%  { box-shadow: 0 0 0 6px rgba(245, 158, 11, 0.22); }
+    100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .video-card-arriving { animation: none; }
+}
+
 /* ── Accordion ──────────────────────────────────────────── */
 .accordion-content {
     transition: max-height 0.3s ease-out, opacity 0.2s ease-out;

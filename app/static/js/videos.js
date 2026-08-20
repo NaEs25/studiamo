@@ -412,14 +412,18 @@ function initImportTab() {
                         await fetchAPI(`/api/videos/${result.video_id}/goal`, { method: 'POST', body: mapForm });
                     }
                 }
-                if (typeof loadDashboard === 'function') loadDashboard();
-                if (typeof loadGoals === 'function') loadGoals();
+                // Switch first so the dashboard is the visible tab, then await the reload:
+                // the new card cannot be scrolled to before loadDashboard has rendered it.
                 if (typeof switchTab === 'function') switchTab('dashboard');
-                
+                if (typeof loadDashboard === 'function') await loadDashboard();
+                if (typeof loadGoals === 'function') loadGoals();
+
                 if (window.globalImportBacklog) {
                     window.globalImportBacklog.toggleDrawer(true);
                     window.globalImportBacklog.poll();
                 }
+
+                scrollToVideoCard(result.video_id);
 
                 // Only queued at this point , the completion toast fires from the
                 // import backlog poll once the task actually finishes.
@@ -436,6 +440,29 @@ function initImportTab() {
             }
         });
     }
+}
+
+// Brings a freshly queued import's card into view and flashes it, so the user can see where
+// the material landed instead of hunting for it in the list.
+//
+// Polls rather than looking once: the card is created by loadDashboard's render pass, and a
+// card placed under a goal can take an extra frame to appear. Gives up quietly, since failing
+// to scroll must never look like the import itself failed.
+async function scrollToVideoCard(videoId, timeoutMs = 4000) {
+    if (!videoId) return false;
+
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+        const card = document.getElementById(`video-card-${videoId}`);
+        if (card) {
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            card.classList.add('video-card-arriving');
+            setTimeout(() => card.classList.remove('video-card-arriving'), 2400);
+            return true;
+        }
+        await new Promise(resolve => setTimeout(resolve, 120));
+    }
+    return false;
 }
 
 function renderVideoCard(video, quizzes, goals) {
@@ -1921,6 +1948,7 @@ async function handleStudyButtonClick(event, videoId, level = 3) {
 window.handleStudyButtonClick = handleStudyButtonClick;
 window.initImportTab = initImportTab;
 window.renderVideoCard = renderVideoCard;
+window.scrollToVideoCard = scrollToVideoCard;
 window.toggleVideoDetails = toggleVideoDetails;
 window.toggleVideoMenu = toggleVideoMenu;
 window.closeVideoMenu = closeVideoMenu;
