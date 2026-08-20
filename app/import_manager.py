@@ -698,6 +698,9 @@ class ImportQueueManager:
             "goal_quiz": GoalQuizProcessor()
         }
         self._user_semaphores: Dict[str, asyncio.Semaphore] = {}
+        # Task ids currently executing, so the same task cannot be launched twice. See
+        # _process_task_async for why that matters.
+        self._inflight_task_ids: set = set()
 
     def _get_user_semaphore(self, username: str) -> asyncio.Semaphore:
         if username not in self._user_semaphores:
@@ -740,6 +743,30 @@ class ImportQueueManager:
             conn.close()
 
     async def _process_task_async(self, task_id: int, username: str):
+        """Runs a task once, ignoring a launch for a task that is already running.
+
+        The retry control appears in two places for the same failed import, on the material
+        card and in the import drawer, and neither the route nor retry_task checked whether a
+        run was already in flight. Two runs of the same task upload the same video within the
+        same minute and, between them, exceed the per-minute token quota, so a retry reliably
+        recreated the rate limit that had made the import fail in the first place: measured at
+        four attempts and two minutes per run, twice over, while a single import of the same
+        size succeeded moments later.
+
+        Tracked in memory rather than by task status, because both launches read the row
+        before either has written 'processing' to it.
+        """
+        if task_id in self._inflight_task_ids:
+            print(f"[ImportQueueManager] Task #{task_id} is already running, ignoring duplicate launch.")
+            return
+
+        self._inflight_task_ids.add(task_id)
+        try:
+            await self._run_task_async(task_id, username)
+        finally:
+            self._inflight_task_ids.discard(task_id)
+
+    async def _run_task_async(self, task_id: int, username: str):
         sem = self._get_user_semaphore(username)
         async with sem:
             conn = database.get_db_connection(username)

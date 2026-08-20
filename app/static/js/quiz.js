@@ -263,7 +263,11 @@ async function startQuiz(quizId, videoId = null, level = 3) {
 // flip mode: recall already covers it, since leaving the box empty and pressing the button
 // just turns the card over without calling the AI.
 const QUIZ_MODES = ['choice', 'mixed', 'recall'];
-const QUIZ_MODE_KEY = 'studiamo_quiz_mode';
+// Versioned: the earlier key was written while the mode list still contained 'flip' and
+// defaulted to 'recall'. A value saved then would silently outrank the current default and
+// pin every question to typed recall, with nothing on screen explaining why. Bumping the key
+// retires those values instead of asking anyone to clear site data.
+const QUIZ_MODE_KEY = 'studiamo_quiz_mode_v2';
 
 // In mixed mode, stages up to and including this one are answered by picking an option;
 // everything above it switches to typed recall. Multiple choice is recognition, which is the
