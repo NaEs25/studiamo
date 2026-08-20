@@ -20,6 +20,8 @@ from app.dependencies import (
     adjust_next_review,
     require_app_access,
     build_concept_pool,
+    select_stage_questions,
+    STAGE_KEYS,
 )
 
 logger = logging.getLogger("studiamo")
@@ -748,6 +750,141 @@ async def generate_video_quiz_for_level(
         return {"status": "success", "quiz_id": quiz_id}
     finally:
         conn.close()
+
+
+# Shown under each stage tab in the focus overlay. Server-side so the ladder is described in
+# one place, matching the prompt that generated the questions.
+_STAGE_LABELS = [
+    "Immediate: definitions and key facts",
+    "1 day: concepts and core mechanics",
+    "3 days: cause, effect and practical logic",
+    "7 days: synthesis, edge cases, comparison",
+    "14-30 days: transfer and real-world judgment",
+]
+
+
+def _load_focus_context(video_id: int, username: str):
+    """Resolves a video to its quiz row, concept pool, saved focus and per-star question count."""
+    conn = database.get_db_connection(username)
+    user_uuid = conn.user_uuid
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """SELECT q.id AS quiz_id, q.srs_stage, v.importance_rating, v.title
+                 FROM videos v
+                 JOIN quizzes q ON q.video_id = v.id AND q.user_uuid = v.user_uuid
+                WHERE v.id = %s AND v.user_uuid = %s AND q.quiz_type = 'video'
+                LIMIT 1;""",
+            (video_id, user_uuid)
+        )
+        row = cursor.fetchone()
+    finally:
+        conn.close()
+
+    if not row:
+        raise HTTPException(status_code=404, detail="No quiz found for this material yet.")
+
+    pool, focus = database.get_quiz_pool_and_focus(row["quiz_id"], username=username)
+    if not pool:
+        raise HTTPException(
+            status_code=409,
+            detail="This material was imported before topic extraction existed, so it has no topics to choose from."
+        )
+
+    q_counts = get_question_counts(config.load_user_config(username))
+    target_count = q_counts.get(row.get("importance_rating") or 3, 5)
+    return row, pool, focus, target_count
+
+
+@router.get("/videos/{id}/concept-pool")
+async def get_concept_pool(id: int, username: str = Depends(require_app_access)):
+    """Returns the topics available per SRS stage, for the learning-focus overlay.
+
+    Selection state falls back to the AI's own picks when the user has never saved one, so the
+    overlay opens pre-filled with a sensible quiz rather than nothing ticked."""
+    row, pool, focus, target_count = _load_focus_context(id, username)
+
+    stages = []
+    for stage_index, stage_key in enumerate(STAGE_KEYS):
+        items = [q for q in pool if q.get("stage") == stage_index]
+        if not items:
+            continue
+
+        saved = focus.get(stage_key) if isinstance(focus, dict) else None
+        topics = {}
+        for item in items:
+            name = (item.get("topic") or "Ungrouped").strip() or "Ungrouped"
+            entry = topics.setdefault(name, {"topic": name, "count": 0, "recommended": False})
+            entry["count"] += 1
+            if item.get("ai_recommended"):
+                entry["recommended"] = True
+
+        for entry in topics.values():
+            # No saved choice means "use what the AI recommended", which is also what
+            # select_stage_questions falls back to when it reads an empty selection.
+            entry["selected"] = (entry["topic"] in saved) if saved else entry["recommended"]
+
+        ordered = sorted(topics.values(), key=lambda t: (not t["recommended"], -t["count"], t["topic"]))
+        stages.append({
+            "stage": stage_index,
+            "label": _STAGE_LABELS[stage_index],
+            "topics": ordered,
+            "total_questions": len(items),
+            "selected_questions": sum(t["count"] for t in ordered if t["selected"]),
+            "has_saved_selection": bool(saved),
+        })
+
+    return {
+        "video_id": id,
+        "quiz_id": row["quiz_id"],
+        "title": row.get("title"),
+        "current_stage": row.get("srs_stage") or 0,
+        "target_count": target_count,
+        "stages": stages,
+    }
+
+
+@router.post("/videos/{id}/focus")
+async def save_concept_focus(
+    id: int,
+    focus_topics: str = Form(...),
+    username: str = Depends(require_app_access)
+):
+    """Saves the per-stage topic selection and rebuilds the active question list.
+
+    Purely local: the questions already exist in concept_pool, so this costs no AI call."""
+    try:
+        parsed = json.loads(focus_topics)
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="Could not read the focus selection.")
+    if not isinstance(parsed, dict):
+        raise HTTPException(status_code=400, detail="Could not read the focus selection.")
+
+    row, pool, _, target_count = _load_focus_context(id, username)
+
+    # Keep only topics that exist in this pool, so a stale overlay cannot persist a selection
+    # that silently resolves to nothing.
+    known = {(q.get("topic") or "Ungrouped").strip() or "Ungrouped" for q in pool}
+    cleaned = {}
+    for stage_index, stage_key in enumerate(STAGE_KEYS):
+        chosen = parsed.get(stage_key)
+        if not isinstance(chosen, list):
+            continue
+        kept = [t for t in chosen if isinstance(t, str) and t.strip() in known]
+        if kept:
+            cleaned[stage_key] = kept
+
+    current_stage = row.get("srs_stage") or 0
+    active = select_stage_questions(pool, current_stage, cleaned, target_count)
+    database.save_quiz_focus(row["quiz_id"], cleaned, active, username=username)
+
+    return {
+        "status": "success",
+        "quiz_id": row["quiz_id"],
+        "current_stage": current_stage,
+        "active_questions": len(active),
+        "target_count": target_count,
+    }
 
 
 @router.get("/videos/{id}/stats")

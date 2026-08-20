@@ -216,6 +216,31 @@ def save_quiz_active_questions(quiz_id: int, questions: list, username: str) -> 
         conn.close()
 
 
+def save_quiz_focus(quiz_id: int, focus_topics: dict, questions: list, username: str) -> None:
+    """Stores a focus selection and the question list it produces, in one statement.
+
+    The two belong together: focus_topics is what the user chose, questions_json is what that
+    choice currently resolves to for the active stage. Writing them separately would leave a
+    window where a quiz opened between the two reads a selection its questions do not match.
+    in_progress_index is cleared because the position a half-finished session was holding
+    refers to the previous list.
+    """
+    conn = get_db_connection(username)
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """UPDATE quizzes
+                  SET focus_topics = %s::jsonb,
+                      questions_json = %s::jsonb,
+                      in_progress_index = NULL
+                WHERE id = %s AND user_uuid = %s;""",
+            (json.dumps(focus_topics or {}), json.dumps(questions or []), quiz_id, conn.user_uuid)
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def get_quiz_pool_and_focus(quiz_id: int, username: str) -> tuple:
     """Returns (concept_pool, focus_topics) for a quiz, both already decoded from JSONB."""
     conn = get_db_connection(username)

@@ -126,11 +126,18 @@ async def get_dashboard_data(username: str = Depends(require_app_access)):
     
     # 3. Fetch all active videos with summary
     cursor.execute("""
-        SELECT v.id, v.youtube_id, v.title, v.category, v.thumbnail_url, 
+        SELECT v.id, v.youtube_id, v.title, v.category, v.thumbnail_url,
                v.importance_rating, v.learning_goal_id, v.is_archived, v.is_paused,
                v.status, v.status_error, v.is_watchlist, v.custom_notes, v.goal_order_index,
                v.last_position_seconds, v.duration_seconds, v.is_temporary, v.expires_at, v.summary,
-               g.title AS goal_title
+               g.title AS goal_title,
+               -- Gates the "Adjust Learning Focus" menu entry. Material imported before topic
+               -- extraction existed has an empty pool and would open an empty overlay.
+               EXISTS (
+                   SELECT 1 FROM quizzes q
+                    WHERE q.video_id = v.id AND q.user_uuid = v.user_uuid
+                      AND jsonb_array_length(COALESCE(q.concept_pool, '[]'::jsonb)) > 0
+               ) AS has_concept_pool
         FROM videos v
         LEFT JOIN goals g ON v.learning_goal_id = g.id
         WHERE v.user_uuid = %s AND v.is_archived = 0
