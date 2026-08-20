@@ -341,6 +341,7 @@ class DocumentTaskProcessor(IImportTaskProcessor):
 
             category = analysis.get("category", "General")
             summary = analysis.get("summary", [])
+            outline = analysis.get("outline", [])
             quiz_items = analysis.get("quiz", [])
             quiz_stages = analysis.get("stages", {})
             fact_check_result = analysis.get("fact_check", {})
@@ -391,6 +392,7 @@ class DocumentTaskProcessor(IImportTaskProcessor):
                 "is_watchlist": 0,
                 "custom_notes": "",
                 "summary": summary,
+                "outline": outline,
                 "fact_check": fact_check_result,
                 "created_at": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
                 "status": "ready"
@@ -467,6 +469,7 @@ class NotesTaskProcessor(IImportTaskProcessor):
 
             category = analysis.get("category", "General")
             summary = analysis.get("summary", [])
+            outline = analysis.get("outline", [])
             quiz_items = analysis.get("quiz", [])
             quiz_stages = analysis.get("stages", {})
             fact_check_result = analysis.get("fact_check", {})
@@ -517,6 +520,7 @@ class NotesTaskProcessor(IImportTaskProcessor):
                 "is_watchlist": 0,
                 "custom_notes": text_content,
                 "summary": summary,
+                "outline": outline,
                 "fact_check": fact_check_result,
                 "created_at": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
                 "status": "ready"
@@ -607,7 +611,7 @@ class GoalQuizProcessor(IImportTaskProcessor):
             transcripts = []
             for gv in goal_videos:
                 yt_id_val = gv["youtube_id"] or f"doc_{gv['id']}"
-                vdata = storage.load_video_json(yt_id_val, username=username)
+                vdata = storage.get_video_json(yt_id_val, username=username)
                 if vdata and vdata.get("summary"):
                     transcripts.append(f"Video '{gv['title']}':\n" + "\n".join(vdata.get("summary", [])))
 

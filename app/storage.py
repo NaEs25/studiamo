@@ -86,6 +86,31 @@ def sanitize_folder_name(name: str) -> str:
     return clean if clean else "unnamed_item"
 
 # Video Storage Handlers
+def _video_row_key(filename: str, data: dict = None) -> tuple:
+    """Resolves the (youtube_key, video_id) a legacy video "filename" refers to.
+
+    Video rows are still addressed here by a filename-shaped string: a bare YouTube id for
+    videos, or "doc_<video_id>" for uploaded documents. The document form matches neither
+    `youtube_id` (NULL for documents) nor `id::text`, so a WHERE clause built from the string
+    alone matched zero rows and silently dropped every document's summary, outline and
+    fact_check on write, and returned {} on read. Parsing the id back out is what makes the
+    document paths address a real row.
+    """
+    key = (filename or "").replace("video_", "").replace(".json", "")
+    if data and data.get("youtube_id"):
+        key = data["youtube_id"]
+
+    video_id = None
+    if data and isinstance(data.get("id"), int):
+        video_id = data["id"]
+    elif key.startswith("doc_"):
+        try:
+            video_id = int(key[4:])
+        except ValueError:
+            video_id = None
+    return key, video_id
+
+
 def save_video_json(filename: str, data: dict, username: str = "default_user"):
     """Saves video summary, outline, and fact_check directly to PostgreSQL videos table."""
     from app.database import get_pooled_raw_connection, release_pooled_connection
@@ -99,15 +124,20 @@ def save_video_json(filename: str, data: dict, username: str = "default_user"):
         outline = json.dumps(data.get("outline") or [])
         fact_check = json.dumps(data.get("fact_check") or {})
 
-        yt_id = data.get("youtube_id") or filename.replace("video_", "").replace(".json", "")
+        yt_id, video_id = _video_row_key(filename, data)
 
         cursor.execute("""
             UPDATE videos
             SET summary = %s::jsonb,
                 outline = %s::jsonb,
                 fact_check = %s::jsonb
-            WHERE user_uuid = %s AND (youtube_id = %s OR id::text = %s);
-        """, (summary, outline, fact_check, user_uuid, yt_id, yt_id))
+            WHERE user_uuid = %s AND (youtube_id = %s OR id::text = %s OR id = %s);
+        """, (summary, outline, fact_check, user_uuid, yt_id, yt_id, video_id))
+        if cursor.rowcount == 0:
+            logger.warning(
+                f"save_video_json matched no video row for key '{filename}' (user {username}); "
+                "summary/outline/fact_check were not persisted."
+            )
         conn.commit()
         cursor.close()
     finally:
@@ -122,16 +152,16 @@ def get_video_json(filename: str, username: str = "default_user") -> dict:
     try:
         cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         user_uuid = get_user_uuid_from_db(username)
-        yt_id = filename.replace("video_", "").replace(".json", "")
+        yt_id, video_id = _video_row_key(filename)
 
         cursor.execute("""
             SELECT id, user_uuid, youtube_id, title, category, thumbnail_url, importance_rating,
                    learning_goal_id, is_archived, is_paused, is_watchlist, custom_notes, status,
                    summary, outline, fact_check, created_at
             FROM videos
-            WHERE user_uuid = %s AND (youtube_id = %s OR id::text = %s)
+            WHERE user_uuid = %s AND (youtube_id = %s OR id::text = %s OR id = %s)
             LIMIT 1;
-        """, (user_uuid, yt_id, yt_id))
+        """, (user_uuid, yt_id, yt_id, video_id))
         row = cursor.fetchone()
         cursor.close()
         if row:
