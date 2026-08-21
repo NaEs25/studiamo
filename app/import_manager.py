@@ -215,44 +215,11 @@ class YouTubeTaskProcessor(IImportTaskProcessor):
             res = cursor.fetchone()
             quiz_id = res["id"] if isinstance(res, dict) and "id" in res else res[0]
 
-            existing_v_json = storage.get_video_json(yt_id, username=username) or {}
-            existing_notes = existing_v_json.get("custom_notes", "") if isinstance(existing_v_json, dict) else ""
+            database.save_video_analysis(
+                video_id, username,
+                summary=summary, outline=outline, fact_check=fact_check_result
+            )
 
-            json_filename = yt_id
-            video_json_payload = {
-                "id": video_id,
-                "youtube_id": yt_id,
-                "title": metadata_title,
-                "category": category,
-                "thumbnail_url": thumbnail,
-                "importance_rating": importance_rating,
-                "learning_goal_id": target_goal_id,
-                "is_archived": 0,
-                "is_paused": 0,
-                "is_temporary": 0,
-                "is_watchlist": payload.get("is_watchlist", 0),
-                "custom_notes": existing_notes,
-                "duration_seconds": duration_seconds_val,
-                "summary": summary,
-                "outline": outline,
-                "fact_check": fact_check_result,
-                "created_at": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
-                "status": "ready"
-            }
-
-            storage.save_video_json(json_filename, video_json_payload, username=username)
-
-            quiz_json_payload = {
-                "id": quiz_id,
-                "video_id": video_id,
-                "video_filename": json_filename,
-                "quiz_type": "video",
-                "srs_stage": 0,
-                "next_review_at": next_review.isoformat(),
-                "questions": [dict(q) for q in quiz_items],
-                "importance_level": importance_rating
-            }
-            storage.save_quiz_json(quiz_id, quiz_json_payload, username=username)
 
             cursor.execute(
                 """UPDATE videos
@@ -405,38 +372,11 @@ class DocumentTaskProcessor(IImportTaskProcessor):
             res = cursor.fetchone()
             quiz_id = res["id"] if isinstance(res, dict) and "id" in res else res[0]
 
-            json_filename = f"doc_{video_id}"
-            video_json_payload = {
-                "id": video_id,
-                "youtube_id": None,
-                "title": metadata_title,
-                "category": category,
-                "thumbnail_url": thumbnail,
-                "importance_rating": importance_rating,
-                "learning_goal_id": target_goal_id,
-                "is_archived": 0,
-                "is_paused": 0,
-                "is_watchlist": 0,
-                "custom_notes": "",
-                "summary": summary,
-                "outline": outline,
-                "fact_check": fact_check_result,
-                "created_at": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
-                "status": "ready"
-            }
-            storage.save_video_json(json_filename, video_json_payload, username=username)
+            database.save_video_analysis(
+                video_id, username,
+                summary=summary, outline=outline, fact_check=fact_check_result
+            )
 
-            quiz_json_payload = {
-                "id": quiz_id,
-                "video_id": video_id,
-                "video_filename": json_filename,
-                "quiz_type": "video",
-                "srs_stage": 0,
-                "next_review_at": next_review.isoformat(),
-                "questions": [dict(q) for q in quiz_items],
-                "importance_level": importance_rating
-            }
-            storage.save_quiz_json(quiz_id, quiz_json_payload, username=username)
 
             cursor.execute(
                 """UPDATE videos 
@@ -533,38 +473,11 @@ class NotesTaskProcessor(IImportTaskProcessor):
             res = cursor.fetchone()
             quiz_id = res["id"] if isinstance(res, dict) and "id" in res else res[0]
 
-            json_filename = f"doc_{video_id}"
-            video_json_payload = {
-                "id": video_id,
-                "youtube_id": None,
-                "title": metadata_title,
-                "category": category,
-                "thumbnail_url": thumbnail,
-                "importance_rating": importance_rating,
-                "learning_goal_id": target_goal_id,
-                "is_archived": 0,
-                "is_paused": 0,
-                "is_watchlist": 0,
-                "custom_notes": text_content,
-                "summary": summary,
-                "outline": outline,
-                "fact_check": fact_check_result,
-                "created_at": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
-                "status": "ready"
-            }
-            storage.save_video_json(json_filename, video_json_payload, username=username)
+            database.save_video_analysis(
+                video_id, username,
+                summary=summary, outline=outline, fact_check=fact_check_result
+            )
 
-            quiz_json_payload = {
-                "id": quiz_id,
-                "video_id": video_id,
-                "video_filename": json_filename,
-                "quiz_type": "video",
-                "srs_stage": 0,
-                "next_review_at": next_review.isoformat(),
-                "questions": [dict(q) for q in quiz_items],
-                "importance_level": importance_rating
-            }
-            storage.save_quiz_json(quiz_id, quiz_json_payload, username=username)
 
             cursor.execute(
                 """UPDATE videos 
@@ -637,8 +550,7 @@ class GoalQuizProcessor(IImportTaskProcessor):
 
             transcripts = []
             for gv in goal_videos:
-                yt_id_val = gv["youtube_id"] or f"doc_{gv['id']}"
-                vdata = storage.get_video_json(yt_id_val, username=username)
+                vdata = database.get_video_row(gv["id"], username=username)
                 if vdata and vdata.get("summary"):
                     transcripts.append(f"Video '{gv['title']}':\n" + "\n".join(vdata.get("summary", [])))
 
@@ -667,16 +579,6 @@ class GoalQuizProcessor(IImportTaskProcessor):
             res = cursor.fetchone()
             quiz_id = res["id"] if isinstance(res, dict) and "id" in res else res[0]
 
-            quiz_json_payload = {
-                "id": quiz_id,
-                "goal_id": goal_id,
-                "quiz_type": "goal",
-                "srs_stage": 0,
-                "next_review_at": next_review.isoformat(),
-                "questions": [dict(q) for q in quiz_items],
-                "importance_level": 3
-            }
-            storage.save_quiz_json(quiz_id, quiz_json_payload, username=username)
             conn.commit()
 
             return {"goal_id": goal_id, "quiz_id": quiz_id}

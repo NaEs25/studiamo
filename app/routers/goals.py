@@ -556,8 +556,7 @@ async def generate_goal_practice_quiz(
     
     transcripts = []
     for v in videos:
-        yt_id = v.get("youtube_id") or f"doc_{v['id']}"
-        v_data = storage.get_video_json(yt_id, username=username)
+        v_data = database.get_video_row(v["id"], username=username)
         if v_data and v_data.get("summary"):
             transcripts.append(f"--- Video: {v['title']} ---\n" + "\n".join(v_data.get("summary", [])))
 
@@ -598,16 +597,8 @@ async def generate_goal_practice_quiz(
     conn.close()
 
 
-    quiz_json_payload = {
-        "id": quiz_id,
-        "goal_id": id,
-        "quiz_type": "goal",
-        "srs_stage": 0,
-        "next_review_at": next_review,
-        "questions": ai_quiz_data.get("quiz", []),
-        "importance_level": 3
-    }
-    storage.save_quiz_json(quiz_id, quiz_json_payload, username=username)
+    # The INSERT above does not carry questions_json, so this is the write that fills it.
+    database.save_quiz_active_questions(quiz_id, ai_quiz_data.get("quiz", []), username=username)
     database.save_quiz_concept_pool(quiz_id, build_concept_pool(ai_quiz_data), username=username)
 
     return {"status": "success", "quiz_id": quiz_id}

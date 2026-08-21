@@ -171,6 +171,146 @@ def get_db_connection(username: str):
     raw_conn.autocommit = True
     return ConnectionWrapper(raw_conn, user_uuid=user_uuid)
 
+_UNSET = object()
+
+
+def get_video_row(video_id: int, username: str) -> dict:
+    """Returns one video row by primary key, or {} if the user does not own it.
+
+    Replaces storage.get_video_json, which took a filename-shaped string ("<youtube_id>" or
+    "doc_<video_id>") and matched it against two columns with an OR. That indirection is what
+    let document rows silently miss, since their key matched neither column.
+    """
+    conn = get_db_connection(username)
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """SELECT id, user_uuid, youtube_id, title, category, thumbnail_url,
+                      importance_rating, learning_goal_id, is_archived, is_paused, is_watchlist,
+                      custom_notes, status, summary, outline, fact_check, created_at
+                 FROM videos
+                WHERE id = %s AND user_uuid = %s
+                LIMIT 1;""",
+            (video_id, conn.user_uuid)
+        )
+        row = cursor.fetchone()
+    finally:
+        conn.close()
+
+    if not row:
+        return {}
+    data = dict(row)
+    created = data.get("created_at")
+    if hasattr(created, "isoformat"):
+        data["created_at"] = created.isoformat()
+    return data
+
+
+def save_video_analysis(video_id: int, username: str, summary=None, outline=None, fact_check=None) -> None:
+    """Writes a video's AI analysis. Only the fields passed are touched.
+
+    Replaces storage.save_video_json, which accepted a whole payload dict but persisted exactly
+    three columns from it and ignored the rest, so callers could not tell what would survive.
+    Several call sites passed status, is_temporary or expires_at and silently changed nothing.
+    """
+    sets, params = [], []
+    if summary is not None:
+        sets.append("summary = %s::jsonb")
+        params.append(json.dumps(summary))
+    if outline is not None:
+        sets.append("outline = %s::jsonb")
+        params.append(json.dumps(outline))
+    if fact_check is not None:
+        sets.append("fact_check = %s::jsonb")
+        params.append(json.dumps(fact_check))
+    if not sets:
+        return
+
+    conn = get_db_connection(username)
+    try:
+        cursor = conn.cursor()
+        params.extend([video_id, conn.user_uuid])
+        cursor.execute(
+            f"UPDATE videos SET {', '.join(sets)} WHERE id = %s AND user_uuid = %s;",
+            tuple(params)
+        )
+        if cursor.rowcount == 0:
+            logger.warning(f"save_video_analysis matched no video row for id {video_id} (user {username}).")
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def get_quiz_row(quiz_id: int, username: str) -> dict:
+    """Returns one quiz row by primary key, with questions_json decoded as `questions`."""
+    conn = get_db_connection(username)
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """SELECT id, video_id, goal_id, quiz_type, srs_stage, next_review_at,
+                      importance_level, in_progress_index, questions_json
+                 FROM quizzes
+                WHERE id = %s AND user_uuid = %s
+                LIMIT 1;""",
+            (quiz_id, conn.user_uuid)
+        )
+        row = cursor.fetchone()
+    finally:
+        conn.close()
+
+    if not row:
+        return {}
+    data = dict(row)
+    questions = data.pop("questions_json", None) or []
+    if isinstance(questions, str):
+        try:
+            questions = json.loads(questions)
+        except (TypeError, ValueError):
+            questions = []
+    data["questions"] = questions if isinstance(questions, list) else []
+    next_review = data.get("next_review_at")
+    data["next_review_at"] = next_review.isoformat() if hasattr(next_review, "isoformat") else (
+        str(next_review) if next_review else ""
+    )
+    return data
+
+
+def update_quiz_progress(quiz_id: int, username: str, srs_stage=None, next_review_at=None,
+                         in_progress_index=_UNSET) -> None:
+    """Updates a quiz's SRS position. Only the arguments given are written.
+
+    in_progress_index takes a sentinel rather than None as its default, because clearing it is
+    a real instruction ("this session finished") and has to be distinguishable from "leave it
+    alone". storage.save_quiz_json wrote it unconditionally from whatever the payload happened
+    to contain, so a caller that only meant to bump next_review_at silently dropped a
+    half-finished session's position.
+    """
+    sets, params = [], []
+    if srs_stage is not None:
+        sets.append("srs_stage = %s")
+        params.append(srs_stage)
+    if next_review_at is not None:
+        sets.append("next_review_at = %s::timestamptz")
+        params.append(next_review_at)
+    if in_progress_index is not _UNSET:
+        sets.append("in_progress_index = %s")
+        params.append(in_progress_index)
+    if not sets:
+        return
+
+    conn = get_db_connection(username)
+    try:
+        cursor = conn.cursor()
+        params.extend([quiz_id, conn.user_uuid])
+        cursor.execute(
+            f"UPDATE quizzes SET {', '.join(sets)} WHERE id = %s AND user_uuid = %s;",
+            tuple(params)
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def save_quiz_concept_pool(quiz_id: int, concept_pool: list, username: str) -> None:
     """Persists a quiz's full multi-stage question pool.
 

@@ -7,7 +7,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Form, HTTPException, Depends
 
-from app import config, database, storage, ai
+from app import config, database, ai
 from app.ai import UsageLimitExceeded
 from app.dependencies import (
     get_active_username,
@@ -44,7 +44,7 @@ async def get_quiz(id: int, username: str = Depends(require_app_access)):
     db_row = cursor.fetchone()
     conn.close()
 
-    quiz_data = storage.get_quiz_json(id, username=username)
+    quiz_data = database.get_quiz_row(id, username=username)
     if not isinstance(quiz_data, dict):
         quiz_data = None
 
@@ -69,8 +69,8 @@ async def get_quiz(id: int, username: str = Depends(require_app_access)):
         yt_id = v_row.get("youtube_id")
         title = v_row.get("title")
         filename = yt_id if yt_id else f"doc_{video_id}"
-        
-        video_data = storage.get_video_json(filename, username=username)
+
+        video_data = database.get_video_row(video_id, username=username)
         user_config = config.load_user_config(username)
         q_counts = get_question_counts(user_config)
         question_count = q_counts.get(5, 5)
@@ -106,7 +106,7 @@ async def get_quiz(id: int, username: str = Depends(require_app_access)):
             "questions": ai_quiz_data.get("quiz", []),
             "importance_level": level
         }
-        storage.save_quiz_json(id, quiz_json_payload, username=username)
+        database.save_quiz_active_questions(id, quiz_json_payload["questions"], username=username)
         database.save_quiz_concept_pool(id, build_concept_pool(ai_quiz_data), username=username)
         quiz_data = quiz_json_payload
         
@@ -157,7 +157,7 @@ async def get_quiz(id: int, username: str = Depends(require_app_access)):
                 conn.close()
                 if v_row:
                     filename = v_row["youtube_id"] if v_row["youtube_id"] else f"doc_{video_id}"
-                    video_data = storage.get_video_json(filename, username=username)
+                    video_data = database.get_video_row(video_id, username=username)
                     yt_id = v_row["youtube_id"]
                     if yt_id:
                         ai_quiz_data = ai.analyze_youtube_video(f"https://www.youtube.com/watch?v={yt_id}", question_count=target_count, username=username)
@@ -172,7 +172,7 @@ async def get_quiz(id: int, username: str = Depends(require_app_access)):
                     questions_pool = ai_quiz_data.get("quiz", [])
                     if isinstance(quiz_data, dict):
                         quiz_data["questions"] = questions_pool
-                        storage.save_quiz_json(id, quiz_data, username=username)
+                        database.save_quiz_active_questions(id, questions_pool, username=username)
                     database.save_quiz_concept_pool(id, build_concept_pool(ai_quiz_data), username=username)
             except Exception as e:
                 logger.error(f"Auto-repair quiz {id} failed: {e}")
@@ -422,28 +422,17 @@ async def grade_quiz(
 
     
     if progress_srs_bool:
-        quiz_json = storage.get_quiz_json(id, username=username)
-        if quiz_json:
-            if is_final_bool:
-                quiz_json["srs_stage"] = next_stage
-                quiz_json["next_review_at"] = next_review.isoformat()
-                quiz_json["in_progress_index"] = None
-            else:
-                quiz_json["in_progress_index"] = next_in_progress
-            storage.save_quiz_json(id, quiz_json, username=username)
-            
+        # The srs_stage and next_review_at columns were already written above; this keeps the
+        # in-progress position in step. Finishing a session clears it, mid-session advances it.
         if is_final_bool:
-            video_id = row["video_id"]
-            if video_id:
-                cursor.execute("SELECT youtube_id FROM videos WHERE id = %s AND user_uuid = %s;", (video_id, user_uuid))
-                v_row = cursor.fetchone()
-                if v_row:
-                    filename = v_row["youtube_id"] if v_row.get("youtube_id") else f"doc_{video_id}"
-                    video_data = storage.get_video_json(filename, username=username)
-                    if video_data:
-                        video_data["srs_stage"] = next_stage
-                        video_data["next_review_at"] = next_review.isoformat()
-                        storage.save_video_json(filename, video_data, username=username)
+            database.update_quiz_progress(id, username=username, in_progress_index=None)
+        else:
+            database.update_quiz_progress(id, username=username, in_progress_index=next_in_progress)
+
+        # A block here previously read the video row, set srs_stage and next_review_at on the
+        # dict, and wrote it back. The videos table has neither column, and save_video_json
+        # persisted only summary, outline and fact_check, so it rewrote those three to
+        # themselves and changed nothing. Removed rather than translated.
                 
     conn.commit()
     conn.close()
@@ -480,12 +469,7 @@ async def reschedule_quiz(id: int, username: str = Depends(require_app_access)):
     conn.commit()
     conn.close()
 
-    
-    quiz_json = storage.get_quiz_json(id, username=username)
-    if quiz_json:
-        quiz_json["next_review_at"] = next_review.isoformat()
-        storage.save_quiz_json(id, quiz_json, username=username)
-        
+
     return {"status": "success", "next_review_at": next_review.isoformat()}
 
 
@@ -497,7 +481,7 @@ async def verify_quiz_guess(
     username: str = Depends(require_app_access)
 ):
     """Uses Gemini AI to conceptually evaluate a user's typed guess against the correct answer."""
-    quiz_data = storage.get_quiz_json(quiz_id, username=username)
+    quiz_data = database.get_quiz_row(quiz_id, username=username)
     if not quiz_data or "questions" not in quiz_data:
         raise HTTPException(status_code=404, detail="Quiz payload not found")
         

@@ -392,8 +392,7 @@ async def get_fact_check(id: int, username: str = Depends(require_app_access)):
     if not row:
         raise HTTPException(status_code=404, detail="Video not found")
         
-    yt_id = row.get("youtube_id") or f"doc_{id}"
-    video_json = storage.get_video_json(yt_id, username=username)
+    video_json = database.get_video_row(id, username=username)
     if not video_json:
         raise HTTPException(status_code=404, detail="Video metadata not found")
         
@@ -416,8 +415,7 @@ async def get_fact_check(id: int, username: str = Depends(require_app_access)):
         raise HTTPException(status_code=409, detail="No content available to fact-check yet. Wait for the video's summary to finish generating.")
 
     fact_check = ai.generate_fact_check(row["title"], text_content, video_id=id, username=username)
-    video_json["fact_check"] = fact_check
-    storage.save_video_json(yt_id, video_json, username=username)
+    database.save_video_analysis(id, username, fact_check=fact_check)
     return fact_check
 
 
@@ -552,20 +550,6 @@ async def create_preview_video(
         video_id = database.first_val(row)
         conn.commit()
 
-        json_filename = yt_id
-        video_json_payload = {
-            "id": video_id,
-            "youtube_id": yt_id,
-            "title": title,
-            "thumbnail_url": thumbnail,
-            "learning_goal_id": target_goal,
-            "custom_notes": "",
-            "is_temporary": 1,
-            "is_watchlist": 1,
-            "expires_at": expires_at,
-            "summary": []
-        }
-        storage.save_video_json(json_filename, video_json_payload, username=username)
 
         return {
             "status": "success",
@@ -611,14 +595,6 @@ async def confirm_video_import(
         )
         conn.commit()
         
-        yt_id = youtube_id or f"doc_{id}"
-        json_data = storage.get_video_json(yt_id, username=username)
-        if isinstance(json_data, dict) and json_data:
-            json_data["is_temporary"] = 0
-            json_data["expires_at"] = None
-            json_data["status"] = "processing"
-            storage.save_video_json(yt_id, json_data, username=username)
-
         task_id = None
         if youtube_id and not youtube_id.startswith("doc_"):
             payload = {
@@ -706,7 +682,7 @@ async def generate_video_quiz_for_level(
 
         conn.commit()
 
-        video_data = storage.get_video_json(yt_id, username=username)
+        video_data = database.get_video_row(id, username=username)
         q_counts = get_question_counts(user_config)
         # Generate a pool sized for the largest configured star level, not just this one,
         # so later star-rating changes can reslice the existing pool (see the lookup above)
@@ -734,17 +710,8 @@ async def generate_video_quiz_for_level(
 
 
 
-        quiz_json_payload = {
-            "id": quiz_id,
-            "video_id": id,
-            "video_filename": yt_id,
-            "quiz_type": "video",
-            "srs_stage": 0,
-            "next_review_at": next_review,
-            "questions": ai_quiz_data.get("quiz", []),
-            "importance_level": level
-        }
-        storage.save_quiz_json(quiz_id, quiz_json_payload, username=username)
+        # The INSERT above does not carry questions_json, so this is the write that fills it.
+        database.save_quiz_active_questions(quiz_id, ai_quiz_data.get("quiz", []), username=username)
         database.save_quiz_concept_pool(quiz_id, build_concept_pool(ai_quiz_data), username=username)
 
         return {"status": "success", "quiz_id": quiz_id}
