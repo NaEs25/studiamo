@@ -328,13 +328,12 @@ async def delete_video(id: int, username: str = Depends(require_app_access)):
     conn = database.get_db_connection(username)
     user_uuid = conn.user_uuid
     cursor = conn.cursor()
-    cursor.execute("SELECT youtube_id, learning_goal_id FROM videos WHERE id = %s AND user_uuid = %s;", (id, user_uuid))
+    cursor.execute("SELECT id FROM videos WHERE id = %s AND user_uuid = %s;", (id, user_uuid))
     row = cursor.fetchone()
     if not row:
         conn.close()
         raise HTTPException(status_code=404, detail="Video not found")
-    yt_id = row.get("youtube_id") or f"doc_{id}"
-    storage.delete_video_dir(yt_id, goal_id=row.get("learning_goal_id"), username=username)
+    storage.delete_video_document(id, username=username)
     cursor.execute("DELETE FROM quiz_attempts WHERE video_id = %s AND user_uuid = %s;", (id, user_uuid))
     cursor.execute("DELETE FROM quizzes WHERE video_id = %s AND user_uuid = %s;", (id, user_uuid))
     cursor.execute("DELETE FROM videos WHERE id = %s AND user_uuid = %s;", (id, user_uuid))

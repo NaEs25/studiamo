@@ -213,15 +213,14 @@ async def delete_goal(
         raise HTTPException(status_code=404, detail="Goal not found")
 
     if delete_materials:
-        cursor.execute("SELECT id, youtube_id FROM videos WHERE learning_goal_id = %s AND user_uuid = %s;", (id, user_uuid))
+        cursor.execute("SELECT id FROM videos WHERE learning_goal_id = %s AND user_uuid = %s;", (id, user_uuid))
         video_rows = cursor.fetchall()
         for v in video_rows:
             v_id = v["id"]
-            yt_id = v.get("youtube_id") or f"doc_{v_id}"
             cursor.execute("DELETE FROM quiz_attempts WHERE video_id = %s AND user_uuid = %s;", (v_id, user_uuid))
             cursor.execute("DELETE FROM quizzes WHERE video_id = %s AND user_uuid = %s;", (v_id, user_uuid))
             cursor.execute("DELETE FROM videos WHERE id = %s AND user_uuid = %s;", (v_id, user_uuid))
-            storage.delete_video_json(yt_id, username=username)
+            storage.delete_video_document(v_id, username=username)
     else:
         cursor.execute("UPDATE videos SET learning_goal_id = NULL WHERE learning_goal_id = %s AND user_uuid = %s;", (id, user_uuid))
         
