@@ -39,10 +39,6 @@ def get_user_items_dir(username: str = "default_user") -> Path:
     items_dir.mkdir(parents=True, exist_ok=True)
     return items_dir
 
-def get_video_dir_path(filename: str, goal_id: int = None, title: str = None, username: str = "default_user") -> Path:
-    """Returns the flat user items directory path: users/<user_uuid>/items/"""
-    return get_user_items_dir(username)
-
 _SAFE_DOC_EXT_PATTERN = re.compile(r"^\.[a-z0-9]{1,10}$")
 
 
@@ -56,12 +52,12 @@ def safe_doc_extension(filename) -> str:
     return ext if _SAFE_DOC_EXT_PATTERN.fullmatch(ext) else ".txt"
 
 
-def get_document_path(video_id, extension: str, goal_id: int = None, username: str = "default_user") -> Path:
+def get_document_path(video_id, extension: str, username: str = "default_user") -> Path:
     """Returns the on-disk path for an uploaded document, using one naming
     scheme (doc_<video_id><ext>) shared consistently by save, serve, and
     delete , never the client-supplied filename."""
     ext = extension if _SAFE_DOC_EXT_PATTERN.fullmatch(extension or "") else ".txt"
-    return get_video_dir_path(f"doc_{video_id}", goal_id=goal_id, username=username) / f"doc_{video_id}{ext}"
+    return get_user_items_dir(username) / f"doc_{video_id}{ext}"
 
 def delete_file(filepath: Path):
     """Deletes a file if it exists."""

@@ -36,7 +36,7 @@ async def get_import_tasks_route(username: str = Depends(require_app_access)):
 
 
 @router.post("/videos/import-tasks/{task_id}/retry")
-async def retry_import_task_route(task_id: int, username: str = Depends(require_app_access)):
+async def retry_import_task_route(task_id: str, username: str = Depends(require_app_access)):
     """Retries a failed import backlog task."""
     success = ImportQueueManager.get_instance().retry_task(task_id, username)
     if not success:
@@ -45,7 +45,7 @@ async def retry_import_task_route(task_id: int, username: str = Depends(require_
 
 
 @router.delete("/videos/import-tasks/{task_id}")
-async def dismiss_import_task_route(task_id: int, username: str = Depends(require_app_access)):
+async def dismiss_import_task_route(task_id: str, username: str = Depends(require_app_access)):
     """Dismisses/deletes an import task from backlog view."""
     success = ImportQueueManager.get_instance().dismiss_task(task_id, username)
     if not success:
@@ -170,9 +170,7 @@ async def add_content(
         # the filename itself, so a crafted name (e.g. containing "../") can't
         # write outside this directory.
         safe_ext = storage.safe_doc_extension(file.filename)
-        saved_file_path = storage.get_document_path(
-            video_id, safe_ext, goal_id=learning_goal_id, username=username
-        )
+        saved_file_path = storage.get_document_path(video_id, safe_ext, username=username)
         saved_file_path.write_bytes(file_bytes)
         payload["file_path"] = str(saved_file_path)
         payload["original_filename"] = file.filename
@@ -239,14 +237,16 @@ def _resolve_video_document(video_id: int, username: str) -> Path:
     conn = database.get_db_connection(username)
     user_uuid = conn.user_uuid
     cursor = conn.cursor()
-    cursor.execute("SELECT learning_goal_id FROM videos WHERE id = %s AND user_uuid = %s;", (video_id, user_uuid))
+    # Scoped to user_uuid: this is the ownership check for the document being served,
+    # not a data fetch. Nothing but the row's existence is used, so it selects id.
+    cursor.execute("SELECT id FROM videos WHERE id = %s AND user_uuid = %s;", (video_id, user_uuid))
     row = cursor.fetchone()
     conn.close()
 
     if not row:
         raise HTTPException(status_code=404, detail="Document item not found")
 
-    doc_dir = storage.get_video_dir_path(f"doc_{video_id}", goal_id=row["learning_goal_id"], username=username)
+    doc_dir = storage.get_user_items_dir(username)
     if not doc_dir.exists():
         raise HTTPException(status_code=404, detail="Document storage directory not found")
 
