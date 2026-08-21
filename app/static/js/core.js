@@ -81,7 +81,13 @@ async function fetchAPI(url, options = {}) {
                         msg = err.message;
                     }
                 } catch (e) {}
-                throw new Error(msg);
+                // Carry the status on the error. Without it the only thing a caller can
+                // branch on is the prose of `detail`, which drifts the moment the wording
+                // changes: the quiz loader tested for 'rate-limit' against a message that
+                // says "rate limiting", so its guard never once fired.
+                const apiError = new Error(msg);
+                apiError.status = response.status;
+                throw apiError;
             }
             return await response.json();
         } catch (e) {

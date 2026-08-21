@@ -231,27 +231,23 @@ async function startQuiz(quizId, videoId = null, level = 3) {
         if (typeof hideToast === 'function') hideToast();
         console.error("Quiz retrieval error:", e);
         const msg = e?.message || String(e);
-        if (videoId && videoId !== 'null' && videoId !== 'undefined') {
-            // Only fall back to triggerStudy if NOT a transcript issue (422)
-            if (!msg.includes('transcript') && !msg.includes('rate-limit')) {
-                return triggerStudy(videoId, level);
-            }
+        // 429 is the usage limit (rate limit or monthly budget). Retrying through
+        // triggerStudy would fire a second AI call against an account that was just
+        // told to slow down, so surface the message instead.
+        if (videoId && videoId !== 'null' && videoId !== 'undefined' && e?.status !== 429) {
+            return triggerStudy(videoId, level);
         }
         // Show a friendly non-blocking toast
         if (typeof showToast === 'function') {
-            showToast(msg.includes('transcript') ? 'No transcript: re-import to enable Study.' : ('Could not load quiz: ' + msg), 'failed', 4000);
+            showToast('Could not load quiz: ' + msg, 'failed', 4000);
         }
         const toastEl = document.getElementById('global-toast') || document.getElementById('toast');
         if (toastEl) {
-            toastEl.textContent = msg.includes('transcript')
-                ? 'No transcript: re-import the video to enable Study.'
-                : ('Could not load quiz: ' + msg);
+            toastEl.textContent = 'Could not load quiz: ' + msg;
             toastEl.classList.remove('hidden', 'opacity-0');
             setTimeout(() => toastEl.classList.add('opacity-0'), 5000);
         } else {
-            alert(msg.includes('transcript')
-                ? 'This video has no transcript. Please re-import the video to enable quizzes.'
-                : ('Could not load quiz: ' + msg));
+            alert('Could not load quiz: ' + msg);
         }
     }
 }
