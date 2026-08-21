@@ -68,6 +68,22 @@ from app.dependencies import (
 )
 
 
+def _note_text_truncation(analysis: dict, summary: list) -> list:
+    """Prepends a notice when only part of a document reached the AI.
+
+    The long-document counterpart of the long-video notice in the YouTube path. The import
+    still succeeds either way, so without this the summary and quizzes would cover just the
+    opening section with nothing on screen saying so. Word count comes from the constant
+    rather than being written out here, so the two cannot drift apart.
+    """
+    if not analysis.get("text_truncated"):
+        return list(summary)
+    return [
+        f"⚠️ Only the first {ai.MAX_TRANSCRIPT_WORDS:,} words of this content were processed, "
+        f"due to technical limitations."
+    ] + list(summary)
+
+
 class IImportTaskProcessor(ABC):
     """Abstract interface for all background task processors."""
 
@@ -334,7 +350,7 @@ class DocumentTaskProcessor(IImportTaskProcessor):
         try:
 
             category = analysis.get("category", "General")
-            summary = analysis.get("summary", [])
+            summary = _note_text_truncation(analysis, analysis.get("summary", []))
             outline = analysis.get("outline", [])
             quiz_items = analysis.get("quiz", [])
             quiz_stages = analysis.get("stages", {})
@@ -435,7 +451,7 @@ class NotesTaskProcessor(IImportTaskProcessor):
         try:
 
             category = analysis.get("category", "General")
-            summary = analysis.get("summary", [])
+            summary = _note_text_truncation(analysis, analysis.get("summary", []))
             outline = analysis.get("outline", [])
             quiz_items = analysis.get("quiz", [])
             quiz_stages = analysis.get("stages", {})

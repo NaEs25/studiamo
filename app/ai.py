@@ -19,6 +19,13 @@ logger = logging.getLogger("studiamo")
 # to Gemini (see analyze_youtube_video) to bound worst-case per-video cost.
 MAX_VIDEO_ANALYSIS_SECONDS = 30 * 60
 
+# The same bound for the text path (documents and pasted notes, see
+# analyze_video_transcript). Text has no duration to clip against, and the only other
+# limit upstream is the 20 MB upload ceiling, which permits far more words than any
+# single request should carry. Set well above the ~4,500 spoken words that fit in
+# MAX_VIDEO_ANALYSIS_SECONDS, since written material is denser and legitimately longer.
+MAX_TRANSCRIPT_WORDS = 15000
+
 
 # --- AI usage limits: rate limit + monthly budget enforcement ---
 #
@@ -871,11 +878,33 @@ def analyze_youtube_video(youtube_url: str, question_count: int, username: str =
     result["duration_seconds"] = duration_seconds
     return result
 
+def _truncate_to_word_limit(text: str, max_words: int = MAX_TRANSCRIPT_WORDS) -> tuple[str, bool]:
+    """Cuts `text` to at most `max_words` words, returning (text, was_truncated).
+
+    Slices the original string at the cut point rather than re-joining split words, so
+    the newlines and indentation the model relies on to find sections survive intact.
+    Returns the input untouched when it is already short enough, which is the common case.
+    """
+    count = 0
+    for match in re.finditer(r"\S+", text):
+        count += 1
+        if count > max_words:
+            return text[:match.start()].rstrip(), True
+    return text, False
+
+
 def analyze_video_transcript(transcript_text: str, question_count: int, active_goals: list = None, video_id: int = None, username: str = "default_user") -> dict:
     """Fallback function for document text processing."""
     client = get_gemini_client(username=username)
 
-    prompt = f"""{_goal_focus_block(active_goals=active_goals)}    Analyze this text content. Perform the following operations:
+    transcript_text, text_truncated = _truncate_to_word_limit(transcript_text)
+    truncation_note = (
+        f"\n    NOTE: Only the first {MAX_TRANSCRIPT_WORDS:,} words of this content were provided, "
+        "base your analysis strictly on that portion.\n"
+        if text_truncated else ""
+    )
+
+    prompt = f"""{truncation_note}{_goal_focus_block(active_goals=active_goals)}    Analyze this text content. Perform the following operations:
     1. Categorize it into a broad, single-word category.
     2. Write a dynamic summary tailored to the text length (3-8 key takeaway bullets).
     3. Extract a structural outline with section titles, timestamps (set to 0 if text has no timing), and summaries.
@@ -900,7 +929,9 @@ def analyze_video_transcript(transcript_text: str, question_count: int, active_g
         username=username
     )
 
-    return _normalise_analysis(json.loads(response_text))
+    result = _normalise_analysis(json.loads(response_text))
+    result["text_truncated"] = text_truncated
+    return result
 
 def generate_topic_quiz(topic: str, description: str, question_count: int, quiz_id: int = None, username: str = "default_user") -> dict:
     client = get_gemini_client(username=username)
@@ -1013,7 +1044,19 @@ def fact_check_transcript(transcript_text: str, video_id: int = None, username: 
     """Compares the transcript content against general knowledge/scientific consensus to detect contradictions."""
     client = get_gemini_client(username=username)
 
-    prompt = f"""
+    # The caller builds this from a video's summary and custom notes, so it is short in
+    # practice. Capped anyway as a guard, and the model is told when that happens rather
+    # than being handed a silently shortened document to pass verdicts on. No flag is
+    # returned: the response goes straight to the client, and a key nothing reads is
+    # exactly the kind of dead payload this path is being cleaned of.
+    transcript_text, text_truncated = _truncate_to_word_limit(transcript_text)
+    truncation_note = (
+        f"\n    NOTE: Only the first {MAX_TRANSCRIPT_WORDS:,} words were provided, "
+        "restrict the fact-check to that portion.\n"
+        if text_truncated else ""
+    )
+
+    prompt = f"""{truncation_note}
     Analyze this transcript. Perform a detail-oriented fact-check comparison against generally accepted scientific consensus, historical consensus, or common factual knowledge.
     
     Identify:
