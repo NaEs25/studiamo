@@ -54,6 +54,38 @@ def record_waitlist_lead(
         conn.close()
 
 
+def mark_waitlist_converted(*emails: str) -> int:
+    """Stamps converted_at on the lead row(s) for an account that is now off the waitlist and
+    active. Returns how many rows were stamped. Idempotent: an already-stamped row keeps its
+    original timestamp, so re-running a promotion never rewrites history.
+
+    Kept separate from mark_waitlist_email_sent('spot_ready') on purpose. That one records
+    that an email was delivered; this one records that the person can actually use the
+    product. They come apart whenever a send fails, and it is this fact, not the delivery,
+    that a later mailer has to filter on. Stamping only on successful delivery would leave a
+    promoted user looking identical to someone still waiting, and mail them accordingly.
+
+    Takes several addresses because an account can be reached at either `email` or
+    `google_email`, and the lead may have been captured under either one.
+    """
+    candidates = [e.strip().lower() for e in emails if e and e.strip()]
+    if not candidates:
+        return 0
+    conn = get_waitlist_db()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE landing_waitlist SET converted_at = NOW() "
+            "WHERE LOWER(email) = ANY(?) AND converted_at IS NULL;",
+            (candidates,),
+        )
+        stamped = cursor.rowcount
+        conn.commit()
+        return stamped
+    finally:
+        conn.close()
+
+
 def mark_waitlist_email_sent(email: str, email_type: str) -> None:
     """Stamps a landing_waitlist row after an email actually sent successfully,
     so retries stay safe and delivery is auditable. `email_type` is
