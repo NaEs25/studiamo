@@ -706,8 +706,8 @@ async def send_test_email_route(username: str = Depends(get_active_username)):
 
 @router.post("/test/schedule_due_now")
 async def test_schedule_due_now(
-    username: str = Depends(get_active_username),
     _dev_only: None = Depends(require_dev_tools_enabled),
+    username: str = Depends(get_active_username),
 ):
     """Test helper: Marks at least 1 quiz for the active user as due right now and triggers test Telegram message."""
     target_user = username
@@ -782,8 +782,8 @@ async def unsubscribe_push(request: Request, username: str = Depends(get_active_
 
 @router.post("/test/reset_due")
 async def test_reset_due(
-    username: str = Depends(get_active_username),
     _dev_only: None = Depends(require_dev_tools_enabled),
+    username: str = Depends(get_active_username),
 ):
     """Resets all quizzes for the active user back to future dates so nothing is due."""
     target_user = username
