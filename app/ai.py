@@ -1237,7 +1237,11 @@ def generate_daily_recommendations(goals: list, force_refresh: bool = False, use
                     seen_yt_ids.add(yt_id)
                     v["goal_id"] = goal_id
                     v["goal_title"] = goal_title
-                    v["channel"] = v.get("views", "YouTube")
+                    # No channel assignment here: search_youtube_recommendations already
+                    # sets it from the snippet's channelTitle. This used to overwrite it
+                    # with v["views"], so the recommendation card printed the formatted
+                    # view count next to the channel icon and the real channel name never
+                    # reached the cache at all.
                     recommendations.append(v)
                     collected_for_goal += 1
                     if collected_for_goal >= count:
