@@ -573,6 +573,49 @@ def find_user_by_referral_code(code: str):
             release_pooled_connection(conn)
 
 
+def find_user_by_google_identity(google_id: str, email: str):
+    """Returns {"username", "user_uuid", "status", "referral_code"} for the account that owns a
+    Google identity, or None.
+
+    Deliberately matches only on identities an account has already proven belongs to it. Matching
+    by bare username would let anyone claim an existing account just by registering a Google
+    address whose local-part equals that username (alice@anydomain.com for the account "alice").
+
+    The ordering is the point, not decoration. google_id is Google's stable subject id and is
+    authoritative; google_email and email are weaker and can go stale when someone changes their
+    Google address. An unordered LIMIT 1 lets Postgres pick either row whenever two accounts
+    overlap on these columns, so the same person could land in a different account from one login
+    to the next. Ranking makes the winner the same every time.
+    """
+    if not google_id and not email:
+        return None
+    conn = None
+    try:
+        conn = get_pooled_raw_connection()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        cursor.execute(
+            """
+            SELECT username, user_uuid, status, referral_code
+              FROM user_profile
+             WHERE (google_id IS NOT NULL AND google_id = %s)
+                OR (google_email IS NOT NULL AND LOWER(google_email) = LOWER(%s))
+                OR (email IS NOT NULL AND LOWER(email) = LOWER(%s))
+             ORDER BY CASE
+                        WHEN google_id IS NOT NULL AND google_id = %s THEN 0
+                        WHEN google_email IS NOT NULL AND LOWER(google_email) = LOWER(%s) THEN 1
+                        ELSE 2
+                      END,
+                      id
+             LIMIT 1;
+            """,
+            (str(google_id), email, email, str(google_id), email)
+        )
+        return cursor.fetchone()
+    finally:
+        if conn is not None:
+            release_pooled_connection(conn)
+
+
 def credit_referral(referral_code: str) -> bool:
     """Atomically increments the referrer's referral_count if under the 5-referral cap.
     Single UPDATE (not read-then-write) so concurrent referrals can't double-credit past the cap.

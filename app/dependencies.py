@@ -104,13 +104,21 @@ def _decode_session_token(token: str) -> Optional[str]:
 _oauth_state_signer = URLSafeSerializer(SECRET_KEY, salt="yb-oauth-state-v1")
 
 
-def _sign_oauth_state(dest_path: str, ref_code: str, require_existing: bool, referrer: str = "") -> str:
+def _sign_oauth_state(dest_path: str, ref_code: str, require_existing: bool, referrer: str = "",
+                      link_intent: bool = False) -> str:
     """Returns a signed, tamper-proof state string for Google OAuth 2.0 requests.
 
     `referrer` carries the page that sent the visitor into the OAuth flow (captured at
     /auth/google, the last hop where the browser's Referer header still points at our own
     site, not Google's consent screen) so the callback, which only ever sees Google as its
     Referer, can still attribute the signup to where it actually started.
+
+    `link_intent` records that the flow was started by the "Link Google Account" button in
+    Settings rather than by a login button. It rides in the signed state, not in a cookie or
+    a query param on the callback, because it decides whether the callback is allowed to
+    overwrite an account's Google identity, see google_callback. Inferring that intent from
+    "a session cookie happens to be present" instead is what let a stray second callback
+    rebind a live account to an unrelated Google account.
     """
     import time
     payload = {
@@ -119,28 +127,34 @@ def _sign_oauth_state(dest_path: str, ref_code: str, require_existing: bool, ref
         "e": 1 if require_existing else 0,
         "t": int(time.time()),
         "rf": (referrer or "")[:500],
+        "l": 1 if link_intent else 0,
     }
     return _oauth_state_signer.dumps(payload)
 
 
-def _decode_oauth_state(state_str: Optional[str]) -> tuple[str, str, bool, str]:
+def _decode_oauth_state(state_str: Optional[str]) -> tuple[str, str, bool, str, bool]:
     """Decodes and validates a signed OAuth state token, rejecting expired (>15 min) or forged states.
-    Falls back gracefully to legacy plain string format if needed for backward compatibility."""
+    Falls back gracefully to legacy plain string format if needed for backward compatibility.
+
+    Returns (dest_path, ref_code, require_existing, referrer, link_intent). Every failure and
+    legacy path returns link_intent False: an unreadable state must never be the thing that
+    authorizes rebinding an account's Google identity."""
     import time
     if not state_str:
-        return "/", "", False, ""
+        return "/", "", False, "", False
     try:
         data = _oauth_state_signer.loads(state_str)
         issued_at = data.get("t", 0)
         if time.time() - issued_at > 900:
             logger.warning("[google_oauth] OAuth state parameter expired (>15 minutes old).")
-            return "/", "", False, ""
+            return "/", "", False, "", False
         dest_path = str(data.get("d", "/")).strip()
         dest_path = dest_path if dest_path.startswith("/") else "/"
         ref_code = str(data.get("r", "")).strip()
         require_existing = bool(data.get("e", 0))
         referrer = str(data.get("rf", "")).strip()
-        return dest_path, ref_code, require_existing, referrer
+        link_intent = bool(data.get("l", 0))
+        return dest_path, ref_code, require_existing, referrer, link_intent
     except (BadSignature, Exception):
         if "|" in state_str:
             raw_dest, _, raw_rest = state_str.partition("|")
@@ -148,9 +162,9 @@ def _decode_oauth_state(state_str: Optional[str]) -> tuple[str, str, bool, str]:
             dest_path = raw_dest.strip() if raw_dest.strip().startswith("/") else "/"
             ref_code = raw_ref.strip()
             require_existing = raw_require_existing.strip() == "1"
-            return dest_path, ref_code, require_existing, ""
+            return dest_path, ref_code, require_existing, "", False
         logger.warning(f"[google_oauth] Invalid or tampered OAuth state parameter: {state_str}")
-        return "/", "", False, ""
+        return "/", "", False, "", False
 
 
 
