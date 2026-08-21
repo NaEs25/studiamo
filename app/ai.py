@@ -5,7 +5,6 @@ import logging
 import os
 import random
 import re
-import struct
 import subprocess
 import tempfile
 import json
@@ -737,23 +736,6 @@ topic_quiz_schema = {
     "required": ["category", "stages"]
 }
 
-goal_recs_schema = {
-    "type": "OBJECT",
-    "properties": {
-        "search_queries": {
-            "type": "ARRAY",
-            "items": { "type": "STRING" },
-            "description": "3-5 optimized YouTube search queries."
-        },
-        "key_concepts": {
-            "type": "ARRAY",
-            "items": { "type": "STRING" },
-            "description": "3-5 core concepts to master this goal."
-        }
-    },
-    "required": ["search_queries", "key_concepts"]
-}
-
 quiz_verification_schema = {
     "type": "OBJECT",
     "properties": {
@@ -889,16 +871,10 @@ def analyze_youtube_video(youtube_url: str, question_count: int, username: str =
     result["duration_seconds"] = duration_seconds
     return result
 
-def truncate_transcript(text: str, max_words: int = 999999) -> str:
-    """Returns the complete transcript text without truncation to ensure full video context is sent."""
-    return text
-
 def analyze_video_transcript(transcript_text: str, question_count: int, active_goals: list = None, video_id: int = None, username: str = "default_user") -> dict:
     """Fallback function for document text processing."""
     client = get_gemini_client(username=username)
-    
-    transcript_text = truncate_transcript(transcript_text)
-    
+
     prompt = f"""{_goal_focus_block(active_goals=active_goals)}    Analyze this text content. Perform the following operations:
     1. Categorize it into a broad, single-word category.
     2. Write a dynamic summary tailored to the text length (3-8 key takeaway bullets).
@@ -950,34 +926,6 @@ def generate_topic_quiz(topic: str, description: str, question_count: int, quiz_
     )
 
     return _normalise_analysis(json.loads(response_text))
-
-
-import struct
-
-def pcm_to_wav(pcm_data: bytes, sample_rate: int = 24000, num_channels: int = 1, bits_per_sample: int = 16) -> bytes:
-    """Wraps raw 16-bit PCM audio data with a standard RIFF WAV header."""
-    byte_rate = sample_rate * num_channels * (bits_per_sample // 8)
-    block_align = num_channels * (bits_per_sample // 8)
-    data_size = len(pcm_data)
-    chunk_size = 36 + data_size
-    
-    header = struct.pack(
-        '<4sI4s4sIHHIIHH4sI',
-        b'RIFF',
-        chunk_size,
-        b'WAVE',
-        b'fmt ',
-        16,                # Subchunk1Size for PCM
-        1,                 # AudioFormat 1 = PCM
-        num_channels,
-        sample_rate,
-        byte_rate,
-        block_align,
-        bits_per_sample,
-        b'data',
-        data_size
-    )
-    return header + pcm_data
 
 
 def detect_text_language(text: str) -> str:
@@ -1064,10 +1012,7 @@ def generate_speech_audio(text: str, speed: float = 1.0) -> tuple[bytes, str]:
 def fact_check_transcript(transcript_text: str, video_id: int = None, username: str = "default_user") -> dict:
     """Compares the transcript content against general knowledge/scientific consensus to detect contradictions."""
     client = get_gemini_client(username=username)
-    
-    # Cap transcript length to control token costs
-    transcript_text = truncate_transcript(transcript_text)
-    
+
     prompt = f"""
     Analyze this transcript. Perform a detail-oriented fact-check comparison against generally accepted scientific consensus, historical consensus, or common factual knowledge.
     
@@ -1093,11 +1038,6 @@ def fact_check_transcript(transcript_text: str, video_id: int = None, username: 
     )
     
     return json.loads(response_text)
-
-def generate_fact_check(title: str, transcript_text: str, video_id: int = None, username: str = "default_user") -> dict:
-    """Alias for fact_check_transcript."""
-    return fact_check_transcript(transcript_text, video_id=video_id, username=username)
-
 
 def verify_user_guess(question: str, correct_answer: str, user_guess: str, quiz_id: int = None, video_id: int = None, username: str = "default_user") -> dict:
     """Uses Gemini Flash to conceptually evaluate a user's guess against the correct answer."""
