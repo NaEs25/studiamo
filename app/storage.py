@@ -65,12 +65,22 @@ def delete_file(filepath: Path):
         os.remove(filepath)
 
 # Video Storage Handlers
-def delete_video_json(filename: str, username: str = "default_user"):
-    items_dir = get_user_items_dir(username)
-    for ext in [".json", ".pdf", ".txt", ".png", ".jpg", ".jpeg", "_thumb.jpg"]:
-        target = items_dir / f"{filename}{ext}"
-        if target.exists():
-            delete_file(target)
+def delete_video_document(video_id, username: str = "default_user"):
+    """Deletes the uploaded document belonging to a video, whatever extension it
+    was saved under.
+
+    Globs doc_<video_id>.* rather than walking a fixed extension list, so it
+    matches exactly what get_document_path() writes and what
+    _resolve_video_document() serves. The old list (.json/.pdf/.txt/.png/.jpg/
+    .jpeg/_thumb.jpg) predates DB storage: it was keyed on a filename-shaped
+    string ("<youtube_id>" or "doc_<id>"), so the YouTube half could never match
+    anything, and the document half missed every extension outside the list.
+    safe_doc_extension() accepts any short alphanumeric suffix, so a .md or
+    .docx upload was left on disk forever, counting against the user's storage
+    quota with no way to reclaim it.
+    """
+    for target in get_user_items_dir(username).glob(f"doc_{video_id}.*"):
+        delete_file(target)
 
 # Quiz Storage Handlers
 def add_dismissed_recommendation(youtube_id: str, username: str = "default_user"):
@@ -157,6 +167,3 @@ def clear_daily_recommendation_cache(username: str = "default_user"):
         logger.error(f"Error clearing daily recommendations for {username}: {e}")
     finally:
         conn.close()
-
-def delete_video_dir(filename: str, goal_id: int = None, username: str = "default_user"):
-    delete_video_json(filename, username=username)
