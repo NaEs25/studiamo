@@ -22,6 +22,7 @@ from app.dependencies import (
     limiter,
     hash_password,
     verify_password,
+    require_dev_tools_enabled,
 )
 
 router = APIRouter(prefix="/api", tags=["Settings & Backup"])
@@ -519,7 +520,18 @@ async def update_review_mode(
     mode: Optional[str] = Form(None),
     username: str = Depends(get_active_username)
 ):
-    """Updates the review mode (video/topic/mixed) directly in user_profile."""
+    """Updates the review mode (video/topic/mixed) directly in user_profile.
+
+    NOTE: nothing consumes review_mode. It is written here, returned by GET /api/settings and
+    bound to a <select>, but no code branches on the value: quizzes.py selects it and then reads
+    only xp and level. Its UI control is disabled and labelled "Coming soon" (see index.html)
+    until the grouping is actually implemented.
+
+    Three vocabularies disagree and need reconciling first. This endpoint and the bulk settings
+    save accept video/topic/mixed, the dropdown offers video/goal, and schema.py defaults to
+    'video' while GET /api/settings falls back to 'mixed'. One production row already holds
+    'goal', which the check below would now reject.
+    """
     if mode not in ["video", "topic", "mixed"]:
         raise HTTPException(status_code=400, detail=f"Invalid review mode '{mode}'. Must be video, topic, or mixed.")
     conn = database.get_db_connection(username)
@@ -693,7 +705,10 @@ async def send_test_email_route(username: str = Depends(get_active_username)):
 
 
 @router.post("/test/schedule_due_now")
-async def test_schedule_due_now(username: str = Depends(get_active_username)):
+async def test_schedule_due_now(
+    username: str = Depends(get_active_username),
+    _dev_only: None = Depends(require_dev_tools_enabled),
+):
     """Test helper: Marks at least 1 quiz for the active user as due right now and triggers test Telegram message."""
     target_user = username
     user_uuid = config.get_user_uuid_from_db(target_user)
@@ -766,7 +781,10 @@ async def unsubscribe_push(request: Request, username: str = Depends(get_active_
 
 
 @router.post("/test/reset_due")
-async def test_reset_due(username: str = Depends(get_active_username)):
+async def test_reset_due(
+    username: str = Depends(get_active_username),
+    _dev_only: None = Depends(require_dev_tools_enabled),
+):
     """Resets all quizzes for the active user back to future dates so nothing is due."""
     target_user = username
     user_uuid = config.get_user_uuid_from_db(target_user)

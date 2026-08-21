@@ -232,6 +232,18 @@ def require_local_auth_enabled() -> None:
         )
 
 
+def require_dev_tools_enabled() -> None:
+    """Dependency guard: blocks the /api/test/* SRS helpers in cloud mode.
+
+    These exist to put a local account into a given review state while working on the
+    scheduler. They have no UI, and they rewrite every quiz's next_review_at for the
+    caller, so on cloud the only thing finding one can do is destroy your own schedule.
+    Self-hosted keeps them, since there the operator and the user are the same person.
+    """
+    if config.IS_CLOUD:
+        raise HTTPException(status_code=404, detail="Not found")
+
+
 # --- Bug tracker admin gate ---
 # A separate signed cookie, not the yb_session/_signer above: this gates a single
 # shared secret (see scripts/set_admin_bug_password.py), not a per-user account, so
