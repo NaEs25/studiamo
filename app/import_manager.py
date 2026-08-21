@@ -6,7 +6,7 @@ import asyncio
 import traceback
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone, timedelta
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Union
 from pathlib import Path
 
 
