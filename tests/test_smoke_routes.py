@@ -42,6 +42,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import pytest
 
+from app import config
+
 # path param name -> a value satisfying its route converter (int routes need a
 # number; str/default routes accept anything). Not a real id in either case.
 DUMMY_PATH_VALUES = {
@@ -80,6 +82,16 @@ EXCLUDED = {
 # the panel happens to be checked out would make the whole file environment-dependent, so those
 # routes are skipped rather than declared safe.
 ADMIN_PREFIX = "/admin"
+
+# Auth-gated routes that answer 404 rather than 401 when APP_MODE=cloud. The guard that
+# hides them (dependencies.require_dev_tools_enabled) resolves before the auth dependency
+# on purpose: in cloud these routes are meant not to exist, and a 401 would confirm that
+# they do. Self-hosted leaves them reachable, so there they still 401 unauthenticated and
+# this exception does not apply.
+HIDDEN_IN_CLOUD = {
+    ("POST", "/api/test/reset_due"),
+    ("POST", "/api/test/schedule_due_now"),
+}
 
 
 def _iter_routes():
@@ -168,7 +180,8 @@ def test_route_does_not_500(client, method, path, needs_auth):
         f"{method} {path} -> {response.status_code}: {response.text[:300]}"
     )
     if needs_auth:
-        assert response.status_code in (401, 403), (
+        expected = (401, 403, 404) if ((method, path) in HIDDEN_IN_CLOUD and config.IS_CLOUD) else (401, 403)
+        assert response.status_code in expected, (
             f"{method} {path} requires auth but returned {response.status_code} unauthenticated, "
-            f"expected 401/403: {response.text[:300]}"
+            f"expected {'/'.join(str(e) for e in expected)}: {response.text[:300]}"
         )
