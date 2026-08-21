@@ -7,6 +7,7 @@ from typing import Optional
 from urllib.parse import quote
 
 import httpx
+import psycopg2
 from fastapi import APIRouter, Request, Form, HTTPException, Depends, BackgroundTasks
 from fastapi.responses import JSONResponse, RedirectResponse
 
@@ -311,7 +312,29 @@ async def google_callback(
     error: Optional[str] = None,
     state: Optional[str] = None
 ):
-    """Handles Google OAuth callback code exchange and session creation."""
+    """Handles Google OAuth callback code exchange and session creation.
+
+    Thin wrapper so a database blip cannot surface as a raw 500. It matters more here than
+    on other routes: Google's authorization code is single-use and is already spent by the
+    time any query runs, so the 500 page the person reloads re-sends a code Google now
+    rejects, and the browser reports 'token_exchange_failed' for what was really a dropped
+    connection. Sending them back to /login makes the retry start a fresh flow that can
+    actually succeed."""
+    try:
+        return await _google_callback(request, background_tasks, code, error, state)
+    except psycopg2.OperationalError as e:
+        import logging
+        logging.getLogger("studiamo").error(f"[google_oauth] Database unavailable during callback: {e}")
+        return RedirectResponse("/login?error=temporary_error")
+
+
+async def _google_callback(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    code: Optional[str] = None,
+    error: Optional[str] = None,
+    state: Optional[str] = None
+):
     if config.IS_SELFHOSTED:
         raise HTTPException(status_code=400, detail="Google SSO is disabled in self-hosted mode.")
 

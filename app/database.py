@@ -5,6 +5,7 @@ Provides unified connection pool & parameter wrapping for clean execution across
 import json
 import os
 import sys
+import time
 import logging
 import psycopg2
 import psycopg2.pool
@@ -22,6 +23,17 @@ _initialized_users = set()
 
 POOL_MIN_CONN = int(os.environ.get("SUPABASE_POOL_MIN_CONN", "4"))
 POOL_MAX_CONN = int(os.environ.get("SUPABASE_POOL_MAX_CONN", "50"))
+
+# How long a connection may sit unused in the pool before it is pinged on the way out, and
+# how many dead ones a single borrow will discard before giving up. See
+# _verify_pooled_connection for why the pool cannot be trusted to hand back a live socket.
+POOL_IDLE_VERIFY_SECONDS = int(os.environ.get("SUPABASE_POOL_IDLE_VERIFY_SECONDS", "60"))
+POOL_BORROW_ATTEMPTS = 3
+
+# Monotonic timestamp of when each pooled connection was last released, keyed by id(). The
+# pool holds a strong reference to every connection it owns, so an id stays unambiguous for
+# as long as the entry is needed; entries are dropped as connections are borrowed or closed.
+_pool_idle_since = {}
 
 def get_supabase_db_url():
     global _DB_URL
@@ -67,9 +79,58 @@ def _get_pool() -> psycopg2.pool.ThreadedConnectionPool:
         _pool = psycopg2.pool.ThreadedConnectionPool(POOL_MIN_CONN, POOL_MAX_CONN, get_supabase_db_url())
     return _pool
 
+def _verify_pooled_connection(conn) -> bool:
+    """Returns True if a connection borrowed from the pool can still reach the server.
+
+    Supabase drops connections that sit idle, and psycopg2's pool has no liveness check of
+    its own: it hands back whatever it is holding, so a socket the server closed minutes ago
+    surfaces as `SSL SYSCALL error: EOF detected` inside whichever query happens to run next.
+
+    Connections borrowed again quickly skip the check, so the hot path keeps its single round
+    trip; only ones that sat idle long enough to plausibly have been reaped are pinged."""
+    if conn.closed:
+        return False
+    idle_since = _pool_idle_since.get(id(conn))
+    if idle_since is not None and (time.monotonic() - idle_since) < POOL_IDLE_VERIFY_SECONDS:
+        return True
+    try:
+        conn.autocommit = True
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1;")
+        cursor.fetchone()
+        cursor.close()
+        return True
+    except psycopg2.Error:
+        return False
+
+
 def get_pooled_raw_connection():
-    """Borrows a raw psycopg2 connection from the shared pool for admin/no-user-context queries."""
-    conn = _get_pool().getconn()
+    """Borrows a live raw psycopg2 connection from the shared pool for admin/no-user-context queries.
+
+    Dead connections are closed out of the pool rather than returned to it, so each retry gets
+    a socket the pool has to open fresh. Bounded, because every attempt that finds a dead
+    connection also removes one."""
+    pool = _get_pool()
+    conn = None
+    for _ in range(POOL_BORROW_ATTEMPTS):
+        conn = pool.getconn()
+        # Verify before dropping the idle stamp: _verify_pooled_connection reads it to decide
+        # whether this connection has been sitting long enough to be worth a ping.
+        live = _verify_pooled_connection(conn)
+        _pool_idle_since.pop(id(conn), None)
+        if live:
+            conn.autocommit = True
+            return conn
+        try:
+            pool.putconn(conn, close=True)
+        except Exception as e:
+            logger.debug(f"[get_pooled_raw_connection] discarding a dead connection failed: {e}")
+        conn = None
+    # Every attempt came back dead, which points at the database being unreachable rather
+    # than at stale sockets. Hand back a connection anyway and let the caller's query raise
+    # the real driver error, that says far more than an exception invented here would.
+    logger.warning(f"[get_pooled_raw_connection] No live connection after {POOL_BORROW_ATTEMPTS} attempts.")
+    conn = pool.getconn()
     conn.autocommit = True
     return conn
 
@@ -84,8 +145,10 @@ def release_pooled_connection(raw_conn):
         # seems to be leaking connections.
         logger.debug(f"[release_pooled_connection] rollback failed (connection may be dead): {e}")
     try:
+        _pool_idle_since[id(raw_conn)] = time.monotonic()
         _get_pool().putconn(raw_conn)
     except Exception:
+        _pool_idle_since.pop(id(raw_conn), None)
         try:
             raw_conn.close()
         except Exception as e:

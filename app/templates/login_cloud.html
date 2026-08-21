@@ -78,10 +78,22 @@
             } catch (e) {}
             if (window.lucide) lucide.createIcons();
             const urlParams = new URLSearchParams(window.location.search);
+            // Sign-in failures used to render the bare code ("Authentication error:
+            // token_exchange_failed"), which tells the person nothing about whether to retry.
+            // Anything unmapped still falls back to the code, since a support message quoting
+            // it is better than a message that hides it.
+            const ERROR_MESSAGES = {
+                temporary_error: "Something went wrong on our end. Please try signing in again.",
+                token_exchange_failed: "That sign-in link has already been used. Please try signing in again.",
+                userinfo_failed: "We could not read your Google profile. Please try signing in again.",
+                missing_code: "Sign-in was cancelled. Please try again.",
+                access_denied: "Sign-in was cancelled. Please try again.",
+                no_email: "Your Google account did not share an email address, which Studiamo needs to create your account.",
+            };
             const err = urlParams.get('error');
             if (err) {
                 const banner = document.getElementById('error-banner');
-                banner.textContent = 'Authentication error: ' + err;
+                banner.textContent = ERROR_MESSAGES[err] || ('Authentication error: ' + err);
                 banner.classList.remove('hidden');
             }
             // Landing here with ?deleted=1 means the account deletion in
