@@ -20,11 +20,15 @@ from app import database, config, storage, ai, youtube
 # constants in static/js/core.js (renderProgressOnly). Records only how long an
 # import took and what it was importing, no username, no user_uuid, no title.
 #
-# Switch off with ENABLE_IMPORT_TIMING_LOG=false in .env.
-# TO REMOVE ENTIRELY AFTER BETA: delete this function and its two call sites in
-# _execute_task (search "_log_import_timing"), then DROP TABLE import_timings.
+# Collection now defaults to off: the progress bar has the calibration data it was
+# added to gather. Set ENABLE_IMPORT_TIMING_LOG=true to resume recording, which is
+# worth doing for a while after any change that alters how long an import takes.
+#
+# TO REMOVE ENTIRELY: delete this function and its two call sites in _execute_task
+# (search "_log_import_timing"), then drop the table. Note the DROP needs its own
+# migration script, since schema.py only ever adds.
 # ==============================================================================
-ENABLE_IMPORT_TIMING_LOG = os.getenv("ENABLE_IMPORT_TIMING_LOG", "true").strip().lower() in ("1", "true", "yes", "on")
+ENABLE_IMPORT_TIMING_LOG = os.getenv("ENABLE_IMPORT_TIMING_LOG", "false").strip().lower() in ("1", "true", "yes", "on")
 
 
 def _log_import_timing(
@@ -292,7 +296,7 @@ class DocumentTaskProcessor(IImportTaskProcessor):
         # doc_file's own extension was already validated at upload time
         # (storage.safe_doc_extension), reuse it here so save/serve/delete
         # all agree on the same doc_<video_id><ext> naming.
-        saved_doc_path = storage.get_document_path(video_id, doc_file.suffix.lower(), goal_id=learning_goal_id, username=username)
+        saved_doc_path = storage.get_document_path(video_id, doc_file.suffix.lower(), username=username)
 
         file_bytes = doc_file.read_bytes()
         # Uploads already land on saved_doc_path, so normally there is nothing
@@ -945,13 +949,48 @@ class ImportQueueManager:
         finally:
             conn.close()
 
-    def retry_task(self, task_id: int, username: str) -> bool:
+    def retry_task(self, task_id: Union[int, str], username: str) -> bool:
         """Resets a failed or incomplete task to pending and re-runs it."""
+        tid_str = str(task_id)
+        if tid_str.startswith("v_"):
+            conn = database.get_db_connection(username)
+            user_uuid = conn.user_uuid
+            cursor = conn.cursor()
+            try:
+                vid = int(tid_str.replace("v_", ""))
+                cursor.execute("SELECT id, youtube_id, title FROM videos WHERE id = %s AND user_uuid = %s;", (vid, user_uuid))
+                v_row = cursor.fetchone()
+                if not v_row:
+                    return False
+                yt_id = v_row.get("youtube_id")
+                payload = {}
+                if yt_id and not yt_id.startswith("doc_"):
+                    payload = {"url": f"https://www.youtube.com/watch?v={yt_id}", "importance_rating": 3}
+                    task_type = "youtube"
+                else:
+                    task_type = "document"
+                cursor.execute("UPDATE videos SET status = 'processing', status_error = NULL WHERE id = %s AND user_uuid = %s;", (vid, user_uuid))
+                conn.commit()
+                self.enqueue_task(
+                    username=username,
+                    task_type=task_type,
+                    title=v_row.get("title") or f"Content {vid}",
+                    payload=payload,
+                    video_id=vid
+                )
+                return True
+            except Exception as e:
+                print(f"[retry_task] Error retrying synthetic video task {task_id}: {e}")
+                return False
+            finally:
+                conn.close()
+
         conn = database.get_db_connection(username)
         user_uuid = conn.user_uuid
         cursor = conn.cursor()
         try:
-            cursor.execute("SELECT video_id FROM import_tasks WHERE id = %s AND user_uuid = %s;", (task_id, user_uuid))
+            numeric_tid = int(task_id)
+            cursor.execute("SELECT video_id FROM import_tasks WHERE id = %s AND user_uuid = %s;", (numeric_tid, user_uuid))
             row = cursor.fetchone()
             if not row:
                 return False
@@ -963,24 +1002,39 @@ class ImportQueueManager:
                 """UPDATE import_tasks 
                    SET status = 'pending', progress_stage = 'Retrying...', error_message = NULL, updated_at = CURRENT_TIMESTAMP 
                    WHERE id = %s AND user_uuid = %s;""",
-                (task_id, user_uuid)
+                (numeric_tid, user_uuid)
             )
             conn.commit()
 
-            asyncio.create_task(self._process_task_async(task_id, username))
+            asyncio.create_task(self._process_task_async(numeric_tid, username))
             return True
+        except (ValueError, TypeError):
+            return False
         finally:
             conn.close()
 
-    def dismiss_task(self, task_id: int, username: str) -> bool:
-        """Deletes a task record from backlog view."""
+    def dismiss_task(self, task_id: Union[int, str], username: str) -> bool:
+        """Deletes a task record or clears stuck synthetic task from backlog view."""
+        tid_str = str(task_id)
         conn = database.get_db_connection(username)
         user_uuid = conn.user_uuid
         cursor = conn.cursor()
         try:
-            cursor.execute("DELETE FROM import_tasks WHERE id = %s AND user_uuid = %s;", (task_id, user_uuid))
+            if tid_str.startswith("v_"):
+                try:
+                    vid = int(tid_str.replace("v_", ""))
+                    cursor.execute("DELETE FROM videos WHERE id = %s AND user_uuid = %s AND status = 'processing';", (vid, user_uuid))
+                    conn.commit()
+                    return True
+                except ValueError:
+                    return False
+
+            numeric_tid = int(task_id)
+            cursor.execute("DELETE FROM import_tasks WHERE id = %s AND user_uuid = %s;", (numeric_tid, user_uuid))
             conn.commit()
             return True
+        except (ValueError, TypeError):
+            return False
         finally:
             conn.close()
 
