@@ -38,7 +38,14 @@ async function switchUserProfile(username) {
                 body: formData
             });
         } catch (err) {
-            if (err.message && (err.message.includes("Password required") || err.message.includes("Incorrect password") || err.message.includes("401"))) {
+            // /api/users/verify returns three different 401s and only two of them are
+            // worth prompting for: "Password required" and "Incorrect password". The
+            // third says the account has no password and should sign in with Google,
+            // and it has to fall through to the rethrow below, since prompting an
+            // SSO user for a password they do not have is a dead end. That is why this
+            // reads the message rather than err.status, which cannot tell them apart.
+            // (fetchAPI deliberately exempts this URL from its redirect-on-401.)
+            if (err.message && (err.message.includes("Password required") || err.message.includes("Incorrect password"))) {
                 const promptFn = window.showPrompt || (typeof showPrompt === 'function' ? showPrompt : null);
                 let inputPwd = null;
                 if (promptFn) {
