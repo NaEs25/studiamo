@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Studiamo | Spaced Repetition Active Recall</title>
     <!-- Umami Analytics: empty in self-hosted mode unless UMAMI_WEBSITE_ID is set, see app/config.py -->
-    <!-- UMAMI_SCRIPT -->
+    {% if umami_website_id %}<script defer src="{{ umami_script_url }}" data-website-id="{{ umami_website_id }}"></script>{% endif %}
 
     <!-- Tailwind CSS (compiled) -->
     <link rel="stylesheet" href="/static/css/tailwind-built.css">

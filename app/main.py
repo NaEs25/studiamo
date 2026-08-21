@@ -115,9 +115,10 @@ STATIC_DIR = Path(__file__).resolve().parent / "static"
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/static", NoCacheStaticFiles(directory=STATIC_DIR), name="static")
 
-# Jinja2 environment for pages that share partials (e.g. templates/partials/_header.html).
-# Most view routes below still serve their HTML as plain text via read_text() and don't
-# need this; only pages that {% include %} a shared partial go through TemplateResponse.
+# Jinja2 environment for the view routes below. Every HTML page renders through here:
+# serving a template with read_text() instead meant any {% include %} or {{ ... }} added
+# to it later would be emitted verbatim rather than rendered, which is how the focus
+# overlay came to never render at all.
 TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
 # Global rather than per-render context: every TemplateResponse call gets these without
@@ -125,17 +126,6 @@ templates = Jinja2Templates(directory=TEMPLATES_DIR)
 templates.env.globals["umami_website_id"] = config.UMAMI_WEBSITE_ID
 templates.env.globals["umami_script_url"] = config.UMAMI_SCRIPT_URL
 
-
-def _umami_script_tag() -> str:
-    """Umami <script> tag for the plain-HTML routes below that read_text() a template
-    instead of rendering it through Jinja. Empty in self-hosted mode unless the
-    self-hoster has set UMAMI_WEBSITE_ID themselves (see app/config.py)."""
-    if not config.UMAMI_WEBSITE_ID:
-        return ""
-    return (
-        f'<script defer src="{config.UMAMI_SCRIPT_URL}" '
-        f'data-website-id="{config.UMAMI_WEBSITE_ID}"></script>'
-    )
 
 # Register Feature Routers
 app.include_router(auth.router)
@@ -256,15 +246,15 @@ async def serve_root(request: Request):
     template_path = Path(__file__).resolve().parent / "templates" / template_name
     if not template_path.exists():
         raise HTTPException(status_code=404, detail="HTML template not found")
-    return template_path.read_text(encoding="utf-8").replace("<!-- UMAMI_SCRIPT -->", _umami_script_tag())
+    return templates.TemplateResponse(template_name, {"request": request})
 
 
 @app.get("/landing", response_class=HTMLResponse)
-async def serve_landing():
+async def serve_landing(request: Request):
     template_path = Path(__file__).resolve().parent / "templates" / "landing.html"
     if not template_path.exists():
         raise HTTPException(status_code=404, detail="Landing HTML template not found")
-    return template_path.read_text(encoding="utf-8").replace("<!-- UMAMI_SCRIPT -->", _umami_script_tag())
+    return templates.TemplateResponse("landing.html", {"request": request})
 
 
 @app.get("/login", response_class=HTMLResponse)
@@ -310,7 +300,7 @@ async def serve_app(request: Request):
     if auth_user:
         template_path = Path(__file__).resolve().parent / "templates" / "index.html"
         if template_path.exists():
-            return template_path.read_text(encoding="utf-8").replace("<!-- UMAMI_SCRIPT -->", _umami_script_tag())
+            return templates.TemplateResponse("index.html", {"request": request})
     return RedirectResponse(url="/login", status_code=307)
 
 
