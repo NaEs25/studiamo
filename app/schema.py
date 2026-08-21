@@ -411,6 +411,11 @@ TABLES_SQL = [
     ALTER TABLE landing_waitlist ADD COLUMN IF NOT EXISTS reminder_1_sent_at TIMESTAMPTZ;
     ALTER TABLE landing_waitlist ADD COLUMN IF NOT EXISTS reminder_2_sent_at TIMESTAMPTZ;
     ALTER TABLE landing_waitlist ADD COLUMN IF NOT EXISTS emails_sent_count INTEGER DEFAULT 0;
+    -- Set once the lead's account is off the waitlist and usable. Deliberately not the same
+    -- as spot_ready_sent_at, which records that the promotion email was delivered: a send can
+    -- fail while the promotion still happened, and anything mailing this list later has to
+    -- exclude people who already have a working account rather than people who got an email.
+    ALTER TABLE landing_waitlist ADD COLUMN IF NOT EXISTS converted_at TIMESTAMPTZ;
     """,
     """
     ALTER TABLE user_profile ENABLE ROW LEVEL SECURITY;

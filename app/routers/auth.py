@@ -554,6 +554,25 @@ async def _google_callback(
                 background_tasks.add_task(_send_and_mark_waitlist_confirmation)
                 return RedirectResponse(f"/waitlist-confirmation?ref={new_referral_code}", status_code=303)
 
+            # A new account that never had to wait, because a spot was free. If this address
+            # is already on the lead list (they signed up on /landing before the app opened),
+            # it stops being a prospect the moment the account works, the same as a promotion
+            # does. Without this they stay on the list as someone still waiting for a spot
+            # they are already using. Backgrounded so a marketing-table write never delays
+            # the login redirect, and swallowed on failure for the same reason recording the
+            # lead above is: it is supplementary tracking, never a reason to fail a signup.
+            def _mark_lead_converted():
+                import logging
+                from app import landing_waitlist_db as _lw
+                try:
+                    _lw.mark_waitlist_converted(email)
+                except Exception as e:
+                    logging.getLogger("studiamo").warning(
+                        f"Failed to stamp landing_waitlist conversion for {email!r}: {e}"
+                    )
+
+            background_tasks.add_task(_mark_lead_converted)
+
         token = _make_session_token(target_user_uuid)
 
         response = RedirectResponse(dest_path, status_code=303)
