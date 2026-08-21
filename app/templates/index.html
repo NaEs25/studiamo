@@ -1389,17 +1389,29 @@
                             </div>
                         </div>
 
-                        <!-- Section 5: Active Recall Grouping Mode -->
+                        <!-- Section 5: Active Recall Grouping Mode
+                             Disabled on purpose, not styled-out by accident. Nothing reads
+                             user_profile.review_mode: the quiz builder selects the column and
+                             then never branches on it, so this control changed nothing even
+                             when it was writable. The "Per Goal" option was worse than inert,
+                             POST /api/settings/review_mode rejects "goal" with a 400 because it
+                             only accepts video/topic/mixed. Re-enabling means implementing the
+                             grouping, reconciling those two option lists, and restoring the
+                             change handler (it was removed with the disable, since a disabled
+                             select cannot fire one). -->
                         <div class="space-y-3 pt-4 border-t border-stone-200">
-                            <h4 class="text-xs font-bold text-stone-700 uppercase tracking-wider">Active Recall
-                                Grouping Mode</h4>
-                            <select id="settings-review-mode" onchange="saveReviewMode(this.value)"
-                                class="w-full bg-[#fcfaf6] border border-[#e7dfd3] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900 font-medium">
+                            <div class="flex items-center space-x-2">
+                                <h4 class="text-xs font-bold text-stone-400 uppercase tracking-wider">Active Recall
+                                    Grouping Mode</h4>
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">Coming soon</span>
+                            </div>
+                            <select id="settings-review-mode" disabled
+                                class="w-full bg-stone-100 border border-stone-200 rounded-xl px-4 py-3 text-sm text-stone-400 font-medium opacity-70 cursor-not-allowed">
                                 <option value="video">Per Video Material (Standard)</option>
                                 <option value="goal">Per Goal (Grouped across goal materials)</option>
                             </select>
-                            <p class="text-xs text-stone-400">Determines whether practice review sessions present
-                                questions per video material or grouped by learning goal.</p>
+                            <p class="text-xs text-stone-400">Practice sessions are grouped per video material.
+                                Grouping across a whole learning goal is not available yet.</p>
                         </div>
                     </div>
                 </div>

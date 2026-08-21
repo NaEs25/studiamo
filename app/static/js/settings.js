@@ -1141,24 +1141,6 @@ async function testVoiceSample(btn) {
     }
 }
 
-async function saveReviewMode(mode) {
-    const formData = new FormData();
-    formData.append('mode', mode);
-    try {
-        await fetchAPI('/api/settings/review_mode', { method: 'POST', body: formData });
-        if (typeof showToast === 'function') {
-            showToast('Review mode updated', 'saved', 2000);
-        }
-    } catch (e) {
-        console.error("Failed to update review mode:", e);
-        if (typeof showToast === 'function') {
-            showToast("Failed to save review mode", "failed");
-        } else {
-            alert("Failed to save review mode: " + (e.detail || e.message));
-        }
-    }
-}
-
 async function testTelegramNotification() {
     const btn = document.getElementById('btn-test-telegram');
     let origContent = '';
