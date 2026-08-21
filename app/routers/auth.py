@@ -257,8 +257,13 @@ def get_oauth_redirect_uri(request: Request) -> str:
 
 
 @router.get("/auth/google")
-async def google_login(request: Request, redirect: Optional[str] = None, require_existing: bool = False):
-    """Redirects user to Google OAuth 2.0 consent screen."""
+async def google_login(request: Request, redirect: Optional[str] = None, require_existing: bool = False,
+                       link: bool = False):
+    """Redirects user to Google OAuth 2.0 consent screen.
+
+    `link=true` is set only by the "Link Google Account" button in Settings. It is the one
+    thing that lets the callback rebind an existing account's Google identity, so it travels
+    in the signed state and cannot be inferred from the request itself."""
     client_id = os.getenv("GOOGLE_CLIENT_ID")
     if not client_id:
         raise HTTPException(status_code=400, detail="Google SSO is disabled or GOOGLE_CLIENT_ID is not configured.")
@@ -283,7 +288,7 @@ async def google_login(request: Request, redirect: Optional[str] = None, require
     # refuse to sign up a Google identity it's never seen before, instead of silently creating
     # an empty account for whichever Gmail the person happened to click -- see google_callback.
     # The state is cryptographically signed to prevent OAuth CSRF / fixation attacks.
-    signed_state = _sign_oauth_state(target_redirect, ref_code, require_existing, referrer)
+    signed_state = _sign_oauth_state(target_redirect, ref_code, require_existing, referrer, link)
 
     params = {
         "client_id": client_id,
@@ -321,7 +326,7 @@ async def google_callback(
     redirect_uri = get_oauth_redirect_uri(request)
 
     # Decode and verify the cryptographically signed OAuth state parameter
-    dest_path, ref_code, require_existing, origin_referrer = _decode_oauth_state(state)
+    dest_path, ref_code, require_existing, origin_referrer, link_intent = _decode_oauth_state(state)
 
     async with httpx.AsyncClient(timeout=10.0) as client:
         token_res = await client.post(
@@ -358,7 +363,11 @@ async def google_callback(
         if not email:
             return RedirectResponse("/login?error=no_email")
 
-        # Check if an active user is currently logged in via session cookie
+        # Check if an active user is currently logged in via session cookie. This only ever
+        # matters for the deliberate link flow below: a session cookie on its own says
+        # nothing about what the person meant to do, and treating it as consent to rebind
+        # is how a live account loses its Google identity to whichever account Google
+        # happened to return.
         active_user_uuid = None
         raw_token = request.cookies.get("yb_session")
         if raw_token:
@@ -369,14 +378,29 @@ async def google_callback(
         target_username = None
         target_user_uuid = None
 
-        if active_user_uuid:
-            # Case 1: User is logged in (e.g. 'Alice') and clicked "Link Google Account" in Settings
+        if link_intent and active_user_uuid:
+            # Case 1: User is logged in (e.g. 'Alice') and clicked "Link Google Account" in Settings.
+            #
+            # Gated on link_intent from the signed state, not on the cookie alone. Without that
+            # gate every ordinary login carrying a session cookie landed here, so a second
+            # callback firing against a still-valid state (a replayed authorize request returns
+            # a different authuser under prompt=none) silently overwrote the signed-in account's
+            # GOOGLE_ID/GOOGLE_EMAIL/EMAIL with an unrelated Google account. The original owner
+            # then no longer matched their own account on the next login and got a brand new
+            # empty one instead, while whoever held that second Google account owned their data.
             resolved_username = config.get_username_from_uuid(active_user_uuid)
             if resolved_username:
+                # Refuse to attach an identity that already belongs to somebody else. Two rows
+                # sharing a google_id/google_email would make the Case 2 lookup below ambiguous,
+                # and the account that resolved first would answer for both people's logins.
+                owner = database.find_user_by_google_identity(str(google_id), email)
+                if owner and owner["user_uuid"] != active_user_uuid:
+                    return RedirectResponse(f"{dest_path}?google_error=already_linked", status_code=303)
+
                 target_username = resolved_username
                 target_user_uuid = active_user_uuid
                 config.write_user_config(target_username, {
-                    "GOOGLE_ID": google_id,
+                    "GOOGLE_ID": str(google_id),
                     "GOOGLE_EMAIL": email,
                     "EMAIL": email
                 })
@@ -393,21 +417,9 @@ async def google_callback(
         cursor = conn.cursor()
         uname_base = email.split("@")[0].replace(".", "_").strip().lower()
 
-        # Only match by an identity this account has already proven belongs to it.
-        # Matching by bare username here would let anyone claim an existing account
-        # just by registering a Google address whose local-part happens to equal
-        # that username (e.g. alice@anydomain.com for the account "alice").
-        cursor.execute(
-            """
-            SELECT username, status, referral_code, user_uuid FROM user_profile
-            WHERE (google_id IS NOT NULL AND google_id = %s)
-               OR (google_email IS NOT NULL AND LOWER(google_email) = LOWER(%s))
-               OR (email IS NOT NULL AND LOWER(email) = LOWER(%s))
-            LIMIT 1;
-            """,
-            (str(google_id), email, email)
-        )
-        row = cursor.fetchone()
+        # Same resolution the link flow above checks against, so "which account owns this
+        # Google identity" has exactly one answer in the codebase.
+        row = database.find_user_by_google_identity(str(google_id), email)
 
         if row:
             target_username = row["username"]

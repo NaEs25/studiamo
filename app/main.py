@@ -347,9 +347,16 @@ async def serve_science(request: Request):
 
 
 @app.get("/auth/google")
-async def root_google_login(request: Request):
+async def root_google_login(request: Request, redirect: Optional[str] = None,
+                            require_existing: bool = False, link: bool = False):
+    """Unprefixed alias for the router's /api/auth/google.
+
+    The query parameters have to be declared and forwarded explicitly: this is a separate
+    FastAPI endpoint, so anything it does not name is dropped before google_login ever sees
+    it. `link` in particular decides whether the callback may rebind an account's Google
+    identity, and silently losing it here would make the Settings button a no-op."""
     from app.routers.auth import google_login
-    return await google_login(request)
+    return await google_login(request, redirect=redirect, require_existing=require_existing, link=link)
 
 
 @app.get("/auth/google/callback")

@@ -361,6 +361,10 @@ async function loadSettings() {
             showToast('Google account linked successfully!', 'saved');
             window.history.replaceState({}, document.title, window.location.pathname);
         }
+        if (urlParams.get('google_error') === 'already_linked') {
+            showToast('That Google account already belongs to another Studiamo account.', 'error');
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
         
     } catch (e) {
         console.error("Settings load error:", e);
