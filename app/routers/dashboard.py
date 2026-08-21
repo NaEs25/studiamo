@@ -146,10 +146,25 @@ async def get_dashboard_data(username: str = Depends(require_app_access)):
     videos = [dict(r) for r in cursor.fetchall()]
 
     # 4. Fetch archived videos with summary
+    # Same card renderer and same context menu as the active list above, so the two column
+    # lists have to agree on everything either of them reads. is_archived and
+    # has_concept_pool were missing here: renderVideoCard's menu reads both off
+    # _videoCardCache, which the frontend fills from this list too, so every archived
+    # material offered "Archive Video" instead of "Send to Active" and never offered
+    # "Adjust Learning Focus".
     cursor.execute("""
-        SELECT id, youtube_id, title, category, thumbnail_url, importance_rating, learning_goal_id, is_paused, status, status_error, is_watchlist, custom_notes, summary
-        FROM videos 
-        WHERE user_uuid = %s AND is_archived = 1;
+        SELECT v.id, v.youtube_id, v.title, v.category, v.thumbnail_url, v.importance_rating,
+               v.learning_goal_id, v.is_archived, v.is_paused, v.status, v.status_error,
+               v.is_watchlist, v.custom_notes, v.summary,
+               g.title AS goal_title,
+               EXISTS (
+                   SELECT 1 FROM quizzes q
+                    WHERE q.video_id = v.id AND q.user_uuid = v.user_uuid
+                      AND jsonb_array_length(COALESCE(q.concept_pool, '[]'::jsonb)) > 0
+               ) AS has_concept_pool
+        FROM videos v
+        LEFT JOIN goals g ON v.learning_goal_id = g.id
+        WHERE v.user_uuid = %s AND v.is_archived = 1;
     """, (user_uuid,))
     archived = [dict(r) for r in cursor.fetchall()]
     
