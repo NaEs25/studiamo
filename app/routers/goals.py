@@ -48,7 +48,7 @@ async def get_goals(include_archived: bool = False, username: str = Depends(requ
         return []
 
     goal_ids = [r["id"] for r in rows]
-    cursor.execute("SELECT id, title, youtube_id, category, goal_order_index, learning_goal_id FROM videos WHERE user_uuid = %s AND learning_goal_id = ANY(%s) AND is_archived = 0 ORDER BY goal_order_index ASC, id DESC;", (user_uuid, goal_ids))
+    cursor.execute("SELECT id, title, youtube_id, category, learning_goal_id FROM videos WHERE user_uuid = %s AND learning_goal_id = ANY(%s) AND is_archived = 0 ORDER BY id DESC;", (user_uuid, goal_ids))
     all_videos = cursor.fetchall()
     conn.close()
 

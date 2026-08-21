@@ -128,7 +128,7 @@ async def get_dashboard_data(username: str = Depends(require_app_access)):
     cursor.execute("""
         SELECT v.id, v.youtube_id, v.title, v.category, v.thumbnail_url,
                v.importance_rating, v.learning_goal_id, v.is_archived, v.is_paused,
-               v.status, v.status_error, v.is_watchlist, v.custom_notes, v.goal_order_index,
+               v.status, v.status_error, v.is_watchlist, v.custom_notes,
                v.last_position_seconds, v.duration_seconds, v.is_temporary, v.expires_at, v.summary,
                g.title AS goal_title,
                -- Gates the "Adjust Learning Focus" menu entry. Material imported before topic
@@ -141,13 +141,13 @@ async def get_dashboard_data(username: str = Depends(require_app_access)):
         FROM videos v
         LEFT JOIN goals g ON v.learning_goal_id = g.id
         WHERE v.user_uuid = %s AND v.is_archived = 0
-        ORDER BY v.goal_order_index ASC, v.id DESC;
+        ORDER BY v.id DESC;
     """, (user_uuid,))
     videos = [dict(r) for r in cursor.fetchall()]
 
     # 4. Fetch archived videos with summary
     cursor.execute("""
-        SELECT id, youtube_id, title, category, thumbnail_url, importance_rating, learning_goal_id, is_paused, status, status_error, is_watchlist, custom_notes, goal_order_index, summary
+        SELECT id, youtube_id, title, category, thumbnail_url, importance_rating, learning_goal_id, is_paused, status, status_error, is_watchlist, custom_notes, summary
         FROM videos 
         WHERE user_uuid = %s AND is_archived = 1;
     """, (user_uuid,))
