@@ -1615,6 +1615,7 @@ function initStudioYTPlayerTracker() {
 }
 
 async function openStudyStudio(id) {
+    if (typeof stopActiveInlineTracker === 'function') stopActiveInlineTracker();
     _currentStudioVideoId = id;
     _currentStudioVideoCurrentTime = 0;
     const cardData = (window._videoCardCache && window._videoCardCache[id]) || null;
@@ -1776,6 +1777,7 @@ async function saveStudioVideoPosition() {
             const playerTime = _currentStudioPlayer.getCurrentTime();
             if (typeof playerTime === 'number' && playerTime > 0) {
                 pos = playerTime;
+                _currentStudioVideoCurrentTime = playerTime;
             }
         } catch (e) {}
     }
@@ -1813,27 +1815,44 @@ function closeStudyStudio() {
     if (miniPlayer) miniPlayer.classList.add('hidden');
 }
 
+function getStudioCurrentTime() {
+    let sec = _currentStudioVideoCurrentTime || 0;
+    if (_currentStudioPlayer && typeof _currentStudioPlayer.getCurrentTime === 'function') {
+        try {
+            const t = _currentStudioPlayer.getCurrentTime();
+            if (typeof t === 'number' && !isNaN(t) && t > 0) {
+                sec = t;
+                _currentStudioVideoCurrentTime = t;
+            }
+        } catch (e) {}
+    }
+    if (sec <= 0 && _currentStudioVideoId && window._videoCardCache && window._videoCardCache[_currentStudioVideoId]) {
+        sec = parseFloat(window._videoCardCache[_currentStudioVideoId].last_position_seconds) || 0;
+    }
+    return sec;
+}
+
 // Re-parenting the YT iframe (minimize/restore) makes the browser reload it,
 // which would otherwise snap playback back to the `start=` baked into the src
 // when Study Studio was first opened. Reads the live position synchronously
 // before the move, then forces a controlled reload at that position and
-// rebinds the YT.Player - the old binding dies with the implicit reload.
-function relocateStudioPlayer(iframe) {
-    let resumeSec = _currentStudioVideoCurrentTime;
-    if (_currentStudioPlayer && typeof _currentStudioPlayer.getCurrentTime === 'function') {
-        try {
-            const t = _currentStudioPlayer.getCurrentTime();
-            if (typeof t === 'number' && t > 0) resumeSec = t;
-        } catch (e) {}
+// rebinds the YT.Player.
+function relocateStudioPlayer(iframe, targetContainer) {
+    const resumeSec = Math.floor(getStudioCurrentTime());
+    _currentStudioVideoCurrentTime = resumeSec;
+
+    if (_currentStudioVideoId && window._videoCardCache && window._videoCardCache[_currentStudioVideoId]) {
+        window._videoCardCache[_currentStudioVideoId].last_position_seconds = resumeSec;
     }
 
     try {
         const url = new URL(iframe.src);
-        url.searchParams.set('start', Math.floor(resumeSec || 0));
+        url.searchParams.set('start', resumeSec);
         url.searchParams.set('autoplay', '1');
         iframe.src = url.toString();
     } catch (e) {}
 
+    targetContainer.appendChild(iframe);
     initStudioYTPlayerTracker();
 }
 
@@ -1848,14 +1867,8 @@ function minimizeStudio() {
         return;
     }
 
-    saveStudioVideoPosition();
     saveStudioNotes();
-
-    // No inline sizing here - the .yt-downscale-wrapper class on
-    // #mini-player-video (same trick used for the main studio player)
-    // handles cropping YouTube's own chrome out of the tiny embed.
-    miniVideo.appendChild(iframe);
-    relocateStudioPlayer(iframe);
+    relocateStudioPlayer(iframe, miniVideo);
 
     const miniTitle = document.getElementById('mini-player-title');
     const cardData = (window._videoCardCache && window._videoCardCache[_currentStudioVideoId]) || null;
@@ -1873,8 +1886,7 @@ function restoreStudio() {
     const overlay = document.getElementById('overlay-study-studio');
 
     if (iframe && ytWrapper) {
-        ytWrapper.appendChild(iframe);
-        relocateStudioPlayer(iframe);
+        relocateStudioPlayer(iframe, ytWrapper);
     }
     if (miniPlayer) miniPlayer.classList.add('hidden');
     if (overlay) overlay.classList.remove('hidden');
@@ -2212,6 +2224,7 @@ window.closeMiniPlayer = closeMiniPlayer;
 window.studioTogglePlay = studioTogglePlay;
 window.studioSetSpeed = studioSetSpeed;
 window.studioSeek = studioSeek;
+window.ensureYouTubeAPI = ensureYouTubeAPI;
 async function confirmPreviewImport(id, btnEl = null) {
     if (btnEl) {
         btnEl.disabled = true;
