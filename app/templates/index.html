@@ -2854,36 +2854,61 @@
                     </p>
                 </div>
 
-                <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 space-y-1">
-                    <div class="flex items-baseline space-x-2">
-                        <span class="text-3xl font-extrabold text-stone-900">$3.99</span>
-                        <span class="text-sm font-semibold text-stone-500">/ month</span>
-                        <span class="text-sm font-semibold text-stone-400 line-through">$7.99</span>
-                    </div>
-                    <!-- This sentence is a material term of the offer and must stay visible
-                         here, not in a tooltip or a terms link. -->
-                    <p class="text-xs font-semibold text-emerald-800">
-                        For your first 6 months, then $7.99 / month. Cancel any time.
-                    </p>
-                </div>
-
                 <div class="space-y-2">
-                    <!-- Directly above the button, because the code has to be read before
-                         the click, not after. Lemon Squeezy puts an applied discount below
-                         its own pay button, so a customer who does not scroll sees only the
-                         full price. Hidden by billing.js when no code is configured. -->
-                    <div id="paywall-discount-note" class="discount-note">
-                        <i data-lucide="ticket-percent" class="w-4 h-4 flex-shrink-0"></i>
-                        <span>
-                            Enter code <strong class="discount-code" id="paywall-discount-code"></strong>
-                            at checkout for 50% off your first 6 months, because you are helping test Studiamo.
-                        </span>
-                    </div>
+                    {% include "partials/_beta_offer.html" %}
                     <button type="button" onclick="startCheckout()"
                         class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl transition shadow-lg flex items-center justify-center space-x-2">
                         <span>Continue to checkout</span>
                         <i data-lucide="arrow-right" class="w-4 h-4"></i>
                     </button>
+                    <button type="button" onclick="logoutFromPaywall()"
+                        class="w-full py-2.5 text-stone-500 hover:text-stone-800 font-semibold text-sm transition">
+                        Log out
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tester period over. Shown INSTEAD of the standard first-time step, which
+                 opens "Thank you for choosing Cloud" and prices the product as though the
+                 reader had never used it. Someone who has just spent two weeks testing has,
+                 and telling them that would waste the one screen where their answer is
+                 still open. Chosen in initPaywall() and notifyPaymentRequired(). -->
+            <div id="paywall-step-tester-expired" class="hidden space-y-5">
+                <div class="space-y-2">
+                    <div class="w-11 h-11 rounded-2xl bg-emerald-100 flex items-center justify-center">
+                        <i data-lucide="heart-handshake" class="w-5 h-5 text-emerald-600"></i>
+                    </div>
+                    <h3 class="text-xl font-extrabold text-stone-900">Your tester access has ended</h3>
+                    <p class="text-sm text-stone-600 leading-relaxed">
+                        Thank you for testing Studiamo. Early users caught things we would never
+                        have found alone, and the version everyone else gets is better because you
+                        used this one first.
+                    </p>
+                    <p class="text-sm text-stone-600 leading-relaxed">
+                        Everything you created is still here and still yours. Pick up where you left
+                        off, or take your data with you. Either way, you are welcome back any time.
+                    </p>
+                </div>
+
+                <div class="space-y-2">
+                    {% include "partials/_beta_offer.html" %}
+                    <button type="button" onclick="startCheckout()"
+                        class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl transition shadow-lg flex items-center justify-center space-x-2">
+                        <span>Continue with a subscription</span>
+                        <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                    </button>
+
+                    <!-- A real navigation, not a fetch, so it works even though the overlay
+                         blocks the app behind it. /api/user/export depends on
+                         get_active_username and NOT on require_app_access, which is what
+                         lets someone with no access left still download their own data.
+                         Do not move that route behind the paid gate. -->
+                    <a href="/api/user/export" id="tester-expired-export"
+                        class="w-full py-3 bg-stone-100 hover:bg-stone-200 border border-[#e7dfd3] rounded-xl text-sm font-bold text-stone-700 transition flex items-center justify-center space-x-2">
+                        <i data-lucide="download" class="w-4 h-4"></i>
+                        <span>Download my data</span>
+                    </a>
+
                     <button type="button" onclick="logoutFromPaywall()"
                         class="w-full py-2.5 text-stone-500 hover:text-stone-800 font-semibold text-sm transition">
                         Log out
