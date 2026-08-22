@@ -574,6 +574,11 @@ async def run_scheduler_daemon():
             await check_and_notify_quizzes()
             await check_and_notify_streak()
             await check_and_notify_inactivity()
+            try:
+                from app.import_manager import ImportQueueManager
+                ImportQueueManager.get_instance().recover_all_pending_tasks()
+            except Exception as e_recovery:
+                print(f"Periodic task recovery error in scheduler: {e_recovery}")
         except Exception as e:
             print(f"Scheduler daemon error: {e}")
         await asyncio.sleep(60)
