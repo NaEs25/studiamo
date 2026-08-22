@@ -22,6 +22,14 @@ from app.telegram_bot import telegram_long_polling, managed_telegram_long_pollin
 from app.routers import auth, dashboard, goals, videos, quizzes, settings, landing_waitlist, bugs, billing
 
 logging.basicConfig(level=logging.INFO)
+
+# httpx logs every request URL at INFO. The Telegram API puts the bot token in the path,
+# and the notification loops poll getUpdates continuously, so INFO writes a live credential
+# into the system journal a few times a minute, forever. WARNING keeps the failures, which
+# are the part worth reading, and drops the successful calls that carry the secret.
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+
 logger = logging.getLogger("studiamo")
 
 
