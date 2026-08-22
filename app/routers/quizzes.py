@@ -68,7 +68,6 @@ async def get_quiz(id: int, username: str = Depends(require_app_access)):
             
         yt_id = v_row.get("youtube_id")
         title = v_row.get("title")
-        filename = yt_id if yt_id else f"doc_{video_id}"
 
         video_data = database.get_video_row(video_id, username=username)
         user_config = config.load_user_config(username)
@@ -96,10 +95,14 @@ async def get_quiz(id: int, username: str = Depends(require_app_access)):
         conn.close()
 
         
+        # No video_filename key: it was the last caller of the filename-shaped
+        # "<youtube_id>" / "doc_<video_id>" scheme the storage facade used, and nothing
+        # reads it. quiz.js addresses the video by youtube_id, and only this one
+        # regeneration branch ever set it, so the key was absent from the response the
+        # rest of the time anyway.
         quiz_json_payload = {
             "id": id,
             "video_id": video_id,
-            "video_filename": filename,
             "quiz_type": quiz_type,
             "srs_stage": srs_stage,
             "next_review_at": next_review_at,
@@ -156,7 +159,6 @@ async def get_quiz(id: int, username: str = Depends(require_app_access)):
                 v_row = cursor.fetchone()
                 conn.close()
                 if v_row:
-                    filename = v_row["youtube_id"] if v_row["youtube_id"] else f"doc_{video_id}"
                     video_data = database.get_video_row(video_id, username=username)
                     yt_id = v_row["youtube_id"]
                     if yt_id:
