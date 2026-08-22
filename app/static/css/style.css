@@ -361,6 +361,33 @@ option {
     opacity: 0.45;
 }
 
+/* Verdict tint for the AI evaluation box on the quiz back side. Only the color lives here:
+   the box's layout (padding, radius, border width, flex) stays on the element in the
+   template, and quiz.js toggles one of these two classes on top of it.
+
+   It used to reassign .className outright, which restated the template's own layout classes
+   as a second copy that could drift, and reached for text-emerald-450 / text-red-450 to color
+   the label. Tailwind's scale has no 450 step, so those classes compiled to nothing and the
+   verdict label rendered with no color at all. Written as plain CSS rather than utilities for
+   the same reason .quiz-grade-suggested is: it is applied by script, not by the markup. */
+.quiz-verdict-correct {
+    background-color: #ecfdf5;
+    border-color: #a7f3d0;
+}
+
+.quiz-verdict-correct .quiz-verdict-label {
+    color: #065f46;
+}
+
+.quiz-verdict-incorrect {
+    background-color: #fef2f2;
+    border-color: #fecaca;
+}
+
+.quiz-verdict-incorrect .quiz-verdict-label {
+    color: #991b1b;
+}
+
 /* ── Quiz Read-Aloud Button ─────────────────────────────── */
 /* Icon-only control that sits beside the text it reads. Shared by the question, answer and
    explanation buttons in the quiz overlay, which previously repeated the same utility chain
@@ -732,3 +759,36 @@ button:active:not(:disabled) {
 }
 
 
+/* ── Segmented Toggle ───────────────────────────────────── */
+/* Pill group where exactly one option is active: the import type selector (YouTube /
+   Document / Notes) and the voice-engine toggle (Browser / Edge TTS). Both used to spell the
+   active and inactive utility chains out in the template and again in the script that
+   switches between them, so each variant lived in four places at once and the script
+   overwrote whatever the markup declared. The markup now carries .segmented-tab and the
+   script toggles .is-active on top of it, nothing else. Padding, radius and inner layout
+   stay as per-instance Tailwind utilities, same split as .btn-primary above.
+   The transparent border on the inactive state is deliberate: only the active option used to
+   carry a border, so switching tabs moved every button by 2px. */
+.segmented-tab {
+    border: 1px solid transparent;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 600;
+    color: #57534e; /* stone-600 */
+    transition: all 200ms;
+}
+
+.segmented-tab:hover {
+    color: #78350f; /* amber-900 */
+}
+
+/* Token colors, not amber-500/20 and amber-500/40 as the markup used to spell it: the
+   "Amber Tinted Utility Blocks" mapping near the top of this file already rewrites
+   .bg-amber-500\/20 to these tokens and wins on load order, so the tokens are what the
+   active tab has actually been rendering as all along. */
+.segmented-tab.is-active {
+    font-weight: 700;
+    color: #92400e; /* amber-800 */
+    background-color: var(--color-primary-bg);
+    border-color: var(--color-primary-border);
+}
