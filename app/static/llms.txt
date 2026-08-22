@@ -2,7 +2,7 @@
 
 > Studiamo is an AI-powered active recall and spaced repetition learning platform that transforms YouTube videos, PDF documents, and study notes into structured knowledge, quizzes, and automated study schedules.
 
-Full extended documentation: [llms-full.txt](https://studiamo.cloud/llms-full.txt)
+Full extended documentation: [llms-full.txt](https://www.studiamo.cloud/llms-full.txt)
 
 ## Overview
 
@@ -34,12 +34,12 @@ Studiamo bridges the gap between passive video watching or reading and long-term
 
 ## Key Links
 
-- [Official Website](https://studiamo.cloud/)
-- [Full LLM Specification](https://studiamo.cloud/llms-full.txt)
-- [Waitlist & Sign In](https://studiamo.cloud/login)
+- [Official Website](https://www.studiamo.cloud/)
+- [Full LLM Specification](https://www.studiamo.cloud/llms-full.txt)
+- [Waitlist & Sign In](https://www.studiamo.cloud/login)
 - [Self-Hosting Documentation](https://github.com/NaEs25/studiamo/blob/main/SELFHOSTING.md)
-- [Cognitive Science & Evidence](https://studiamo.cloud/science)
-- [Privacy Policy](https://studiamo.cloud/privacy)
-- [Terms of Service](https://studiamo.cloud/terms)
-- [Imprint / Impressum](https://studiamo.cloud/impressum)
+- [Cognitive Science & Evidence](https://www.studiamo.cloud/science)
+- [Privacy Policy](https://www.studiamo.cloud/privacy)
+- [Terms of Service](https://www.studiamo.cloud/terms)
+- [Imprint / Impressum](https://www.studiamo.cloud/impressum)
 

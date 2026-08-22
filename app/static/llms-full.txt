@@ -2,10 +2,10 @@
 
 > Studiamo is an AI-powered active recall and spaced repetition learning platform. It automatically extracts structured summaries, key takeaways, fact-checks, and multi-stage active recall quizzes from educational YouTube videos, PDF documents, and study notes, scheduling them across optimal retention intervals.
 
-- **Primary URL**: https://studiamo.cloud/
+- **Primary URL**: https://www.studiamo.cloud/
 - **Open-Source Repository**: https://github.com/NaEs25/studiamo.git
 - **License**: AGPL-3.0 (Self-Hosted / Open Source)
-- **Short Documentation**: https://studiamo.cloud/llms.txt
+- **Short Documentation**: https://www.studiamo.cloud/llms.txt
 - **Target Audience**: Students, lifelong learners, self-taught developers, and professionals who consume educational content and want high long-term retention with zero manual flashcard creation friction.
 
 ---
@@ -106,11 +106,11 @@ Studiamo focuses on eliminating the friction of testing yourself on educational 
 
 ## 8. Canonical URLs & Resources
 
-- **Home & App**: https://studiamo.cloud/
-- **Sign In / Registration**: https://studiamo.cloud/login
-- **Cognitive Science Whitepaper**: https://studiamo.cloud/science
+- **Home & App**: https://www.studiamo.cloud/
+- **Sign In / Registration**: https://www.studiamo.cloud/login
+- **Cognitive Science Whitepaper**: https://www.studiamo.cloud/science
 - **GitHub Repository**: https://github.com/NaEs25/studiamo
 - **Self-Hosting Guide**: https://github.com/NaEs25/studiamo/blob/main/SELFHOSTING.md
-- **Privacy Policy**: https://studiamo.cloud/privacy
-- **Terms of Service**: https://studiamo.cloud/terms
-- **Imprint**: https://studiamo.cloud/impressum
+- **Privacy Policy**: https://www.studiamo.cloud/privacy
+- **Terms of Service**: https://www.studiamo.cloud/terms
+- **Imprint**: https://www.studiamo.cloud/impressum
