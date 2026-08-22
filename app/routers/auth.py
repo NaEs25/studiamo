@@ -566,6 +566,9 @@ async def _google_callback(
                 from app import landing_waitlist_db as _lw
                 try:
                     _lw.mark_waitlist_converted(email)
+                    # Also claim the lead row for this account. record_waitlist_lead does this
+                    # on the waitlist path; this is the same link for the path that skips it.
+                    _lw.link_lead_to_account(target_user_uuid, email)
                 except Exception as e:
                     logging.getLogger("studiamo").warning(
                         f"Failed to stamp landing_waitlist conversion for {email!r}: {e}"
