@@ -284,14 +284,27 @@ async def serve_waitlist_confirmation(request: Request):
 
 
 @app.get("/join")
-async def serve_join(ref: Optional[str] = None):
+async def serve_join(ref: Optional[str] = None, src: Optional[str] = None):
     """Referral entry point (/join?ref=<code>): stashes the referral code in a
     short-lived cookie, then hands off to the normal login page. google_login
     reads this cookie and folds the code into the OAuth state so it survives
-    the redirect round-trip to Google and back."""
-    response = RedirectResponse(url="/login", status_code=303)
+    the redirect round-trip to Google and back.
+
+    The redirect target carries utm_* parameters because this route renders no
+    HTML of its own: without them a click on a shared referral link leaves no
+    trace in analytics, only the signups that completed. static/js/referral_click.js
+    turns the tag into an event on the login page. 'src' marks where the link
+    was shared from (the confirmation email sets src=email, a link the person
+    copied and pasted themselves carries nothing)."""
     ref_clean = (ref or "").strip()
-    if re.fullmatch(r"[a-f0-9]{12}", ref_clean):
+    valid_ref = bool(re.fullmatch(r"[a-f0-9]{12}", ref_clean))
+    shared_via = "email" if (src or "").strip().lower() == "email" else ("link" if valid_ref else "broken-link")
+
+    response = RedirectResponse(
+        url=f"/login?utm_source=referral&utm_medium=waitlist&utm_content={shared_via}",
+        status_code=303,
+    )
+    if valid_ref:
         response.set_cookie(key="ref_code", value=ref_clean, httponly=True, samesite="lax", secure=config.IS_CLOUD, max_age=86400, path="/")
     return response
 

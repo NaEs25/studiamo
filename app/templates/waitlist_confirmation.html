@@ -93,64 +93,6 @@
     <!-- Footer -->
     {% include "partials/_footer.html" %}
 
-    <script>
-        function flashCopied(labelEl, original) {
-            labelEl.textContent = 'Copied!';
-            setTimeout(() => { labelEl.textContent = original; }, 1500);
-        }
-
-        document.addEventListener('DOMContentLoaded', async () => {
-            if (window.lucide) lucide.createIcons();
-
-            const params = new URLSearchParams(window.location.search);
-            const ref = (params.get('ref') || '').trim();
-
-            const loadingEl = document.getElementById('loading-state');
-            const errorEl = document.getElementById('error-state');
-            const readyEl = document.getElementById('ready-state');
-
-            function showError(message) {
-                loadingEl.classList.add('hidden');
-                readyEl.classList.add('hidden');
-                errorEl.textContent = message;
-                errorEl.classList.remove('hidden');
-            }
-
-            if (!ref) {
-                showError("We couldn't find your waitlist info. Please use the link from your confirmation email.");
-                return;
-            }
-
-            try {
-                const res = await fetch(`/api/waitlist-status?ref=${encodeURIComponent(ref)}`);
-                if (!res.ok) {
-                    showError("We couldn't find your waitlist info. Please use the link from your confirmation email.");
-                    return;
-                }
-                const data = await res.json();
-
-                const referralLink = `${window.location.origin}/join?ref=${ref}`;
-                const shareMessage = `I'm on the waitlist for Studiamo, an AI-powered spaced repetition app for turning YouTube videos into active recall practice. Join me: ${referralLink}`;
-
-                document.getElementById('referral-count').textContent = data.referral_count;
-                document.getElementById('referral-link').value = referralLink;
-                document.getElementById('share-message').textContent = shareMessage;
-
-                loadingEl.classList.add('hidden');
-                readyEl.classList.remove('hidden');
-
-                document.getElementById('copy-link-btn').addEventListener('click', () => {
-                    navigator.clipboard.writeText(referralLink);
-                    flashCopied(document.getElementById('copy-link-label'), 'Copy');
-                });
-                document.getElementById('copy-message-btn').addEventListener('click', () => {
-                    navigator.clipboard.writeText(shareMessage);
-                    flashCopied(document.getElementById('copy-message-label'), 'Copy');
-                });
-            } catch (e) {
-                showError("Something went wrong loading your waitlist info. Please try again shortly.");
-            }
-        });
-    </script>
+    <script src="/static/js/waitlist_confirmation.js" defer></script>
 </body>
 </html>

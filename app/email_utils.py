@@ -291,7 +291,9 @@ def send_waitlist_status_email(recipient_email: str, referral_code: str) -> bool
     on the account waitlist (registration-cap reached). Not to be confused
     with send_waitlist_confirmation_email above, which is for the separate
     pre-launch landing-page email list."""
-    referral_link = f"https://studiamo.cloud/join?ref={referral_code}"
+    # src=email splits clicks on this link from clicks on the link the person
+    # copied off the confirmation page, see serve_join() in app/main.py.
+    referral_link = f"https://studiamo.cloud/join?ref={referral_code}&src=email"
     subject = "You're on the Studiamo waitlist"
 
     html_content = f"""
