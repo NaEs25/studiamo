@@ -1,4 +1,3 @@
-import json
 import re
 import asyncio
 from datetime import datetime, timezone, timedelta
@@ -290,9 +289,12 @@ async def get_goal_recommendations(id: int, username: str = Depends(require_app_
         if len(videos) >= 4:
             break
         
+    # No "queries" key: nothing reads it. The search strings above are an implementation
+    # detail of picking the four videos, and reload_all_goal_recommendations, which writes
+    # to the same cached blob, never included them, so the key already vanished the first
+    # time a user reloaded a goal's recommendations.
     result = {
         "key_concepts": key_concepts,
-        "queries": queries,
         "videos": videos[:4],
         "youtube_api_key_missing": not youtube.is_configured()
     }
@@ -408,7 +410,7 @@ async def get_daily_recommendations(username: str = Depends(require_app_access))
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT dr.id, dr.youtube_id, dr.title, dr.thumbnail_url AS thumbnail, dr.url, dr.goal_id, dr.goal_title, dr.summary, dr.duration, dr.views, dr.channel,
+        SELECT dr.id, dr.youtube_id, dr.title, dr.thumbnail_url AS thumbnail, dr.url, dr.goal_id, dr.goal_title, dr.duration, dr.views, dr.channel,
                v.id AS video_id, v.is_temporary, v.last_position_seconds, v.duration_seconds
         FROM daily_recommendations dr
         LEFT JOIN videos v ON v.youtube_id = dr.youtube_id AND v.user_uuid = dr.user_uuid
@@ -436,10 +438,15 @@ async def get_daily_recommendations(username: str = Depends(require_app_access))
     try:
         recs = ai.generate_daily_recommendations(goals, username=username)
         for r in recs:
+            # No summary column: the recommendations come from
+            # youtube.search_youtube_recommendations, whose result shape has no summary
+            # key, so this always wrote the literal "[]" and the two SELECTs above always
+            # read it back. Nothing on the card renders it either. The column stays in the
+            # table, since schema.py can only add.
             cursor.execute("""
                 INSERT INTO daily_recommendations
-                (user_uuid, youtube_id, title, thumbnail_url, url, goal_id, goal_title, summary, duration, views, channel, created_date)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+                (user_uuid, youtube_id, title, thumbnail_url, url, goal_id, goal_title, duration, views, channel, created_date)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
             """, (
                 user_uuid,
                 r.get("youtube_id", "dQw4w9WgXcQ"),
@@ -448,7 +455,6 @@ async def get_daily_recommendations(username: str = Depends(require_app_access))
                 r.get("url", ""),
                 r.get("goal_id"),
                 r.get("goal_title", ""),
-                json.dumps(r.get("summary", [])),
                 r.get("duration", "N/A"),
                 r.get("views", "N/A"),
                 r.get("channel", ""),
@@ -460,7 +466,7 @@ async def get_daily_recommendations(username: str = Depends(require_app_access))
         recs = []
 
     cursor.execute("""
-        SELECT dr.id, dr.youtube_id, dr.title, dr.thumbnail_url AS thumbnail, dr.url, dr.goal_id, dr.goal_title, dr.summary, dr.duration, dr.views, dr.channel,
+        SELECT dr.id, dr.youtube_id, dr.title, dr.thumbnail_url AS thumbnail, dr.url, dr.goal_id, dr.goal_title, dr.duration, dr.views, dr.channel,
                v.id AS video_id, v.is_temporary, v.last_position_seconds, v.duration_seconds
         FROM daily_recommendations dr
         LEFT JOIN videos v ON v.youtube_id = dr.youtube_id AND v.user_uuid = dr.user_uuid
@@ -504,9 +510,13 @@ async def refresh_daily_recommendations(username: str = Depends(require_app_acce
 
     try:
         for r in recs:
+            # Same column list as the INSERT in get_daily_recommendations, which reads back
+            # through the same two SELECTs. This one was missing channel, so a refreshed
+            # batch persisted with no channel name: the response below returns recs
+            # directly and looked right, and the name only disappeared on the next reload.
             cursor.execute("""
-                INSERT INTO daily_recommendations 
-                (user_uuid, youtube_id, title, thumbnail_url, url, goal_id, goal_title, summary, duration, views, created_date)
+                INSERT INTO daily_recommendations
+                (user_uuid, youtube_id, title, thumbnail_url, url, goal_id, goal_title, duration, views, channel, created_date)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
             """, (
                 user_uuid,
@@ -516,9 +526,9 @@ async def refresh_daily_recommendations(username: str = Depends(require_app_acce
                 r.get("url", ""),
                 r.get("goal_id"),
                 r.get("goal_title", ""),
-                json.dumps(r.get("summary", [])),
                 r.get("duration", "N/A"),
                 r.get("views", "N/A"),
+                r.get("channel", ""),
                 today_str
             ))
         conn.commit()
