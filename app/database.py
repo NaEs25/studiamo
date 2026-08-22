@@ -700,6 +700,36 @@ def credit_referral(referral_code: str) -> bool:
             release_pooled_connection(conn)
 
 
+def promote_user_to_active(user_uuid: str) -> dict:
+    """Promotes one specific account off the waitlist, regardless of queue position.
+
+    Distinct from promote_next_n_users, which takes the front of the queue. This is a
+    deliberate queue jump for a named account, which is what an admin looking at one person
+    actually wants; the ordering rules do not apply and are not consulted.
+
+    Returns {"username", "email", "google_email"} so the caller can send the promotion
+    email, or None if nothing was promoted.
+
+    The `AND status = 'waitlist'` is what makes this idempotent, and it is load-bearing
+    rather than tidy: without it a second call would "succeed" on an already-active account
+    and the caller would send a second "your spot is ready" email to someone who has been
+    using the product for a week."""
+    conn = None
+    try:
+        conn = get_pooled_raw_connection()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        cursor.execute(
+            """UPDATE user_profile SET status = 'active'
+                WHERE user_uuid = %s AND status = 'waitlist'
+            RETURNING username, email, google_email;""",
+            (user_uuid,)
+        )
+        return cursor.fetchone()
+    finally:
+        if conn is not None:
+            release_pooled_connection(conn)
+
+
 def promote_next_n_users(n: int) -> list:
     """Promotes up to n waitlist users to 'active', front of the queue first
     (highest referral_count, then oldest created_at, position is computed on
