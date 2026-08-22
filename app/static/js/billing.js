@@ -256,6 +256,60 @@ function _dayCount(n) {
 
 
 /**
+ * Whole days from today until `iso`, by calendar date in UTC, or null.
+ *
+ * Mirrors _tester_days_left in database.py rather than dividing a millisecond difference
+ * by 86400000: a subscription ending at 01:00 tomorrow is one day away, not zero, and the
+ * two ways of counting disagree for most of every day. Negative results clamp to 0.
+ */
+function _daysUntil(iso) {
+    if (!iso) return null;
+    const end = new Date(iso);
+    if (isNaN(end.getTime())) return null;
+    const endDay = Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate());
+    const now = new Date();
+    const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+    return Math.max(0, Math.round((endDay - today) / 86400000));
+}
+
+
+/**
+ * Subscription states whose message is better with a date in it.
+ *
+ * 'cancelled' especially: in Lemon Squeezy it means "will not renew", so the customer keeps
+ * access until ls_ends_at, and "you keep access until the end of the paid period" was
+ * asking them to work out when that is from a receipt somewhere.
+ */
+function _datedSubscriptionText(status, settings, fallback) {
+    const endsAt = settings && settings.subscription_ends_at;
+    const renewsAt = settings && settings.subscription_renews_at;
+
+    if (status === 'cancelled') {
+        const on = _formatTesterDate(endsAt);
+        if (!on) return fallback;
+        const left = _daysUntil(endsAt);
+        if (left === 0) return `Cancelled. Your access ends today, ${on}.`;
+        if (left === null) return `Cancelled. You keep access until ${on}.`;
+        return `Cancelled. Your access ends in ${_dayCount(left)}, on ${on}.`;
+    }
+
+    if (status === 'active') {
+        const on = _formatTesterDate(renewsAt);
+        return on ? `Your subscription is active. It renews on ${on}.` : fallback;
+    }
+
+    if (status === 'past_due') {
+        const on = _formatTesterDate(endsAt);
+        return on
+            ? `Your last payment failed. Update your card before ${on} to avoid losing access.`
+            : fallback;
+    }
+
+    return fallback;
+}
+
+
+/**
  * Chooses the badge and body text for an account with tester access.
  *
  * Branches on `unlimited` and `legacy` BEFORE looking at days_left: both carry
@@ -353,6 +407,7 @@ function renderSubscriptionCard(settings) {
             : { label: 'Tester', variant: 'status-badge-tester', text: 'You have free tester access.' };
     } else {
         preset = PRESETS[status] || PRESETS.inactive;
+        preset = { ...preset, text: _datedSubscriptionText(status, settings, preset.text) };
     }
 
     textEl.textContent = preset.text;

@@ -75,7 +75,7 @@ async def get_app_settings(username: str = Depends(get_active_username)):
                        notify_telegram, notify_push, notify_email,
                        notify_cat_quizzes, notify_cat_streak, notify_cat_inactivity,
                        leaderboard_hidden, review_mode, voice_engine, voice_speed,
-                       subscription_status, is_tester
+                       subscription_status, is_tester, ls_ends_at, ls_renews_at
                 FROM user_profile WHERE user_uuid = %s LIMIT 1;
                 """,
                 (user_uuid,)
@@ -194,6 +194,14 @@ async def get_app_settings(username: str = Depends(get_active_username)):
             # Kept for backward compatibility; `tester` below is the one with the end date.
             "is_tester": _parse_bool(settings_row.get("is_tester", 0)),
             "tester": database.tester_state_payload(database.get_tester_state(username)),
+            # So the card can name the date a cancelled subscription actually runs out, and
+            # the date an active one renews. 'cancelled' in Lemon Squeezy means "will not
+            # renew", not "access ends now", so that date is the one the customer cares
+            # about and the one they otherwise have no way to look up in the app.
+            "subscription_ends_at": (settings_row.get("ls_ends_at").isoformat()
+                                     if settings_row.get("ls_ends_at") else None),
+            "subscription_renews_at": (settings_row.get("ls_renews_at").isoformat()
+                                       if settings_row.get("ls_renews_at") else None),
             # For the subscribe CTA on this card to name the code, same as the paywall does.
             # Not pre-applied to the checkout URL; see billing.build_checkout_url.
             "beta_discount_code": (config.LEMONSQUEEZY_BETA_DISCOUNT_CODE or "") if config.IS_CLOUD else "",
