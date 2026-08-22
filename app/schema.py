@@ -418,6 +418,46 @@ TABLES_SQL = [
     ALTER TABLE landing_waitlist ADD COLUMN IF NOT EXISTS converted_at TIMESTAMPTZ;
     """,
     """
+    -- Time-boxed tester grants. One row per grant, history kept: the *current* grant for a
+    -- user is the newest row by granted_at, revoked or not. Reading the newest row
+    -- unconditionally, rather than the newest un-revoked one, is what makes a revocation
+    -- stick even if an older un-revoked row is still lying around from a manual edit.
+    --
+    -- user_profile.is_tester still exists and is still read on hot paths (app.ai reads it
+    -- for the per-account AI budget), but it is a cache of "there is a valid grant here",
+    -- not the source of truth. database.has_app_access() reads this table.
+    CREATE TABLE IF NOT EXISTS tester_access (
+        id                  SERIAL PRIMARY KEY,
+        user_uuid           UUID NOT NULL,
+        username            TEXT,
+        granted_at          TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        expires_at          TIMESTAMPTZ,
+        period_days         INTEGER NOT NULL,
+        granted_by          TEXT,
+        note                TEXT,
+        extended_count      INTEGER NOT NULL DEFAULT 0,
+        last_extended_at    TIMESTAMPTZ,
+        revoked_at          TIMESTAMPTZ,
+        revoked_reason      TEXT,
+        welcome_seen_at     TIMESTAMPTZ,
+        reminder_7d_seen_at TIMESTAMPTZ,
+        reminder_1d_seen_at TIMESTAMPTZ,
+        expiry_seen_at      TIMESTAMPTZ,
+        created_at          TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- period_days = 0 means "no end date", and is the only case where expires_at is NULL.
+    -- Two columns encoding one fact will drift otherwise: three separate code paths write
+    -- this row (grant, extend, backfill), so the invariant is enforced here rather than
+    -- trusting all three to keep agreeing. DROP first so this block stays re-runnable.
+    ALTER TABLE tester_access DROP CONSTRAINT IF EXISTS tester_access_period_expiry_check;
+    ALTER TABLE tester_access ADD CONSTRAINT tester_access_period_expiry_check
+        CHECK (
+            (period_days = 0 AND expires_at IS NULL) OR
+            (period_days > 0 AND expires_at IS NOT NULL)
+        );
+    """,
+    """
     ALTER TABLE user_profile ENABLE ROW LEVEL SECURITY;
     ALTER TABLE goals ENABLE ROW LEVEL SECURITY;
     ALTER TABLE videos ENABLE ROW LEVEL SECURITY;
@@ -434,6 +474,7 @@ TABLES_SQL = [
     ALTER TABLE bugs ENABLE ROW LEVEL SECURITY;
     ALTER TABLE import_timings ENABLE ROW LEVEL SECURITY;
     ALTER TABLE landing_waitlist ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE tester_access ENABLE ROW LEVEL SECURITY;
     """,
 ]
 
@@ -510,6 +551,14 @@ INDEXES_SQL = [
     "CREATE INDEX IF NOT EXISTS idx_user_profile_referral_code ON user_profile(referral_code);",
     "CREATE INDEX IF NOT EXISTS idx_user_profile_status ON user_profile(status);",
     "CREATE INDEX IF NOT EXISTS idx_dismissed_user_youtube ON dismissed_recommendations(user_uuid, youtube_id);",
+
+    # has_app_access() resolves the current grant with
+    # `WHERE user_uuid = ... AND revoked_at IS NULL ORDER BY granted_at DESC LIMIT 1`,
+    # on every guarded request. This index is what keeps that a single index scan.
+    "CREATE INDEX IF NOT EXISTS idx_tester_access_user ON tester_access(user_uuid, granted_at DESC);",
+    # Backs the admin panel's "who is expiring soon" list and the optional sweeper. Partial
+    # because a revoked grant is never a candidate for either.
+    "CREATE INDEX IF NOT EXISTS idx_tester_access_expires ON tester_access(expires_at) WHERE revoked_at IS NULL;",
 ]
 
 
