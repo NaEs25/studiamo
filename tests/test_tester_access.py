@@ -120,6 +120,51 @@ def test_legacy_flag_without_a_grant_row_stays_active():
     assert database._derive_tester_state(_row(is_tester=True))["state"] == "active"
 
 
+# --- The access decision itself -------------------------------------------------------
+
+@pytest.mark.parametrize("row, expected", [
+    (None, False),                                          # no such account
+    (_row(), False),                                        # nothing at all
+    (_row(is_tester=True), True),                           # legacy flag
+    (_grant(10), True),                                     # inside the period
+    (_unlimited(), True),                                   # no end date
+    (_grant(-1), False),                                    # lapsed
+    (_grant(5, revoked_at=NOW), False),                     # ended by an admin
+    (_unlimited(revoked_at=NOW), False),                    # unlimited, then revoked
+    (_row(subscription_status="active"), True),
+    (_row(subscription_status="past_due"), True),           # kept during dunning
+    (_row(subscription_status="paused"), False),
+])
+def test_access_decision(row, expected):
+    assert database._decide_access(row)[0] is expected
+
+
+def test_lapsed_tester_who_has_since_subscribed_keeps_access():
+    """The tester branch must fall through to the subscription checks rather than
+    returning early, or paying customers get locked out the day their test phase ends."""
+    row = _grant(-1, subscription_status="active")
+    assert database._decide_access(row)[0] is True
+
+
+def test_cancelled_subscription_keeps_access_until_the_paid_period_ends():
+    """In Lemon Squeezy 'cancelled' means 'will not renew', not 'access ends now'."""
+    assert database._decide_access(
+        _row(subscription_status="cancelled", ls_ends_at=NOW + timedelta(days=3))
+    )[0] is True
+    assert database._decide_access(
+        _row(subscription_status="cancelled", ls_ends_at=NOW - timedelta(days=3))
+    )[0] is False
+
+
+def test_stale_cache_is_reported_only_once_it_is_actually_stale():
+    """The second element of the tuple drives a write, so it must not fire spuriously."""
+    assert database._decide_access(_grant(-1, is_tester=True))[1] is True    # lapsed, flag set
+    assert database._decide_access(_grant(10, is_tester=True))[1] is False   # still valid
+    assert database._decide_access(_unlimited())[1] is False                 # no end date
+    assert database._decide_access(_row(is_tester=True))[1] is False         # legacy, no row
+    assert database._decide_access(_grant(-1, is_tester=False))[1] is False  # already cleared
+
+
 # --- days_left -----------------------------------------------------------------------
 
 def test_days_left_uses_calendar_dates_not_24_hour_blocks():
