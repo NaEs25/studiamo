@@ -72,6 +72,45 @@ from app.dependencies import (
 )
 
 
+# How long a finished import stays in the backlog drawer. The drawer reports what is running
+# now, so a completed or failed task older than this is history rather than status. Without a
+# window, a single failure kept greeting the user every time the drawer opened, including one
+# raised by an import path that had since been replaced entirely.
+FINISHED_TASK_RETENTION_DAYS = 7
+
+
+class ImportInputError(ValueError):
+    """Raised when the material itself is the problem, carrying copy safe to show a user.
+
+    Subclasses ValueError so this stays a drop-in replacement for the plain ValueErrors the
+    processors used to raise.
+    """
+
+
+_GENERIC_IMPORT_ERROR = (
+    "Something went wrong while importing this. Please try again, and contact "
+    "hello@studiamo.cloud if it keeps failing."
+)
+
+
+def _user_facing_error(exc: Exception) -> str:
+    """Reduces an import failure to a message that is safe and useful to put on screen.
+
+    A failure reaches the user twice, in the import drawer and on the material card, so only
+    curated copy may be written to `import_tasks.error_message` and `videos.status_error`.
+    Three exception types carry such copy by construction: ImportInputError above, and ai.py's
+    AIServiceUnavailable / UsageLimitExceeded. Everything else is a bug or a raw provider
+    payload, and writing str(e) put a rate-limit body complete with a signed URL, a stack of
+    library-internal advice and a link to file a GitHub issue in front of the user. The full
+    text is not lost, the caller logs it with the task id and a traceback.
+    """
+    if isinstance(exc, (ImportInputError, ai.AIServiceUnavailable, ai.UsageLimitExceeded)):
+        message = str(exc).strip()
+        if message:
+            return message
+    return _GENERIC_IMPORT_ERROR
+
+
 def _note_text_truncation(analysis: dict, summary: list) -> list:
     """Prepends a notice when only part of a document reached the AI.
 
@@ -125,7 +164,7 @@ class YouTubeTaskProcessor(IImportTaskProcessor):
         update_stage_fn("Step 1/2: Fetching Video Info...")
         yt_id = youtube.extract_video_id(url)
         if not yt_id:
-            raise ValueError("Invalid YouTube URL.")
+            raise ImportInputError("Invalid YouTube URL.")
 
         meta = youtube.get_video_metadata(yt_id)
         metadata_title = meta.get("title", f"YouTube Video ({yt_id})")
@@ -291,7 +330,7 @@ class DocumentTaskProcessor(IImportTaskProcessor):
         update_stage_fn("Step 1/3: Extracting Document Text...")
         doc_file = Path(file_path_str) if file_path_str else None
         if not doc_file or not doc_file.exists():
-            raise ValueError("Uploaded document file was not found on server.")
+            raise ImportInputError("Uploaded document file was not found on server.")
 
         # doc_file's own extension was already validated at upload time
         # (storage.safe_doc_extension), reuse it here so save/serve/delete
@@ -318,12 +357,12 @@ class DocumentTaskProcessor(IImportTaskProcessor):
                     pages_text.append(t)
             extracted_text = "\n".join(pages_text).strip()
             if not extracted_text:
-                raise ValueError("No text could be extracted from the PDF.")
+                raise ImportInputError("No text could be extracted from the PDF.")
         else:
             extracted_text = file_bytes.decode("utf-8", errors="ignore").strip()
 
         if len(extracted_text) < 30:
-            raise ValueError("Document content is too short to generate high-quality quizzes.")
+            raise ImportInputError("Document content is too short to generate high-quality quizzes.")
 
         original_filename = payload.get("original_filename") or doc_file.name
         metadata_title = title.strip() if (title and title.strip()) else original_filename
@@ -425,7 +464,7 @@ class NotesTaskProcessor(IImportTaskProcessor):
         learning_goal_id = payload.get("learning_goal_id")
 
         if len(text_content) < 30:
-            raise ValueError("Notes text is too short to generate high-quality quizzes.")
+            raise ImportInputError("Notes text is too short to generate high-quality quizzes.")
 
         update_stage_fn("Step 1/3: Reading Notes Content...")
         metadata_title = title.strip() if (title and title.strip()) else f"Notes ({datetime.now().strftime('%Y-%b-%d')})"
@@ -530,7 +569,7 @@ class GoalRecommendationsProcessor(IImportTaskProcessor):
             cursor.execute("SELECT id, title, description FROM goals WHERE id = %s AND user_uuid = %s;", (goal_id, user_uuid))
             goal = cursor.fetchone()
             if not goal:
-                raise ValueError("Goal not found.")
+                raise ImportInputError("Goal not found.")
 
             cursor.execute("SELECT id, title, youtube_id, custom_notes FROM videos WHERE learning_goal_id = %s AND user_uuid = %s AND status = 'ready';", (goal_id, user_uuid))
             vids = [dict(r) for r in cursor.fetchall()]
@@ -562,7 +601,7 @@ class GoalQuizProcessor(IImportTaskProcessor):
             cursor.execute("SELECT id, title, description FROM goals WHERE id = %s AND user_uuid = %s;", (goal_id, user_uuid))
             goal = cursor.fetchone()
             if not goal:
-                raise ValueError("Goal not found.")
+                raise ImportInputError("Goal not found.")
 
             cursor.execute("SELECT id, title, youtube_id FROM videos WHERE learning_goal_id = %s AND user_uuid = %s AND status = 'ready';", (goal_id, user_uuid))
             goal_videos = [dict(r) for r in cursor.fetchall()]
@@ -575,7 +614,7 @@ class GoalQuizProcessor(IImportTaskProcessor):
                     transcripts.append(f"Video '{gv['title']}':\n" + "\n".join(vdata.get("summary", [])))
 
             if not transcripts:
-                raise ValueError("No video summaries available under this goal.")
+                raise ImportInputError("No video summaries available under this goal.")
 
             combined_text = "\n\n---\n\n".join(transcripts)
             analysis = ai.analyze_video_transcript(combined_text, question_count, [], username=username)
@@ -797,6 +836,7 @@ class ImportQueueManager:
 
             except Exception as e:
                 err_str = str(e)
+                user_message = _user_facing_error(e)
                 elapsed_sec = round(time.time() - start_time, 2)
                 print(f"Import task #{task_id} failed for user '{username}': {err_str}")
                 traceback.print_exc()
@@ -811,12 +851,12 @@ class ImportQueueManager:
                             """UPDATE import_tasks 
                                SET status = 'failed', progress_stage = 'Failed', error_message = %s, updated_at = CURRENT_TIMESTAMP 
                                WHERE id = %s AND user_uuid = %s;""",
-                            (err_str, task_id, user_uuid)
+                            (user_message, task_id, user_uuid)
                         )
                         if task_dict and task_dict.get("video_id"):
                             fail_cur.execute(
                                 "UPDATE videos SET status = 'failed', status_error = %s WHERE id = %s AND user_uuid = %s;",
-                                (err_str, task_dict["video_id"], user_uuid)
+                                (user_message, task_dict["video_id"], user_uuid)
                             )
                         if not getattr(raw_fail_conn, "autocommit", False):
                             raw_fail_conn.commit()
@@ -830,19 +870,43 @@ class ImportQueueManager:
 
 
     def recover_pending_tasks(self, username: str):
-        """Scans database for incomplete tasks after server restart and resumes execution."""
+        """Resumes incomplete tasks after a restart, and does the backlog's housekeeping.
+
+        Runs both at startup (per user, from main.lifespan) and every minute from the
+        scheduler daemon, which is why the retention sweep lives here rather than in its own
+        pass: this already holds a connection for the user.
+        """
         conn = database.get_db_connection(username)
         user_uuid = conn.user_uuid
         cursor = conn.cursor()
         try:
             # Auto-resolve any stuck videos whose quizzes/SRS generation finished or are ready
             cursor.execute(
-                """UPDATE videos SET status = 'ready' 
-                   WHERE status = 'processing' AND user_uuid = %s 
+                """UPDATE videos SET status = 'ready'
+                   WHERE status = 'processing' AND user_uuid = %s
                    AND id IN (SELECT DISTINCT video_id FROM quizzes WHERE user_uuid = %s);""",
                 (user_uuid, user_uuid)
             )
             conn.commit()
+
+            # Retire finished tasks past the retention window. Only the row goes: an import
+            # that produced a video wrote it long before this, and import_tasks.video_id is a
+            # reference to that video, not the other way around.
+            cursor.execute(
+                """DELETE FROM import_tasks
+                    WHERE user_uuid = %s
+                      AND status IN ('completed', 'failed')
+                      AND updated_at < CURRENT_TIMESTAMP - (INTERVAL '1 day' * %s)
+                 RETURNING id;""",
+                (user_uuid, FINISHED_TASK_RETENTION_DAYS)
+            )
+            purged = cursor.fetchall()
+            conn.commit()
+            if purged:
+                print(
+                    f"[ImportQueueManager] Removed {len(purged)} finished import task(s) older "
+                    f"than {FINISHED_TASK_RETENTION_DAYS} days for user '{username}'."
+                )
 
             # Only tasks that have gone quiet. A running task touches updated_at at every
             # progress step, so anything newer than this is being worked on right now, either

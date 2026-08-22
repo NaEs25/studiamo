@@ -715,7 +715,7 @@ function renderVideoCard(video, quizzes, goals) {
         `;
     } else if (video.status === 'failed') {
         actionControlsHTML = `
-            <button onclick="retryVideoImport(${video.id})" class="w-full py-2 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 font-bold rounded-xl text-xs transition flex items-center justify-center space-x-1.5 h-[38px]" title="Retry Video Import: ${video.status_error || 'Import Failed'}">
+            <button onclick="retryVideoImport(${video.id})" class="w-full py-2 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 font-bold rounded-xl text-xs transition flex items-center justify-center space-x-1.5 h-[38px]" title="Retry Video Import: ${escapeHtml(video.status_error) || 'Import Failed'}">
                  <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
                  <span>Retry</span>
             </button>
@@ -742,11 +742,11 @@ function renderVideoCard(video, quizzes, goals) {
     const isWatchlist = video.is_watchlist === 1 || video.is_watchlist === true;
 
     const failedNoticeHTML = video.status === 'failed' ? `
-        <div class="p-2.5 bg-red-50 border border-red-100 rounded-xl flex items-start space-x-2 text-xs text-red-700" title="${video.status_error || 'Unknown Error'}">
+        <div class="p-2.5 bg-red-50 border border-red-100 rounded-xl flex items-start space-x-2 text-xs text-red-700" title="${escapeHtml(video.status_error) || 'Unknown Error'}">
             <i data-lucide="alert-triangle" class="w-4 h-4 shrink-0 text-red-500 mt-0.5"></i>
             <div class="min-w-0 flex-1">
                 <p class="font-semibold text-red-800 text-xs">Import Failed</p>
-                <p class="text-[11px] text-red-600/90 break-words whitespace-normal leading-tight mt-0.5">${video.status_error || 'Unknown error occurred during processing.'}</p>
+                <p class="text-[11px] text-red-600/90 break-words whitespace-normal leading-tight mt-0.5">${escapeHtml(video.status_error) || 'Unknown error occurred during processing.'}</p>
             </div>
         </div>
     ` : '';
