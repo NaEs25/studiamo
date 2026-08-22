@@ -611,14 +611,6 @@ async def run_scheduler_daemon():
                 ImportQueueManager.get_instance().recover_all_pending_tasks()
             except Exception as e_recovery:
                 print(f"Periodic task recovery error in scheduler: {e_recovery}")
-            # Rides this loop rather than hooking the signup path: a notifier must not be
-            # able to affect whether an account gets created. Rate-limits itself internally,
-            # so calling it every tick costs one query every few minutes, not every minute.
-            try:
-                from app.signup_notify import check_and_notify_new_signups
-                check_and_notify_new_signups()
-            except Exception as e_signup:
-                print(f"Signup notification error in scheduler: {e_signup}")
         except Exception as e:
             print(f"Scheduler daemon error: {e}")
         await asyncio.sleep(60)
