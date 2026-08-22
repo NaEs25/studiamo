@@ -72,12 +72,16 @@ async def add_content(
     placeholder_thumb = "/static/images/notes-icon.svg"
     yt_id = None
     task_type = "youtube"
+    # No is_watchlist key: no processor reads one. The column is set by the INSERT below
+    # (and by the two UPDATEs in the duplicate-import branch), which is the only place it is
+    # ever written. Carrying it in the payload as well read as if the importer would apply
+    # it, and the three call sites did not even agree on a value: this one forwarded the
+    # form field, the retry path below hardcoded 0 and confirm_video_import hardcoded 1.
     payload = {
         "url": url,
         "title": title,
         "importance_rating": importance_rating,
-        "learning_goal_id": learning_goal_id,
-        "is_watchlist": is_watchlist
+        "learning_goal_id": learning_goal_id
     }
 
     if url and url.strip():
@@ -220,8 +224,7 @@ async def retry_video_import_route(
             "url": url,
             "title": video["title"],
             "importance_rating": video["importance_rating"],
-            "learning_goal_id": video["learning_goal_id"],
-            "is_watchlist": 0
+            "learning_goal_id": video["learning_goal_id"]
         }
         task_id = ImportQueueManager.get_instance().enqueue_task(
             username=username,
@@ -599,8 +602,7 @@ async def confirm_video_import(
             payload = {
                 "url": f"https://www.youtube.com/watch?v={youtube_id}",
                 "importance_rating": importance_rating,
-                "learning_goal_id": learning_goal_id,
-                "is_watchlist": 1
+                "learning_goal_id": learning_goal_id
             }
             task_id = ImportQueueManager.get_instance().enqueue_task(
                 username=username,
