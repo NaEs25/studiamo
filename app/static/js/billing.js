@@ -190,6 +190,89 @@ async function initPaywall() {
 }
 
 
+// Every variant the status badge can wear. The template owns the badge's shape; these are
+// the only classes the script adds or removes, so the two cannot drift apart.
+const STATUS_BADGE_VARIANTS = [
+    'status-badge-positive', 'status-badge-warning', 'status-badge-danger',
+    'status-badge-neutral', 'status-badge-tester',
+];
+
+
+/** Formats an ISO date for display, e.g. "September 5, 2026". Empty string on anything
+ *  unparseable, so a bad value degrades to a sentence without a date rather than
+ *  "Invalid Date". */
+function _formatTesterDate(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+
+/** "1 day" / "5 days", so no sentence has to read "in 1 days". */
+function _dayCount(n) {
+    return n === 1 ? '1 day' : `${n} days`;
+}
+
+
+/**
+ * Chooses the badge and body text for an account with tester access.
+ *
+ * Branches on `unlimited` and `legacy` BEFORE looking at days_left: both carry
+ * days_left === null, which is silently false-y in JS and would otherwise fall through to
+ * the "ends today" wording for someone whose access has no end date at all.
+ */
+function _testerPreset(tester) {
+    const ended = { label: 'Tester ended', variant: 'status-badge-neutral' };
+
+    if (tester.state === 'expired' || tester.state === 'revoked') {
+        const on = _formatTesterDate(tester.expires_at);
+        return {
+            ...ended,
+            text: on
+                ? `Your tester access ended on ${on}. Thank you for helping test Studiamo.`
+                : 'Your tester access has ended. Thank you for helping test Studiamo.',
+        };
+    }
+
+    if (tester.unlimited) {
+        return {
+            label: 'Tester', variant: 'status-badge-tester',
+            text: 'You have tester access with no end date.',
+        };
+    }
+
+    // Predates time-boxed grants. Kept deliberately vague: there is no end date to show,
+    // and inventing one here would be a promise the database is not making.
+    if (tester.legacy) {
+        return {
+            label: 'Tester', variant: 'status-badge-tester',
+            text: 'You have free tester access.',
+        };
+    }
+
+    const left = tester.days_left;
+    const on = _formatTesterDate(tester.expires_at);
+
+    if (left === 0) {
+        return {
+            label: 'Ending today', variant: 'status-badge-warning',
+            text: 'Your tester access ends today. Subscribe to keep your library and your streak.',
+        };
+    }
+    if (left !== null && left <= 7) {
+        return {
+            label: 'Tester', variant: 'status-badge-warning',
+            text: `Tester access ends in ${_dayCount(left)}, on ${on}.`,
+        };
+    }
+    return {
+        label: 'Tester', variant: 'status-badge-tester',
+        text: `Tester access until ${on}. ${_dayCount(left)} left.`,
+    };
+}
+
+
 /**
  * Renders the Settings subscription card from live status.
  * Called by loadSettings() once the settings payload is in.
@@ -201,53 +284,106 @@ function renderSubscriptionCard(settings) {
     if (!textEl || !badgeEl) return;
 
     const status = (settings && settings.subscription_status) || 'inactive';
-    const isTester = !!(settings && settings.is_tester);
+    // `tester` carries the end date; `is_tester` is the flat legacy flag kept for older
+    // clients. Fall back to it so this still renders something sane if the payload is stale.
+    const tester = (settings && settings.tester) || null;
+    const isTester = tester
+        ? tester.state !== 'none'
+        : !!(settings && settings.is_tester);
+    const testerEnded = !!tester && (tester.state === 'expired' || tester.state === 'revoked');
 
     const PRESETS = {
-        active:    { label: 'Active',      cls: 'bg-emerald-100 text-emerald-700', text: 'Your subscription is active.' },
-        on_trial:  { label: 'Trial',       cls: 'bg-emerald-100 text-emerald-700', text: 'You are on a free trial.' },
-        past_due:  { label: 'Payment due', cls: 'bg-amber-100 text-amber-700',     text: "Your last payment failed. Update your card to avoid losing access." },
-        cancelled: { label: 'Ending',      cls: 'bg-amber-100 text-amber-700',     text: 'Cancelled: you keep access until the end of the paid period.' },
-        paused:    { label: 'Paused',      cls: 'bg-stone-200 text-stone-600',     text: 'Your subscription is paused.' },
-        unpaid:    { label: 'Unpaid',      cls: 'bg-red-100 text-red-700',         text: 'Your subscription is unpaid.' },
-        expired:   { label: 'Expired',     cls: 'bg-stone-200 text-stone-600',     text: 'Your subscription has expired.' },
-        inactive:  { label: 'None',        cls: 'bg-stone-200 text-stone-600',     text: 'You do not have an active subscription.' },
+        active:    { label: 'Active',      variant: 'status-badge-positive', text: 'Your subscription is active.' },
+        on_trial:  { label: 'Trial',       variant: 'status-badge-positive', text: 'You are on a free trial.' },
+        past_due:  { label: 'Payment due', variant: 'status-badge-warning',  text: "Your last payment failed. Update your card to avoid losing access." },
+        cancelled: { label: 'Ending',      variant: 'status-badge-warning',  text: 'Cancelled: you keep access until the end of the paid period.' },
+        paused:    { label: 'Paused',      variant: 'status-badge-neutral',  text: 'Your subscription is paused.' },
+        unpaid:    { label: 'Unpaid',      variant: 'status-badge-danger',   text: 'Your subscription is unpaid.' },
+        expired:   { label: 'Expired',     variant: 'status-badge-neutral',  text: 'Your subscription has expired.' },
+        inactive:  { label: 'None',        variant: 'status-badge-neutral',  text: 'You do not have an active subscription.' },
     };
 
-    let preset = PRESETS[status] || PRESETS.inactive;
-    if (isTester) {
-        preset = { label: 'Tester', cls: 'bg-indigo-100 text-indigo-700', text: 'You have free tester access.' };
+    // A real subscription outranks a tester grant: someone who subscribed mid-test phase is
+    // paying, and should be told about the thing they are paying for.
+    const hasSubscription = status !== 'inactive';
+    let preset;
+    if (isTester && !hasSubscription) {
+        preset = tester
+            ? _testerPreset(tester)
+            : { label: 'Tester', variant: 'status-badge-tester', text: 'You have free tester access.' };
+    } else {
+        preset = PRESETS[status] || PRESETS.inactive;
     }
 
     textEl.textContent = preset.text;
     badgeEl.textContent = preset.label;
-    badgeEl.className =
-        'text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md ' + preset.cls;
+    // Toggle the variant only. The shape classes stay in the template, where they are
+    // declared once.
+    badgeEl.classList.remove(...STATUS_BADGE_VARIANTS);
+    badgeEl.classList.add(preset.variant);
 
     if (!actionEl) return;
+    _renderSubscriptionAction(actionEl, { hasSubscription, isTester, testerEnded, tester });
+}
 
-    // Testers have no Lemon Squeezy subscription to manage, and nothing to buy.
-    if (isTester) {
-        actionEl.innerHTML = '';
-        return;
-    }
 
-    const hasSubscription = status !== 'inactive';
+/**
+ * Fills the action area under the status box.
+ *
+ * Handlers are attached with addEventListener after the markup is in place rather than
+ * written as inline onclick attributes in these template strings.
+ */
+function _renderSubscriptionAction(actionEl, { hasSubscription, isTester, testerEnded, tester }) {
+    const SUBSCRIBE_BTN = `
+        <button type="button" data-action="checkout-beta"
+            class="w-full py-2.5 px-4 bg-amber-500 hover:bg-amber-600 rounded-xl text-xs font-extrabold text-stone-950 transition flex items-center justify-center space-x-2">
+            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+            <span>Continue with a subscription</span>
+        </button>`;
+    const EXPORT_BTN = `
+        <a href="/api/user/export"
+            class="w-full py-2.5 px-4 bg-stone-100 hover:bg-stone-200 border border-[#e7dfd3] rounded-xl text-xs font-bold text-stone-700 transition flex items-center justify-center space-x-2">
+            <i data-lucide="download" class="w-3.5 h-3.5"></i>
+            <span>Download my data</span>
+        </a>`;
+
     if (hasSubscription) {
         actionEl.innerHTML = `
-            <button type="button" onclick="openBillingPortal()"
+            <button type="button" data-action="billing-portal"
                 class="w-full py-2.5 px-4 bg-stone-100 hover:bg-stone-200 border border-[#e7dfd3] rounded-xl text-xs font-bold text-stone-700 transition flex items-center justify-center space-x-2">
                 <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
                 <span>Manage subscription</span>
             </button>`;
+    } else if (testerEnded) {
+        // The export link matters most here: this is someone deciding whether to stay, and
+        // leaving with their data has to be as reachable as paying.
+        actionEl.innerHTML = `<div class="space-y-2">${SUBSCRIBE_BTN}${EXPORT_BTN}</div>`;
+    } else if (isTester && tester && !tester.unlimited && !tester.legacy && tester.days_left !== null && tester.days_left <= 7) {
+        // Only once the end is in sight. A tester on day one is here to test, not to be sold to.
+        actionEl.innerHTML = SUBSCRIBE_BTN;
+    } else if (isTester) {
+        // Testers with time left have no subscription to manage and nothing to buy yet.
+        actionEl.innerHTML = '';
+        return;
     } else {
         actionEl.innerHTML = `
-            <button type="button" onclick="startCheckout(false)"
+            <button type="button" data-action="checkout-standard"
                 class="w-full py-2.5 px-4 bg-amber-500 hover:bg-amber-600 rounded-xl text-xs font-extrabold text-stone-950 transition flex items-center justify-center space-x-2">
                 <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
                 <span>Subscribe ($7.99 / month)</span>
             </button>`;
     }
+
+    const HANDLERS = {
+        'billing-portal': () => openBillingPortal(),
+        'checkout-beta': () => startCheckout(true),
+        'checkout-standard': () => startCheckout(false),
+    };
+    actionEl.querySelectorAll('[data-action]').forEach(el => {
+        const handler = HANDLERS[el.dataset.action];
+        if (handler) el.addEventListener('click', handler);
+    });
+
     if (typeof renderIcons === 'function') renderIcons();
 }
 
