@@ -47,7 +47,7 @@ Allow: /llms-full.txt
 Disallow: /api/
 Disallow: /app
 
-Sitemap: https://studiamo.cloud/sitemap.xml
-# LLMs: https://studiamo.cloud/llms.txt
-# LLMs Full: https://studiamo.cloud/llms-full.txt
+Sitemap: https://www.studiamo.cloud/sitemap.xml
+# LLMs: https://www.studiamo.cloud/llms.txt
+# LLMs Full: https://www.studiamo.cloud/llms-full.txt
 
