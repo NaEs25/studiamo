@@ -14,6 +14,11 @@ waiting, and the marketing list keeps counting them as someone still to convert.
 the failure this module exists to make impossible, by being the one place both the CLI
 (scripts/promote_waitlist.py) and the admin panel call.
 
+Every function here takes an optional `conn`, so all four steps land on one database. The
+admin cockpit administers production from inside a staging process; without that, promoting
+from the panel would flip a status on one database and stamp the lead row on another. The
+email is the only step with no database at all, which is what makes this possible.
+
 Step 2 runs BEFORE the send and regardless of whether it succeeds. The account is already
 active at that point, so a lead row still reading "waiting" is wrong the moment the UPDATE
 committed, and a failed email must not be what decides whether someone counts as converted.
@@ -25,7 +30,7 @@ from app import database, email_utils, landing_waitlist_db
 logger = logging.getLogger("studiamo")
 
 
-def notify_promoted(row: dict, send_email: bool = True) -> dict:
+def notify_promoted(row: dict, send_email: bool = True, conn=None) -> dict:
     """Steps 2 to 4 for an account that has just been promoted.
 
     Takes the row returned by either promotion query, so the bulk path
@@ -44,7 +49,8 @@ def notify_promoted(row: dict, send_email: bool = True) -> dict:
 
     # Before the send, and independent of it. See the module docstring.
     try:
-        landing_waitlist_db.mark_waitlist_converted(row.get("google_email"), row.get("email"))
+        landing_waitlist_db.mark_waitlist_converted(
+            row.get("google_email"), row.get("email"), conn=conn)
     except Exception as e:
         # The account is active either way; a lead-table stamp must not undo that or raise
         # into the caller as though the promotion failed.
@@ -72,7 +78,7 @@ def notify_promoted(row: dict, send_email: bool = True) -> dict:
     report["email_sent"] = bool(sent)
     if sent:
         try:
-            landing_waitlist_db.mark_waitlist_email_sent(recipient, "spot_ready")
+            landing_waitlist_db.mark_waitlist_email_sent(recipient, "spot_ready", conn=conn)
         except Exception as e:
             logger.warning(f"[promotion] spot_ready stamp failed for {username}: {e}")
     else:
@@ -81,7 +87,7 @@ def notify_promoted(row: dict, send_email: bool = True) -> dict:
     return report
 
 
-def promote_and_notify(user_uuid: str, send_email: bool = True) -> dict:
+def promote_and_notify(user_uuid: str, send_email: bool = True, conn=None) -> dict:
     """Promotes one specific waitlist account and runs the full follow-through.
 
     Returns a report of what actually happened rather than a bare success flag, because
@@ -94,10 +100,10 @@ def promote_and_notify(user_uuid: str, send_email: bool = True) -> dict:
     `reason` is set whenever something did not happen: the account was not on the waitlist,
     there was no address on file, or the send failed. It is meant to be shown, not logged
     and swallowed."""
-    row = database.promote_user_to_active(user_uuid)
+    row = database.promote_user_to_active(user_uuid, conn=conn)
     if not row:
         # Already active, or no such account. Deliberately not an error: a double click
         # should be a no-op, not a second email to someone promoted a week ago.
         return {"promoted": False, "username": None, "recipient": None,
                 "email_sent": False, "reason": "Account was not on the waitlist."}
-    return notify_promoted(row, send_email=send_email)
+    return notify_promoted(row, send_email=send_email, conn=conn)

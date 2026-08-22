@@ -700,7 +700,7 @@ def credit_referral(referral_code: str) -> bool:
             release_pooled_connection(conn)
 
 
-def promote_user_to_active(user_uuid: str) -> dict:
+def promote_user_to_active(user_uuid: str, conn=None) -> dict:
     """Promotes one specific account off the waitlist, regardless of queue position.
 
     Distinct from promote_next_n_users, which takes the front of the queue. This is a
@@ -713,10 +713,14 @@ def promote_user_to_active(user_uuid: str) -> dict:
     The `AND status = 'waitlist'` is what makes this idempotent, and it is load-bearing
     rather than tidy: without it a second call would "succeed" on an already-active account
     and the caller would send a second "your spot is ready" email to someone who has been
-    using the product for a week."""
-    conn = None
+    using the product for a week.
+
+    `conn` lets a caller run this on a database other than the app's own. The admin cockpit
+    administers production from inside a staging process, and every write belonging to one
+    promotion has to land in the same place. A supplied connection is left open."""
+    borrowed = conn is None
     try:
-        conn = get_pooled_raw_connection()
+        conn = get_pooled_raw_connection() if borrowed else conn
         cursor = conn.cursor(cursor_factory=RealDictCursor)
         cursor.execute(
             """UPDATE user_profile SET status = 'active'
@@ -724,9 +728,12 @@ def promote_user_to_active(user_uuid: str) -> dict:
             RETURNING username, email, google_email;""",
             (user_uuid,)
         )
-        return cursor.fetchone()
+        row = cursor.fetchone()
+        if borrowed and not getattr(conn, "autocommit", False):
+            conn.commit()
+        return row
     finally:
-        if conn is not None:
+        if borrowed and conn is not None:
             release_pooled_connection(conn)
 
 

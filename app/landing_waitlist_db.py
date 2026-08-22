@@ -101,7 +101,7 @@ def link_lead_to_account(user_uuid: str, *emails: str) -> int:
         conn.close()
 
 
-def mark_waitlist_converted(*emails: str) -> int:
+def mark_waitlist_converted(*emails: str, conn=None) -> int:
     """Stamps converted_at on the lead row(s) for an account that is now off the waitlist and
     active. Returns how many rows were stamped. Idempotent: an already-stamped row keeps its
     original timestamp, so re-running a promotion never rewrites history.
@@ -114,11 +114,18 @@ def mark_waitlist_converted(*emails: str) -> int:
 
     Takes several addresses because an account can be reached at either `email` or
     `google_email`, and the lead may have been captured under either one.
+
+    `conn` lets a caller supply its own connection so this write lands on the same database
+    as the status change it belongs to. The admin cockpit administers production while
+    running inside a staging process, and a promotion that flipped the status on one
+    database and stamped the lead row on another would be worse than one that failed.
+    A supplied connection is used and left open; the caller owns it.
     """
     candidates = [e.strip().lower() for e in emails if e and e.strip()]
     if not candidates:
         return 0
-    conn = get_waitlist_db()
+    borrowed = conn is None
+    conn = get_waitlist_db() if borrowed else conn
     try:
         cursor = conn.cursor()
         cursor.execute(
@@ -130,17 +137,22 @@ def mark_waitlist_converted(*emails: str) -> int:
         conn.commit()
         return stamped
     finally:
-        conn.close()
+        if borrowed:
+            conn.close()
 
 
-def mark_waitlist_email_sent(email: str, email_type: str) -> None:
+def mark_waitlist_email_sent(email: str, email_type: str, conn=None) -> None:
     """Stamps a landing_waitlist row after an email actually sent successfully,
     so retries stay safe and delivery is auditable. `email_type` is
     'confirmation' (account-waitlist signup email) or 'spot_ready' (promotion
     email sent by scripts/promote_waitlist.py). No-op if no row matches the
     email, callers aren't required to have called record_waitlist_lead first.
+
+    `conn`, as in mark_waitlist_converted, lets the caller keep every write of one promotion
+    on a single database. A supplied connection is left open; the caller owns it.
     """
-    conn = get_waitlist_db()
+    borrowed = conn is None
+    conn = get_waitlist_db() if borrowed else conn
     try:
         if email_type == "confirmation":
             conn.execute(
@@ -158,4 +170,5 @@ def mark_waitlist_email_sent(email: str, email_type: str) -> None:
             raise ValueError(f"Unknown email_type: {email_type!r}")
         conn.commit()
     finally:
-        conn.close()
+        if borrowed:
+            conn.close()
