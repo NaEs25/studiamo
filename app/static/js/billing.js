@@ -143,14 +143,19 @@ async function logoutFromPaywall() {
 /**
  * Sends the user to Lemon Squeezy checkout.
  *
- * There is one checkout URL. The promotional code is displayed in our own UI and typed in
- * at checkout rather than pre-applied, because Lemon Squeezy renders an applied discount
- * below its pay button, where someone who does not scroll never sees it.
+ * On the general paywall the promotional code is displayed in our own UI and typed in at
+ * checkout rather than pre-applied, because Lemon Squeezy renders an applied discount below
+ * its pay button, where someone who does not scroll never sees it.
+ *
+ * The expired-tester screen passes applyDiscount, having already stated the price and terms
+ * on our side: that reader has earned the offer, and asking them to transcribe a code is
+ * friction at the moment their answer is still open.
  */
-async function startCheckout() {
+async function startCheckout(applyDiscount = false) {
     _paywallError('');
     try {
-        const data = await fetchAPI('/api/billing/checkout');
+        const data = await fetchAPI(
+            `/api/billing/checkout${applyDiscount ? '?apply_discount=true' : ''}`);
         if (!data || !data.checkout_url) throw new Error('No checkout URL returned');
         window.location.href = data.checkout_url;
     } catch (e) {

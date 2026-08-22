@@ -3,6 +3,11 @@
      the expired-tester step), so the price and the terms are stated once rather than kept
      in sync by hand across two nearly-identical blocks.
 
+     `discount_applied` switches the wording between "type this in" and "already applied".
+     The code is still named either way: it is what appears on the Lemon Squeezy line item,
+     and a discount you can see the name of is easier to trust than an unexplained lower
+     total.
+
      Marked with classes and data attributes rather than ids, because an id cannot appear
      twice on a page and this block now does. billing.js fills every [data-discount-note]
      it finds. -->
@@ -26,7 +31,12 @@
 <div class="discount-note" data-discount-note>
     <i data-lucide="ticket-percent" class="w-4 h-4 flex-shrink-0"></i>
     <span>
+        {% if discount_applied %}
+        Code <strong class="discount-code" data-discount-code></strong> is already applied,
+        so checkout will show $3.99. Nothing to type in.
+        {% else %}
         Enter code <strong class="discount-code" data-discount-code></strong>
         at checkout for 50% off your first 6 months, because you are helping test Studiamo.
+        {% endif %}
     </span>
 </div>

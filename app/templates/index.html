@@ -2803,7 +2803,10 @@
     <div id="overlay-paywall"
         class="hidden fixed inset-0 bg-stone-950/90 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
         role="dialog" aria-modal="true" aria-labelledby="paywall-title">
-        <div class="max-w-md w-full bg-white border border-stone-200 rounded-3xl p-7 shadow-2xl space-y-5">
+        <!-- max-h + overflow so a tall step cannot run off the viewport. The overlay has no
+             close button by design, so anything pushed past the bottom edge is unreachable
+             rather than merely awkward. -->
+        <div class="max-w-md w-full bg-white border border-stone-200 rounded-3xl p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
 
             <!-- Step 1: full price. The only price shown until it is declined. -->
             <div id="paywall-step-standard" class="space-y-5">
@@ -2873,7 +2876,7 @@
                  reader had never used it. Someone who has just spent two weeks testing has,
                  and telling them that would waste the one screen where their answer is
                  still open. Chosen in initPaywall() and notifyPaymentRequired(). -->
-            <div id="paywall-step-tester-expired" class="hidden space-y-5">
+            <div id="paywall-step-tester-expired" class="hidden space-y-4">
                 <div class="space-y-2">
                     <div class="w-11 h-11 rounded-2xl bg-emerald-100 flex items-center justify-center">
                         <i data-lucide="heart-handshake" class="w-5 h-5 text-emerald-600"></i>
@@ -2881,18 +2884,19 @@
                     <h3 class="text-xl font-extrabold text-stone-900">Your tester access has ended</h3>
                     <p class="text-sm text-stone-600 leading-relaxed">
                         Thank you for testing Studiamo. Early users caught things we would never
-                        have found alone, and the version everyone else gets is better because you
-                        used this one first.
+                        have found alone.
                     </p>
                     <p class="text-sm text-stone-600 leading-relaxed">
-                        Everything you created is still here and still yours. Pick up where you left
-                        off, or take your data with you. Either way, you are welcome back any time.
+                        Everything you made is still here and still yours. Pick up where you left
+                        off, or take it with you.
                     </p>
                 </div>
 
                 <div class="space-y-2">
-                    {% include "partials/_beta_offer.html" %}
-                    <button type="button" onclick="startCheckout()"
+                    {% with discount_applied = true %}
+                        {% include "partials/_beta_offer.html" %}
+                    {% endwith %}
+                    <button type="button" onclick="startCheckout(true)"
                         class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl transition shadow-lg flex items-center justify-center space-x-2">
                         <span>Continue with a subscription</span>
                         <i data-lucide="arrow-right" class="w-4 h-4"></i>

@@ -55,7 +55,7 @@ def _parse_ls_timestamp(value: Optional[str]) -> Optional[datetime]:
 # Checkout
 # --------------------------------------------------------------------------------------
 
-def build_checkout_url(user_uuid: str, email: str = "") -> str:
+def build_checkout_url(user_uuid: str, email: str = "", apply_discount: bool = False) -> str:
     """Builds the hosted Lemon Squeezy checkout URL for one user.
 
     user_uuid travels in checkout[custom][user_uuid] and comes back on every subscription
@@ -66,16 +66,23 @@ def build_checkout_url(user_uuid: str, email: str = "") -> str:
 
     email is prefilled purely as a convenience and is never used to resolve identity.
 
-    The promotional code is deliberately NOT pre-applied here. Lemon Squeezy renders an
-    auto-applied discount as a line item near the bottom of the checkout, below the pay
-    button, so the headline price a customer reads on the way in is the full one and the
-    reduction only becomes visible if they scroll. Telling them the code in our own UI and
-    letting them enter it means the offer is stated where the decision is made, in wording
-    we control, instead of being discovered late in someone else's layout."""
+    apply_discount controls whether the promotional code is attached to the URL, and it is
+    False by default. Lemon Squeezy renders an applied discount as a line item near the
+    bottom of its checkout, below the pay button, so the headline price stays the full one
+    and the reduction is only visible to someone who scrolls. On the general paywall the
+    code is therefore stated in our own UI and typed in by the customer, where the offer is
+    made in wording we control.
+
+    The expired-tester screen passes True. That reader has already been shown the price and
+    the terms on our side, so the argument above is satisfied before they leave, and making
+    someone who just spent two weeks testing transcribe a code is friction at the exact
+    moment their answer is still open."""
     ls = config.get_lemonsqueezy_config()
     params = {"checkout[custom][user_uuid]": user_uuid}
     if email:
         params["checkout[email]"] = email
+    if apply_discount and ls.get("beta_discount_code"):
+        params["checkout[discount_code]"] = ls["beta_discount_code"]
     # safe="[]" keeps Lemon Squeezy's bracket syntax literal in the query string.
     return f"{ls['buy_url']}?{urlencode(params, safe='[]')}"
 
@@ -84,6 +91,7 @@ def build_checkout_url(user_uuid: str, email: str = "") -> str:
 @limiter.limit("20/minute")
 async def create_checkout(
     request: Request,
+    apply_discount: bool = False,
     username: str = Depends(get_active_username),
 ):
     """Returns the checkout URL for the signed-in user.
@@ -91,8 +99,8 @@ async def create_checkout(
     JSON rather than a redirect so the paywall modal can surface a real error instead of
     navigating the user to a broken page if billing is misconfigured.
 
-    There is one checkout URL, not a standard one and a discounted one. The promotional
-    code is shown in our own UI and typed in at checkout (see build_checkout_url)."""
+    apply_discount=true attaches the promotional code instead of leaving it to be typed in.
+    Used by the expired-tester screen; see build_checkout_url for why it is not the default."""
     _require_cloud()
     user_uuid = config.get_user_uuid_from_db(username)
     if not user_uuid:
@@ -102,7 +110,7 @@ async def create_checkout(
     email = user_cfg.get("GOOGLE_EMAIL") or user_cfg.get("EMAIL") or ""
 
     try:
-        url = build_checkout_url(user_uuid, email=email)
+        url = build_checkout_url(user_uuid, email=email, apply_discount=apply_discount)
     except RuntimeError as e:
         # require_env_for_cloud raises when a Lemon Squeezy value is missing.
         logger.error(f"Lemon Squeezy is not configured: {e}")
