@@ -828,3 +828,35 @@ button:active:not(:disabled) {
     background-color: #e0e7ff; /* indigo-100 */
     color: #4338ca;            /* indigo-700 */
 }
+
+/* ── Promotional Code Note ──────────────────────────────── */
+/* Sits directly above a checkout button, in the paywall and on the Settings subscription
+   card. The code is deliberately shown here rather than pre-applied to the checkout URL:
+   Lemon Squeezy renders an applied discount as a line item below its own pay button, so a
+   customer who does not scroll reads the full price and nothing else. Stating the offer
+   next to the button puts it where the decision is actually made. */
+.discount-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.625rem 0.75rem;
+    border-radius: 0.75rem;
+    background-color: #ecfdf5; /* emerald-50 */
+    border: 1px solid #a7f3d0; /* emerald-200 */
+    color: #065f46;            /* emerald-800 */
+    font-size: 0.6875rem;
+    line-height: 1.45;
+    font-weight: 600;
+}
+
+/* Monospace and letter-spaced so the code can be transcribed without ambiguity between
+   look-alike characters, and selectable so it can simply be copied. */
+.discount-code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    padding: 0.0625rem 0.25rem;
+    border-radius: 0.25rem;
+    background-color: #d1fae5; /* emerald-100 */
+    user-select: all;
+}
