@@ -917,7 +917,10 @@ function renderAnalyticsHistory() {
         const passes = session.attempts.filter(a => a.grade === 'remembered').length;
         const total = session.attempts.length;
         const scorePct = Math.round((passes / total) * 100);
-        const scoreClass = scorePct >= 80 ? 'text-emerald-450' : (scorePct >= 50 ? 'text-amber-450' : 'text-red-450');
+        // -400, not -450: Tailwind's scale has no 450 step, so these three compiled to
+        // nothing and every score percentage rendered uncolored. -400 is what the same
+        // score badge in videos.js renderVideoStatsAttempts uses, so the two agree.
+        const scoreClass = scorePct >= 80 ? 'text-emerald-400' : (scorePct >= 50 ? 'text-amber-400' : 'text-red-400');
         const isExpanded = window._expandedSessions?.[session.id] ? true : false;
         
         let attemptsHTML = '';
@@ -926,8 +929,8 @@ function renderAnalyticsHistory() {
         session.attempts.forEach(attempt => {
             const gradeLabel = attempt.grade === 'remembered' ? 'Pass' : 'Fail';
             const gradeBadgeClass = attempt.grade === 'remembered'
-                ? 'bg-emerald-500/10 text-emerald-450 border border-emerald-500/20'
-                : 'bg-red-500/10 text-red-450 border border-red-500/20';
+                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                : 'bg-red-500/10 text-red-400 border border-red-500/20';
                 
             attemptsHTML += `
                 <div class="p-3.5 bg-stone-100 border border-stone-200 rounded-xl space-y-3 shadow-inner">
@@ -981,23 +984,13 @@ function setVoiceEngine(engine) {
     const validEngine = engine === 'gemini' ? 'gemini' : 'browser';
     localStorage.setItem('studiamo_voice_engine', validEngine);
 
-    // Update pill-toggle active state
+    // Update pill-toggle active state. Only .is-active moves: the buttons keep their
+    // .segmented-tab styling and padding from the template, which reassigning .className
+    // used to throw away and replace with a second copy maintained here.
     const btnBrowser = document.getElementById('voice-card-browser');
     const btnGemini = document.getElementById('voice-card-gemini');
-    if (btnBrowser) {
-        if (validEngine === 'browser') {
-            btnBrowser.className = 'px-3 py-1 rounded-lg text-xs font-bold transition-all duration-200 text-amber-900 bg-amber-500/20 border border-amber-500/40';
-        } else {
-            btnBrowser.className = 'px-3 py-1 rounded-lg text-xs font-semibold transition-all duration-200 text-stone-600 hover:text-amber-900';
-        }
-    }
-    if (btnGemini) {
-        if (validEngine === 'gemini') {
-            btnGemini.className = 'px-3 py-1 rounded-lg text-xs font-bold transition-all duration-200 text-amber-900 bg-amber-500/20 border border-amber-500/40';
-        } else {
-            btnGemini.className = 'px-3 py-1 rounded-lg text-xs font-semibold transition-all duration-200 text-stone-600 hover:text-amber-900';
-        }
-    }
+    if (btnBrowser) btnBrowser.classList.toggle('is-active', validEngine === 'browser');
+    if (btnGemini) btnGemini.classList.toggle('is-active', validEngine === 'gemini');
     if (!window._settingsLoading && typeof _submitSettings === 'function') {
         _submitSettings(true);
     }

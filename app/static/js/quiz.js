@@ -645,7 +645,10 @@ function initQuizEvents() {
             btnShow.disabled = true;
             btnShow.textContent = "Verifying guess conceptually...";
             
-            if (verdictBox) verdictBox.classList.add('hidden');
+            if (verdictBox) {
+                verdictBox.classList.add('hidden');
+                verdictBox.classList.remove('quiz-verdict-correct', 'quiz-verdict-incorrect');
+            }
             if (feedbackEl) feedbackEl.innerHTML = '';
             
             // Clear only the verdict emphasis. This used to reassign .className outright,
@@ -675,15 +678,14 @@ function initQuizEvents() {
                     feedbackEl.textContent = verification.feedback;
                     lastVerdictIsCorrect = !!verification.is_correct;
 
-                    if (verification.is_correct) {
-                        verdictLabel.textContent = "AI Evaluation: Conceptually Correct";
-                        verdictLabel.className = "text-[9px] font-bold uppercase tracking-wider text-emerald-450";
-                        verdictBox.className = "p-3 rounded-xl border border-emerald-500/30 bg-emerald-950/10 flex flex-col space-y-1";
-                    } else {
-                        verdictLabel.textContent = "AI Evaluation: Incorrect / Needs Review";
-                        verdictLabel.className = "text-[9px] font-bold uppercase tracking-wider text-red-450";
-                        verdictBox.className = "p-3 rounded-xl border border-red-500/30 bg-red-950/10 flex flex-col space-y-1";
-                    }
+                    // Only the verdict tint is toggled here. The box keeps its own layout
+                    // classes from the template, the same reason the grade buttons above
+                    // use classList rather than a className reassignment.
+                    verdictBox.classList.toggle('quiz-verdict-correct', !!verification.is_correct);
+                    verdictBox.classList.toggle('quiz-verdict-incorrect', !verification.is_correct);
+                    verdictLabel.textContent = verification.is_correct
+                        ? "AI Evaluation: Conceptually Correct"
+                        : "AI Evaluation: Incorrect / Needs Review";
                 }
             } catch (e) {
                 console.error("Conceptual verification error:", e);

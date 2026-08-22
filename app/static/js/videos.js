@@ -206,29 +206,28 @@ function initImportTab() {
     const panelDoc = document.getElementById('panel-document');
     const panelNotes = document.getElementById('panel-notes');
     
+    // Only .is-active moves. The buttons' own .segmented-tab styling and their padding
+    // stay in the template: this used to reassign .className with a full utility chain
+    // per state, which meant the same two chains were maintained here and in the markup.
     function resetImportPanels() {
         if (panelYt) panelYt.classList.add('hidden');
         if (panelDoc) panelDoc.classList.add('hidden');
         if (panelNotes) panelNotes.classList.add('hidden');
-        
-        const inactiveClass = "py-2.5 text-xs font-semibold rounded-lg text-stone-600 hover:text-amber-900 transition-all flex items-center justify-center space-x-1.5";
-        if (btnYt) btnYt.className = inactiveClass;
-        if (btnDoc) btnDoc.className = inactiveClass;
-        if (btnNotes) btnNotes.className = inactiveClass;
+
+        [btnYt, btnDoc, btnNotes].forEach(b => b && b.classList.remove('is-active'));
     }
-    
+
     function setTab(tab) {
         resetImportPanels();
-        const activeClass = "py-2.5 text-xs font-bold rounded-lg text-amber-900 bg-amber-500/20 border border-amber-500/40 shadow-2xs transition-all flex items-center justify-center space-x-1.5";
         if (tab === 'youtube') {
             if (panelYt) panelYt.classList.remove('hidden');
-            if (btnYt) btnYt.className = activeClass;
+            if (btnYt) btnYt.classList.add('is-active');
         } else if (tab === 'document') {
             if (panelDoc) panelDoc.classList.remove('hidden');
-            if (btnDoc) btnDoc.className = activeClass;
+            if (btnDoc) btnDoc.classList.add('is-active');
         } else if (tab === 'notes') {
             if (panelNotes) panelNotes.classList.remove('hidden');
-            if (btnNotes) btnNotes.className = activeClass;
+            if (btnNotes) btnNotes.classList.add('is-active');
         }
     }
 
@@ -543,7 +542,15 @@ function renderFocusStatus() {
         cls = 'bg-emerald-50 border-emerald-200 text-emerald-800';
         text = `${selected} questions selected. The ${target} best-fitting will be used each session.`;
     }
-    el.className = `text-xs font-semibold rounded-xl px-3 py-2 border ${cls}`;
+    // Swaps only the tint, leaving the box's shape (text-xs font-semibold rounded-xl px-3
+    // py-2 border) on the element where the template put it. Rewriting .className here
+    // meant that shape was declared twice and only one copy was ever applied.
+    el.classList.remove(
+        'bg-red-50', 'border-red-200', 'text-red-700',
+        'bg-amber-50', 'border-amber-200', 'text-amber-800',
+        'bg-emerald-50', 'border-emerald-200', 'text-emerald-800'
+    );
+    el.classList.add(...cls.split(' '));
     el.textContent = text;
 }
 
@@ -1331,23 +1338,25 @@ async function openVideoStatsModal(id) {
         }
         
         if (reviewEl) {
+            let isDue = false;
             if (!stats.next_review_at) {
                 reviewEl.textContent = "Not scheduled";
-                reviewEl.className = "text-xs font-semibold text-stone-500";
             } else {
                 const dtStr = typeof parseDate === 'function' ? parseDate(stats.next_review_at) : stats.next_review_at;
                 const dt = new Date(dtStr);
-                const now = new Date();
-                if (dt <= now) {
-                    reviewEl.textContent = "Due now";
-                    reviewEl.className = "text-xs font-bold text-amber-400";
-                } else {
-                    reviewEl.textContent = dt.toLocaleString(undefined, {
-                        month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-                    });
-                    reviewEl.className = "text-xs font-semibold text-stone-500";
-                }
+                isDue = dt <= new Date();
+                reviewEl.textContent = isDue ? "Due now" : dt.toLocaleString(undefined, {
+                    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                });
             }
+            // Toggles only the emphasis. Reassigning .className here restated the
+            // template's own text-xs font-semibold as a second copy, which had already
+            // drifted: the markup said text-stone-400 and every branch here said
+            // text-stone-500, so the color the template declares was never the one shown.
+            reviewEl.classList.toggle('font-bold', isDue);
+            reviewEl.classList.toggle('text-amber-400', isDue);
+            reviewEl.classList.toggle('font-semibold', !isDue);
+            reviewEl.classList.toggle('text-stone-500', !isDue);
         }
         
         renderVideoStatsAttempts(attemptsContainer, stats.attempts || []);
