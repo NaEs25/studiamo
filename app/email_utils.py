@@ -65,6 +65,19 @@ def verify_unsubscribe_token(email: str, token: str) -> bool:
     return hmac.compare_digest(expected, token.strip())
 
 
+def unsubscribe_url(recipient_email: str) -> str:
+    """Returns the tokenized unsubscribe URL for one address.
+
+    Every email that goes to the waitlist has to carry this. The address is the only thing
+    identifying the row to opt out, and the token is what stops anyone from unsubscribing
+    someone else by editing the query string."""
+    return (
+        "https://studiamo.cloud/api/waitlist/unsubscribe"
+        f"?email={urllib.parse.quote(recipient_email)}"
+        f"&token={generate_unsubscribe_token(recipient_email)}"
+    )
+
+
 def send_waitlist_confirmation_email(recipient_email: str) -> bool:
     """
     Sends a branded confirmation email after a user joins the Studiamo waitlist.
@@ -310,7 +323,8 @@ def send_waitlist_status_email(recipient_email: str, referral_code: str) -> bool
                 <a href="https://studiamo.cloud/privacy" style="color: #d97706;">Privacy Policy</a>.
             </p>
             <div style="font-size: 12px; color: #a8a29e; margin-top: 28px; text-align: center; border-top: 1px solid #e7dfd3; padding-top: 20px; line-height: 1.6;">
-                © 2026 Studiamo Learning System
+                © 2026 Studiamo Learning System<br>
+                <a href="{unsubscribe_url(recipient_email)}" style="color: #a8a29e; text-decoration: underline;">Unsubscribe</a>
             </div>
         </div>
     </body>
@@ -320,7 +334,8 @@ def send_waitlist_status_email(recipient_email: str, referral_code: str) -> bool
         "You're on the Studiamo waitlist.\n\n"
         "Studiamo is at capacity right now, so we've placed your account on the waitlist. "
         "We'll email you the moment a spot opens up.\n\n"
-        f"Want to move up faster? Share your referral link (up to 5 referrals count): {referral_link}\n"
+        f"Want to move up faster? Share your referral link (up to 5 referrals count): {referral_link}\n\n"
+        f"Unsubscribe: {unsubscribe_url(recipient_email)}\n"
     )
     return _send_via_resend(recipient_email, subject, html_content, text_content, "ACCOUNT WAITLIST EMAIL")
 
@@ -358,7 +373,9 @@ def send_promotion_email(recipient_email: str) -> bool:
     """Sends the "you're in" email when an admin promotes a waitlist account to active."""
     subject = "Your spot is ready, sign in at Studiamo"
 
-    html_content = """
+    # f-string because of the unsubscribe URL in the footer. This body carries no CSS blocks,
+    # so there are no literal braces that would need doubling.
+    html_content = f"""
     <!DOCTYPE html>
     <html>
     <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
@@ -375,7 +392,8 @@ def send_promotion_email(recipient_email: str) -> bool:
             </p>
             <a href="https://studiamo.cloud/login" style="display: inline-block; background: #d97706; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 14px; padding: 12px 24px; border-radius: 12px; margin: 8px 0 20px;">Sign in to Studiamo</a>
             <div style="font-size: 12px; color: #a8a29e; margin-top: 28px; text-align: center; border-top: 1px solid #e7dfd3; padding-top: 20px; line-height: 1.6;">
-                © 2026 Studiamo Learning System
+                © 2026 Studiamo Learning System<br>
+                <a href="{unsubscribe_url(recipient_email)}" style="color: #a8a29e; text-decoration: underline;">Unsubscribe</a>
             </div>
         </div>
     </body>
@@ -384,6 +402,7 @@ def send_promotion_email(recipient_email: str) -> bool:
     text_content = (
         "Your spot is ready!\n\n"
         "A spot just opened up and your Studiamo account is now active. "
-        "Sign in at https://studiamo.cloud/login whenever you're ready.\n"
+        "Sign in at https://studiamo.cloud/login whenever you're ready.\n\n"
+        f"Unsubscribe: {unsubscribe_url(recipient_email)}\n"
     )
     return _send_via_resend(recipient_email, subject, html_content, text_content, "PROMOTION EMAIL")
