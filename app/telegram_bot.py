@@ -64,6 +64,38 @@ async def send_telegram_message(text: str, username: str) -> bool:
         print(f"Telegram notification transport error for {username}: {e}")
         return False
 
+def send_admin_telegram(text: str) -> bool:
+    """Sends an operator alert to one fixed chat. Returns False if none is configured.
+
+    Consults no user account, by design. send_telegram_message() looks its destination up
+    in a user_profile row, which is right for a user's own notifications and wrong for
+    operator alerts about other people: it would make the recipient of that data a property
+    of an account record rather than of the deployment's configuration.
+
+    Synchronous because the scheduler loop that calls it already is, and because there is
+    no reason for an alert to be worth an event loop."""
+    chat_id = config.ADMIN_TELEGRAM_CHAT_ID
+    token = config.ADMIN_TELEGRAM_BOT_TOKEN or config.TELEGRAM_MANAGED_BOT_TOKEN
+    if not chat_id or not token:
+        return False
+
+    try:
+        import httpx
+        resp = httpx.post(
+            f"https://api.telegram.org/bot{token}/sendMessage",
+            json={"chat_id": chat_id, "text": text, "parse_mode": "HTML"},
+            timeout=10.0,
+        )
+        if resp.status_code == 200:
+            return True
+        # Logged without the token or the chat id: this line ends up in journalctl.
+        print(f"Admin Telegram alert rejected: HTTP {resp.status_code}")
+        return False
+    except Exception as e:
+        print(f"Admin Telegram transport error: {e}")
+        return False
+
+
 def send_telegram_message_sync(text: str, username: str) -> bool:
     """Synchronous wrapper for sending Telegram messages from background worker threads."""
     try:
@@ -579,6 +611,14 @@ async def run_scheduler_daemon():
                 ImportQueueManager.get_instance().recover_all_pending_tasks()
             except Exception as e_recovery:
                 print(f"Periodic task recovery error in scheduler: {e_recovery}")
+            # Rides this loop rather than hooking the signup path: a notifier must not be
+            # able to affect whether an account gets created. Rate-limits itself internally,
+            # so calling it every tick costs one query every few minutes, not every minute.
+            try:
+                from app.signup_notify import check_and_notify_new_signups
+                check_and_notify_new_signups()
+            except Exception as e_signup:
+                print(f"Signup notification error in scheduler: {e_signup}")
         except Exception as e:
             print(f"Scheduler daemon error: {e}")
         await asyncio.sleep(60)

@@ -50,6 +50,19 @@ except Exception:
 TELEGRAM_MANAGED_BOT_TOKEN = os.getenv("TELEGRAM_MANAGED_BOT_TOKEN", "")
 TELEGRAM_MANAGED_BOT_USERNAME = os.getenv("TELEGRAM_MANAGED_BOT_USERNAME", "")
 
+# Operator alerts (signup notifications). A raw chat id, deliberately, NOT a username:
+# send_telegram_message resolves its destination from a user_profile row, so routing
+# operator alerts that way would make "who receives our signup data" depend on an account
+# record. A wrong username in a setting, or an account changing hands, would be enough to
+# deliver it to a registered user. This addresses a chat directly and consults no account.
+#
+# Empty by default and empty in source. The value is personal data, so it lives in .env
+# (gitignored) on the deployment that wants the alerts, and nowhere else.
+ADMIN_TELEGRAM_CHAT_ID = os.getenv("ADMIN_TELEGRAM_CHAT_ID", "")
+# Optional. Falls back to the managed bot, so a separate operator bot can be introduced
+# later by setting one variable rather than by changing code.
+ADMIN_TELEGRAM_BOT_TOKEN = os.getenv("ADMIN_TELEGRAM_BOT_TOKEN", "")
+
 # Umami analytics website ID. Defaults to the managed studiamo.cloud tracker in cloud mode
 # so the hosted site's behaviour doesn't change. Defaults to empty in self-hosted mode: a
 # self-hoster's instance must not silently phone home to the cloud tracker just because it
