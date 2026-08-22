@@ -137,13 +137,13 @@ async function loadGoals() {
                                     <span class="recs-btn-text">${recsBtnLabel}</span>
                                 </button>
                                 
-                                <button disabled class="flex-grow py-1.5 px-3 bg-amber-500/10 text-amber-900/60 border border-amber-500/20 font-semibold rounded-lg text-xs flex items-center justify-center space-x-1.5 cursor-not-allowed opacity-75 shadow-2xs">
+                                <button disabled class="flex-grow py-1.5 px-3 bg-amber-500/10 text-amber-900/60 border border-amber-500/20 font-semibold rounded-lg text-xs flex items-center justify-center space-x-1.5 cursor-not-allowed opacity-75 shadow-sm">
                                     <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-700/60"></i>
                                     <span>Coming Soon</span>
                                 </button>
                             </div>
                             
-                            <div id="recs-${g.id}" class="${isDrawerOpen ? '' : 'hidden'} p-3.5 bg-[#fbf8f2] border border-[#e7dfd3] rounded-xl space-y-3 shadow-xs">
+                            <div id="recs-${g.id}" class="${isDrawerOpen ? '' : 'hidden'} p-3.5 bg-[#fbf8f2] border border-[#e7dfd3] rounded-xl space-y-3 shadow-sm">
                                 <div class="flex items-start justify-between pb-2 border-b border-[#e7dfd3]/80 gap-2">
                                     <div class="flex items-start space-x-1.5 min-w-0 flex-1">
                                         <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-700 shrink-0 mt-0.5"></i>
@@ -151,7 +151,7 @@ async function loadGoals() {
                                         <div id="concepts-${g.id}" class="text-[11px] text-stone-600 leading-relaxed break-words flex-1"></div>
                                     </div>
                                     <div class="flex items-center space-x-1 shrink-0">
-                                        <button onclick="reloadGoalRecommendations(${g.id}, this)" class="p-1.5 bg-stone-100 hover:bg-stone-200/80 text-stone-600 hover:text-amber-800 rounded-lg transition border border-stone-200/80 shadow-2xs" title="Reload Recommendations">
+                                        <button onclick="reloadGoalRecommendations(${g.id}, this)" class="p-1.5 bg-stone-100 hover:bg-stone-200/80 text-stone-600 hover:text-amber-800 rounded-lg transition border border-stone-200/80 shadow-sm" title="Reload Recommendations">
                                             <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
                                         </button>
                                         <button onclick="closeRecommendationsDrawer(${g.id})" class="p-1.5 hover:bg-stone-200/80 text-stone-400 hover:text-stone-700 rounded-lg transition ml-0.5" title="Collapse Panel">
@@ -525,7 +525,7 @@ function renderRecommendationCardHTML(v, goalId) {
     const safeTitle = (v.title || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
 
     return `
-        <div id="rec-card-${goalId}-${ytId}" class="flex items-center space-x-2.5 bg-[#fcfaf6] p-2.5 pr-8 rounded-xl border border-[#e7dfd3] justify-between group transition hover:border-amber-500/40 hover:bg-white shadow-2xs relative">
+        <div id="rec-card-${goalId}-${ytId}" class="flex items-center space-x-2.5 bg-[#fcfaf6] p-2.5 pr-8 rounded-xl border border-[#e7dfd3] justify-between group transition hover:border-amber-500/40 hover:bg-white shadow-sm relative">
             <div class="relative shrink-0">
                 <img src="${v.thumbnail}" class="w-14 h-9 object-cover rounded-lg border border-[#e7dfd3] bg-[#f3ebd9]">
                 ${durationStr !== 'N/A' ? `<span class="absolute bottom-0.5 right-0.5 bg-stone-900/90 text-amber-300 text-[8px] font-mono px-1 py-0.2 rounded font-bold">${durationStr}</span>` : ''}
@@ -603,7 +603,7 @@ function populateRecommendationDrawer(goalId, data) {
 
     const conceptsList = document.getElementById(`concepts-${goalId}`);
     if (conceptsList && data.key_concepts) {
-        conceptsList.innerHTML = data.key_concepts.map(c => `<span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/10 text-amber-950 border border-amber-500/20 shadow-2xs">${c}</span>`).join('');
+        conceptsList.innerHTML = data.key_concepts.map(c => `<span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/10 text-amber-950 border border-amber-500/20 shadow-sm">${c}</span>`).join('');
     }
     
     const vidsList = document.getElementById(`vids-${goalId}`);

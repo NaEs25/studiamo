@@ -406,10 +406,10 @@ async function loadDailyRecommendations() {
                                     <span>Add to Queue</span>
                                 </button>
                             `}
-                            <button onclick="openRecommendationInStudio('${ytId}', '${cleanTitle}', '${rec.goal_id || ''}')" class="p-2 bg-stone-100 hover:bg-amber-100 text-stone-700 hover:text-amber-900 border border-stone-200 rounded-xl transition flex items-center justify-center min-w-[38px] h-[38px] shadow-2xs" title="Open Study Studio (Notes)">
+                            <button onclick="openRecommendationInStudio('${ytId}', '${cleanTitle}', '${rec.goal_id || ''}')" class="p-2 bg-stone-100 hover:bg-amber-100 text-stone-700 hover:text-amber-900 border border-stone-200 rounded-xl transition flex items-center justify-center min-w-[38px] h-[38px] shadow-sm" title="Open Study Studio (Notes)">
                                 <i data-lucide="book-open" class="w-4 h-4"></i>
                             </button>
-                            <button onclick="dismissRecommendation('${ytId}')" class="p-2 bg-stone-100 hover:bg-red-100 text-stone-500 hover:text-red-700 border border-stone-200 rounded-xl transition flex items-center justify-center min-w-[38px] h-[38px] shadow-2xs" title="Dismiss">
+                            <button onclick="dismissRecommendation('${ytId}')" class="p-2 bg-stone-100 hover:bg-red-100 text-stone-500 hover:text-red-700 border border-stone-200 rounded-xl transition flex items-center justify-center min-w-[38px] h-[38px] shadow-sm" title="Dismiss">
                                 <i data-lucide="x" class="w-4 h-4"></i>
                             </button>
                         </div>
