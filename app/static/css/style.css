@@ -792,3 +792,39 @@ button:active:not(:disabled) {
     background-color: var(--color-primary-bg);
     border-color: var(--color-primary-border);
 }
+
+/* ── Status Badge Variants ──────────────────────────────── */
+/* The subscription badge in Settings. Same split as .segmented-tab above: the template
+   carries the shape (size, padding, radius, tracking) and the script toggles exactly one
+   variant class on top of it. renderSubscriptionCard used to reassign .className with a
+   second copy of the shape classes, so the markup's declaration and the script's had to be
+   kept in sync by hand and only one of them was ever visible.
+   Literal hex rather than the Tailwind utility names these replace: .bg-amber-500/10|15|20
+   are remapped to the design tokens near the top of this file and win on load order, so
+   naming a utility here would not reliably render the color it is named after. */
+.status-badge-positive {
+    background-color: #d1fae5; /* emerald-100 */
+    color: #047857;            /* emerald-700 */
+}
+
+.status-badge-warning {
+    background-color: #fef3c7; /* amber-100 */
+    color: #b45309;            /* amber-700 */
+}
+
+.status-badge-danger {
+    background-color: #fee2e2; /* red-100 */
+    color: #b91c1c;            /* red-700 */
+}
+
+.status-badge-neutral {
+    background-color: #e7e5e4; /* stone-200 */
+    color: #57534e;            /* stone-600 */
+}
+
+/* Tester access is not a subscription state and should not read as one, hence a hue that
+   appears nowhere else in this card. */
+.status-badge-tester {
+    background-color: #e0e7ff; /* indigo-100 */
+    color: #4338ca;            /* indigo-700 */
+}
