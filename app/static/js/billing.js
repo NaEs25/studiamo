@@ -221,7 +221,7 @@ function _discountNoteMarkup(code) {
     if (!code) return '';
     return `
         <div class="discount-note">
-            <i data-lucide="ticket" class="w-4 h-4 flex-shrink-0"></i>
+            <i data-lucide="ticket-percent" class="w-4 h-4 flex-shrink-0"></i>
             <span>
                 Enter code <strong class="discount-code">${code}</strong> at checkout for 50% off
                 your first 6 months, because you are helping test Studiamo. Cancel any time.
