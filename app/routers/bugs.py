@@ -29,9 +29,13 @@ from app.dependencies import (
     limiter,
     get_authenticated_username,
     make_admin_token,
-    is_bugs_admin,
+    is_admin,
     require_admin_auth,
+    verify_password,
     ADMIN_COOKIE_NAME,
+    LEGACY_ADMIN_COOKIE_NAME,
+    ADMIN_PASSWORD_SETTING_KEY,
+    ADMIN_PASSWORD_LEGACY_KEY,
 )
 
 router = APIRouter(tags=["Bugs"])
@@ -99,7 +103,7 @@ async def get_bugs(request: Request):
     Public endpoint by design (the board is meant to be browsable by everyone
     so people can check for duplicates), but usernames and captured context
     are stripped out unless the request carries a valid admin cookie."""
-    admin = is_bugs_admin(request)
+    admin = is_admin(request)
     conn = None
     try:
         conn = database.get_pooled_raw_connection()
@@ -116,21 +120,36 @@ async def get_bugs(request: Request):
 @router.get("/api/dev/bugs/admin/status")
 async def get_admin_status(request: Request):
     """Tells the frontend whether this browser is currently logged in as admin."""
-    return JSONResponse({"is_admin": is_bugs_admin(request)})
+    return JSONResponse({"is_admin": is_admin(request)})
 
 
 @router.post("/api/dev/bugs/admin/login")
 @limiter.limit("10/minute")  # Single shared password, no lockout -- cap guesses per IP per minute.
 async def admin_login(request: Request, password: str = Form(...)):
-    """Checks the shared admin password (set via scripts/set_admin_bug_password.py)
-    and, on success, sets the signed bugs_admin cookie."""
-    expected_hash = database.get_app_setting("admin_bug_password_hash")
+    """Checks the shared admin password (set via scripts/set_admin_password.py) and, on
+    success, sets the signed admin cookie.
+
+    Accepts both bcrypt and the legacy unsalted SHA-256 this used to store, and writes the
+    bcrypt replacement back on a successful legacy match, so the stored credential upgrades
+    itself on the next login rather than needing a migration. That matters more than it used
+    to: this password no longer gates only bug reports, it also opens the Users page in the
+    admin cockpit, which lists accounts by email."""
+    expected_hash = (database.get_app_setting(ADMIN_PASSWORD_SETTING_KEY)
+                     or database.get_app_setting(ADMIN_PASSWORD_LEGACY_KEY))
     if not expected_hash:
         raise HTTPException(status_code=503, detail="Admin password has not been configured yet.")
 
-    submitted_hash = hashlib.sha256(password.encode("utf-8")).hexdigest()
-    if not hmac.compare_digest(submitted_hash, expected_hash):
+    is_valid, upgraded_hash = verify_password(password, expected_hash)
+    if not is_valid:
         raise HTTPException(status_code=401, detail="Incorrect admin password.")
+
+    if upgraded_hash:
+        try:
+            database.set_app_setting(ADMIN_PASSWORD_SETTING_KEY, upgraded_hash)
+        except Exception as e:
+            # The password was correct; failing to persist the stronger hash must not turn
+            # a successful login into an error.
+            logger.warning(f"Could not upgrade the stored admin password hash: {e}")
 
     response = JSONResponse({"status": "success"})
     response.set_cookie(
@@ -146,9 +165,10 @@ async def admin_login(request: Request, password: str = Form(...)):
 
 @router.post("/api/dev/bugs/admin/logout")
 async def admin_logout():
-    """Clears the bugs_admin cookie."""
+    """Clears the admin cookie, both the current name and the one it replaced."""
     response = JSONResponse({"status": "success"})
     response.delete_cookie(key=ADMIN_COOKIE_NAME, path="/")
+    response.delete_cookie(key=LEGACY_ADMIN_COOKIE_NAME, path="/")
     return response
 
 

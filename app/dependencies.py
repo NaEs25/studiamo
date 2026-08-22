@@ -260,21 +260,38 @@ def require_dev_tools_enabled() -> None:
 
 # --- Bug tracker admin gate ---
 # A separate signed cookie, not the yb_session/_signer above: this gates a single
-# shared secret (see scripts/set_admin_bug_password.py), not a per-user account, so
-# it deliberately can't be confused with or decoded as a real user session token.
+# shared secret (see scripts/set_admin_password.py), not a per-user account, so it
+# deliberately can't be confused with or decoded as a real user session token.
+#
+# The salt keeps its original value. Rotating it would invalidate every live admin cookie
+# while changing nothing about the strength of the signature, which is derived from
+# SECRET_KEY; there is no benefit to pay a forced re-login for.
 _admin_signer = URLSafeSerializer(SECRET_KEY, salt="bugs-admin-v1")
-ADMIN_COOKIE_NAME = "bugs_admin"
+ADMIN_COOKIE_NAME = "studiamo_admin"
+
+# Previous name for the same cookie, still read so the rename does not sign anyone out.
+# Both are cleared on logout. Safe to delete once no live browser holds one.
+LEGACY_ADMIN_COOKIE_NAME = "bugs_admin"
+
+# app_settings key holding the shared admin password. The old key is read as a fallback so
+# this keeps working before scripts/set_admin_password.py has been re-run.
+ADMIN_PASSWORD_SETTING_KEY = "admin_password_hash"
+ADMIN_PASSWORD_LEGACY_KEY = "admin_bug_password_hash"
 
 
 def make_admin_token() -> str:
-    """Returns a signed token proving the bug-tracker admin password was entered."""
+    """Returns a signed token proving the shared admin password was entered."""
     return _admin_signer.dumps("bugs-admin")
 
 
-def is_bugs_admin(request: Request) -> bool:
-    """Non-raising check for the bugs_admin cookie. Used by the public bug-list
-    endpoint to decide whether to include usernames/context in the response."""
-    token = request.cookies.get(ADMIN_COOKIE_NAME)
+def is_admin(request: Request) -> bool:
+    """Non-raising check for the admin cookie. Used by the public bug-list endpoint to
+    decide whether to include usernames and captured context in the response.
+
+    This gate is no longer only about bug reports: the same password opens the Users page
+    in the private admin cockpit, which lists accounts by email."""
+    token = (request.cookies.get(ADMIN_COOKIE_NAME)
+             or request.cookies.get(LEGACY_ADMIN_COOKIE_NAME))
     if not token:
         return False
     try:
@@ -283,10 +300,14 @@ def is_bugs_admin(request: Request) -> bool:
         return False
 
 
+# Old name, kept so nothing importing it breaks mid-rename.
+is_bugs_admin = is_admin
+
+
 def require_admin_auth(request: Request) -> None:
-    """Dependency guard: blocks bug-tracker edit/delete endpoints unless the
-    bugs_admin cookie is present and valid."""
-    if not is_bugs_admin(request):
+    """Dependency guard: blocks admin-only endpoints unless a valid admin cookie is
+    present."""
+    if not is_admin(request):
         raise HTTPException(status_code=403, detail="Admin login required.")
 
 
