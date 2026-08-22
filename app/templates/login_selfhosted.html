@@ -64,7 +64,7 @@
             </div>
 
             <!-- Create New Profile Form -->
-            <div class="space-y-4 bg-[#f3ebd9] p-5 rounded-2xl border border-paperBorder shadow-2xs">
+            <div class="space-y-4 bg-[#f3ebd9] p-5 rounded-2xl border border-paperBorder shadow-sm">
                 <h3 class="text-sm font-bold text-stoneText flex items-center space-x-2">
                     <i data-lucide="user-plus" class="w-4 h-4 text-amberPrimary"></i>
                     <span>Create Local Profile</span>
@@ -141,7 +141,7 @@
                     }
 
                     container.innerHTML = users.map(u => `
-                        <div onclick="selectUser('${u}')" class="p-3 bg-[#fbf8f2] border border-[#e7dfd3] hover:border-amberPrimary/50 rounded-xl flex items-center justify-between cursor-pointer transition group shadow-2xs hover:shadow-xs">
+                        <div onclick="selectUser('${u}')" class="p-3 bg-[#fbf8f2] border border-[#e7dfd3] hover:border-amberPrimary/50 rounded-xl flex items-center justify-between cursor-pointer transition group shadow-sm hover:shadow">
                             <div class="flex items-center space-x-3">
                                 <div class="w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-900 font-bold flex items-center justify-center text-xs">
                                     ${u.substring(0, 2).toUpperCase()}

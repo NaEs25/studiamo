@@ -333,7 +333,7 @@ class ImportBacklogManager {
             let mediaPreviewHTML = '';
             if (thumbUrl && !thumbUrl.includes('document-icon') && !thumbUrl.includes('notes-icon')) {
                 mediaPreviewHTML = `
-                    <img src="${thumbUrl}" class="w-9 h-7 object-cover rounded-md border border-[#e7dfd3] bg-stone-100 shrink-0 shadow-2xs" onerror="this.onerror=null;this.parentElement.innerHTML='<div class=\\'p-1.5 bg-amber-500/10 border border-amber-500/20 rounded-md shrink-0 text-amber-700\\'><i data-lucide=\\'${iconLucide}\\' class=\\'w-3.5 h-3.5\\'></i></div>';">
+                    <img src="${thumbUrl}" class="w-9 h-7 object-cover rounded-md border border-[#e7dfd3] bg-stone-100 shrink-0 shadow-sm" onerror="this.onerror=null;this.parentElement.innerHTML='<div class=\\'p-1.5 bg-amber-500/10 border border-amber-500/20 rounded-md shrink-0 text-amber-700\\'><i data-lucide=\\'${iconLucide}\\' class=\\'w-3.5 h-3.5\\'></i></div>';">
                 `;
             } else {
                 mediaPreviewHTML = `
@@ -377,7 +377,7 @@ class ImportBacklogManager {
                 statusTextHTML = '';
                 if (task.video_id) {
                     actionBtnHTML = `
-                        <button onclick="openTaskStudioAndDismiss('${task.id}', ${task.video_id})" class="text-[10px] bg-[#fbbf24] hover:bg-[#f59e0b] text-[#78350f] font-extrabold px-3 py-1 rounded-lg transition flex items-center space-x-1 shadow-xs cursor-pointer">
+                        <button onclick="openTaskStudioAndDismiss('${task.id}', ${task.video_id})" class="text-[10px] bg-[#fbbf24] hover:bg-[#f59e0b] text-[#78350f] font-extrabold px-3 py-1 rounded-lg transition flex items-center space-x-1 shadow-sm cursor-pointer">
                             <span>Open</span>
                             <i data-lucide="arrow-right" class="w-2.5 h-2.5"></i>
                         </button>
@@ -399,7 +399,7 @@ class ImportBacklogManager {
             }
 
             return `
-                <div class="bg-white border border-[#e7dfd3] p-2.5 rounded-xl flex flex-col space-y-1 shadow-xs text-stone-900 group">
+                <div class="bg-white border border-[#e7dfd3] p-2.5 rounded-xl flex flex-col space-y-1 shadow-sm text-stone-900 group">
                     <div class="flex items-center justify-between space-x-2">
                         <div class="flex items-center space-x-2 min-w-0 flex-grow">
                             ${mediaPreviewHTML}

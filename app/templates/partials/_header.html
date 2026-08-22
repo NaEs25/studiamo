@@ -23,7 +23,7 @@
         {% endif %}
         {% endif %}
 {% endset %}
-    <header class="w-full bg-[#fdfbf7]/95 backdrop-blur border-b border-[#e7dfd3] {{ header_position|default('') }} {{ header_padding|default('py-4 px-6') }} shadow-2xs{% if not wrapper_class %} flex items-center justify-between{% endif %}">
+    <header class="w-full bg-[#fdfbf7]/95 backdrop-blur border-b border-[#e7dfd3] {{ header_position|default('') }} {{ header_padding|default('py-4 px-6') }} shadow-sm{% if not wrapper_class %} flex items-center justify-between{% endif %}">
         {% if wrapper_class %}
         <div class="{{ wrapper_class }} flex items-center justify-between">{{ inner }}</div>
         {% else %}{{ inner }}{% endif %}

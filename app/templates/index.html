@@ -39,7 +39,7 @@
 
     <!-- Header / Top Bar -->
     <header id="app-header"
-        class="border-b border-stone-200 bg-[#fdfbf7]/95 backdrop-blur sticky top-0 z-40 px-3 sm:px-4 py-2.5 sm:py-3 flex items-center justify-between shadow-xs">
+        class="border-b border-stone-200 bg-[#fdfbf7]/95 backdrop-blur sticky top-0 z-40 px-3 sm:px-4 py-2.5 sm:py-3 flex items-center justify-between shadow-sm">
         <div class="flex items-center space-x-3">
             <img src="/static/images/logo-icon.png" class="w-9 h-9 rounded-xl shadow-md shadow-amber-500/20"
                 alt="Studiamo Logo" />
@@ -170,7 +170,7 @@
                             class="text-[10px] sm:text-xs bg-amber-100 text-amber-800 font-semibold px-2.5 py-0.5 rounded-full border border-amber-300 shrink-0">Today</span>
                     </div>
                     <button id="btn-refresh-daily-recs" onclick="refreshDailyRecommendations()" aria-label="Refresh 6 daily recommended videos"
-                        class="px-3.5 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-900 border border-amber-500/30 font-bold rounded-xl text-xs transition flex items-center justify-center space-x-1.5 shadow-xs whitespace-nowrap min-h-[44px] shrink-0 active:scale-[0.98]">
+                        class="px-3.5 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-900 border border-amber-500/30 font-bold rounded-xl text-xs transition flex items-center justify-center space-x-1.5 shadow-sm whitespace-nowrap min-h-[44px] shrink-0 active:scale-[0.98]">
                         <i data-lucide="refresh-cw" id="icon-refresh-daily-recs"
                             class="w-3.5 h-3.5 text-amber-600 shrink-0"></i>
                         <span>Refresh 6 Videos</span>
@@ -775,7 +775,7 @@
                             <p class="text-xs text-stone-500">Manage your local login password</p>
                         </div>
                         <button type="button" onclick="openChangePasswordModal()"
-                            class="px-4 py-2 bg-white hover:bg-stone-50 border border-[#e7dfd3] rounded-xl text-xs font-bold text-stone-800 shadow-2xs flex items-center space-x-1.5 transition">
+                            class="px-4 py-2 bg-white hover:bg-stone-50 border border-[#e7dfd3] rounded-xl text-xs font-bold text-stone-800 shadow-sm flex items-center space-x-1.5 transition">
                             <i data-lucide="key" class="w-3.5 h-3.5 text-amber-700"></i>
                             <span>Change Password</span>
                         </button>
@@ -794,7 +794,7 @@
                                 class="text-[10px] uppercase font-bold tracking-wider text-emerald-700 bg-emerald-500/20 px-2 py-0.5 rounded-md">Linked</span>
                         </div>
                         <a id="btn-link-google-acc" href="/auth/google?link=true"
-                            class="hidden w-full py-2.5 px-4 bg-white hover:bg-stone-50 border border-[#e7dfd3] rounded-xl text-xs font-bold text-stone-800 shadow-xs flex items-center justify-center space-x-2 transition">
+                            class="hidden w-full py-2.5 px-4 bg-white hover:bg-stone-50 border border-[#e7dfd3] rounded-xl text-xs font-bold text-stone-800 shadow-sm flex items-center justify-center space-x-2 transition">
                             <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24">
                                 <path fill="#4285F4"
                                     d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -1809,13 +1809,13 @@
                     <div class="border-t border-stone-200 pt-3">
                         <div class="grid grid-cols-2 gap-3">
                             <button id="btn-grade-forgot" aria-label="Grade as Forgot"
-                                class="py-3 px-3 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 font-bold text-sm whitespace-nowrap rounded-2xl transition flex items-center justify-center gap-1.5 active:scale-[0.98] shadow-xs">
+                                class="py-3 px-3 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 font-bold text-sm whitespace-nowrap rounded-2xl transition flex items-center justify-center gap-1.5 active:scale-[0.98] shadow-sm">
                                 <i data-lucide="x-circle" class="w-4 h-4 shrink-0"></i>
                                 <span>I Forgot</span>
                                 <span class="quiz-key-hint">1</span>
                             </button>
                             <button id="btn-grade-remembered" aria-label="Grade as Remembered"
-                                class="py-3 px-3 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 font-bold text-sm whitespace-nowrap rounded-2xl transition flex items-center justify-center gap-1.5 active:scale-[0.98] shadow-xs">
+                                class="py-3 px-3 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 font-bold text-sm whitespace-nowrap rounded-2xl transition flex items-center justify-center gap-1.5 active:scale-[0.98] shadow-sm">
                                 <i data-lucide="check-circle" class="w-4 h-4 shrink-0"></i>
                                 <span>I Remembered</span>
                                 <span class="quiz-key-hint">2</span>
@@ -2580,7 +2580,7 @@
             </div>
             <span id="import-badge-label" class="text-stone-800 font-bold">Importing...</span>
             <span id="import-badge-count"
-                class="bg-amber-100 text-amber-800 border border-amber-300/80 font-extrabold text-[10px] px-1.5 py-0.5 rounded-full shadow-xs">0</span>
+                class="bg-amber-100 text-amber-800 border border-amber-300/80 font-extrabold text-[10px] px-1.5 py-0.5 rounded-full shadow-sm">0</span>
         </button>
     </div>
 
