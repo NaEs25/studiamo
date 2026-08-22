@@ -226,6 +226,20 @@ async def retry_video_import_route(
             "importance_rating": video["importance_rating"],
             "learning_goal_id": video["learning_goal_id"]
         }
+
+        # A document task is nothing without file_path: DocumentTaskProcessor reads it
+        # first and raises "Uploaded document file was not found on server" without one.
+        # This branch runs when no import_tasks row survives (the user dismissed the failed
+        # task from the backlog), and it built the payload without one, so retrying a
+        # document could only ever fail again with a message saying the upload was lost.
+        # It usually is not: the file sits at items/doc_<video_id>.*, exactly where
+        # serve_video_document reads it from. If it really is gone, the key stays absent
+        # and the task fails as before, which is then an accurate message.
+        if task_type == "document":
+            doc_matches = sorted(storage.get_user_items_dir(username).glob(f"doc_{video_id}.*"))
+            if doc_matches:
+                payload["file_path"] = str(doc_matches[0])
+
         task_id = ImportQueueManager.get_instance().enqueue_task(
             username=username,
             task_type=task_type,
