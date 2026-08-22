@@ -426,7 +426,6 @@ async function handleProfileSave(event) {
     event.preventDefault();
     const newUsername = document.getElementById('profile-username')?.value.trim();
     const displayName = document.getElementById('profile-display-name')?.value.trim();
-    const lbHidden = document.getElementById('leaderboard-hidden-toggle')?.checked ?? false;
     const geminiKey = document.getElementById('settings-gemini-key')?.value.trim();
 
     const btnSave = event?.target?.querySelector?.('button[type="submit"]') || document.getElementById('btn-save-profile');
@@ -445,7 +444,10 @@ async function handleProfileSave(event) {
     const fd = new FormData();
     if (newUsername && newUsername !== activeUsername) fd.append('new_username', newUsername);
     if (displayName !== undefined) fd.append('display_name', displayName);
-    fd.append('is_anonymous', lbHidden ? 'true' : 'false');
+    // No is_anonymous field. The leaderboard toggle is saved by setLeaderboardHidden()
+    // through POST /api/settings, which writes user_profile.leaderboard_hidden, and that
+    // column is what the leaderboard actually reads. Sending it here as well stored a
+    // second copy in the per-user config that nothing ever consulted.
     if (geminiKey) fd.append('gemini_api_key', geminiKey);
 
     try {

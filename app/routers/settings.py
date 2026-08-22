@@ -113,7 +113,6 @@ async def get_app_settings(username: str = Depends(get_active_username)):
         return {
             "username": username,
             "display_name": user_cfg.get("DISPLAY_NAME") or user_cfg.get("display_name", username),
-            "is_anonymous": bool(user_cfg.get("IS_ANONYMOUS", False)),
             "google_email": user_cfg.get("GOOGLE_EMAIL") or user_cfg.get("EMAIL") if user_cfg.get("GOOGLE_ID") else None,
             "google_linked": bool(user_cfg.get("GOOGLE_ID")),
             "app_mode": config.APP_MODE,
@@ -483,8 +482,13 @@ async def get_leaderboard(username: str = Depends(get_active_username)):
 
         for idx, r in enumerate(all_rankings, 1):
             r["rank"] = idx
+            # Renumbers placeholder names to the final rank. The "Anonymous" guard is
+            # belt-and-braces: a hidden user's display_name is set to exactly "Anonymous"
+            # above, which satisfies neither arm of the outer condition. This used to also
+            # test r.get("is_anonymous"), a key nothing ever puts on these dicts, so that
+            # term was always None and contributed nothing.
             if not r["display_name"] or r["display_name"].startswith("Learner "):
-                if not r.get("is_anonymous") and r["display_name"] != "Anonymous":
+                if r["display_name"] != "Anonymous":
                     r["display_name"] = f"Learner {idx}"
 
         # Top 5 are always visible
@@ -808,7 +812,6 @@ async def update_selfhosted_profile(
     display_name: Optional[str] = Form(None),
     new_password: Optional[str] = Form(None),
     old_password: Optional[str] = Form(None),
-    is_anonymous: Optional[bool] = Form(None),
     gemini_api_key: Optional[str] = Form(None),
     username: str = Depends(get_active_username)
 ):
@@ -902,9 +905,6 @@ async def update_selfhosted_profile(
 
     if is_changing_password:
         updates["PASSWORD_HASH"] = hash_password(new_password)
-
-    if is_anonymous is not None:
-        updates["IS_ANONYMOUS"] = bool(is_anonymous)
 
     if gemini_api_key is not None:
         clean_key = gemini_api_key.strip()
