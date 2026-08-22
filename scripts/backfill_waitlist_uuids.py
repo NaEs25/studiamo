@@ -40,15 +40,20 @@ def main():
         cursor = conn.cursor(cursor_factory=RealDictCursor)
 
         # Pass 1: rows that should carry an account's uuid but do not.
+        # Ordered so that when one account captured two addresses, the google_email row is
+        # the one that gets the id. That address is tied to the identity the account signs
+        # in with; `email` is a copy that can diverge. Same precedence the app uses for
+        # billing, notifications and the promotion email.
         cursor.execute("""
             SELECT lw.id, lw.email, lw.uuid AS current_uuid,
-                   up.user_uuid::text AS account_uuid, up.username
+                   up.user_uuid::text AS account_uuid, up.username,
+                   (LOWER(lw.email) = LOWER(up.google_email)) AS is_google_address
               FROM landing_waitlist lw
               JOIN user_profile up
                 ON LOWER(lw.email) = LOWER(up.email)
                 OR LOWER(lw.email) = LOWER(up.google_email)
              WHERE lw.uuid IS DISTINCT FROM up.user_uuid::text
-             ORDER BY lw.id;
+             ORDER BY (LOWER(lw.email) = LOWER(up.google_email)) DESC, lw.id;
         """)
         to_link = cursor.fetchall()
 
@@ -99,7 +104,8 @@ def main():
         if collisions:
             print(f"SKIPPED, {len(collisions)} row(s) whose account is already claimed by an earlier row:")
             for r in collisions:
-                print(f"  id {r['id']:<4} {r['email']:34} ({r['username']}) : matched by email instead")
+                why = "google address already linked" if not r["is_google_address"] else "another row holds this id"
+                print(f"  id {r['id']:<4} {r['email']:34} ({r['username']}) : {why}, matched by email instead")
             print()
 
         if not linkable and not to_clear:
