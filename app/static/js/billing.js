@@ -230,11 +230,16 @@ async function initPaywall() {
         // Populated before the modal opens, so the code is already on screen rather than
         // appearing a moment after the user starts reading.
         renderDiscountNote(status && status.beta_discount_code);
+        renderTesterPill(_testerState);
         if (status && !status.has_access) {
             const step = _blockedStepFor(_testerState);
             if (step === 'paywall-step-tester-expired') _ackTesterNotice('expiry');
             openPaywall(step);
+            return;
         }
+        // Deferred so the onboarding and "what's new" modals, which fire from their own
+        // load path, have already claimed the screen if they were going to.
+        setTimeout(() => maybeShowTesterNotice(_testerState), 1200);
     } catch (e) {
         // A failed status check must not lock anyone out of an app they have paid for.
         // The server-side dependency is the real gate; this is only the explanation.
@@ -467,6 +472,8 @@ function renderSubscriptionCard(settings) {
     badgeEl.classList.remove(...STATUS_BADGE_VARIANTS);
     badgeEl.classList.add(preset.variant);
 
+    if (tester) renderTesterPill(tester);
+
     if (!actionEl) return;
     _renderSubscriptionAction(actionEl, {
         hasSubscription, isTester, testerEnded, tester,
@@ -538,6 +545,154 @@ function _renderSubscriptionAction(actionEl, { hasSubscription, isTester, tester
 }
 
 
+// --- Tester pill and notices ---------------------------------------------------------
+
+/**
+ * The countdown chip in the header.
+ *
+ * Hidden for everyone who is not a tester, and also for testers whose grant has no end
+ * date, whether that is a deliberate unlimited grant or a legacy one: both carry
+ * days_left === null, and a countdown with nothing to count down to is noise.
+ */
+function renderTesterPill(tester) {
+    const pill = document.getElementById('tester-pill');
+    const label = document.getElementById('tester-pill-label');
+    if (!pill || !label) return;
+
+    const left = tester && tester.days_left;
+    const showable = tester && tester.state === 'active' && left !== null && left !== undefined;
+    if (!showable) {
+        pill.classList.add('hidden');
+        pill.classList.remove('flex');
+        return;
+    }
+
+    label.textContent = left === 0 ? 'Tester, ends today' : `Tester, ${_dayCount(left)} left`;
+    pill.classList.remove('hidden');
+    pill.classList.add('flex');
+    // Same three-state colouring as the Settings badge, so the header and the card agree
+    // about how much time is left.
+    pill.classList.remove(...STATUS_BADGE_VARIANTS);
+    pill.classList.add(left <= 7 ? 'status-badge-warning' : 'status-badge-tester');
+    if (typeof renderIcons === 'function') renderIcons();
+}
+
+
+// Which notice is on screen, so dismissing it can acknowledge the right one.
+let _openTesterNotice = null;
+
+
+const TESTER_NOTICES = {
+    welcome: {
+        icon: 'flask-conical',
+        iconWrap: 'bg-indigo-100 text-indigo-600',
+        title: 'Welcome to the Studiamo test phase',
+        primary: 'Start studying',
+        dismiss: 'Close',
+        body: (t) => [
+            t.unlimited || t.days_left === null
+                ? 'You have full access to everything in Studiamo, with no end date and nothing to cancel.'
+                : `You have full access to everything in Studiamo for the next ${_dayCount(t.days_left)}, `
+                  + `through <strong>${_formatTesterDate(t.expires_at)}</strong>. No card, no subscription, `
+                  + 'nothing to cancel.',
+            'What we would love from you: use it the way you actually study, and tell us where it gets '
+              + 'in your way. The bug report button in the header goes straight to us.',
+            'Your notes, imports and quiz history are yours and stay yours. You can download all of it '
+              + 'at any time from Settings, whether or not you continue afterwards.',
+        ],
+    },
+    reminder_7d: {
+        icon: 'clock',
+        iconWrap: 'bg-amber-100 text-amber-600',
+        title: 'One week left in your test phase',
+        primary: 'See the tester price',
+        dismiss: 'Remind me later',
+        body: (t) => [
+            `Your tester access runs through <strong>${_formatTesterDate(t.expires_at)}</strong>. After that, `
+              + 'Studiamo needs a subscription to keep going, at a price we are keeping low for the people '
+              + 'who tested it.',
+            'Nothing disappears when the test phase ends: your library stays where it is, and you can '
+              + 'download everything from Settings at any time.',
+        ],
+    },
+    reminder_1d: {
+        icon: 'clock',
+        iconWrap: 'bg-amber-100 text-amber-600',
+        title: 'Your test phase ends tomorrow',
+        primary: 'Continue with a subscription',
+        dismiss: 'Not now',
+        body: (t) => [
+            `Tomorrow, <strong>${_formatTesterDate(t.expires_at)}</strong>, Studiamo will ask for a `
+              + 'subscription. Everything you have built stays in your account either way, and your data '
+              + 'export is always available in Settings.',
+        ],
+    },
+};
+
+
+function closeTesterNotice() {
+    const overlay = document.getElementById('overlay-tester-notice');
+    if (overlay) overlay.classList.add('hidden');
+    document.body.classList.remove('overflow-hidden');
+    // Written on dismiss rather than on open: a notice the user never actually saw, because
+    // the tab was closed first, should still be waiting for them next time.
+    if (_openTesterNotice) {
+        _ackTesterNotice(_openTesterNotice === 'welcome' ? 'welcome' : _openTesterNotice);
+        _openTesterNotice = null;
+    }
+}
+
+
+function openTesterNotice(kind, tester) {
+    const spec = TESTER_NOTICES[kind];
+    const overlay = document.getElementById('overlay-tester-notice');
+    if (!spec || !overlay) return;
+
+    document.getElementById('tester-notice-title').textContent = spec.title;
+    document.getElementById('tester-notice-icon').setAttribute('data-lucide', spec.icon);
+    document.getElementById('tester-notice-icon-wrap').className =
+        'w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 ' + spec.iconWrap;
+    document.getElementById('tester-notice-body').innerHTML =
+        spec.body(tester).map(p => `<p>${p}</p>`).join('');
+    document.getElementById('tester-notice-primary-label').textContent = spec.primary;
+    document.getElementById('tester-notice-dismiss-label').textContent = spec.dismiss;
+
+    const primary = document.getElementById('tester-notice-primary');
+    // The welcome's primary action is just "get on with it"; the reminders' is the offer.
+    primary.onclick = kind === 'welcome'
+        ? () => closeTesterNotice()
+        : () => { closeTesterNotice(); openPaywall('paywall-step-beta'); };
+
+    _openTesterNotice = kind;
+    overlay.classList.remove('hidden');
+    document.body.classList.add('overflow-hidden');
+    if (typeof renderIcons === 'function') renderIcons();
+}
+
+
+/**
+ * Shows at most one tester notice per load, and only once nothing else is competing.
+ *
+ * The onboarding and "what's new" modals are also fired on load for new accounts, and a
+ * tester's first session is exactly when all three could want the screen. Stacking them
+ * would bury whichever lost. This one yields.
+ */
+function maybeShowTesterNotice(tester) {
+    if (!tester || tester.state !== 'active') return;
+
+    const busy = ['overlay-tab-guide', 'overlay-updates-modal', 'overlay-paywall']
+        .some(id => {
+            const el = document.getElementById(id);
+            return el && !el.classList.contains('hidden');
+        });
+    if (busy) return;
+
+    if (tester.needs_welcome) return openTesterNotice('welcome', tester);
+    if (tester.needs_reminder === '1d') return openTesterNotice('reminder_1d', tester);
+    if (tester.needs_reminder === '7d') return openTesterNotice('reminder_7d', tester);
+}
+
+
 /** Opens the Lemon Squeezy customer portal, where the user updates their card or cancels. */
 async function openBillingPortal() {
     try {
@@ -561,4 +716,7 @@ window.logoutFromPaywall = logoutFromPaywall;
 window.startCheckout = startCheckout;
 window.initPaywall = initPaywall;
 window.renderSubscriptionCard = renderSubscriptionCard;
+window.renderTesterPill = renderTesterPill;
+window.closeTesterNotice = closeTesterNotice;
+window.maybeShowTesterNotice = maybeShowTesterNotice;
 window.openBillingPortal = openBillingPortal;
