@@ -313,16 +313,30 @@
                         <i data-lucide="arrow-right" class="w-5 h-5"></i>
                     </a>
 
-                    <div
-                        class="hidden mt-4 flex flex-wrap items-center justify-center gap-6 text-xs text-stone-600 font-medium">
-                        <span class="flex items-center space-x-1.5">
-                            <i data-lucide="check" class="w-4 h-4 text-emerald-600"></i>
-                            <span>100% Open Source code</span>
-                        </span>
-                        <span class="flex items-center space-x-1.5">
-                            <i data-lucide="shield-check" class="w-4 h-4 text-[#78350f]"></i>
-                            <span>Zero spam guarantee</span>
-                        </span>
+                    <!-- Trust badges: switched off deliberately, alongside the waitlist form above,
+                         and kept in the markup for the same reason, so the two can come back
+                         together the moment signups need gating.
+                         Hidden by a plain wrapper rather than by adding "hidden" to the badge
+                         row's own class list. Pairing "hidden" with "flex" on one element is a
+                         perfectly good Tailwind idiom and this app uses it in ~35 places: every
+                         modal is written that way, and JS reveals them by removing "hidden".
+                         These badges are the exception, nothing ever toggles them, so carrying
+                         both advertised a switch that does not exist. The wrapper says "off"
+                         outright and leaves the row's own layout untouched for whenever it
+                         returns. To bring them back, delete this wrapper div, nothing else
+                         changes. -->
+                    <div class="hidden">
+                        <div
+                            class="mt-4 flex flex-wrap items-center justify-center gap-6 text-xs text-stone-600 font-medium">
+                            <span class="flex items-center space-x-1.5">
+                                <i data-lucide="check" class="w-4 h-4 text-emerald-600"></i>
+                                <span>100% Open Source code</span>
+                            </span>
+                            <span class="flex items-center space-x-1.5">
+                                <i data-lucide="shield-check" class="w-4 h-4 text-[#78350f]"></i>
+                                <span>Zero spam guarantee</span>
+                            </span>
+                        </div>
                     </div>
                 </div>
 
