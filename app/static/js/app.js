@@ -239,27 +239,118 @@ function escapeRecQuotes(str) {
     return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
 }
 
-function playInlineVideo(ytId, wrapperId) {
+// --- Inline Video Player & Auto-Save Position Tracking ---
+let _activeInlineYTPlayer = null;
+let _activeInlineSaveInterval = null;
+let _activeInlineVideoId = null;
+let _activeInlineYtId = null;
+
+function saveActiveInlinePosition() {
+    if (!_activeInlineVideoId) return;
+    let pos = 0;
+    if (_activeInlineYTPlayer && typeof _activeInlineYTPlayer.getCurrentTime === 'function') {
+        try {
+            const t = _activeInlineYTPlayer.getCurrentTime();
+            if (typeof t === 'number' && t > 0) pos = t;
+        } catch (e) {}
+    }
+    if (pos <= 0) return;
+
+    if (window._videoCardCache && window._videoCardCache[_activeInlineVideoId]) {
+        window._videoCardCache[_activeInlineVideoId].last_position_seconds = pos;
+    }
+
+    try {
+        const formData = new FormData();
+        formData.append('position', pos.toFixed(1));
+        fetchAPI(`/api/videos/${_activeInlineVideoId}/position`, { method: 'POST', body: formData });
+    } catch (e) {
+        console.warn("Failed to auto-save inline video position:", e);
+    }
+}
+window.saveActiveInlinePosition = saveActiveInlinePosition;
+
+function stopActiveInlineTracker() {
+    if (_activeInlineSaveInterval) {
+        clearInterval(_activeInlineSaveInterval);
+        _activeInlineSaveInterval = null;
+    }
+    if (_activeInlineVideoId) {
+        saveActiveInlinePosition();
+    }
+    _activeInlineYTPlayer = null;
+    _activeInlineVideoId = null;
+    _activeInlineYtId = null;
+}
+window.stopActiveInlineTracker = stopActiveInlineTracker;
+
+window.addEventListener('beforeunload', () => {
+    if (typeof saveActiveInlinePosition === 'function') {
+        saveActiveInlinePosition();
+    }
+});
+
+function playInlineVideo(ytId, wrapperId, startSec = 0, videoId = null) {
+    stopActiveInlineTracker();
+
     const wrapper = document.getElementById(wrapperId);
     if (!wrapper) return;
     wrapper.onclick = null;
     wrapper.removeAttribute('onclick');
     wrapper.classList.remove('cursor-pointer');
     wrapper.classList.add('yt-downscale-wrapper');
+    const iframeId = `inline-yt-${ytId}`;
+    const startParam = startSec > 0 ? `&start=${Math.floor(startSec)}` : '';
     wrapper.innerHTML = `
-        <iframe class="w-full h-full border-0"
-                src="https://www.youtube-nocookie.com/embed/${ytId}?autoplay=1&rel=0"
+        <iframe id="${iframeId}"
+                class="w-full h-full border-0"
+                src="https://www.youtube.com/embed/${ytId}?enablejsapi=1&autoplay=1&rel=0${startParam}"
                 frameborder="0"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowfullscreen>
         </iframe>
     `;
+
+    _activeInlineYtId = ytId;
+    _activeInlineVideoId = videoId;
+
+    const setupInlinePlayer = () => {
+        try {
+            const iframe = document.getElementById(iframeId);
+            if (!iframe) return;
+            _activeInlineYTPlayer = new YT.Player(iframeId, {
+                events: {
+                    'onStateChange': (event) => {
+                        if (event && (event.data === 2 || event.data === 0)) { // PAUSED or ENDED
+                            saveActiveInlinePosition();
+                        }
+                    }
+                }
+            });
+        } catch (e) {}
+    };
+
+    if (typeof ensureYouTubeAPI === 'function') {
+        ensureYouTubeAPI(setupInlinePlayer);
+    } else if (window.ensureYouTubeAPI) {
+        window.ensureYouTubeAPI(setupInlinePlayer);
+    }
+
+    _activeInlineSaveInterval = setInterval(() => {
+        saveActiveInlinePosition();
+    }, 5000);
 }
 window.playInlineVideo = playInlineVideo;
 
-function playRecommendedVideo(ytId, wrapperId, title, goalId) {
-    playInlineVideo(ytId, wrapperId);
-    queueRecommendationPreview(ytId, title, goalId, true);
+async function playRecommendedVideo(ytId, wrapperId, title, goalId, lastPositionSeconds = 0) {
+    const startSec = Math.floor(parseFloat(lastPositionSeconds) || 0);
+    const existingVideoId = (window._dailyRecsDrafts && window._dailyRecsDrafts[ytId]) || null;
+    playInlineVideo(ytId, wrapperId, startSec, existingVideoId);
+
+    const res = await queueRecommendationPreview(ytId, title, goalId, true);
+    if (res && res.video_id) {
+        _activeInlineVideoId = res.video_id;
+    }
 }
 window.playRecommendedVideo = playRecommendedVideo;
 
@@ -325,7 +416,7 @@ async function loadDailyRecommendations() {
             return `
                 <div class="bg-white border border-stone-200/90 rounded-2xl overflow-hidden flex flex-col justify-between hover:border-amber-400 hover:shadow-md transition-all duration-200 relative group select-none">
                     <!-- Inline Playable Media Wrapper -->
-                    <div id="${wrapperId}" class="w-full aspect-video relative overflow-hidden bg-stone-900 cursor-pointer group" onclick="playRecommendedVideo('${ytId}', '${wrapperId}', '${cleanTitle}', '${rec.goal_id || ''}')">
+                    <div id="${wrapperId}" class="w-full aspect-video relative overflow-hidden bg-stone-900 cursor-pointer group" onclick="playRecommendedVideo('${ytId}', '${wrapperId}', '${cleanTitle}', '${rec.goal_id || ''}', ${lastPos})">
                         <img src="${thumbUrl}"
                              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                              draggable="false"
@@ -377,24 +468,14 @@ async function loadDailyRecommendations() {
                     </div>
 
                     <!-- Details Body -->
-                    <div class="p-4 flex-grow flex flex-col justify-between space-y-3 bg-white">
-                        <div class="space-y-1.5">
-                            <h4 class="font-bold text-sm text-stone-900 leading-snug line-clamp-2 hover:text-amber-700 transition-colors cursor-pointer"
-                                onclick="playRecommendedVideo('${ytId}', '${wrapperId}', '${cleanTitle}', '${rec.goal_id || ''}')">
-                                ${escapeHtml(rec.title)}
-                            </h4>
-                            <div class="flex items-center text-xs text-stone-500 pt-0.5">
-                                <span class="flex items-center space-x-1 truncate" title="${escapeHtml(rec.channel) || ''}">
-                                    ${rec.channel ? `
-                                        <i data-lucide="youtube" class="w-3.5 h-3.5 text-red-600 shrink-0"></i>
-                                        <span class="truncate">${escapeHtml(rec.channel)}</span>
-                                    ` : ''}
-                                </span>
-                            </div>
-                        </div>
+                    <div class="p-3.5 flex flex-col gap-2.5 bg-white">
+                        <h4 class="font-bold text-sm text-stone-900 leading-snug line-clamp-2 hover:text-amber-700 transition-colors cursor-pointer"
+                            onclick="playRecommendedVideo('${ytId}', '${wrapperId}', '${cleanTitle}', '${rec.goal_id || ''}', ${lastPos})">
+                            ${escapeHtml(rec.title)}
+                        </h4>
 
                         <!-- Action Bar -->
-                        <div class="flex items-center space-x-2 pt-2.5">
+                        <div class="flex items-center space-x-2">
                             ${isQueued ? `
                                 <button id="btn-queue-${ytId}" onclick="navigateToVideoInGoals(${draftVideoId})" class="btn-primary flex-grow py-2 px-3 font-extrabold rounded-xl text-xs transition flex items-center justify-center space-x-1.5 active:scale-[0.98]">
                                     <i data-lucide="bookmark" class="w-3.5 h-3.5 fill-current"></i>
@@ -525,6 +606,9 @@ async function openRecommendationInStudio(youtubeId, title, goalId) {
 }
 
 async function dismissRecommendation(recId) {
+    if (_activeInlineYtId === recId) {
+        stopActiveInlineTracker();
+    }
     try {
         const formData = new FormData();
         formData.append('youtube_id', recId);
@@ -536,6 +620,7 @@ async function dismissRecommendation(recId) {
 }
 
 async function refreshDailyRecommendations() {
+    stopActiveInlineTracker();
     const btn = document.getElementById('btn-refresh-daily-recs');
     const icon = document.getElementById('icon-refresh-daily-recs');
     if (btn) btn.disabled = true;
