@@ -17,7 +17,10 @@ const ACTIVATION_POLL_TIMEOUT_MS = 30000;
 
 
 function _paywallShowStep(stepId) {
-    ['paywall-step-standard', 'paywall-step-beta', 'paywall-step-activating', 'paywall-step-pending']
+    // Every step id must be listed. _paywallShowStep only toggles what it knows about, so a
+    // step missing from this array is never hidden and would sit under the one being shown.
+    ['paywall-step-standard', 'paywall-step-beta', 'paywall-step-tester-expired',
+     'paywall-step-activating', 'paywall-step-pending']
         .forEach(id => {
             const el = document.getElementById(id);
             if (el) el.classList.toggle('hidden', id !== stepId);
@@ -53,6 +56,35 @@ function closePaywall() {
 }
 
 
+// Last known tester state, so the 402 handler can pick the right step without a fetch of
+// its own. Set by initPaywall from the status call it already makes.
+let _testerState = null;
+
+
+/** Which first screen a blocked user should meet. */
+function _blockedStepFor(tester) {
+    const state = tester && tester.state;
+    return (state === 'expired' || state === 'revoked')
+        ? 'paywall-step-tester-expired'
+        : 'paywall-step-standard';
+}
+
+
+/**
+ * Records that a tester notice was shown, so it is not shown again and so the admin side
+ * can see who has actually been told.
+ *
+ * Fire-and-forget on purpose: this is bookkeeping, and a failed POST must not stop the
+ * screen it is recording from being displayed.
+ */
+function _ackTesterNotice(kind) {
+    const body = new FormData();
+    body.append('kind', kind);
+    fetch('/api/billing/tester/ack', { method: 'POST', body, credentials: 'same-origin' })
+        .catch(e => console.warn('Tester notice ack failed:', e));
+}
+
+
 /**
  * Called by fetchAPI when any request returns 402, i.e. access lapsed mid-session.
  *
@@ -60,11 +92,17 @@ function closePaywall() {
  * so calling it unconditionally would yank a user who is reading the discounted offer
  * back to the default screen the moment any background request returned 402, losing the
  * offer they were about to accept.
+ *
+ * Picks the same step initPaywall would. Without that, a tester whose period ran out while
+ * the tab sat open would be shown the first-time "Thank you for choosing Cloud" screen,
+ * which is exactly the case the expired step exists for and the likeliest way to meet it.
  */
 function notifyPaymentRequired() {
     const overlay = document.getElementById('overlay-paywall');
     if (!overlay || !overlay.classList.contains('hidden')) return;
-    openPaywall();
+    const step = _blockedStepFor(_testerState);
+    if (step === 'paywall-step-tester-expired') _ackTesterNotice('expiry');
+    openPaywall(step);
 }
 
 
@@ -183,10 +221,15 @@ async function initPaywall() {
 
     try {
         const status = await fetchAPI('/api/billing/status');
+        _testerState = (status && status.tester) || null;
         // Populated before the modal opens, so the code is already on screen rather than
         // appearing a moment after the user starts reading.
         renderDiscountNote(status && status.beta_discount_code);
-        if (status && !status.has_access) openPaywall();
+        if (status && !status.has_access) {
+            const step = _blockedStepFor(_testerState);
+            if (step === 'paywall-step-tester-expired') _ackTesterNotice('expiry');
+            openPaywall(step);
+        }
     } catch (e) {
         // A failed status check must not lock anyone out of an app they have paid for.
         // The server-side dependency is the real gate; this is only the explanation.
@@ -204,15 +247,17 @@ async function initPaywall() {
  * rendered with a blank code in the middle of the sentence.
  */
 function renderDiscountNote(code) {
-    const note = document.getElementById('paywall-discount-note');
-    const target = document.getElementById('paywall-discount-code');
-    if (!note || !target) return;
-    if (!code) {
-        note.classList.add('hidden');
-        return;
-    }
-    target.textContent = code;
-    note.classList.remove('hidden');
+    // Every occurrence, not one: the offer partial is included by more than one paywall
+    // step, so this cannot key off an id.
+    document.querySelectorAll('[data-discount-note]').forEach(note => {
+        if (!code) {
+            note.classList.add('hidden');
+            return;
+        }
+        const target = note.querySelector('[data-discount-code]');
+        if (target) target.textContent = code;
+        note.classList.remove('hidden');
+    });
 }
 
 

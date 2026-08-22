@@ -1,0 +1,32 @@
+<!-- The discounted offer: price, its material terms, and the code to type in at checkout.
+     Included by both paywall steps that present it (the declined-standard-price step and
+     the expired-tester step), so the price and the terms are stated once rather than kept
+     in sync by hand across two nearly-identical blocks.
+
+     Marked with classes and data attributes rather than ids, because an id cannot appear
+     twice on a page and this block now does. billing.js fills every [data-discount-note]
+     it finds. -->
+<div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 space-y-1">
+    <div class="flex items-baseline space-x-2">
+        <span class="text-3xl font-extrabold text-stone-900">$3.99</span>
+        <span class="text-sm font-semibold text-stone-500">/ month</span>
+        <span class="text-sm font-semibold text-stone-400 line-through">$7.99</span>
+    </div>
+    <!-- This sentence is a material term of the offer and must stay visible here, not in a
+         tooltip or a terms link. -->
+    <p class="text-xs font-semibold text-emerald-800">
+        For your first 6 months, then $7.99 / month. Cancel any time.
+    </p>
+</div>
+
+<!-- Directly above the button, because the code has to be read before the click, not
+     after. Lemon Squeezy puts an applied discount below its own pay button, so a customer
+     who does not scroll sees only the full price. Hidden by billing.js when no code is
+     configured, rather than rendering a sentence with a gap in it. -->
+<div class="discount-note" data-discount-note>
+    <i data-lucide="ticket-percent" class="w-4 h-4 flex-shrink-0"></i>
+    <span>
+        Enter code <strong class="discount-code" data-discount-code></strong>
+        at checkout for 50% off your first 6 months, because you are helping test Studiamo.
+    </span>
+</div>
