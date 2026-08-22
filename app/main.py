@@ -77,6 +77,11 @@ async def lifespan(app: FastAPI):
     polling_task.cancel()
     managed_polling_task.cancel()
     scheduler_task.cancel()
+    try:
+        from app.import_manager import ImportQueueManager
+        ImportQueueManager.get_instance().reset_inflight_tasks_on_shutdown()
+    except Exception as e_shutdown:
+        logger.warning(f"[shutdown] In-flight task reset error: {e_shutdown}")
 
 
 app = FastAPI(title="studiamo", lifespan=lifespan)
@@ -249,12 +254,9 @@ async def serve_root(request: Request):
     return templates.TemplateResponse(template_name, {"request": request})
 
 
-@app.get("/landing", response_class=HTMLResponse)
-async def serve_landing(request: Request):
-    template_path = Path(__file__).resolve().parent / "templates" / "landing.html"
-    if not template_path.exists():
-        raise HTTPException(status_code=404, detail="Landing HTML template not found")
-    return templates.TemplateResponse("landing.html", {"request": request})
+@app.get("/landing")
+async def serve_landing():
+    return RedirectResponse(url="/", status_code=301)
 
 
 @app.get("/login", response_class=HTMLResponse)
@@ -305,8 +307,6 @@ async def serve_app(request: Request):
 
 
 @app.get("/impressum", response_class=HTMLResponse)
-@app.get("/imprint", response_class=HTMLResponse)
-@app.get("/legal", response_class=HTMLResponse)
 async def serve_impressum(request: Request):
     template_path = Path(__file__).resolve().parent / "templates" / "impressum.html"
     if not template_path.exists():
@@ -314,8 +314,13 @@ async def serve_impressum(request: Request):
     return templates.TemplateResponse("impressum.html", {"request": request, "current_page": "impressum"})
 
 
+@app.get("/imprint")
+@app.get("/legal")
+async def redirect_impressum():
+    return RedirectResponse(url="/impressum", status_code=301)
+
+
 @app.get("/privacy", response_class=HTMLResponse)
-@app.get("/privacy-policy", response_class=HTMLResponse)
 async def serve_privacy(request: Request):
     template_path = Path(__file__).resolve().parent / "templates" / "privacy.html"
     if not template_path.exists():
@@ -323,9 +328,12 @@ async def serve_privacy(request: Request):
     return templates.TemplateResponse("privacy.html", {"request": request, "current_page": "privacy"})
 
 
+@app.get("/privacy-policy")
+async def redirect_privacy():
+    return RedirectResponse(url="/privacy", status_code=301)
+
+
 @app.get("/terms", response_class=HTMLResponse)
-@app.get("/tos", response_class=HTMLResponse)
-@app.get("/terms-of-service", response_class=HTMLResponse)
 async def serve_terms(request: Request):
     template_path = Path(__file__).resolve().parent / "templates" / "terms.html"
     if not template_path.exists():
@@ -333,13 +341,23 @@ async def serve_terms(request: Request):
     return templates.TemplateResponse("terms.html", {"request": request, "current_page": "terms"})
 
 
+@app.get("/tos")
+@app.get("/terms-of-service")
+async def redirect_terms():
+    return RedirectResponse(url="/terms", status_code=301)
+
+
 @app.get("/science", response_class=HTMLResponse)
-@app.get("/research", response_class=HTMLResponse)
 async def serve_science(request: Request):
     template_path = Path(__file__).resolve().parent / "templates" / "science.html"
     if not template_path.exists():
         raise HTTPException(status_code=404, detail="Science HTML template not found")
     return templates.TemplateResponse("science.html", {"request": request, "current_page": "science"})
+
+
+@app.get("/research")
+async def redirect_science():
+    return RedirectResponse(url="/science", status_code=301)
 
 
 

@@ -624,6 +624,10 @@ class ImportQueueManager:
         # _process_task_async for why that matters.
         self._inflight_task_ids: set = set()
 
+    def is_task_inflight(self, task_id: int) -> bool:
+        """Returns True if the task is currently executing in this process."""
+        return task_id in self._inflight_task_ids
+
     def _get_user_semaphore(self, username: str) -> asyncio.Semaphore:
         if username not in self._user_semaphores:
             self._user_semaphores[username] = asyncio.Semaphore(2)
@@ -869,6 +873,41 @@ class ImportQueueManager:
             print(f"Error recovering pending tasks for '{username}': {e}")
         finally:
             conn.close()
+
+    def recover_all_pending_tasks(self):
+        """Scans database periodically across all users for orphaned incomplete tasks and resumes them."""
+        try:
+            for username in database.get_all_users():
+                self.recover_pending_tasks(username)
+        except Exception as e:
+            print(f"Error during periodic task recovery: {e}")
+
+    def reset_inflight_tasks_on_shutdown(self):
+        """Resets tasks currently running in memory to pending on graceful server shutdown.
+
+        Setting updated_at back ensures that the next process start immediately picks them up
+        instead of waiting for the 15-minute quiet threshold."""
+        if not self._inflight_task_ids:
+            return
+        try:
+            raw_conn = database.get_pooled_raw_connection()
+            try:
+                cursor = raw_conn.cursor()
+                task_ids = list(self._inflight_task_ids)
+                cursor.execute(
+                    """UPDATE import_tasks 
+                       SET status = 'pending', progress_stage = 'Queued (Restart)',
+                           updated_at = CURRENT_TIMESTAMP - INTERVAL '16 minutes'
+                       WHERE id = ANY(%s) AND status = 'processing';""",
+                    (task_ids,)
+                )
+                if not getattr(raw_conn, "autocommit", False):
+                    raw_conn.commit()
+                cursor.close()
+            finally:
+                database.release_pooled_connection(raw_conn)
+        except Exception as e:
+            print(f"Error resetting in-flight tasks on shutdown: {e}")
 
     def get_user_backlog(self, username: str) -> List[dict]:
         """Fetches active and recent backlog tasks for user UI widget."""

@@ -125,6 +125,32 @@ async def add_content(
                     video_id=existing["id"]
                 )
                 return {"status": "processing", "video_id": existing["id"], "task_id": task_id, "retrying": True}
+            elif existing["status"] == "processing":
+                cursor.execute(
+                    """SELECT id, status, updated_at FROM import_tasks 
+                       WHERE video_id = %s AND user_uuid = %s ORDER BY id DESC LIMIT 1;""",
+                    (existing["id"], user_uuid)
+                )
+                t_row = cursor.fetchone()
+                queue_mgr = ImportQueueManager.get_instance()
+                is_running = t_row and queue_mgr.is_task_inflight(t_row["id"])
+                if is_running:
+                    conn.close()
+                    return {"status": "processing", "video_id": existing["id"], "task_id": t_row["id"], "already_processing": True}
+                
+                cursor.execute("UPDATE videos SET status = 'processing', status_error = NULL WHERE id = %s AND user_uuid = %s;", (existing["id"], user_uuid))
+                if is_watchlist == 1:
+                    cursor.execute("UPDATE videos SET is_watchlist = 1 WHERE id = %s AND user_uuid = %s;", (existing["id"], user_uuid))
+                conn.commit()
+                conn.close()
+                task_id = queue_mgr.enqueue_task(
+                    username=username,
+                    task_type="youtube",
+                    title=placeholder_title,
+                    payload=payload,
+                    video_id=existing["id"]
+                )
+                return {"status": "processing", "video_id": existing["id"], "task_id": task_id, "retrying": True}
             elif is_watchlist == 1:
                 cursor.execute("UPDATE videos SET is_watchlist = 1 WHERE id = %s AND user_uuid = %s;", (existing["id"], user_uuid))
                 conn.commit()
