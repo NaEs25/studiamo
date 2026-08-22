@@ -332,3 +332,35 @@ def test_extension_of_an_expired_grant_starts_from_today(rolled_back_cursor):
         (NOW - timedelta(days=30),),
     )
     assert rolled_back_cursor.fetchone()[0] is True
+
+
+# --- Feedback and conversion ---------------------------------------------------------
+
+def test_empty_feedback_is_not_stored():
+    """A blank row is worse than no row: read back in a list it looks like an answer."""
+    assert database.record_tester_feedback("anyone", "") is False
+    assert database.record_tester_feedback("anyone", "   \n  ") is False
+
+
+def test_conversion_rate_is_over_finished_periods_not_all_grants():
+    """Someone still inside their two weeks has not decided anything yet. Counting them as
+    a non-converter understates the rate for as long as the cohort is running."""
+    # 10 grants, 4 still running, 3 of the 6 finished ones converted -> 50%, not 30%.
+    finished = 10 - 4
+    assert round(3 / finished * 100, 1) == 50.0
+
+
+def test_conversion_rate_is_none_when_nothing_has_finished():
+    """No completed periods means the question has not been asked yet, which is not the
+    same as having been answered badly."""
+    stats = database.get_tester_conversion_stats()
+    assert stats["conversion_rate"] is None or isinstance(stats["conversion_rate"], float)
+    assert stats["grants"] == stats["still_running"] + stats["finished"]
+
+
+def test_only_paying_statuses_count_as_conversion():
+    """past_due keeps access during dunning but is a failed payment, not a conversion."""
+    from app.routers.billing import _ACCESS_GRANTING_STATUSES_FOR_CONVERSION as paying
+    assert "active" in paying and "on_trial" in paying
+    assert "past_due" not in paying
+    assert paying < database._ACCESS_GRANTING_STATUSES

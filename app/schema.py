@@ -450,12 +450,35 @@ TABLES_SQL = [
     -- Two columns encoding one fact will drift otherwise: three separate code paths write
     -- this row (grant, extend, backfill), so the invariant is enforced here rather than
     -- trusting all three to keep agreeing. DROP first so this block stays re-runnable.
+    -- Set when an account that had a tester grant later starts paying. Distinct from
+    -- revoked_reason, which records an admin ending a period: converting is something the
+    -- customer did, not something done to them, and conflating the two would make it
+    -- impossible to tell "I ended this" from "they subscribed".
+    ALTER TABLE tester_access ADD COLUMN IF NOT EXISTS converted_at TIMESTAMPTZ;
+
     ALTER TABLE tester_access DROP CONSTRAINT IF EXISTS tester_access_period_expiry_check;
     ALTER TABLE tester_access ADD CONSTRAINT tester_access_period_expiry_check
         CHECK (
             (period_days = 0 AND expires_at IS NULL) OR
             (period_days > 0 AND expires_at IS NOT NULL)
         );
+    """,
+    """
+    -- What testers said on their way out. The point of a test phase is finding out what is
+    -- wrong, and the expiry screen is the one moment someone has both formed an opinion and
+    -- has nothing left to lose by saying it.
+    --
+    -- grant_id records which test period the answer belongs to, so a second grant to the
+    -- same person collects a separate answer rather than overwriting the first. Deliberately
+    -- nullable: feedback is worth keeping even if the grant row it came from is later gone.
+    CREATE TABLE IF NOT EXISTS tester_feedback (
+        id          SERIAL PRIMARY KEY,
+        user_uuid   UUID NOT NULL,
+        username    TEXT,
+        grant_id    INTEGER,
+        message     TEXT NOT NULL,
+        created_at  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
     """,
     """
     ALTER TABLE user_profile ENABLE ROW LEVEL SECURITY;
@@ -475,6 +498,7 @@ TABLES_SQL = [
     ALTER TABLE import_timings ENABLE ROW LEVEL SECURITY;
     ALTER TABLE landing_waitlist ENABLE ROW LEVEL SECURITY;
     ALTER TABLE tester_access ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE tester_feedback ENABLE ROW LEVEL SECURITY;
     """,
 ]
 
@@ -559,6 +583,10 @@ INDEXES_SQL = [
     # Backs the admin panel's "who is expiring soon" list and the optional sweeper. Partial
     # because a revoked grant is never a candidate for either.
     "CREATE INDEX IF NOT EXISTS idx_tester_access_expires ON tester_access(expires_at) WHERE revoked_at IS NULL;",
+    # Feedback is read newest-first, per account when looking at one person and across the
+    # table when reading the batch after a cohort ends.
+    "CREATE INDEX IF NOT EXISTS idx_tester_feedback_created ON tester_feedback(created_at DESC);",
+    "CREATE INDEX IF NOT EXISTS idx_tester_feedback_user ON tester_feedback(user_uuid);",
 ]
 
 

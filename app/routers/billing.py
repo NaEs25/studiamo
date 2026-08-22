@@ -27,6 +27,11 @@ router = APIRouter(tags=["Billing"])
 
 _LS_API_BASE = "https://api.lemonsqueezy.com/v1"
 
+# Statuses that mean money is actually flowing, for the purpose of recording that a tester
+# converted. Narrower than database._ACCESS_GRANTING_STATUSES, which also counts 'past_due'
+# because access is kept during dunning: a failed payment is not a conversion.
+_ACCESS_GRANTING_STATUSES_FOR_CONVERSION = {"active", "on_trial"}
+
 
 def _require_cloud() -> None:
     """Billing routes exist only in cloud mode. 404 rather than 403: on a self-hosted
@@ -169,6 +174,23 @@ async def acknowledge_tester_notice(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     return {"ok": True, "updated": updated}
+
+
+@router.post("/api/billing/tester/feedback")
+@limiter.limit("5/minute")
+async def submit_tester_feedback(
+    request: Request,
+    message: str = Form(...),
+    username: str = Depends(get_active_username),
+):
+    """Stores what a tester said on their way out.
+
+    get_active_username rather than require_app_access, like the ack endpoint and the data
+    export: this is offered on the screen someone sees precisely because their access has
+    ended, so gating it on having access would make it unreachable by everyone it is for."""
+    _require_cloud()
+    saved = database.record_tester_feedback(username, message)
+    return {"ok": True, "saved": saved}
 
 
 @router.get("/api/billing/portal")
@@ -316,12 +338,12 @@ def _apply_subscription_event(event_name: str, payload: dict) -> bool:
         """
         if user_uuid:
             cursor.execute(
-                f"UPDATE user_profile {set_clause} WHERE user_uuid = %s RETURNING username;",
+                f"UPDATE user_profile {set_clause} WHERE user_uuid = %s RETURNING username, user_uuid;",
                 params + [user_uuid],
             )
         elif subscription_id:
             cursor.execute(
-                f"UPDATE user_profile {set_clause} WHERE ls_subscription_id = %s RETURNING username;",
+                f"UPDATE user_profile {set_clause} WHERE ls_subscription_id = %s RETURNING username, user_uuid;",
                 params + [subscription_id],
             )
         else:
@@ -329,11 +351,20 @@ def _apply_subscription_event(event_name: str, payload: dict) -> bool:
             return False
 
         row = cursor.fetchone()
+        resolved_uuid = row.get("user_uuid") if row else None
         if not getattr(conn, "autocommit", False):
             conn.commit()
     finally:
         if conn is not None:
             database.release_pooled_connection(conn)
+
+    # A tester who started paying. Stamped once, on the newest grant, and only for an
+    # account that had one; see database.mark_tester_converted. Deliberately after the
+    # commit and deliberately unable to raise: Lemon Squeezy retries anything it does not
+    # get a 200 for, and losing a subscription update to protect a statistic would be the
+    # wrong trade.
+    if resolved_uuid and status in _ACCESS_GRANTING_STATUSES_FOR_CONVERSION:
+        database.mark_tester_converted(resolved_uuid)
 
     if not row:
         logger.error(

@@ -2972,6 +2972,27 @@
                         Log out
                     </button>
                 </div>
+
+                <!-- Asked last, below the decision, on purpose: leading with a question
+                     would read as a toll on the way out. Optional, one field, and it says
+                     what happens to the answer. This is the only moment a tester has both
+                     formed an opinion and has nothing left to lose by giving it. -->
+                <div class="pt-3 border-t border-stone-200 space-y-2">
+                    <label for="tester-feedback-input"
+                        class="block text-xs font-bold text-stone-700">
+                        Before you go: what was missing?
+                    </label>
+                    <textarea id="tester-feedback-input" rows="3" maxlength="4000"
+                        placeholder="Anything that got in your way, or that you expected and did not find."
+                        class="w-full p-3 bg-[#fcfaf6] border border-[#e7dfd3] rounded-xl text-xs text-stone-700 placeholder:text-stone-400 focus:outline-none focus:border-amber-400 resize-none"></textarea>
+                    <div class="flex items-center justify-between gap-2">
+                        <p id="tester-feedback-status" class="text-[11px] text-stone-400"></p>
+                        <button type="button" id="tester-feedback-send"
+                            class="px-4 py-2 bg-stone-100 hover:bg-stone-200 border border-[#e7dfd3] rounded-xl text-xs font-bold text-stone-700 transition flex-shrink-0">
+                            Send
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <!-- Returning from Lemon Squeezy: the webhook may land a moment after the

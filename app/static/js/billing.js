@@ -101,7 +101,11 @@ function notifyPaymentRequired() {
     const overlay = document.getElementById('overlay-paywall');
     if (!overlay || !overlay.classList.contains('hidden')) return;
     const step = _blockedStepFor(_testerState);
-    if (step === 'paywall-step-tester-expired') _ackTesterNotice('expiry');
+    if (step === 'paywall-step-tester-expired') {
+        _ackTesterNotice('expiry');
+        const send = document.getElementById('tester-feedback-send');
+        if (send) send.addEventListener('click', sendTesterFeedback);
+    }
     openPaywall(step);
 }
 
@@ -233,7 +237,11 @@ async function initPaywall() {
         renderTesterPill(_testerState);
         if (status && !status.has_access) {
             const step = _blockedStepFor(_testerState);
-            if (step === 'paywall-step-tester-expired') _ackTesterNotice('expiry');
+            if (step === 'paywall-step-tester-expired') {
+                _ackTesterNotice('expiry');
+                const send = document.getElementById('tester-feedback-send');
+                if (send) send.addEventListener('click', sendTesterFeedback);
+            }
             openPaywall(step);
             return;
         }
@@ -693,6 +701,44 @@ function maybeShowTesterNotice(tester) {
 }
 
 
+/**
+ * Sends the one-question tester feedback from the expired screen.
+ *
+ * Never blocks or replaces the two real actions next to it. The button reports what
+ * happened in place, and a failure says so rather than pretending: someone who took the
+ * trouble to write something deserves to know whether it arrived.
+ */
+async function sendTesterFeedback() {
+    const input = document.getElementById('tester-feedback-input');
+    const status = document.getElementById('tester-feedback-status');
+    const button = document.getElementById('tester-feedback-send');
+    if (!input || !button) return;
+
+    const message = (input.value || '').trim();
+    if (!message) {
+        if (status) status.textContent = 'Write something first.';
+        return;
+    }
+
+    button.disabled = true;
+    if (status) status.textContent = 'Sending…';
+    try {
+        const body = new FormData();
+        body.append('message', message);
+        const res = await fetch('/api/billing/tester/feedback',
+            { method: 'POST', body, credentials: 'same-origin' });
+        if (!res.ok) throw new Error(String(res.status));
+        input.disabled = true;
+        button.classList.add('hidden');
+        if (status) status.textContent = 'Thank you, that went straight to us.';
+    } catch (e) {
+        console.warn('Tester feedback failed:', e);
+        if (status) status.textContent = "That didn't send. Please email hello@studiamo.cloud.";
+        button.disabled = false;
+    }
+}
+
+
 /** Opens the Lemon Squeezy customer portal, where the user updates their card or cancels. */
 async function openBillingPortal() {
     try {
@@ -719,4 +765,5 @@ window.renderSubscriptionCard = renderSubscriptionCard;
 window.renderTesterPill = renderTesterPill;
 window.closeTesterNotice = closeTesterNotice;
 window.maybeShowTesterNotice = maybeShowTesterNotice;
+window.sendTesterFeedback = sendTesterFeedback;
 window.openBillingPortal = openBillingPortal;

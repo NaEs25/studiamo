@@ -1075,6 +1075,105 @@ def get_access_snapshot(username: str) -> dict:
     }
 
 
+
+def record_tester_feedback(username: str, message: str) -> bool:
+    """Stores what a tester said on their way out. Returns True if it was saved.
+
+    Attached to the grant it belongs to, so a second test period for the same person
+    collects its own answer instead of being confused with the first. Trimmed and length
+    capped, and an empty message is not stored at all: a blank row is worse than no row,
+    because it looks like an answer when read back in a list."""
+    message = (message or "").strip()
+    if not message:
+        return False
+    message = message[:4000]
+
+    conn = None
+    try:
+        conn = get_pooled_raw_connection()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        cursor.execute(
+            """INSERT INTO tester_feedback (user_uuid, username, grant_id, message)
+               SELECT p.user_uuid, p.username,
+                      (SELECT t.id FROM tester_access t
+                        WHERE t.user_uuid = p.user_uuid
+                        ORDER BY t.granted_at DESC, t.id DESC LIMIT 1),
+                      %s
+                 FROM user_profile p
+                WHERE LOWER(p.username) = LOWER(%s)
+            RETURNING id;""",
+            (message, username)
+        )
+        return cursor.fetchone() is not None
+    finally:
+        if conn is not None:
+            release_pooled_connection(conn)
+
+
+def mark_tester_converted(user_uuid) -> bool:
+    """Stamps converted_at on a tester grant whose owner has started paying.
+
+    Called from the Lemon Squeezy webhook. Answers the only question a test phase really
+    has to answer: of the people who tried it, how many stayed.
+
+    Only ever stamps the newest grant, only once, and only for an account that actually had
+    one. `converted_at IS NULL` makes a renewal event a no-op rather than moving the date
+    forward every month, which would otherwise turn "when did they convert" into "when did
+    they last pay"."""
+    conn = None
+    try:
+        conn = get_pooled_raw_connection()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        cursor.execute(
+            """UPDATE tester_access SET converted_at = CURRENT_TIMESTAMP
+                WHERE id = (
+                    SELECT id FROM tester_access WHERE user_uuid = %s
+                     ORDER BY granted_at DESC, id DESC LIMIT 1
+                ) AND converted_at IS NULL
+            RETURNING id;""",
+            (user_uuid,)
+        )
+        return cursor.fetchone() is not None
+    except Exception as e:
+        # Conversion bookkeeping must never fail a webhook. Lemon Squeezy retries anything
+        # it does not get a 200 for, and losing a subscription update to protect a
+        # statistic would be the wrong trade.
+        logger.warning(f"[tester] Could not stamp converted_at for {user_uuid}: {e}")
+        return False
+    finally:
+        if conn is not None:
+            release_pooled_connection(conn)
+
+
+def get_tester_conversion_stats() -> dict:
+    """Headline numbers for the test programme: grants made, how many converted, and how
+    many are still running. Counts grants rather than accounts, so a second period for the
+    same person is a second attempt."""
+    conn = None
+    try:
+        conn = get_pooled_raw_connection()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        cursor.execute("""
+            SELECT COUNT(*) AS grants,
+                   COUNT(*) FILTER (WHERE converted_at IS NOT NULL) AS converted,
+                   COUNT(*) FILTER (WHERE revoked_at IS NULL
+                                    AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP))
+                       AS still_running
+              FROM tester_access;
+        """)
+        row = dict(cursor.fetchone())
+        finished = row["grants"] - row["still_running"]
+        row["finished"] = finished
+        # Rate over finished periods, not over every grant ever made: someone still inside
+        # their two weeks has not decided anything yet, and counting them as a non-converter
+        # understates the number for as long as the cohort is running.
+        row["conversion_rate"] = round(row["converted"] / finished * 100, 1) if finished else None
+        return row
+    finally:
+        if conn is not None:
+            release_pooled_connection(conn)
+
+
 def _resolve_user(cursor, username: str):
     """Returns (user_uuid, real_username) for a username, or (None, None)."""
     cursor.execute(
