@@ -52,13 +52,17 @@ def main():
     print(f"Promoted {len(promoted)} user(s):")
     for row in promoted:
         username = row["username"]
-        recipient = row.get("email") or row.get("google_email")
+        # google_email first, matching every other address decision in the app (billing
+        # checkout, notification settings, the test-email route). It is the address tied to
+        # the identity the account actually signs in with; `email` is a copy that can go
+        # stale if the two ever diverge, so preferring it here could mail the wrong inbox.
+        recipient = row.get("google_email") or row.get("email")
 
         # Stamped before the send and independently of whether it succeeds. The account is
         # already active at this point, so a lead row still reading as "waiting" is wrong the
         # moment the UPDATE above committed, and a failed email must not be what decides
         # whether a later mailer treats this person as a prospect.
-        landing_waitlist_db.mark_waitlist_converted(row.get("email"), row.get("google_email"))
+        landing_waitlist_db.mark_waitlist_converted(row.get("google_email"), row.get("email"))
 
         if not recipient:
             print(f"  - {username}: no email on file, skipping promotion email")

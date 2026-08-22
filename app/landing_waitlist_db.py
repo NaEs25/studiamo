@@ -65,10 +65,15 @@ def link_lead_to_account(user_uuid: str, *emails: str) -> int:
     who signed up while a spot was free kept the throwaway id the marketing form minted, so
     the column held two different kinds of value and a join on it silently missed those rows.
 
-    A unique violation here means a second lead row already claims this account, which happens
-    when someone's `email` and `google_email` were both captured separately. That is worth
-    knowing about but never worth failing a signup over, so it is logged and skipped: the
-    email match in the queries that matter still finds both rows.
+    Pass addresses in priority order, most authoritative first, which in this codebase means
+    google_email before email: google_email is the address tied to the identity the account
+    signs in with, while `email` is a copy that can diverge. Only the best-ranked matching row
+    is linked, because `uuid` is UNIQUE and someone whose two addresses were captured as two
+    separate leads can only put the id on one of them. The other stays findable by email,
+    which is what every query that matters already matches on.
+
+    A unique violation can still happen if an unrelated row holds this id. That is worth
+    knowing about but never worth failing a signup over, so it is logged and skipped.
     """
     candidates = [e.strip().lower() for e in emails if e and e.strip()]
     if not user_uuid or not candidates:
@@ -77,9 +82,13 @@ def link_lead_to_account(user_uuid: str, *emails: str) -> int:
     try:
         cursor = conn.cursor()
         cursor.execute(
-            "UPDATE landing_waitlist SET uuid = ? "
-            "WHERE LOWER(email) = ANY(?) AND (uuid IS NULL OR uuid <> ?);",
-            (str(user_uuid), candidates, str(user_uuid)),
+            "UPDATE landing_waitlist SET uuid = ? WHERE id = ("
+            "    SELECT id FROM landing_waitlist"
+            "     WHERE LOWER(email) = ANY(?)"
+            "     ORDER BY array_position(?::text[], LOWER(email))"
+            "     LIMIT 1"
+            ") AND (uuid IS NULL OR uuid <> ?);",
+            (str(user_uuid), candidates, candidates, str(user_uuid)),
         )
         linked = cursor.rowcount
         conn.commit()
