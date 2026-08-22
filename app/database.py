@@ -822,6 +822,7 @@ def get_tester_period_setting(key: str, fallback: int) -> int:
 # has_app_access() runs on every guarded request, so this deliberately stays a single query.
 _TESTER_ACCESS_SQL = """
     SELECT p.user_uuid, p.subscription_status, p.is_tester, p.ls_ends_at,
+           p.ls_renews_at, p.ls_customer_portal_url,
            t.id AS grant_id, t.granted_at, t.expires_at, t.period_days, t.revoked_at,
            t.welcome_seen_at, t.reminder_7d_seen_at, t.reminder_1d_seen_at, t.expiry_seen_at
       FROM user_profile p
@@ -909,15 +910,7 @@ def get_tester_state(username: str) -> dict:
     `unlimited` and `legacy` both mean "active with no end date", but they are not the same
     thing: one is a decision, the other is unmigrated history that still needs attention.
     Callers must not collapse them."""
-    conn = None
-    try:
-        conn = get_pooled_raw_connection()
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
-        cursor.execute(_TESTER_ACCESS_SQL, (username,))
-        return _derive_tester_state(cursor.fetchone())
-    finally:
-        if conn is not None:
-            release_pooled_connection(conn)
+    return _derive_tester_state(_fetch_access_row(username))
 
 
 def tester_state_payload(state: dict) -> dict:
@@ -965,6 +958,58 @@ def _expire_tester_cache(user_uuid) -> None:
             release_pooled_connection(conn)
 
 
+def _decide_access(row) -> tuple:
+    """Access decision for one _TESTER_ACCESS_SQL row. Pure, no I/O.
+
+    Returns (has_access, cache_is_stale). The second flag says the account's is_tester
+    cache outlived the grant behind it, which the caller heals; it is reported rather than
+    acted on here so this stays a pure function that can be tested exhaustively."""
+    if not row:
+        return False, False
+
+    grant_id = row["grant_id"]
+    expires_at = _as_utc(row["expires_at"])
+    revoked = row["revoked_at"] is not None
+    cache_is_stale = False
+
+    # grant_id, not expires_at, is what separates these two branches. The LEFT JOIN yields
+    # expires_at = NULL both for an unlimited grant and for no grant at all, so testing
+    # expires_at alone would grandfather every account that ever had the flag set and make
+    # the expiry check below unreachable.
+    if grant_id is not None and not revoked:
+        if expires_at is None:
+            return True, False                                # unlimited grant
+        if datetime.now(timezone.utc) < expires_at:
+            return True, False                                # still inside the period
+        cache_is_stale = bool(row["is_tester"])
+    elif grant_id is None and row["is_tester"]:
+        return True, False                                    # legacy flag, grandfathered
+
+    # Falls through on purpose: a tester whose grant ended may since have subscribed, and
+    # must keep access through the normal path below.
+    status = (row["subscription_status"] or "").lower()
+    if status in _ACCESS_GRANTING_STATUSES:
+        return True, cache_is_stale
+
+    if status == "cancelled" and row["ls_ends_at"]:
+        return _as_utc(row["ls_ends_at"]) > datetime.now(timezone.utc), cache_is_stale
+
+    return False, cache_is_stale
+
+
+def _fetch_access_row(username: str):
+    """One indexed round trip for everything the access decision and the tester state need."""
+    conn = None
+    try:
+        conn = get_pooled_raw_connection()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        cursor.execute(_TESTER_ACCESS_SQL, (username,))
+        return cursor.fetchone()
+    finally:
+        if conn is not None:
+            release_pooled_connection(conn)
+
+
 def has_app_access(username: str) -> bool:
     """Whether this account may use the cloud app: a subscription in good standing, or a
     tester grant that has not run out.
@@ -976,46 +1021,28 @@ def has_app_access(username: str) -> bool:
 
     Returns False for statuses that genuinely end access ('paused', 'unpaid', 'expired',
     'inactive') and for any username with no profile row."""
-    conn = None
-    try:
-        conn = get_pooled_raw_connection()
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
-        cursor.execute(_TESTER_ACCESS_SQL, (username,))
-        row = cursor.fetchone()
-        if not row:
-            return False
+    row = _fetch_access_row(username)
+    has_access, cache_is_stale = _decide_access(row)
+    if cache_is_stale:
+        _expire_tester_cache(row["user_uuid"])
+    return has_access
 
-        grant_id = row["grant_id"]
-        expires_at = _as_utc(row["expires_at"])
-        revoked = row["revoked_at"] is not None
 
-        # grant_id, not expires_at, is what separates these two branches. The LEFT JOIN
-        # yields expires_at = NULL both for an unlimited grant and for no grant at all, so
-        # testing expires_at alone would grandfather every account that ever had the flag
-        # set and make the expiry check below unreachable.
-        if grant_id is not None and not revoked:
-            if expires_at is None:
-                return True                                   # unlimited grant
-            if datetime.now(timezone.utc) < expires_at:
-                return True                                   # still inside the period
-            if row["is_tester"]:
-                _expire_tester_cache(row["user_uuid"])
-        elif grant_id is None and row["is_tester"]:
-            return True                                       # legacy flag, grandfathered
+def get_access_snapshot(username: str) -> dict:
+    """Access decision, tester state and the Lemon Squeezy display fields, in one query.
 
-        # Falls through on purpose: a tester whose grant ended may since have subscribed,
-        # and must keep access through the normal path below.
-        status = (row["subscription_status"] or "").lower()
-        if status in _ACCESS_GRANTING_STATUSES:
-            return True
-
-        if status == "cancelled" and row["ls_ends_at"]:
-            return _as_utc(row["ls_ends_at"]) > datetime.now(timezone.utc)
-
-        return False
-    finally:
-        if conn is not None:
-            release_pooled_connection(conn)
+    /api/billing/status is called on every page load. Calling has_app_access() and
+    get_tester_state() separately alongside the route's own profile lookup made that three
+    round trips for data that all lives on one row, so the route uses this instead."""
+    row = _fetch_access_row(username)
+    has_access, cache_is_stale = _decide_access(row)
+    if cache_is_stale:
+        _expire_tester_cache(row["user_uuid"])
+    return {
+        "has_access": has_access,
+        "tester": _derive_tester_state(row),
+        "profile": row or {},
+    }
 
 
 def _resolve_user(cursor, username: str):

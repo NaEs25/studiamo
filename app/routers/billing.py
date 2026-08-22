@@ -115,31 +115,20 @@ async def get_billing_status(username: str = Depends(get_active_username)):
     """Current access + subscription state for the signed-in user.
 
     Drives the paywall modal and the post-checkout poll, so it is deliberately cheap:
-    one indexed lookup, no Lemon Squeezy API call."""
+    one indexed lookup, no Lemon Squeezy API call. get_access_snapshot() is what keeps it
+    to one: the access decision, the tester state and the fields below all live on the same
+    row, and fetching them separately made this three round trips on every page load."""
     _require_cloud()
-    conn = None
-    try:
-        conn = database.get_pooled_raw_connection()
-        from psycopg2.extras import RealDictCursor
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
-        cursor.execute(
-            """SELECT subscription_status, is_tester, ls_renews_at, ls_ends_at,
-                      ls_customer_portal_url
-               FROM user_profile WHERE LOWER(username) = LOWER(%s) LIMIT 1;""",
-            (username,)
-        )
-        row = cursor.fetchone() or {}
-    finally:
-        if conn is not None:
-            database.release_pooled_connection(conn)
+    snapshot = database.get_access_snapshot(username)
+    row = snapshot["profile"]
 
     return {
-        "has_access": database.has_app_access(username),
+        "has_access": snapshot["has_access"],
         "status": row.get("subscription_status") or "inactive",
         # Kept for backward compatibility with clients still reading the flat flag. New code
         # should read `tester` below, which is the one that knows about end dates.
         "is_tester": bool(row.get("is_tester")),
-        "tester": database.tester_state_payload(database.get_tester_state(username)),
+        "tester": database.tester_state_payload(snapshot["tester"]),
         "renews_at": row["ls_renews_at"].isoformat() if row.get("ls_renews_at") else None,
         "ends_at": row["ls_ends_at"].isoformat() if row.get("ls_ends_at") else None,
         "has_portal": bool(row.get("ls_customer_portal_url")),
