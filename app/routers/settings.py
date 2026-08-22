@@ -194,6 +194,9 @@ async def get_app_settings(username: str = Depends(get_active_username)):
             # Kept for backward compatibility; `tester` below is the one with the end date.
             "is_tester": _parse_bool(settings_row.get("is_tester", 0)),
             "tester": database.tester_state_payload(database.get_tester_state(username)),
+            # For the subscribe CTA on this card to name the code, same as the paywall does.
+            # Not pre-applied to the checkout URL; see billing.build_checkout_url.
+            "beta_discount_code": (config.LEMONSQUEEZY_BETA_DISCOUNT_CODE or "") if config.IS_CLOUD else "",
         }
     except Exception as e:
         import logging

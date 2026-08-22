@@ -2828,7 +2828,7 @@
                 </div>
 
                 <div class="space-y-2">
-                    <button type="button" onclick="startCheckout(false)"
+                    <button type="button" onclick="startCheckout()"
                         class="btn-primary w-full py-3 font-extrabold rounded-xl transition flex items-center justify-center space-x-2">
                         <span>Subscribe</span>
                         <i data-lucide="arrow-right" class="w-4 h-4"></i>
@@ -2868,9 +2868,20 @@
                 </div>
 
                 <div class="space-y-2">
-                    <button type="button" onclick="startCheckout(true)"
+                    <!-- Directly above the button, because the code has to be read before
+                         the click, not after. Lemon Squeezy puts an applied discount below
+                         its own pay button, so a customer who does not scroll sees only the
+                         full price. Hidden by billing.js when no code is configured. -->
+                    <div id="paywall-discount-note" class="discount-note">
+                        <i data-lucide="ticket" class="w-4 h-4 flex-shrink-0"></i>
+                        <span>
+                            Enter code <strong class="discount-code" id="paywall-discount-code"></strong>
+                            at checkout for 50% off your first 6 months, because you are helping test Studiamo.
+                        </span>
+                    </div>
+                    <button type="button" onclick="startCheckout()"
                         class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl transition shadow-lg flex items-center justify-center space-x-2">
-                        <span>Claim beta price</span>
+                        <span>Continue to checkout</span>
                         <i data-lucide="arrow-right" class="w-4 h-4"></i>
                     </button>
                     <button type="button" onclick="logoutFromPaywall()"

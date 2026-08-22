@@ -105,12 +105,14 @@ async function logoutFromPaywall() {
 /**
  * Sends the user to Lemon Squeezy checkout.
  *
- * `beta` applies promotional discount configuration when requested.
+ * There is one checkout URL. The promotional code is displayed in our own UI and typed in
+ * at checkout rather than pre-applied, because Lemon Squeezy renders an applied discount
+ * below its pay button, where someone who does not scroll never sees it.
  */
-async function startCheckout(beta = false) {
+async function startCheckout() {
     _paywallError('');
     try {
-        const data = await fetchAPI(`/api/billing/checkout?beta=${beta ? 'true' : 'false'}`);
+        const data = await fetchAPI('/api/billing/checkout');
         if (!data || !data.checkout_url) throw new Error('No checkout URL returned');
         window.location.href = data.checkout_url;
     } catch (e) {
@@ -181,12 +183,50 @@ async function initPaywall() {
 
     try {
         const status = await fetchAPI('/api/billing/status');
+        // Populated before the modal opens, so the code is already on screen rather than
+        // appearing a moment after the user starts reading.
+        renderDiscountNote(status && status.beta_discount_code);
         if (status && !status.has_access) openPaywall();
     } catch (e) {
         // A failed status check must not lock anyone out of an app they have paid for.
         // The server-side dependency is the real gate; this is only the explanation.
         console.warn('Billing status check failed, not showing paywall:', e);
     }
+}
+
+
+/**
+ * Fills in the promotional code wherever it is offered.
+ *
+ * The code is never hardcoded in the frontend. It comes from the server, which reads it
+ * from the environment, so rotating it means changing one value and nothing here. An empty
+ * value means no promotion is running, and every note about one is hidden rather than
+ * rendered with a blank code in the middle of the sentence.
+ */
+function renderDiscountNote(code) {
+    const note = document.getElementById('paywall-discount-note');
+    const target = document.getElementById('paywall-discount-code');
+    if (!note || !target) return;
+    if (!code) {
+        note.classList.add('hidden');
+        return;
+    }
+    target.textContent = code;
+    note.classList.remove('hidden');
+}
+
+
+/** The same note as an HTML string, for the action area of the Settings card. */
+function _discountNoteMarkup(code) {
+    if (!code) return '';
+    return `
+        <div class="discount-note">
+            <i data-lucide="ticket" class="w-4 h-4 flex-shrink-0"></i>
+            <span>
+                Enter code <strong class="discount-code">${code}</strong> at checkout for 50% off
+                your first 6 months, because you are helping test Studiamo. Cancel any time.
+            </span>
+        </div>`;
 }
 
 
@@ -323,7 +363,10 @@ function renderSubscriptionCard(settings) {
     badgeEl.classList.add(preset.variant);
 
     if (!actionEl) return;
-    _renderSubscriptionAction(actionEl, { hasSubscription, isTester, testerEnded, tester });
+    _renderSubscriptionAction(actionEl, {
+        hasSubscription, isTester, testerEnded, tester,
+        discountCode: (settings && settings.beta_discount_code) || '',
+    });
 }
 
 
@@ -333,10 +376,13 @@ function renderSubscriptionCard(settings) {
  * Handlers are attached with addEventListener after the markup is in place rather than
  * written as inline onclick attributes in these template strings.
  */
-function _renderSubscriptionAction(actionEl, { hasSubscription, isTester, testerEnded, tester }) {
+function _renderSubscriptionAction(actionEl, { hasSubscription, isTester, testerEnded, tester, discountCode }) {
+    // Above the button, not below it: the code has to be read before the click, not
+    // discovered afterwards on someone else's checkout page.
+    const DISCOUNT_NOTE = _discountNoteMarkup(discountCode);
     const SUBSCRIBE_BTN = `
-        <button type="button" data-action="checkout-beta"
-            class="w-full py-2.5 px-4 bg-amber-500 hover:bg-amber-600 rounded-xl text-xs font-extrabold text-stone-950 transition flex items-center justify-center space-x-2">
+        <button type="button" data-action="checkout"
+            class="btn-primary w-full py-2.5 px-4 rounded-xl text-xs font-extrabold transition flex items-center justify-center space-x-2">
             <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
             <span>Continue with a subscription</span>
         </button>`;
@@ -357,18 +403,18 @@ function _renderSubscriptionAction(actionEl, { hasSubscription, isTester, tester
     } else if (testerEnded) {
         // The export link matters most here: this is someone deciding whether to stay, and
         // leaving with their data has to be as reachable as paying.
-        actionEl.innerHTML = `<div class="space-y-2">${SUBSCRIBE_BTN}${EXPORT_BTN}</div>`;
+        actionEl.innerHTML = `<div class="space-y-2">${DISCOUNT_NOTE}${SUBSCRIBE_BTN}${EXPORT_BTN}</div>`;
     } else if (isTester && tester && !tester.unlimited && !tester.legacy && tester.days_left !== null && tester.days_left <= 7) {
         // Only once the end is in sight. A tester on day one is here to test, not to be sold to.
-        actionEl.innerHTML = SUBSCRIBE_BTN;
+        actionEl.innerHTML = `<div class="space-y-2">${DISCOUNT_NOTE}${SUBSCRIBE_BTN}</div>`;
     } else if (isTester) {
         // Testers with time left have no subscription to manage and nothing to buy yet.
         actionEl.innerHTML = '';
         return;
     } else {
         actionEl.innerHTML = `
-            <button type="button" data-action="checkout-standard"
-                class="w-full py-2.5 px-4 bg-amber-500 hover:bg-amber-600 rounded-xl text-xs font-extrabold text-stone-950 transition flex items-center justify-center space-x-2">
+            <button type="button" data-action="checkout"
+                class="btn-primary w-full py-2.5 px-4 rounded-xl text-xs font-extrabold transition flex items-center justify-center space-x-2">
                 <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
                 <span>Subscribe ($7.99 / month)</span>
             </button>`;
@@ -376,8 +422,7 @@ function _renderSubscriptionAction(actionEl, { hasSubscription, isTester, tester
 
     const HANDLERS = {
         'billing-portal': () => openBillingPortal(),
-        'checkout-beta': () => startCheckout(true),
-        'checkout-standard': () => startCheckout(false),
+        'checkout': () => startCheckout(),
     };
     actionEl.querySelectorAll('[data-action]').forEach(el => {
         const handler = HANDLERS[el.dataset.action];
