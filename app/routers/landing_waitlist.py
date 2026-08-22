@@ -110,8 +110,12 @@ async def join_waitlist(req: WaitlistRequest, background_tasks: BackgroundTasks,
                     "message": "You are already on the waitlist! Your spot has been reserved.",
                 }
 
-        # Register new email with a unique UUIDv4 identifier
-        lead_uuid = str(uuid.uuid4())
+        # uuid stays NULL here on purpose. The column names the account that owns this
+        # address, and a visitor typing an email into the landing form has no account yet:
+        # minting a UUIDv4 for them put a second kind of value in the column, which then
+        # never matched anything, because nothing reads this id back. It gets filled in for
+        # real if and when they sign in with Google. See landing_waitlist_db.
+        lead_uuid = None
         # The HTTP Referer header on this POST is always our own /landing page (that's
         # where the fetch() call originates), so it can't tell us where the visitor came
         # from. Prefer document.referrer sent by the client, which does. Fall back to the

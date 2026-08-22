@@ -13,9 +13,12 @@ Supabase Postgres database as everything else, kept separate from any
 user's personal account data by table, not by database.
 """
 
+import logging
 from typing import Optional
 
 from app.database import get_pooled_raw_connection, ConnectionWrapper
+
+logger = logging.getLogger("studiamo")
 
 
 def get_waitlist_db() -> ConnectionWrapper:
@@ -50,6 +53,41 @@ def record_waitlist_lead(
             (user_uuid, email, preference, referrer, country, user_agent),
         )
         conn.commit()
+    finally:
+        conn.close()
+
+
+def link_lead_to_account(user_uuid: str, *emails: str) -> int:
+    """Points a lead row's `uuid` at the account that owns the address. Returns rows linked.
+
+    `uuid` is meant to answer one question: which account owns this email, if any. It only
+    ever got a real answer on the waitlist path, where record_waitlist_lead writes it. A lead
+    who signed up while a spot was free kept the throwaway id the marketing form minted, so
+    the column held two different kinds of value and a join on it silently missed those rows.
+
+    A unique violation here means a second lead row already claims this account, which happens
+    when someone's `email` and `google_email` were both captured separately. That is worth
+    knowing about but never worth failing a signup over, so it is logged and skipped: the
+    email match in the queries that matter still finds both rows.
+    """
+    candidates = [e.strip().lower() for e in emails if e and e.strip()]
+    if not user_uuid or not candidates:
+        return 0
+    conn = get_waitlist_db()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE landing_waitlist SET uuid = ? "
+            "WHERE LOWER(email) = ANY(?) AND (uuid IS NULL OR uuid <> ?);",
+            (str(user_uuid), candidates, str(user_uuid)),
+        )
+        linked = cursor.rowcount
+        conn.commit()
+        return linked
+    except Exception as e:
+        conn.rollback()
+        logger.warning(f"[landing_waitlist] Could not link {candidates} to account {user_uuid}: {e}")
+        return 0
     finally:
         conn.close()
 
