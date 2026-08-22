@@ -12,8 +12,14 @@ reads the id back, so the mismatch was invisible until you tried to join on it.
 Afterwards the rule is: uuid = the user_uuid of the account owning this email, or NULL when
 no account exists. Two passes, both idempotent:
 
-  link    a lead whose email matches an account gets that account's user_uuid
+  link    a lead whose address matches an account's GOOGLE-VERIFIED address gets its user_uuid
   clear   a lead with no account loses its throwaway id
+
+Linking is an identity claim, so it is only made where the identity is actually proven. A
+lead address is whatever a visitor typed into a form. An account's google_email is proven,
+Google authenticated the person holding it. A match against user_profile.email alone proves
+nothing, because that column can hold a hand-seeded value, so those rows are printed and left
+for a human rather than written.
 
 Collisions are reported, not forced. uuid is UNIQUE, so if one account holds two captured
 addresses only the first row can carry the id; the email match that every real query uses
@@ -55,7 +61,18 @@ def main():
              WHERE lw.uuid IS DISTINCT FROM up.user_uuid::text
              ORDER BY (LOWER(lw.email) = LOWER(up.google_email)) DESC, lw.id;
         """)
-        to_link = cursor.fetchall()
+        matched = cursor.fetchall()
+
+        # A lead address is whatever a visitor typed into a form; nobody proved they own it.
+        # An account's google_email is proven, because Google authenticated the person who
+        # signed in with it. Matching those two is a real identity claim. Matching a lead
+        # against user_profile.email is not: that column can hold a hand-seeded value with
+        # nothing behind it, so an equal string there is a coincidence, not evidence.
+        #
+        # Only the proven direction is written automatically. The rest is printed for a human
+        # to decide on, which is the only thing that can actually answer "same person?".
+        to_link = [r for r in matched if r["is_google_address"]]
+        unverified = [r for r in matched if not r["is_google_address"]]
 
         # A uuid can sit on only one row. Two ways that bites, and both have to be caught or
         # the UPDATE below dies on the unique index: another row may already hold this
@@ -84,9 +101,16 @@ def main():
         """)
         to_clear = cursor.fetchall()
 
-        if not linkable and not to_clear and not collisions:
+        if not linkable and not to_clear and not collisions and not unverified:
             print("Nothing to do: every uuid already names its account, or is NULL.")
             return
+
+        if unverified:
+            print(f"NOT LINKED, {len(unverified)} row(s) match only an unverified address:")
+            for r in unverified:
+                print(f"  id {r['id']:<4} {r['email']:34} looks like {r['username']}, but only via "
+                      f"user_profile.email, which nobody proved")
+            print("  Left alone. Link by hand only if you know it is the same person.\n")
 
         if linkable:
             print(f"LINK, {len(linkable)} row(s) get their account's user_uuid:")
