@@ -10,6 +10,7 @@ import logging
 import psycopg2
 import psycopg2.pool
 from psycopg2.extras import RealDictCursor
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 logger = logging.getLogger("studiamo")
@@ -765,9 +766,208 @@ def ensure_referral_code(username: str) -> str:
 _ACCESS_GRANTING_STATUSES = {"active", "on_trial", "past_due"}
 
 
+# --- Tester access -------------------------------------------------------------------
+#
+# Tester grants are time-boxed rows in `tester_access` (see app/schema.py). The *current*
+# grant for a user is the newest row by granted_at, revoked or not: reading the newest row
+# unconditionally, rather than the newest un-revoked one, is what makes "revoke" actually
+# mean revoked even if an older un-revoked row is still lying around from a manual edit.
+#
+# period_days = 0 means "no end date" and is the only case where expires_at IS NULL. A CHECK
+# constraint in schema.py enforces that pairing, so nothing here has to defend against a row
+# where the two disagree.
+
+# Fallbacks used only when the app_settings row is missing. Not business-sensitive numbers,
+# unlike the AI budget ceilings in app.ai, so plain literals are fine here.
+_TESTER_DEFAULT_PERIOD_DAYS = 14
+_TESTER_MAX_PERIOD_DAYS = 90
+
+
+def _as_utc(value):
+    """Returns a tz-aware UTC datetime, or None.
+
+    Every timestamp column involved is TIMESTAMPTZ, but a naive value can still arrive via a
+    direct DB edit, and comparing naive to aware raises TypeError rather than returning a
+    wrong answer. Normalise instead of trusting the column type."""
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
+def _tester_days_left(expires_at):
+    """Whole days from today until `expires_at`, by calendar date in UTC. None when unlimited.
+
+    Calendar dates rather than 24-hour blocks: someone granted access at 23:50 should not
+    read as "0 days left" ten minutes later. Clamped at 0, never negative."""
+    expires_at = _as_utc(expires_at)
+    if expires_at is None:
+        return None
+    return max(0, (expires_at.date() - datetime.now(timezone.utc).date()).days)
+
+
+def get_tester_period_setting(key: str, fallback: int) -> int:
+    """Reads one of the tester period settings from app_settings, falling back on anything
+    missing or unparseable rather than raising into a request."""
+    try:
+        raw = get_app_setting(key, "")
+        return int(raw) if str(raw).strip() else fallback
+    except (TypeError, ValueError):
+        logger.warning(f"[tester] app_settings['{key}'] is not an integer; using {fallback}.")
+        return fallback
+
+
+# Selects the profile row and its current tester grant in one indexed round trip.
+# has_app_access() runs on every guarded request, so this deliberately stays a single query.
+_TESTER_ACCESS_SQL = """
+    SELECT p.user_uuid, p.subscription_status, p.is_tester, p.ls_ends_at,
+           t.id AS grant_id, t.granted_at, t.expires_at, t.period_days, t.revoked_at,
+           t.welcome_seen_at, t.reminder_7d_seen_at, t.reminder_1d_seen_at, t.expiry_seen_at
+      FROM user_profile p
+      LEFT JOIN LATERAL (
+           SELECT id, granted_at, expires_at, period_days, revoked_at,
+                  welcome_seen_at, reminder_7d_seen_at, reminder_1d_seen_at, expiry_seen_at
+             FROM tester_access
+            WHERE user_uuid = p.user_uuid
+            ORDER BY granted_at DESC, id DESC
+            LIMIT 1
+      ) t ON TRUE
+     WHERE LOWER(p.username) = LOWER(%s)
+     LIMIT 1;
+"""
+
+
+def _derive_tester_state(row) -> dict:
+    """Turns a _TESTER_ACCESS_SQL row into the derived tester state. Pure, no I/O."""
+    empty = {
+        "state": "none", "granted_at": None, "expires_at": None, "period_days": None,
+        "days_left": None, "unlimited": False, "legacy": False, "grant_id": None,
+        "needs_welcome": False, "needs_reminder": None,
+    }
+    if not row:
+        return empty
+
+    grant_id = row.get("grant_id")
+
+    # No grant row at all, but the flag is set: a tester from before grants were time-boxed.
+    # Grandfathered on purpose so deploying this could not cut anyone off; scripts/
+    # backfill_tester_access.py is what makes these explicit, as a deliberate step.
+    if grant_id is None:
+        if row.get("is_tester"):
+            return {**empty, "state": "active", "legacy": True}
+        return empty
+
+    granted_at = _as_utc(row.get("granted_at"))
+    expires_at = _as_utc(row.get("expires_at"))
+    period_days = row.get("period_days")
+    unlimited = expires_at is None
+    days_left = _tester_days_left(expires_at)
+
+    base = {
+        "granted_at": granted_at, "expires_at": expires_at, "period_days": period_days,
+        "days_left": days_left, "unlimited": unlimited, "legacy": False, "grant_id": grant_id,
+        "needs_welcome": False, "needs_reminder": None,
+    }
+
+    if row.get("revoked_at") is not None:
+        return {**base, "state": "revoked"}
+
+    if not unlimited and datetime.now(timezone.utc) >= expires_at:
+        return {**base, "state": "expired"}
+
+    # Active from here down, either unlimited or still inside the period.
+    state = {**base, "state": "active"}
+    state["needs_welcome"] = row.get("welcome_seen_at") is None
+
+    # Thresholds live here and nowhere else, so the modals and any future emails cannot
+    # disagree about when "one week left" starts. The None check must come first: with an
+    # unlimited grant days_left is None, and `None <= 7` raises in Python.
+    if days_left is not None:
+        if days_left <= 1 and row.get("reminder_1d_seen_at") is None:
+            state["needs_reminder"] = "1d"
+        elif days_left <= 7 and row.get("reminder_7d_seen_at") is None:
+            state["needs_reminder"] = "7d"
+    return state
+
+
+def get_tester_state(username: str) -> dict:
+    """Current tester standing for one account, derived from tester_access.
+
+    Returns a dict with:
+        state:        'none' | 'active' | 'expired' | 'revoked'
+        expires_at:   datetime | None   (None when unlimited, or when legacy)
+        granted_at:   datetime | None
+        period_days:  int | None        (0 when unlimited)
+        days_left:    int | None        (0 on the last day, never negative,
+                                         None when unlimited or legacy)
+        unlimited:    bool              (a real grant row with period_days = 0)
+        legacy:       bool              (is_tester set, but no grant row exists)
+        grant_id:     int | None
+        needs_welcome / needs_reminder: see _derive_tester_state
+
+    `unlimited` and `legacy` both mean "active with no end date", but they are not the same
+    thing: one is a decision, the other is unmigrated history that still needs attention.
+    Callers must not collapse them."""
+    conn = None
+    try:
+        conn = get_pooled_raw_connection()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        cursor.execute(_TESTER_ACCESS_SQL, (username,))
+        return _derive_tester_state(cursor.fetchone())
+    finally:
+        if conn is not None:
+            release_pooled_connection(conn)
+
+
+def tester_state_payload(state: dict) -> dict:
+    """JSON-safe form of get_tester_state(), for API responses.
+
+    Lives here rather than in each router so /api/billing/status and /api/settings cannot
+    drift into returning different shapes for the same thing."""
+    return {
+        "state": state["state"],
+        "granted_at": state["granted_at"].isoformat() if state["granted_at"] else None,
+        "expires_at": state["expires_at"].isoformat() if state["expires_at"] else None,
+        "period_days": state["period_days"],
+        "days_left": state["days_left"],
+        "unlimited": state["unlimited"],
+        "legacy": state["legacy"],
+        "needs_welcome": state["needs_welcome"],
+        "needs_reminder": state["needs_reminder"],
+    }
+
+
+def _expire_tester_cache(user_uuid) -> None:
+    """Flips user_profile.is_tester to FALSE once the grant behind it has run out.
+
+    user_profile.is_tester is a cache of "there is a valid grant here" (app.ai reads it on a
+    hot path for the per-account AI budget); tester_access is the source of truth. This is
+    what keeps the two from disagreeing after an expiry, without a scheduled job.
+
+    Writing on a read path is normally worth avoiding. It is justified here because the
+    UPDATE is guarded on is_tester still being TRUE, so it touches rows exactly once per
+    account per grant and is a no-op on every later call."""
+    conn = None
+    try:
+        conn = get_pooled_raw_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE user_profile SET is_tester = FALSE WHERE user_uuid = %s AND is_tester IS TRUE;",
+            (user_uuid,)
+        )
+    except Exception as e:
+        # Never let cache maintenance turn an access check into a 500. The access decision
+        # itself does not depend on this having succeeded.
+        logger.warning(f"[tester] Could not clear is_tester for {user_uuid}: {e}")
+    finally:
+        if conn is not None:
+            release_pooled_connection(conn)
+
+
 def has_app_access(username: str) -> bool:
-    """Whether this account may use the cloud app: a subscription in good standing, or the
-    tester flag.
+    """Whether this account may use the cloud app: a subscription in good standing, or a
+    tester grant that has not run out.
 
     'cancelled' is handled separately and deliberately. In Lemon Squeezy it means "will not
     renew", NOT "access ends now", the customer has paid through the end of the current
@@ -780,29 +980,37 @@ def has_app_access(username: str) -> bool:
     try:
         conn = get_pooled_raw_connection()
         cursor = conn.cursor(cursor_factory=RealDictCursor)
-        cursor.execute(
-            """SELECT subscription_status, is_tester, ls_ends_at
-               FROM user_profile WHERE LOWER(username) = LOWER(%s) LIMIT 1;""",
-            (username,)
-        )
+        cursor.execute(_TESTER_ACCESS_SQL, (username,))
         row = cursor.fetchone()
         if not row:
             return False
-        if row["is_tester"]:
-            return True
 
+        grant_id = row["grant_id"]
+        expires_at = _as_utc(row["expires_at"])
+        revoked = row["revoked_at"] is not None
+
+        # grant_id, not expires_at, is what separates these two branches. The LEFT JOIN
+        # yields expires_at = NULL both for an unlimited grant and for no grant at all, so
+        # testing expires_at alone would grandfather every account that ever had the flag
+        # set and make the expiry check below unreachable.
+        if grant_id is not None and not revoked:
+            if expires_at is None:
+                return True                                   # unlimited grant
+            if datetime.now(timezone.utc) < expires_at:
+                return True                                   # still inside the period
+            if row["is_tester"]:
+                _expire_tester_cache(row["user_uuid"])
+        elif grant_id is None and row["is_tester"]:
+            return True                                       # legacy flag, grandfathered
+
+        # Falls through on purpose: a tester whose grant ended may since have subscribed,
+        # and must keep access through the normal path below.
         status = (row["subscription_status"] or "").lower()
         if status in _ACCESS_GRANTING_STATUSES:
             return True
 
         if status == "cancelled" and row["ls_ends_at"]:
-            from datetime import datetime, timezone
-            ends_at = row["ls_ends_at"]
-            # ls_ends_at is TIMESTAMPTZ, but a naive value can still arrive via a direct
-            # DB edit; compare in UTC either way rather than raising on the subtraction.
-            if ends_at.tzinfo is None:
-                ends_at = ends_at.replace(tzinfo=timezone.utc)
-            return ends_at > datetime.now(timezone.utc)
+            return _as_utc(row["ls_ends_at"]) > datetime.now(timezone.utc)
 
         return False
     finally:
@@ -810,15 +1018,193 @@ def has_app_access(username: str) -> bool:
             release_pooled_connection(conn)
 
 
-def set_tester_access(username: str, is_tester: bool) -> bool:
-    """Admin action: grants or revokes free tester access for one account. Returns True if a row was updated."""
+def _resolve_user(cursor, username: str):
+    """Returns (user_uuid, real_username) for a username, or (None, None)."""
+    cursor.execute(
+        "SELECT user_uuid, username FROM user_profile WHERE LOWER(username) = LOWER(%s) LIMIT 1;",
+        (username,)
+    )
+    row = cursor.fetchone()
+    return (row["user_uuid"], row["username"]) if row else (None, None)
+
+
+def _clamp_period_days(days: int) -> int:
+    """Validates a requested grant length.
+
+    0 is passed through untouched: it means "no end date" and must survive. The obvious
+    max(1, min(days, cap)) would turn an intentional unlimited grant into a one-day one,
+    which is the opposite of what was asked for."""
+    days = int(days)
+    if days < 0:
+        raise ValueError("Tester period cannot be negative. Use 0 for an unlimited grant.")
+    if days == 0:
+        return 0
+    cap = get_tester_period_setting("tester_max_period_days", _TESTER_MAX_PERIOD_DAYS)
+    return max(1, min(days, cap))
+
+
+def _tester_write(username: str, action):
+    """Runs `action(cursor, user_uuid, real_username)` as one transaction.
+
+    Every tester write touches two tables (tester_access and the user_profile.is_tester
+    cache), and a half-applied write is worse than a failed one: setting is_tester without
+    inserting the grant row would produce a phantom unlimited tester via the legacy branch
+    in has_app_access.
+
+    autocommit is explicitly restored afterwards. Pooled connections are handed back with
+    session state intact, so leaving one in manual-commit mode would silently swallow the
+    next caller's writes."""
+    conn = None
+    try:
+        conn = get_pooled_raw_connection()
+        conn.autocommit = False
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        user_uuid, real_username = _resolve_user(cursor, username)
+        if user_uuid is None:
+            raise ValueError(f"No user_profile row found for username '{username}'.")
+        result = action(cursor, user_uuid, real_username)
+        conn.commit()
+        return result
+    except Exception:
+        if conn is not None:
+            conn.rollback()
+        raise
+    finally:
+        if conn is not None:
+            conn.autocommit = True
+            release_pooled_connection(conn)
+
+
+def grant_tester_access(username: str, days: int = None, granted_by: str = None,
+                        note: str = None) -> dict:
+    """Starts a tester period for one account. `days=0` grants unlimited access.
+
+    Any grant already on the account is superseded (revoked) in the same transaction, so
+    "the newest row wins" can never be ambiguous. Returns the resulting get_tester_state()."""
+    if days is None:
+        days = get_tester_period_setting("tester_default_period_days", _TESTER_DEFAULT_PERIOD_DAYS)
+    period_days = _clamp_period_days(days)
+
+    def _action(cursor, user_uuid, real_username):
+        cursor.execute(
+            """UPDATE tester_access SET revoked_at = CURRENT_TIMESTAMP,
+                      revoked_reason = 'superseded'
+                WHERE user_uuid = %s AND revoked_at IS NULL;""",
+            (user_uuid,)
+        )
+        expires_at = None if period_days == 0 else datetime.now(timezone.utc) + timedelta(days=period_days)
+        cursor.execute(
+            """INSERT INTO tester_access
+                   (user_uuid, username, expires_at, period_days, granted_by, note)
+               VALUES (%s, %s, %s, %s, %s, %s) RETURNING id;""",
+            (user_uuid, real_username, expires_at, period_days, granted_by, note)
+        )
+        cursor.execute(
+            "UPDATE user_profile SET is_tester = TRUE WHERE user_uuid = %s;", (user_uuid,)
+        )
+        return real_username
+
+    real_username = _tester_write(username, _action)
+    return get_tester_state(real_username)
+
+
+def extend_tester_access(username: str, extra_days: int, extended_by: str = None) -> dict:
+    """Adds days to the current grant. Returns the resulting get_tester_state().
+
+    Refuses an unlimited grant rather than treating it as a no-op: `NULL + interval` is
+    NULL, so the UPDATE would leave the row unlimited while still incrementing
+    extended_count, and every admin surface would report an extension that never happened."""
+    extra_days = int(extra_days)
+    if extra_days <= 0:
+        raise ValueError("Extension must be a positive number of days.")
+
+    def _action(cursor, user_uuid, real_username):
+        cursor.execute(
+            """SELECT id, expires_at FROM tester_access
+                WHERE user_uuid = %s AND revoked_at IS NULL
+                ORDER BY granted_at DESC, id DESC LIMIT 1;""",
+            (user_uuid,)
+        )
+        grant = cursor.fetchone()
+        if grant is None:
+            raise ValueError(f"'{real_username}' has no active tester grant to extend.")
+        if grant["expires_at"] is None:
+            raise ValueError(
+                f"'{real_username}' has a tester grant with no end date; there is nothing to "
+                "extend. Grant a new timed period instead if it should now expire."
+            )
+        # GREATEST, because extending an already-expired grant by 7 days must mean 7 days
+        # from today, not 7 days from a date in the past (which would change nothing).
+        cursor.execute(
+            """UPDATE tester_access
+                  SET expires_at = GREATEST(expires_at, CURRENT_TIMESTAMP) + (%s * INTERVAL '1 day'),
+                      period_days = period_days + %s,
+                      extended_count = extended_count + 1,
+                      last_extended_at = CURRENT_TIMESTAMP
+                WHERE id = %s;""",
+            (extra_days, extra_days, grant["id"])
+        )
+        # The self-heal in has_app_access may already have cleared this if the grant had
+        # lapsed, so an extension has to put it back rather than assume it is still set.
+        cursor.execute(
+            "UPDATE user_profile SET is_tester = TRUE WHERE user_uuid = %s;", (user_uuid,)
+        )
+        return real_username
+
+    real_username = _tester_write(username, _action)
+    return get_tester_state(real_username)
+
+
+def end_tester_access(username: str, reason: str = None) -> dict:
+    """Ends the current tester period immediately. Idempotent: ending an account that has no
+    active grant is a no-op, not an error. Returns the resulting get_tester_state()."""
+    def _action(cursor, user_uuid, real_username):
+        cursor.execute(
+            """UPDATE tester_access SET revoked_at = CURRENT_TIMESTAMP, revoked_reason = %s
+                WHERE user_uuid = %s AND revoked_at IS NULL;""",
+            (reason or "ended by admin", user_uuid)
+        )
+        cursor.execute(
+            "UPDATE user_profile SET is_tester = FALSE WHERE user_uuid = %s;", (user_uuid,)
+        )
+        return real_username
+
+    real_username = _tester_write(username, _action)
+    return get_tester_state(real_username)
+
+
+def mark_tester_notice_seen(username: str, kind: str) -> bool:
+    """Records that a tester notice was shown, so it is not shown again.
+
+    `kind` is one of 'welcome', 'reminder_7d', 'reminder_1d', 'expiry'. Returns True if a
+    row was updated. Writes to the newest grant regardless of whether it has been revoked or
+    has run out, because the expiry notice is shown precisely when the grant is over."""
+    columns = {
+        "welcome": "welcome_seen_at",
+        "reminder_7d": "reminder_7d_seen_at",
+        "reminder_1d": "reminder_1d_seen_at",
+        "expiry": "expiry_seen_at",
+    }
+    column = columns.get(kind)
+    if column is None:
+        raise ValueError(f"Unknown tester notice kind '{kind}'.")
+
     conn = None
     try:
         conn = get_pooled_raw_connection()
         cursor = conn.cursor(cursor_factory=RealDictCursor)
+        # Column name is interpolated, never the value: it comes from the dict above, so it
+        # cannot be caller-controlled text.
         cursor.execute(
-            "UPDATE user_profile SET is_tester = %s WHERE LOWER(username) = LOWER(%s) RETURNING user_uuid;",
-            (is_tester, username)
+            f"""UPDATE tester_access SET {column} = CURRENT_TIMESTAMP
+                 WHERE id = (
+                     SELECT t.id FROM tester_access t
+                       JOIN user_profile p ON p.user_uuid = t.user_uuid
+                      WHERE LOWER(p.username) = LOWER(%s)
+                      ORDER BY t.granted_at DESC, t.id DESC LIMIT 1
+                 ) AND {column} IS NULL
+             RETURNING id;""",
+            (username,)
         )
         return cursor.fetchone() is not None
     finally:
@@ -842,6 +1228,7 @@ _USER_DATA_TABLES_DELETE_ORDER = [
     "dismissed_recommendations",
     "goal_recommendations",
     "push_subscriptions",
+    "tester_access",
 ]
 
 

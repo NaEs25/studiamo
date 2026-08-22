@@ -16,7 +16,7 @@ from typing import Optional
 from urllib.parse import urlencode
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
 
 from app import config, database
 from app.dependencies import get_active_username, limiter
@@ -136,11 +136,32 @@ async def get_billing_status(username: str = Depends(get_active_username)):
     return {
         "has_access": database.has_app_access(username),
         "status": row.get("subscription_status") or "inactive",
+        # Kept for backward compatibility with clients still reading the flat flag. New code
+        # should read `tester` below, which is the one that knows about end dates.
         "is_tester": bool(row.get("is_tester")),
+        "tester": database.tester_state_payload(database.get_tester_state(username)),
         "renews_at": row["ls_renews_at"].isoformat() if row.get("ls_renews_at") else None,
         "ends_at": row["ls_ends_at"].isoformat() if row.get("ls_ends_at") else None,
         "has_portal": bool(row.get("ls_customer_portal_url")),
     }
+
+
+@router.post("/api/billing/tester/ack")
+async def acknowledge_tester_notice(
+    kind: str = Form(...),
+    username: str = Depends(get_active_username),
+):
+    """Records that a tester notice (welcome, expiry reminder, expiry screen) was shown.
+
+    Depends on get_active_username rather than require_app_access on purpose: the 'expiry'
+    notice is shown to someone whose access has just ended, so gating this on having access
+    would make the one acknowledgement that matters most impossible to record."""
+    _require_cloud()
+    try:
+        updated = database.mark_tester_notice_seen(username, kind)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"ok": True, "updated": updated}
 
 
 @router.get("/api/billing/portal")

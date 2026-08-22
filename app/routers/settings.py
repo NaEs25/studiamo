@@ -191,7 +191,9 @@ async def get_app_settings(username: str = Depends(get_active_username)):
             "enable_stage_5_repetition": _parse_bool(srs_row.get("enable_stage_5_repetition") if srs_row.get("enable_stage_5_repetition") is not None else user_cfg.get("ENABLE_STAGE_5_REPETITION", config.DEFAULT_ENABLE_STAGE_5_REPETITION)),
             "stage_5_repeat_interval": _safe_int(srs_row.get("stage_5_repeat_interval") if srs_row.get("stage_5_repeat_interval") is not None else user_cfg.get("STAGE_5_REPEAT_INTERVAL"), config.DEFAULT_STAGE_5_REPEAT_INTERVAL),
             "subscription_status": settings_row.get("subscription_status") or "inactive",
+            # Kept for backward compatibility; `tester` below is the one with the end date.
             "is_tester": _parse_bool(settings_row.get("is_tester", 0)),
+            "tester": database.tester_state_payload(database.get_tester_state(username)),
         }
     except Exception as e:
         import logging
@@ -936,12 +938,20 @@ async def update_selfhosted_profile(
 # Columns never written into an export: secrets and credentials, which are not
 # "the user's data" in any useful sense and would turn a downloaded file into a
 # way to take over the account it came from.
+# This set is matched by column name across every exported table, so a name added here is
+# redacted everywhere it appears. Check for collisions before adding a generic one.
 _EXPORT_REDACTED_COLUMNS = {
     "password_hash",
     "gemini_api_key",
     "telegram_bot_token",
     "youtube_api_key",
     "subscription_json",
+    # tester_access: written by an admin *about* the account, not by the user. The rest of
+    # the grant (dates, length, whether it was revoked) is the user's own record and stays
+    # in the export; free-text internal notes are not theirs to receive.
+    "granted_by",
+    "note",
+    "revoked_reason",
 }
 
 
