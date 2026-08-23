@@ -64,7 +64,7 @@
                  countdown with nothing to count down to is noise. Clicking opens Settings,
                  where the date and the subscribe button are. -->
             <button type="button" id="tester-pill" onclick="switchTab('settings')"
-                class="hidden cloud-only items-center space-x-1.5 px-3 py-1.5 rounded-full text-xs font-bold min-h-[44px] transition"
+                class="hidden cloud-only items-center space-x-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border border-transparent transition hover:opacity-90 active:scale-[0.98]"
                 title="Your tester access, see Settings for details">
                 <i data-lucide="flask-conical" class="w-4 h-4"></i>
                 <span id="tester-pill-label">Tester</span>
@@ -77,9 +77,9 @@
                     class="hidden text-[10px] text-red-700 font-mono font-bold bg-red-100 px-1.5 py-0.5 rounded border border-red-300 ml-1"></span>
             </div>
             <div id="top-level-badge"
-                class="flex items-center space-x-1.5 px-3 py-1.5 bg-amber-500/10 border border-amber-500/30 text-amber-900 rounded-full text-xs font-bold min-h-[44px]">
-                <span class="text-amber-700 sm:hidden">L</span><span
-                    class="text-amber-700 hidden sm:inline">LVL</span> <span id="header-level-val">1</span>
+                class="flex items-center space-x-1.5 px-3 py-1.5 bg-amber-500/10 border border-amber-500/30 text-amber-800 rounded-full text-xs font-semibold">
+                <span class="sm:hidden">L</span><span class="hidden sm:inline">LVL</span>
+                <span id="header-level-val">1</span>
             </div>
             <!-- Bugs Pill -->
             <a href="/dev/bugs"

@@ -829,6 +829,14 @@ button:active:not(:disabled) {
     color: #4338ca;            /* indigo-700 */
 }
 
+#tester-pill.status-badge-tester {
+    border-color: rgba(99, 102, 241, 0.25);
+}
+
+#tester-pill.status-badge-warning {
+    border-color: rgba(245, 158, 11, 0.3);
+}
+
 /* ── Promotional Code Note ──────────────────────────────── */
 /* Sits directly above a checkout button, in the paywall and on the Settings subscription
    card. The code is deliberately shown here rather than pre-applied to the checkout URL:
