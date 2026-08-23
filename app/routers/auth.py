@@ -18,6 +18,7 @@ from app.dependencies import (
     _decode_session_token,
     _sign_oauth_state,
     _decode_oauth_state,
+    clean_external_referrer,
     get_active_username,
     require_local_auth_enabled,
     hash_password,
@@ -280,11 +281,12 @@ async def google_login(request: Request, redirect: Optional[str] = None, require
     ref_code = (request.cookies.get("ref_code") or "").strip()
     if not _REF_CODE_PATTERN.match(ref_code):
         ref_code = ""
-    # Captured here, not in google_callback: this is the last hop where the browser's Referer
-    # header still points at our own site (e.g. /landing). Once we redirect to Google and it
-    # redirects back, the callback's Referer is always accounts.google.com, so the real
-    # originating page has to travel through the signed state instead.
-    referrer = (request.headers.get("referer") or request.headers.get("referrer") or "").strip()
+    # Captured here, not in google_callback: this is the last hop where we can read the visitor's
+    # initial external referrer cookie (orig_ref) or direct request Referer before redirecting to Google.
+    # Internal origins (/login, studiamo.cloud, etc.) are excluded so internal navigation isn't
+    # tracked as an external acquisition source.
+    raw_referrer = (request.cookies.get("orig_ref") or request.headers.get("referer") or request.headers.get("referrer") or "").strip()
+    referrer = clean_external_referrer(raw_referrer, request.headers.get("host")) or ""
     # require_existing=true (used by the bug tracker's Google button) tells the callback to
     # refuse to sign up a Google identity it's never seen before, instead of silently creating
     # an empty account for whichever Gmail the person happened to click -- see google_callback.
@@ -531,10 +533,11 @@ async def _google_callback(
                 # Record the lead synchronously so it's saved even if the
                 # confirmation email below fails. This is supplementary
                 # tracking only, never let it block the waitlist redirect.
-                # origin_referrer (from the signed OAuth state) is the page that started the
+                # origin_referrer (from the signed OAuth state) is the external page that started the
                 # flow; the request's own Referer header at this point is always Google's
                 # consent screen, so it's only used as a fallback for old/legacy state tokens.
-                referrer = (origin_referrer or request.headers.get("referer") or request.headers.get("referrer") or "")[:500] or None
+                raw_ref = (origin_referrer or request.cookies.get("orig_ref") or request.headers.get("referer") or request.headers.get("referrer") or "")[:500]
+                referrer = clean_external_referrer(raw_ref, request.headers.get("host"))
                 country = (request.headers.get("cf-ipcountry") or request.headers.get("x-country") or "")[:10] or None
                 user_agent = (request.headers.get("user-agent") or "")[:500] or None
                 try:

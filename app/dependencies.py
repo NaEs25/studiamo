@@ -104,6 +104,34 @@ def _decode_session_token(token: str) -> Optional[str]:
 _oauth_state_signer = URLSafeSerializer(SECRET_KEY, salt="yb-oauth-state-v1")
 
 
+def clean_external_referrer(url: Optional[str], request_host: Optional[str] = None) -> Optional[str]:
+    """Returns an external referrer URL, or None if the URL is internal, empty, or an auth service.
+
+    Internal origins (studiamo.cloud, localhost, 127.0.0.1, or matching the current Host header)
+    and auth providers (e.g. accounts.google.com) are navigation steps, not acquisition channels.
+    """
+    if not url:
+        return None
+    raw = str(url).strip()
+    if not raw:
+        return None
+    if raw.lower().startswith("utm:"):
+        return raw[:500]
+    try:
+        from urllib.parse import urlparse
+        parsed = urlparse(raw)
+        host = (parsed.netloc or "").lower().split(":")[0]
+        if not host:
+            return None
+        if "studiamo" in host or "localhost" in host or "127.0.0.1" in host or "accounts.google" in host:
+            return None
+        if request_host and host == request_host.lower().split(":")[0]:
+            return None
+        return raw[:500]
+    except Exception:
+        return None
+
+
 def _sign_oauth_state(dest_path: str, ref_code: str, require_existing: bool, referrer: str = "",
                       link_intent: bool = False) -> str:
     """Returns a signed, tamper-proof state string for Google OAuth 2.0 requests.

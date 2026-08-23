@@ -24,7 +24,7 @@ from app.email_utils import send_waitlist_confirmation_email, verify_unsubscribe
 
 logger = logging.getLogger("studiamo")
 
-from app.dependencies import limiter
+from app.dependencies import limiter, clean_external_referrer
 
 router = APIRouter(prefix="/api/waitlist", tags=["landing-waitlist"])
 
@@ -120,11 +120,11 @@ async def join_waitlist(req: WaitlistRequest, background_tasks: BackgroundTasks,
         # where the fetch() call originates), so it can't tell us where the visitor came
         # from. Prefer document.referrer sent by the client, which does. Fall back to the
         # header only for older cached frontends that don't send req.referrer at all.
-        if req.referrer is not None:
+        if req.referrer is not None and req.referrer.strip():
             raw_ref = req.referrer.strip()
         else:
-            raw_ref = request.headers.get("referer") or request.headers.get("referrer") or ""
-        referrer = raw_ref[:500] if raw_ref else None
+            raw_ref = request.cookies.get("orig_ref") or request.headers.get("referer") or request.headers.get("referrer") or ""
+        referrer = clean_external_referrer(raw_ref, request.headers.get("host"))
         country = (request.headers.get("cf-ipcountry") or request.headers.get("x-country") or "")[:10] or None
         user_agent = (request.headers.get("user-agent") or "")[:500] or None
 
