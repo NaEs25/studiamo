@@ -15,7 +15,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from app import database, storage, config, schema
-from app.dependencies import limiter, get_authenticated_username
+from app.dependencies import limiter, get_authenticated_username, clean_external_referrer
 from app.telegram_bot import telegram_long_polling, managed_telegram_long_polling, run_scheduler_daemon
 
 # Import Router Modules
@@ -111,6 +111,39 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PATCH", "DELETE"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def capture_first_touch_referrer_middleware(request: Request, call_next):
+    """First-touch attribution: captures the entry referrer or campaign source in a 24h cookie.
+
+    Preserves the visitor's original acquisition channel (e.g. reddit.com, search, or utm_source)
+    across internal navigation so signups via Google OAuth or forms can be attributed correctly.
+    """
+    response = await call_next(request)
+    if (
+        request.method == "GET"
+        and not request.url.path.startswith("/static")
+        and not request.cookies.get("orig_ref")
+    ):
+        raw_ref = request.headers.get("referer") or request.headers.get("referrer") or ""
+        utm_source = request.query_params.get("utm_source")
+        ext_ref = None
+        if utm_source and utm_source.strip():
+            ext_ref = f"utm:{utm_source.strip()[:50]}"
+        elif raw_ref:
+            ext_ref = clean_external_referrer(raw_ref, request.headers.get("host"))
+        if ext_ref:
+            response.set_cookie(
+                key="orig_ref",
+                value=ext_ref,
+                httponly=True,
+                samesite="lax",
+                secure=config.IS_CLOUD,
+                max_age=86400,
+                path="/",
+            )
+    return response
 
 
 class NoCacheStaticFiles(StaticFiles):
