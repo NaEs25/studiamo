@@ -357,6 +357,21 @@ TABLES_SQL = [
     );
     """,
     """
+    -- One-time payloads for the managed Telegram bot's /start deep link. A payload
+    -- travels through a URL and is handed to Telegram, so it is stored rather than
+    -- derived: single use, short lived, and worthless once redeemed or expired.
+    CREATE TABLE IF NOT EXISTS telegram_link_token (
+        token VARCHAR(64) PRIMARY KEY,
+        username TEXT NOT NULL,
+        expires_at TIMESTAMPTZ NOT NULL,
+        used_at TIMESTAMPTZ
+    );
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS idx_telegram_link_token_expires
+        ON telegram_link_token (expires_at);
+    """,
+    """
     CREATE TABLE IF NOT EXISTS bugs (
         id TEXT PRIMARY KEY,
         username TEXT NOT NULL,
@@ -514,6 +529,7 @@ TABLES_SQL = [
     ALTER TABLE import_tasks ENABLE ROW LEVEL SECURITY;
     ALTER TABLE push_subscriptions ENABLE ROW LEVEL SECURITY;
     ALTER TABLE app_settings ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE telegram_link_token ENABLE ROW LEVEL SECURITY;
     ALTER TABLE bugs ENABLE ROW LEVEL SECURITY;
     ALTER TABLE import_timings ENABLE ROW LEVEL SECURITY;
     ALTER TABLE landing_waitlist ENABLE ROW LEVEL SECURITY;

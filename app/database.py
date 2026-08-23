@@ -590,6 +590,61 @@ def set_app_setting(key: str, value: str) -> None:
             release_pooled_connection(conn)
 
 
+def issue_telegram_link_token(token: str, username: str, ttl_minutes: int) -> None:
+    """Records a single-use Telegram /start payload for username.
+
+    Also clears rows a day past expiry. The table only ever holds tokens issued in
+    the last few minutes plus that grace window, so this stays cheap and there is no
+    separate sweeper to keep alive."""
+    conn = None
+    try:
+        conn = get_pooled_raw_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM telegram_link_token WHERE expires_at < NOW() - INTERVAL '1 day';")
+        cursor.execute(
+            """INSERT INTO telegram_link_token (token, username, expires_at)
+               VALUES (%s, %s, NOW() + (%s * INTERVAL '1 minute'));""",
+            (token, username, ttl_minutes)
+        )
+        conn.commit()
+        cursor.close()
+    finally:
+        if conn is not None:
+            release_pooled_connection(conn)
+
+
+def consume_telegram_link_token(token: str) -> str:
+    """Redeems a Telegram /start payload and returns the username it was issued to,
+    or "" if it is unknown, already used, or expired.
+
+    One UPDATE does the check and the redemption together, so two /start messages
+    racing on the same payload cannot both win: the second matches no row because
+    used_at is no longer NULL."""
+    conn = None
+    try:
+        conn = get_pooled_raw_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            """UPDATE telegram_link_token
+                  SET used_at = NOW()
+                WHERE token = %s
+                  AND used_at IS NULL
+                  AND expires_at > NOW()
+            RETURNING username;""",
+            (token,)
+        )
+        row = cursor.fetchone()
+        conn.commit()
+        cursor.close()
+        return row[0] if row else ""
+    except Exception as e:
+        logger.warning(f"[telegram] link token lookup failed: {e}")
+        return ""
+    finally:
+        if conn is not None:
+            release_pooled_connection(conn)
+
+
 def get_max_users() -> int:
     """Returns the registration cap from app_settings.max_users. 0 (unset/invalid) means uncapped."""
     try:

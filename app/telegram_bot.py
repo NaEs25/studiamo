@@ -1,8 +1,7 @@
 import asyncio
-import hmac
-import hashlib
 import httpx
 import math
+import secrets
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -166,29 +165,35 @@ async def telegram_long_polling():
         await asyncio.sleep(sleep_duration)
 
 
+# Telegram allows [A-Za-z0-9_-] and at most 64 characters in a /start payload.
+# token_urlsafe(24) spends 32 of them on 192 bits of entropy.
+TELEGRAM_LINK_TTL_MINUTES = 15
+
+
 def generate_telegram_link_payload(username: str) -> str:
-    """Builds a signed /start deep-link payload binding a username, used by
-    the cloud managed-bot 'Connect Telegram' flow. Telegram payloads only
-    allow [A-Za-z0-9_-], so '_' is used as a separator , safe even if the
-    username itself contains '_', since resolution splits on the *last* one
-    and the signature half is always pure hex."""
-    from app.email_utils import SECRET_KEY
-    sig = hmac.new(SECRET_KEY.encode(), username.lower().encode(), hashlib.sha256).hexdigest()[:20]
-    return f"{username}_{sig}"
+    """Issues a single-use /start deep-link payload bound to username.
+
+    Recorded server-side rather than derived from the username, because a payload
+    leaves our control the moment it goes into a URL: it reaches Telegram, browser
+    history, and wherever the person happens to paste it. A derived payload stays
+    valid for as long as the signing key does, so seeing one once was enough to
+    replay it later and point that account's notifications at another chat. This
+    one expires and stops working after a single /start."""
+    token = secrets.token_urlsafe(24)
+    database.issue_telegram_link_token(token, username, TELEGRAM_LINK_TTL_MINUTES)
+    return token
 
 
 def resolve_telegram_link_payload(payload: str) -> str | None:
-    """Verifies a /start deep-link payload and returns the bound username, or None."""
-    from app.email_utils import SECRET_KEY
-    if not payload or "_" not in payload:
+    """Redeems a /start payload and returns the username it was issued to, or None.
+
+    None covers everything that is not a live unredeemed token, including payloads
+    minted by the previous derived scheme: those now fail closed, and the caller
+    already answers an unresolvable payload by telling the person to press Connect
+    Telegram again."""
+    if not payload:
         return None
-    username, _, sig = payload.rpartition("_")
-    if not username or not sig:
-        return None
-    expected = hmac.new(SECRET_KEY.encode(), username.lower().encode(), hashlib.sha256).hexdigest()[:20]
-    if hmac.compare_digest(expected, sig):
-        return username
-    return None
+    return database.consume_telegram_link_token(payload) or None
 
 
 managed_offset = 0
