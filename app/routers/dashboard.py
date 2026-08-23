@@ -1,7 +1,6 @@
-from datetime import datetime, timezone, timedelta
 import logging
 from fastapi import APIRouter, Depends
-from app import database, storage
+from app import database, gamification, storage
 from app.dependencies import get_active_username, require_app_access
 from app.ai import get_usage_status
 
@@ -63,44 +62,39 @@ async def get_dashboard_data(username: str = Depends(require_app_access)):
 
     user_data = dict(user) if user else {"xp": 0, "level": 1, "streak": 0, "last_quiz_at": None, "badges": "[]", "review_mode": "video"}
 
-    # Self-healing: Recalculate total XP, Level, and Streak from quiz_attempts if profile XP is low
+    # Self-healing: lift the cached profile total if the XP ledger accounts for more than it.
+    # Reads xp_events rather than quiz_attempts because attempts are deleted along with their
+    # video, which made this comparison drift downwards and stop firing. Only ever raises the
+    # total, so it cannot take XP away from an account.
     try:
-        cursor.execute("SELECT COALESCE(SUM(xp_gained), 0) AS total_xp, MAX(created_at) AS last_attempt FROM quiz_attempts WHERE user_uuid = %s;", (user_uuid,))
-        att_summary = cursor.fetchone()
-        if att_summary and att_summary.get("total_xp", 0) > user_data.get("xp", 0):
-            calc_xp = att_summary["total_xp"]
-            from math import floor, sqrt
-            calc_level = floor(sqrt(calc_xp / 50)) + 1
-            last_att = att_summary.get("last_attempt")
-            
+        cursor.execute("SELECT COALESCE(SUM(xp), 0) AS total_xp, MAX(created_at) AS last_event FROM xp_events WHERE user_uuid = %s;", (user_uuid,))
+        xp_summary = cursor.fetchone()
+        if xp_summary and xp_summary.get("total_xp", 0) > user_data.get("xp", 0):
+            calc_xp = xp_summary["total_xp"]
+            last_event = xp_summary.get("last_event")
+
             user_data["xp"] = calc_xp
-            user_data["level"] = max(user_data.get("level", 1), calc_level)
-            if last_att and not user_data.get("last_quiz_at"):
-                user_data["last_quiz_at"] = last_att
-            
+            user_data["level"] = max(user_data.get("level", 1), gamification.level_for_xp(calc_xp))
+            if last_event and not user_data.get("last_quiz_at"):
+                user_data["last_quiz_at"] = last_event
+
             cursor.execute(
                 "UPDATE user_profile SET xp = %s, level = %s, last_quiz_at = COALESCE(last_quiz_at, %s) WHERE user_uuid = %s;",
-                (calc_xp, user_data["level"], last_att, user_uuid)
+                (calc_xp, user_data["level"], last_event, user_uuid)
             )
             conn.commit()
     except Exception as e_sync:
         conn.rollback()
         logger.warning(f"Note on XP self-healing sync for {username}: {e_sync}")
 
-    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
-    # Auto-expire streak if > 24 hours elapsed since last quiz
-    if user_data.get("last_quiz_at"):
-        try:
-            raw_last = user_data["last_quiz_at"]
-            last_dt = raw_last if isinstance(raw_last, datetime) else datetime.fromisoformat(str(raw_last))
-            if last_dt.tzinfo is not None:
-                last_dt = last_dt.replace(tzinfo=None)
-            if (now_utc - last_dt) > timedelta(hours=24) and user_data.get("streak", 0) > 0:
-                user_data["streak"] = 0
-                cursor.execute("UPDATE user_profile SET streak = 0 WHERE user_uuid = %s;", (user_uuid,))
-                conn.commit()
-        except Exception as e_strk:
-            logger.warning(f"Error evaluating streak expiration for {username}: {e_strk}")
+    # A lapsed streak reads as 0 without being written back. This used to expire the streak
+    # after 24 rolling hours and UPDATE the zero into user_profile, which ran on every app
+    # boot and so always beat the grading path's own rule: quizzing at 9:00 one day and 9:30
+    # the next is 24.5 hours apart, and the streak was gone before the second quiz was
+    # graded. No account could hold a streak above 1. See app/gamification.py.
+    user_data["streak"] = gamification.effective_streak(
+        user_data.get("streak"), user_data.get("last_quiz_at")
+    )
 
     # 2. Fetch all learning goals ordered by order_index (non-archived only)
     cursor.execute("""

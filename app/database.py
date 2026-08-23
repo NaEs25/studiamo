@@ -1380,6 +1380,7 @@ def mark_tester_notice_seen(username: str, kind: str) -> bool:
 # FKs to other tables in this list are deleted before what they reference
 # (quiz_attempts -> quizzes; import_tasks -> videos; quizzes/daily_recommendations/videos -> goals).
 _USER_DATA_TABLES_DELETE_ORDER = [
+    "xp_events",
     "quiz_attempts",
     "import_tasks",
     "quizzes",

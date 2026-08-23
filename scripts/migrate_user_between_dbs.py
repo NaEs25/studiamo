@@ -35,6 +35,7 @@ USER_DATA_TABLES = [
     "videos",
     "quizzes",
     "quiz_attempts",
+    "xp_events",
     "ai_usage_logs",
     "daily_recommendations",
     "dismissed_recommendations",

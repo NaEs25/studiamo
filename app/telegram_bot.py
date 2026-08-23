@@ -6,7 +6,7 @@ import math
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
-from app import config, database
+from app import config, database, gamification
 from app.config import USERS_DIR, load_user_config, write_user_config
 from app.database import get_db_connection
 
@@ -399,7 +399,7 @@ last_streak_warned_dates = {}
 
 async def check_and_notify_streak():
     """Checks user streaks and sends Telegram warning if <= 5 hours remain before expiration."""
-    now_utc = datetime.utcnow()
+    now_utc = gamification.utc_now()
     today_str = now_utc.strftime("%Y-%m-%d")
 
     for username in database.get_all_users():
@@ -434,22 +434,24 @@ async def check_and_notify_streak():
             if not row.get("notify_cat_streak", 1):
                 continue
 
-            if not row.get("streak") or row["streak"] <= 0 or not row.get("last_quiz_at"):
+            # Both the number quoted in the message and the deadline it is counting down to
+            # come from app/gamification.py, so this warning cannot promise a streak the app
+            # will not honor. It used to bill the deadline as 24 hours after the last quiz,
+            # which is not the rule anywhere: a streak survives to the end of the day after
+            # the last quiz.
+            streak_val = gamification.effective_streak(
+                row.get("streak"), row.get("last_quiz_at"), now=now_utc
+            )
+            if streak_val <= 0:
                 continue
 
-            val = row["last_quiz_at"]
-            last_quiz = val if isinstance(val, datetime) else datetime.fromisoformat(str(val))
-
-            if last_quiz.tzinfo is not None:
-                last_quiz = last_quiz.replace(tzinfo=None)
-
-            deadline = last_quiz + timedelta(hours=24)
-            hours_left = (deadline - now_utc).total_seconds() / 3600.0
+            hours_left = gamification.hours_until_streak_lapses(row.get("last_quiz_at"), now=now_utc)
+            if hours_left is None:
+                continue
 
             if 0 < hours_left <= 5:
                 hours_fmt = int(math.ceil(hours_left))
                 app_link = notification_app_link(row.get("base_url"))
-                streak_val = row["streak"]
 
                 any_channel_enabled = bool(row.get("notify_telegram") or row.get("notify_push") or row.get("notify_email"))
 

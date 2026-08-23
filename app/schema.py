@@ -481,6 +481,26 @@ TABLES_SQL = [
     );
     """,
     """
+    -- Durable XP ledger. user_profile.xp is a lifetime total that only ever grows, but the
+    -- weekly leaderboard used to derive its numbers from SUM(quiz_attempts.xp_gained), and
+    -- attempt rows are deleted outright when their video or goal is deleted (see
+    -- routers/videos.py and routers/goals.py). The two disagreed by 91 XP on the largest
+    -- production account, and a user who tidied up their library silently dropped down the
+    -- weekly board. This table records the XP as it is earned and nothing deletes from it
+    -- except account deletion, so both numbers now come from a source that stays put.
+    --
+    -- No foreign key to quiz_attempts on purpose: outliving the attempt row is the point.
+    -- quiz_attempt_id is kept only so the backfill can be re-run without duplicating rows.
+    CREATE TABLE IF NOT EXISTS xp_events (
+        id              SERIAL PRIMARY KEY,
+        user_uuid       UUID NOT NULL,
+        xp              INTEGER NOT NULL,
+        source          TEXT NOT NULL DEFAULT 'quiz',
+        quiz_attempt_id INTEGER,
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    """,
+    """
     ALTER TABLE user_profile ENABLE ROW LEVEL SECURITY;
     ALTER TABLE goals ENABLE ROW LEVEL SECURITY;
     ALTER TABLE videos ENABLE ROW LEVEL SECURITY;
@@ -499,6 +519,7 @@ TABLES_SQL = [
     ALTER TABLE landing_waitlist ENABLE ROW LEVEL SECURITY;
     ALTER TABLE tester_access ENABLE ROW LEVEL SECURITY;
     ALTER TABLE tester_feedback ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE xp_events ENABLE ROW LEVEL SECURITY;
     """,
 ]
 
@@ -549,6 +570,14 @@ INDEXES_SQL = [
     "CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user ON push_subscriptions(user_uuid);",
     "CREATE INDEX IF NOT EXISTS idx_ai_usage_user_uuid ON ai_usage_logs(user_uuid);",
     "CREATE INDEX IF NOT EXISTS idx_quiz_attempts_user ON quiz_attempts(user_uuid);",
+
+    # The weekly leaderboard sums this table per user over a date range, for every ranked
+    # account at once. Composite so that scan is index-only on both columns.
+    "CREATE INDEX IF NOT EXISTS idx_xp_events_user_created ON xp_events(user_uuid, created_at);",
+    # Makes scripts/backfill_gamification.py safe to re-run: a second pass cannot insert a
+    # second event for an attempt it already seeded. Partial because the adjustment rows the
+    # backfill writes carry no attempt id and there is one per user.
+    "CREATE UNIQUE INDEX IF NOT EXISTS uq_xp_events_quiz_attempt ON xp_events(quiz_attempt_id) WHERE quiz_attempt_id IS NOT NULL;",
     "CREATE INDEX IF NOT EXISTS idx_import_tasks_user ON import_tasks(user_uuid, status);",
     "CREATE INDEX IF NOT EXISTS idx_bugs_created_at ON bugs(created_at DESC);",
     "CREATE INDEX IF NOT EXISTS idx_import_timings_type_duration ON import_timings(task_type, duration_seconds);",

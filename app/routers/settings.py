@@ -5,7 +5,6 @@ import uuid
 import zipfile
 import logging
 from datetime import datetime, timezone, timedelta
-import math
 from pathlib import Path
 from typing import Optional
 
@@ -14,7 +13,7 @@ from fastapi import APIRouter, Form, File, UploadFile, HTTPException, Depends, R
 from fastapi.responses import FileResponse, JSONResponse
 from starlette.background import BackgroundTask
 
-from app import config, database, storage, ai, moderation
+from app import config, database, storage, ai, gamification, moderation
 from app.dependencies import (
     get_active_username,
     get_question_counts,
@@ -435,40 +434,54 @@ async def get_leaderboard(username: str = Depends(get_active_username)):
     """Returns gamification leaderboard directly across Supabase user profiles."""
     now = datetime.now(timezone.utc)
     start_of_week = (now - timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
+    # Computed once so every row on the board is judged against the same instant.
+    now_naive = now.replace(tzinfo=None)
     
     conn = database.get_db_connection(username)
     cursor = conn.cursor()
     
     try:
-        # Include leaderboard_hidden column directly, no per-user config lookup needed
+        # One query for the whole board. This used to run a weekly-XP SELECT per profile
+        # inside the loop below, so ranking N accounts cost N + 1 round trips.
+        #
+        # Weekly XP comes from xp_events, not quiz_attempts: attempt rows are deleted with
+        # their video (routers/videos.py), which silently pushed a user down the weekly board
+        # for tidying up their library, and left lifetime XP and weekly XP disagreeing.
         cursor.execute(
-            "SELECT user_uuid, username, display_name, xp, level, streak, last_quiz_at, "
-            "COALESCE(leaderboard_hidden, 0) AS leaderboard_hidden "
-            "FROM user_profile ORDER BY xp DESC;"
+            """
+            SELECT p.user_uuid, p.username, p.display_name, p.xp, p.level, p.streak,
+                   p.last_quiz_at,
+                   COALESCE(p.leaderboard_hidden, 0) AS leaderboard_hidden,
+                   COALESCE(w.weekly_xp, 0) AS weekly_xp
+              FROM user_profile p
+              LEFT JOIN (
+                    SELECT user_uuid, SUM(xp) AS weekly_xp
+                      FROM xp_events
+                     WHERE created_at >= %s
+                     GROUP BY user_uuid
+              ) w ON w.user_uuid = p.user_uuid
+             ORDER BY p.xp DESC;
+            """,
+            (start_of_week,)
         )
 
         profiles = cursor.fetchall()
         
         all_rankings = []
         for p in profiles:
-            u_uuid = p["user_uuid"]
             u_name = p["username"]
             is_anonymous = bool(p.get("leaderboard_hidden"))
 
             total_xp = p["xp"] if p.get("xp") is not None else 0
             stored_level = p["level"] if p.get("level") is not None else 1
-            streak = p["streak"] if p.get("streak") is not None else 0
-            
-            calc_level = math.floor(math.sqrt(total_xp / 50)) + 1 if total_xp >= 0 else 1
-            level = max(stored_level, calc_level)
-            
-            cursor.execute("""
-                SELECT COALESCE(SUM(xp_gained), 0) AS weekly_xp 
-                FROM quiz_attempts 
-                WHERE user_uuid = %s AND created_at >= %s;
-            """, (u_uuid, start_of_week))
-            w_row = cursor.fetchone()
-            weekly_xp = int(w_row["weekly_xp"]) if w_row and w_row.get("weekly_xp") is not None else 0
+
+            # Derived, never the raw column: a streak whose last quiz predates yesterday has
+            # lapsed, and only grading writes the stored value. See app/gamification.py.
+            streak = gamification.effective_streak(p.get("streak"), p.get("last_quiz_at"), now=now_naive)
+
+            level = max(stored_level, gamification.level_for_xp(total_xp))
+
+            weekly_xp = int(p["weekly_xp"]) if p.get("weekly_xp") is not None else 0
             
             # Hide inactive 0 XP test profiles unless it's the logged-in user
             if total_xp == 0 and weekly_xp == 0 and u_name.lower() != username.lower():

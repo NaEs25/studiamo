@@ -1,13 +1,12 @@
 import asyncio
 import json
 import logging
-from math import floor, sqrt
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Form, HTTPException, Depends
 
-from app import config, database, ai
+from app import config, database, ai, gamification
 from app.ai import UsageLimitExceeded
 from app.dependencies import (
     get_active_username,
@@ -350,8 +349,19 @@ async def grade_quiz(
     
     cursor.execute(
         """INSERT INTO quiz_attempts (user_uuid, quiz_id, video_id, goal_id, question_index, question, given_answer, correct_answer, grade, xp_gained, explanation, feedback)
-           VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);""",
+           VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id;""",
         (user_uuid, id, row["video_id"], row["goal_id"], question_index, question, given_answer, correct_answer, grade, xp_gain, explanation, feedback)
+    )
+    attempt_row = cursor.fetchone()
+    attempt_id = attempt_row["id"] if attempt_row else None
+
+    # The weekly leaderboard reads this ledger, not quiz_attempts. Deleting a video deletes
+    # its attempts (routers/videos.py), which used to retroactively erase the XP those
+    # answers had already earned from the weekly ranking while leaving user_profile.xp
+    # untouched. The ledger row outlives the attempt, so the two totals stay reconcilable.
+    cursor.execute(
+        "INSERT INTO xp_events (user_uuid, xp, source, quiz_attempt_id) VALUES (%s, %s, 'quiz', %s);",
+        (user_uuid, xp_gain, attempt_id)
     )
     
     cursor.execute("SELECT xp, level, streak, last_quiz_at, badges, review_mode FROM user_profile WHERE user_uuid = %s LIMIT 1;", (user_uuid,))
@@ -368,26 +378,15 @@ async def grade_quiz(
     old_xp = user["xp"]
     new_xp = old_xp + xp_gain
     
-    new_level = floor(sqrt(new_xp / 50)) + 1
+    new_level = gamification.level_for_xp(new_xp)
     leveled_up = new_level > user["level"]
     
-    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
-    streak = user.get("streak", 0)
-    if user.get("last_quiz_at"):
-        try:
-            raw_last = user["last_quiz_at"]
-            last_dt = raw_last if isinstance(raw_last, datetime) else datetime.fromisoformat(str(raw_last))
-            if last_dt.tzinfo is not None:
-                last_dt = last_dt.replace(tzinfo=None)
-
-            if (now_utc - last_dt) > timedelta(hours=48):
-                streak = 1
-            elif last_dt.date() < now_utc.date():
-                streak += 1
-        except Exception:
-            streak = 1
-    else:
-        streak = 1
+    now_utc = gamification.utc_now()
+    # A streak counts consecutive calendar days: quizzing today after a quiz yesterday
+    # extends it, a second quiz the same day does not, and a gap resets it to 1. This is the
+    # only place user_profile.streak is written; read paths derive what to show with
+    # gamification.effective_streak instead of correcting the column.
+    streak = gamification.advance_streak(user.get("streak"), user.get("last_quiz_at"), now=now_utc)
         
     badges = json.loads(user["badges"]) if user.get("badges") else []
     new_badges = []
