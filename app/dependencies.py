@@ -17,8 +17,23 @@ from app import config, database
 
 logger = logging.getLogger("studiamo")
 
+
+def get_client_ip(request: Request) -> str:
+    """Rate-limit key: the real visitor IP, not the tunnel connector's address.
+
+    The app is only reachable through the Cloudflare tunnel (bound to 127.0.0.1,
+    UFW blocks everything else), so request.client.host is always cloudflared's
+    loopback address, the same for every visitor, and CF-Connecting-IP is safe to
+    trust: it's set by Cloudflare's edge from the real connection, and there is no
+    way to reach the origin directly to forge it. Falls back to get_remote_address
+    for requests that don't come through the tunnel (local/dev, tests).
+    """
+    cf_ip = request.headers.get("CF-Connecting-IP")
+    return cf_ip.strip() if cf_ip else get_remote_address(request)
+
+
 # Rate limiter setup
-limiter = Limiter(key_func=get_remote_address, default_limits=["600/minute"])
+limiter = Limiter(key_func=get_client_ip, default_limits=["600/minute"])
 
 
 def hash_password(password: str) -> str:
