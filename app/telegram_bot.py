@@ -196,6 +196,15 @@ def resolve_telegram_link_payload(payload: str) -> str | None:
     return database.consume_telegram_link_token(payload) or None
 
 
+def _managed_poll_backoff(failures: int) -> int:
+    """Seconds to wait after `failures` consecutive failed getUpdates calls.
+
+    Doubles to a one minute ceiling, which keeps a permanently bad token to roughly
+    one log line a minute instead of thousands, while a transient blip still recovers
+    within a couple of seconds."""
+    return min(60, 2 ** min(failures, 6))
+
+
 managed_offset = 0
 
 async def managed_telegram_long_polling():
@@ -212,11 +221,18 @@ async def managed_telegram_long_polling():
     client = get_http_client()
     url = f"https://api.telegram.org/bot{config.TELEGRAM_MANAGED_BOT_TOKEN}/getUpdates"
 
+    # Backoff for a getUpdates that keeps failing. Without it the non-200 branch fell
+    # straight back into the loop with nothing to wait on: a revoked token answers 401
+    # instantly, so the loop ran as fast as the socket allowed and wrote thousands of
+    # identical lines a minute into the journal for as long as the token stayed bad.
+    failures = 0
+
     while True:
         try:
             params = {"offset": managed_offset, "timeout": 20}
             response = await client.get(url, params=params, timeout=25.0)
             if response.status_code == 200:
+                failures = 0
                 data = response.json()
                 for update in data.get("result", []):
                     managed_offset = update["update_id"] + 1
@@ -265,10 +281,18 @@ async def managed_telegram_long_polling():
                     )
                     print(f"Managed Telegram poller: bound chat_id={chat_id} to user='{username}'")
             else:
-                print(f"Managed Telegram getUpdates non-200: {response.status_code} {response.text[:200]}")
+                failures += 1
+                delay = _managed_poll_backoff(failures)
+                print(
+                    f"Managed Telegram getUpdates non-200: {response.status_code} "
+                    f"{response.text[:200]} (attempt {failures}, retrying in {delay}s)"
+                )
+                await asyncio.sleep(delay)
         except Exception as e:
-            print(f"Managed Telegram poller error: {e}")
-            await asyncio.sleep(5)
+            failures += 1
+            delay = _managed_poll_backoff(failures)
+            print(f"Managed Telegram poller error: {e} (attempt {failures}, retrying in {delay}s)")
+            await asyncio.sleep(delay)
 
 last_check_times = {}
 
