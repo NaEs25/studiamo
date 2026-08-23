@@ -74,14 +74,14 @@ def build_checkout_url(user_uuid: str, email: str = "", apply_discount: bool = F
     apply_discount controls whether the promotional code is attached to the URL, and it is
     False by default. Lemon Squeezy renders an applied discount as a line item near the
     bottom of its checkout, below the pay button, so the headline price stays the full one
-    and the reduction is only visible to someone who scrolls. On the general paywall the
-    code is therefore stated in our own UI and typed in by the customer, where the offer is
-    made in wording we control.
+    and the reduction is only visible to someone who scrolls. Where the discounted price and
+    terms haven't already been stated in our own UI, the code is left for the customer to
+    type in instead, so the offer is made in wording we control.
 
-    The expired-tester screen passes True. That reader has already been shown the price and
-    the terms on our side, so the argument above is satisfied before they leave, and making
-    someone who just spent two weeks testing transcribe a code is friction at the exact
-    moment their answer is still open."""
+    The beta-offer and expired-tester screens pass True. Both readers have already been shown
+    the discounted price and the terms on our side, so the argument above is satisfied before
+    they leave, and making someone who just read that offer transcribe a code back is friction
+    at the exact moment their answer is still open."""
     ls = config.get_lemonsqueezy_config()
     params = {"checkout[custom][user_uuid]": user_uuid}
     if email:
@@ -105,7 +105,8 @@ async def create_checkout(
     navigating the user to a broken page if billing is misconfigured.
 
     apply_discount=true attaches the promotional code instead of leaving it to be typed in.
-    Used by the expired-tester screen; see build_checkout_url for why it is not the default."""
+    Used by the beta-offer and expired-tester screens; see build_checkout_url for why it is
+    not the default."""
     _require_cloud()
     user_uuid = config.get_user_uuid_from_db(username)
     if not user_uuid:
