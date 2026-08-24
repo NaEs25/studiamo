@@ -5,6 +5,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Studiamo | Spaced Repetition Active Recall</title>
+    <!-- Marks <html> as running installed/standalone, before first paint, so CSS can key off
+         one unambiguous attribute (see style.css's Mobile Safe Area section) instead of
+         @media (display-mode: standalone) directly: that media feature is not reliably honored
+         on iOS before 15.4, so it's cross-checked against navigator.standalone, Apple's older
+         and more reliable iOS-specific signal for the same thing. -->
+    <script>
+        if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+            document.documentElement.setAttribute('data-standalone', 'true');
+        }
+    </script>
     <!-- Umami Analytics: empty in self-hosted mode unless UMAMI_WEBSITE_ID is set, see app/config.py -->
     {% if umami_website_id %}<script defer src="{{ umami_script_url }}" data-website-id="{{ umami_website_id }}"></script>{% endif %}
 
@@ -29,7 +39,17 @@
     <meta name="theme-color" content="#f6f1e7">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <!-- "default" makes iOS reserve real, opaque space for the status bar in the installed
+         PWA, instead of black-translucent's overlay mode, where the status bar is transparent
+         and content/backgrounds are drawn underneath it. Overlay mode was the source of the
+         whole "content under the status bar" class of bugs: even once a fixed/sticky element's
+         own content is pushed down with safe-area padding, its translucent, blurred background
+         still extends up under the status bar by design, and iOS layers its own legibility
+         scrim on top of that for the status icons — which reads as an unwanted fade/blur band
+         right under the icons. "default" removes the overlay entirely, so there's nothing left
+         to blend or scrim: the status bar is opaque OS chrome, exactly like a normal Safari tab,
+         and the header begins cleanly below it. -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Studiamo">
     <link rel="icon" type="image/png" sizes="192x192" href="/static/images/icon-192.png">
     <link rel="apple-touch-icon" href="/static/images/apple-touch-icon.png">
@@ -433,7 +453,7 @@
                  plus a 14px gap; padding-top mirrors just that 14px gap (not the nav's own height) above the button. -->
             <div class="fixed inset-x-0 bottom-0 z-30 bg-[#f6f1e7]/50 pointer-events-none">
                 <div class="max-w-4xl mx-auto px-4 pointer-events-auto"
-                    style="padding-top: 14px; padding-bottom: calc(4.5rem + env(safe-area-inset-bottom));">
+                    style="padding-top: 14px; padding-bottom: calc(4.5rem + var(--safe-bottom));">
                     <button type="submit" form="import-form"
                         class="btn-primary w-full py-3.5 font-extrabold rounded-xl transition-all flex items-center justify-center space-x-2">
                         <i data-lucide="sparkles" class="w-5 h-5"></i>
@@ -1166,9 +1186,9 @@
                         <div class="flex items-center justify-between">
                             <label class="text-[11px] font-semibold text-stone-600">Playback Speed</label>
                             <span id="voice-speed-display"
-                                class="text-[11px] font-bold text-amber-800 tabular-nums">1.25x</span>
+                                class="text-[11px] font-bold text-amber-800 tabular-nums">1.00x</span>
                         </div>
-                        <input type="range" id="voice-speed-slider" min="0.50" max="2.00" step="0.05" value="1.25"
+                        <input type="range" id="voice-speed-slider" min="0.50" max="2.00" step="0.05" value="1.00"
                             oninput="updateVoiceSpeedDisplay(this.value)" onchange="setVoiceSpeed(this.value)"
                             class="w-full h-1.5 bg-stone-200 rounded-full appearance-none cursor-pointer accent-amber-600">
                         <div class="flex justify-between text-[9px] text-stone-500 font-medium">
@@ -1496,7 +1516,7 @@
 
     <!-- Bottom Navigation Bar (Mobile Tab Selector) -->
     <nav
-        class="fixed bottom-0 left-0 right-0 border-t border-stone-200 bg-[#fdfbf7]/95 backdrop-blur z-40 px-2 py-1 pb-[calc(0.25rem+env(safe-area-inset-bottom))] flex justify-around shadow-lg">
+        class="fixed bottom-0 left-0 right-0 border-t border-stone-200 bg-[#fdfbf7]/95 backdrop-blur z-40 px-2 py-1 pb-[calc(0.25rem+var(--safe-bottom))] flex justify-around shadow-lg">
         <button onclick="switchTab('dashboard')" id="nav-dashboard" aria-label="Home Dashboard"
             class="nav-item active flex flex-col items-center justify-center py-1.5 px-3 min-w-[54px] min-h-[44px] text-[10px] transition-all active:scale-[0.95]">
             <i data-lucide="home" class="w-5 h-5 mb-0.5"></i>
@@ -1587,7 +1607,7 @@
 
     <!-- Overlay 1: Setup Splash wizard -->
     <div id="overlay-wizard"
-        class="hidden fixed inset-0 bg-stone-950/95 backdrop-blur z-50 overflow-y-auto flex items-center justify-center p-4">
+        class="app-overlay hidden fixed inset-0 bg-stone-950/95 backdrop-blur z-50 overflow-y-auto flex items-center justify-center p-4">
         <div class="max-w-md w-full bg-white border border-stone-200 rounded-3xl p-6 md:p-8 shadow-2xl space-y-6">
             <div class="text-center space-y-2">
                 <img src="/static/images/logo-icon.png"
@@ -1657,10 +1677,17 @@
     <!-- Overlay 2: Quiz Player Overlay -->
     <!-- Overlay 2: SRS Flashcard Active Recall Quiz -->
     <div id="overlay-quiz" role="dialog" aria-modal="true" aria-labelledby="quiz-source-title"
-        class="hidden fixed inset-0 bg-stone-950/80 backdrop-blur-md z-50 flex items-start sm:items-center justify-center p-4 overflow-y-auto">
+        class="app-overlay hidden fixed inset-0 bg-stone-950/80 backdrop-blur-md z-50 flex justify-center p-4 overflow-y-auto">
+        <!-- No items-center here: the title/progress header stays pinned under the safe area
+             (see #overlay-quiz in style.css) instead of centering the header+card as one block,
+             which pushed the header down along with the card. The card sits in normal top-down
+             flow below it (space-y-6 is its only gap from the header) rather than centered in
+             the leftover space: centering re-centers on every height change - flipping to the
+             answer side, or a longer/shorter question - which read as the card jumping around
+             rather than the view holding still. -->
         <div class="max-w-md w-full flex flex-col space-y-6">
             <!-- Quiz Progress and Title -->
-            <div class="space-y-2">
+            <div class="space-y-2 shrink-0">
                 <!-- Source label and title sit on the same row as the close button, so the
                      header reads as one line instead of a stack floating under a corner icon. -->
                 <div class="flex items-start justify-between gap-3">
@@ -1698,12 +1725,7 @@
                     <div class="flex items-start justify-between gap-3">
                         <p id="quiz-question-text"
                             class="text-base md:text-lg font-bold text-stone-900 leading-relaxed grow"></p>
-                        <div class="relative flex flex-col items-center gap-1 shrink-0">
-                            <button type="button" id="btn-tts-question" aria-label="Read question aloud"
-                                class="quiz-tts-btn" title="Read Question Aloud">
-                                <i data-lucide="volume-2" class="w-4 h-4 tts-icon-idle"></i>
-                                <i data-lucide="pause" class="w-4 h-4 tts-icon-playing hidden"></i>
-                            </button>
+                        <div class="relative shrink-0">
                             <button type="button" id="btn-quiz-settings" aria-label="Session options"
                                 aria-haspopup="true" aria-expanded="false" class="quiz-tts-btn" title="Session options">
                                 <i data-lucide="more-vertical" class="w-4 h-4"></i>
@@ -1713,6 +1735,21 @@
                                  with controls most learners set once. -->
                             <div id="quiz-settings-menu"
                                 class="hidden absolute right-0 top-full mt-2 z-30 w-60 rounded-2xl bg-white border border-[#e7dfd3] shadow-2xl p-2">
+                                <!-- Was its own icon button beside the question text; folded in here so the
+                                     question row only ever has the one icon. Still #btn-tts-question, so
+                                     quiz.js's wireReadButton() and the auto-read call need no changes - only
+                                     .tts-label is new, and setTtsButtonPlaying() already knows to fill it. -->
+                                <button type="button" id="btn-tts-question" aria-label="Read question aloud" class="quiz-menu-row">
+                                    <span class="flex items-center gap-2">
+                                        <i data-lucide="volume-2" class="w-3.5 h-3.5 shrink-0 text-amber-600 tts-icon-idle"></i>
+                                        <i data-lucide="pause" class="w-3.5 h-3.5 shrink-0 text-amber-600 tts-icon-playing hidden"></i>
+                                        <span>Read Question Aloud</span>
+                                    </span>
+                                    <span class="tts-label text-[10px] text-stone-400 font-medium">Read</span>
+                                </button>
+
+                                <div class="border-t border-[#e7dfd3] my-1.5"></div>
+
                                 <label class="quiz-menu-row" title="Advance the spaced repetition interval when this session is graded">
                                     <span class="flex items-center gap-2">
                                         <i data-lucide="calendar-check" class="w-3.5 h-3.5 shrink-0 text-amber-600"></i>
@@ -1840,7 +1877,7 @@
 
     <!-- Overlay 3: Add Goal Dialog Modal -->
     <div id="overlay-goal-modal"
-        class="hidden fixed inset-0 bg-stone-950/80 backdrop-blur z-50 flex items-center justify-center p-4">
+        class="app-overlay hidden fixed inset-0 bg-stone-950/80 backdrop-blur z-50 flex items-center justify-center p-4">
         <div class="max-w-md w-full bg-white border border-stone-200 rounded-3xl p-6 shadow-2xl space-y-5">
             <h3 class="text-lg font-bold text-stone-900 flex items-center space-x-2">
                 <i data-lucide="target" class="w-5 h-5 text-amber-600"></i>
@@ -1878,7 +1915,7 @@
 
     <!-- Overlay: Delete Goal Confirmation Modal -->
     <div id="overlay-delete-goal-modal"
-        class="hidden fixed inset-0 bg-stone-950/80 backdrop-blur z-50 flex items-center justify-center p-4">
+        class="app-overlay hidden fixed inset-0 bg-stone-950/80 backdrop-blur z-50 flex items-center justify-center p-4">
         <div class="max-w-md w-full bg-white border border-stone-200 rounded-3xl p-6 shadow-2xl space-y-5">
             <div class="flex justify-between items-center border-b border-stone-200 pb-3">
                 <h3 class="text-lg font-bold text-stone-900 flex items-center space-x-2">
@@ -1916,7 +1953,7 @@
 
     <!-- Overlay: Delete Account : Step 1 of 2 (offer a data export first) -->
     <div id="overlay-delete-account-step1"
-        class="hidden fixed inset-0 bg-stone-950/80 backdrop-blur z-[120] flex items-center justify-center p-4">
+        class="app-overlay hidden fixed inset-0 bg-stone-950/80 backdrop-blur z-[var(--z-overlay-account-delete)] flex items-center justify-center p-4">
         <div class="max-w-md w-full bg-white border border-stone-200 rounded-3xl p-6 shadow-2xl space-y-5">
             <div class="flex justify-between items-center border-b border-stone-200 pb-3">
                 <h3 class="text-lg font-bold text-stone-900 flex items-center space-x-2">
@@ -1965,7 +2002,7 @@
 
     <!-- Overlay: Delete Account : Step 2 of 2 (permanence warning + typed confirmation) -->
     <div id="overlay-delete-account-step2"
-        class="hidden fixed inset-0 bg-stone-950/80 backdrop-blur z-[120] flex items-center justify-center p-4">
+        class="app-overlay hidden fixed inset-0 bg-stone-950/80 backdrop-blur z-[var(--z-overlay-account-delete)] flex items-center justify-center p-4">
         <div class="max-w-md w-full bg-white border border-red-200 rounded-3xl p-6 shadow-2xl space-y-5">
             <div class="flex justify-between items-center border-b border-red-100 pb-3">
                 <h3 class="text-lg font-bold text-stone-900 flex items-center space-x-2">
@@ -2014,7 +2051,7 @@
     <!-- Learning-focus overlay, opened from a video card's 3-dot menu (openFocusModal in videos.js).
          Content is rendered client-side from GET /api/videos/{id}/concept-pool. -->
     <div id="overlay-focus" role="dialog" aria-modal="true" aria-labelledby="focus-modal-title"
-        class="hidden fixed inset-0 bg-stone-950/70 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        class="app-overlay hidden fixed inset-0 bg-stone-950/70 backdrop-blur-md z-50 flex items-center justify-center p-4">
         <div class="bg-white border border-[#e7dfd3] rounded-3xl w-full max-w-lg shadow-2xl flex flex-col max-h-[88vh]">
 
             <div class="flex items-start justify-between p-5 pb-3 border-b border-[#e7dfd3] shrink-0">
@@ -2056,7 +2093,7 @@
 
     <!-- Overlay 4: Fact Check Details Modal -->
     <div id="overlay-factcheck"
-        class="hidden fixed inset-0 bg-stone-950/80 backdrop-blur z-50 flex items-center justify-center p-4">
+        class="app-overlay hidden fixed inset-0 bg-stone-950/80 backdrop-blur z-50 flex items-center justify-center p-4">
         <div
             class="max-w-2xl w-full bg-white border border-stone-200 rounded-3xl p-6 shadow-2xl space-y-5 flex flex-col max-h-[85vh]">
             <div class="flex justify-between items-center border-b border-stone-200 pb-3">
@@ -2086,7 +2123,7 @@
 
     <!-- Overlay 5: Edit Video Details Modal -->
     <div id="overlay-edit-video"
-        class="hidden fixed inset-0 bg-stone-950/80 backdrop-blur z-50 flex items-center justify-center p-4">
+        class="app-overlay hidden fixed inset-0 bg-stone-950/80 backdrop-blur z-50 flex items-center justify-center p-4">
         <div class="max-w-md w-full bg-white border border-stone-200 rounded-3xl p-6 shadow-2xl space-y-5">
             <h3 class="text-lg font-bold text-stone-900 flex items-center space-x-2">
                 <i data-lucide="edit-3" class="w-5 h-5 text-amber-600"></i>
@@ -2148,7 +2185,7 @@
 
     <!-- Overlay 6: Create User Profile Modal -->
     <div id="overlay-create-user"
-        class="hidden fixed inset-0 bg-stone-950/80 backdrop-blur z-50 flex items-center justify-center p-4">
+        class="app-overlay hidden fixed inset-0 bg-stone-950/80 backdrop-blur z-50 flex items-center justify-center p-4">
         <div class="max-w-sm w-full bg-white border border-stone-200 rounded-3xl p-6 shadow-2xl space-y-5">
             <h3 class="text-lg font-bold text-stone-900 flex items-center space-x-2">
                 <i data-lucide="user-plus" class="w-5 h-5 text-amber-600"></i>
@@ -2193,7 +2230,7 @@
 
     <!-- Overlay: Change Password Modal (Self-Hosted) -->
     <div id="overlay-change-password-modal"
-        class="fixed inset-0 bg-stone-900/60 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4"
+        class="app-overlay fixed inset-0 bg-stone-950/60 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4"
         role="dialog" aria-modal="true" aria-labelledby="change-password-modal-title">
         <div class="bg-paperCard border border-paperBorder rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
             <div class="flex items-center justify-between border-b border-paperBorder pb-3">
@@ -2265,7 +2302,7 @@
 
     <!-- Overlay 7: Floating Resizable Study Studio -->
     <div id="overlay-study-studio" role="dialog" aria-modal="true" aria-labelledby="studio-video-title"
-        class="hidden fixed inset-0 bg-stone-950/80 backdrop-blur-md z-50 flex items-center justify-center p-0 sm:p-4">
+        class="app-overlay hidden fixed inset-0 bg-stone-950/80 backdrop-blur-md z-50 flex items-center justify-center p-0 sm:p-4">
         <div
             class="bg-white border border-stone-200 rounded-none sm:rounded-3xl shadow-2xl flex flex-col w-full h-full sm:w-[90vw] sm:h-[85vh] sm:max-w-[1400px] sm:max-h-[90vh] overflow-hidden resize select-none studio-resizable-modal">
 
@@ -2444,7 +2481,7 @@
 
     <!-- Overlay 8: Video Stats & History Modal -->
     <div id="overlay-video-stats"
-        class="hidden fixed inset-0 bg-stone-950/80 backdrop-blur z-50 flex items-center justify-center p-4">
+        class="app-overlay hidden fixed inset-0 bg-stone-950/80 backdrop-blur z-50 flex items-center justify-center p-4">
         <div
             class="max-w-lg w-full bg-white border border-stone-200 rounded-3xl p-6 shadow-2xl space-y-5 max-h-[85vh] flex flex-col">
             <div class="flex justify-between items-center border-b border-stone-200 pb-3 shrink-0">
@@ -2482,81 +2519,6 @@
                         <!-- Attempts list loaded dynamically -->
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- YouTube Embedded Player Modal for Recommendations -->
-    <div id="overlay-rec-player"
-        class="hidden fixed inset-0 bg-stone-950/80 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4">
-        <div
-            class="bg-white border border-[#e7dfd3] rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl space-y-0">
-            <div class="flex items-center justify-end px-3 py-2 bg-[#fbf8f2] border-b border-[#e7dfd3]">
-                <button onclick="closeRecPlayerModal()"
-                    class="p-1.5 text-stone-500 hover:text-stone-900 hover:bg-stone-200/80 rounded-xl transition"
-                    title="Close">
-                    <i data-lucide="x" class="w-4 h-4"></i>
-                </button>
-            </div>
-            <div class="relative w-full aspect-video bg-stone-950 yt-downscale-wrapper">
-                <iframe id="rec-player-iframe" class="w-full h-full border-0" src="" frameborder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowfullscreen></iframe>
-            </div>
-        </div>
-    </div>
-
-    <!-- AI Summary Viewer Modal for Recommendations -->
-    <div id="overlay-rec-summary"
-        class="hidden fixed inset-0 bg-stone-950/80 backdrop-blur z-50 flex items-center justify-center p-4">
-        <div
-            class="bg-white border border-stone-200 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl p-6 space-y-4">
-            <div class="flex items-center justify-between border-b border-stone-200 pb-3">
-                <div class="flex items-center space-x-2">
-                    <i data-lucide="sparkles" class="w-5 h-5 text-amber-400"></i>
-                    <h3 class="font-bold text-stone-900 text-base">AI Video Summary</h3>
-                </div>
-                <button onclick="closeRecSummaryModal()"
-                    class="p-1.5 hover:bg-stone-100 rounded-xl text-stone-400 hover:text-stone-900 transition">
-                    <i data-lucide="x" class="w-5 h-5"></i>
-                </button>
-            </div>
-            <div>
-                <h4 id="rec-summary-video-title" class="font-bold text-sm text-amber-600">Video Title</h4>
-                <p id="rec-summary-goal-tag" class="text-xs text-stone-400 mt-0.5">Lernziel: Real Estate</p>
-            </div>
-            <div id="rec-summary-content"
-                class="bg-stone-50 border border-stone-200 rounded-xl p-4 text-xs text-stone-700 space-y-2 whitespace-pre-line leading-relaxed">
-                <!-- Summary text dynamically populated -->
-            </div>
-            <div class="pt-2 flex justify-end">
-                <button onclick="closeRecSummaryModal()"
-                    class="px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-900 rounded-xl text-xs font-bold transition">Close</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Spinner / Loading Loader Overlay -->
-    <div id="overlay-loader"
-        class="hidden fixed inset-0 bg-stone-950/80 backdrop-blur z-50 flex items-center justify-center">
-        <!-- Minimize button -->
-        <button id="btn-minimize-loader" onclick="minimizeLoader()"
-            class="absolute top-4 right-4 px-3 py-1.5 bg-stone-100 hover:bg-stone-200 border border-stone-200 rounded-xl text-stone-400 hover:text-stone-900 transition text-xs font-semibold flex items-center space-x-1">
-            <i data-lucide="minimize-2" class="w-3.5 h-3.5"></i>
-            <span>Run in Background</span>
-        </button>
-        <div class="text-center space-y-4">
-            <div class="relative w-16 h-16 mx-auto">
-                <!-- Inner spinner -->
-                <div class="absolute inset-0 rounded-full border-4 border-stone-200"></div>
-                <div class="absolute inset-0 rounded-full border-4 border-amber-500 border-t-transparent animate-spin">
-                </div>
-            </div>
-            <div>
-                <h4 id="loader-title" class="font-bold text-stone-900 text-base">Processing Content...</h4>
-                <p id="loader-desc" class="text-xs text-stone-400 mt-1 max-w-xs mx-auto">Gemini is extracting
-                    transcripts, auto-categorizing, writing executive summaries, and generating active recall questions.
-                </p>
             </div>
         </div>
     </div>
@@ -2652,7 +2614,7 @@
 
     <!-- Overlay: Tab Overview / Onboarding Help Guide Modal -->
     <div id="overlay-tab-guide"
-        class="hidden fixed inset-0 bg-stone-950/85 backdrop-blur z-50 flex items-center justify-center p-4 overflow-y-auto">
+        class="app-overlay hidden fixed inset-0 bg-stone-950/85 backdrop-blur z-50 flex items-center justify-center p-4 overflow-y-auto">
         <div
             class="max-w-lg w-full bg-white border border-amber-500/30 rounded-2xl p-4 sm:p-5 shadow-2xl space-y-3.5 max-h-[85vh] overflow-y-auto">
             <div class="flex items-center justify-between border-b border-stone-200 pb-2.5">
@@ -2747,7 +2709,7 @@
          otherwise existing users who already dismissed a past version of this popup will
          never see your new content: the two are not linked automatically. -->
     <div id="overlay-updates-modal"
-        class="hidden fixed inset-0 bg-stone-950/85 backdrop-blur z-50 flex items-center justify-center p-4 overflow-y-auto">
+        class="app-overlay hidden fixed inset-0 bg-stone-950/85 backdrop-blur z-50 flex items-center justify-center p-4 overflow-y-auto">
         <div
             class="max-w-lg w-full bg-white border border-amber-500/30 rounded-2xl p-4 sm:p-5 shadow-2xl space-y-3.5 max-h-[85vh] overflow-y-auto">
             <div class="flex items-center justify-between border-b border-stone-200 pb-2.5">
@@ -2817,7 +2779,7 @@
          traps someone is worse than one they dismiss. Dismissing records an acknowledgement
          so it is not shown again. -->
     <div id="overlay-tester-notice"
-        class="hidden fixed inset-0 bg-stone-950/85 backdrop-blur z-50 flex items-center justify-center p-4 overflow-y-auto">
+        class="app-overlay hidden fixed inset-0 bg-stone-950/85 backdrop-blur z-50 flex items-center justify-center p-4 overflow-y-auto">
         <div class="max-w-lg w-full bg-white border border-stone-200 rounded-3xl p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
 
             <div class="flex items-start justify-between gap-3">
@@ -2853,9 +2815,10 @@
     <!-- Overlay: Subscription Paywall (cloud only, blocking).
          Deliberately has no close button, no backdrop-click handler and no ESC handler:
          an account without an active subscription or the tester flag cannot reach the app.
-         z-[60] puts it above every other overlay (which use z-50) so nothing can cover it. -->
+         --z-overlay-paywall (style.css) puts it above every other overlay (which use z-50) so
+         nothing can cover it. -->
     <div id="overlay-paywall"
-        class="hidden fixed inset-0 bg-stone-950/90 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+        class="app-overlay hidden fixed inset-0 bg-stone-950/90 backdrop-blur-sm z-[var(--z-overlay-paywall)] flex items-center justify-center p-4"
         role="dialog" aria-modal="true" aria-labelledby="paywall-title">
         <!-- max-h + overflow so a tall step cannot run off the viewport. The overlay has no
              close button by design, so anything pushed past the bottom edge is unreachable

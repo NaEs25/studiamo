@@ -63,7 +63,7 @@ TABLES_SQL = [
     ALTER TABLE user_profile ADD COLUMN IF NOT EXISTS notifications_enabled INTEGER DEFAULT 1;
     ALTER TABLE user_profile ADD COLUMN IF NOT EXISTS leaderboard_hidden INTEGER DEFAULT 0;
     ALTER TABLE user_profile ADD COLUMN IF NOT EXISTS voice_engine TEXT DEFAULT 'browser';
-    ALTER TABLE user_profile ADD COLUMN IF NOT EXISTS voice_speed REAL DEFAULT 1.25;
+    ALTER TABLE user_profile ADD COLUMN IF NOT EXISTS voice_speed REAL DEFAULT 1.0;
 
     -- Per-channel notification toggles, read by routers/settings.py.
     -- The defaults are asymmetric and that is deliberate, not an oversight: a channel is

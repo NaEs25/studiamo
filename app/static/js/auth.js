@@ -14,7 +14,7 @@ async function continueAsTestUser() {
     activeUsername = 'test_user';
     localStorage.setItem('active_username', 'test_user');
     document.cookie = 'username=test_user; path=/; max-age=31536000';
-    document.getElementById('overlay-wizard').classList.add('hidden');
+    if (typeof closeSetupWizard === 'function') closeSetupWizard();
     const fd = new FormData();
     fd.append('username', 'test_user');
     try { await fetchAPI('/api/users', { method: 'POST', body: fd }); } catch(e) {}
@@ -104,13 +104,13 @@ async function switchUserProfile(username) {
 }
 
 function openCreateUserModal() {
-    const el = document.getElementById('overlay-create-user');
-    if (el) el.classList.remove('hidden');
+    openOverlay('overlay-create-user', closeCreateUserModal);
 }
 
 function closeCreateUserModal() {
     const el = document.getElementById('overlay-create-user');
     if (el) el.classList.add('hidden');
+    closeOverlay('overlay-create-user');
     const input = document.getElementById('create-username');
     if (input) input.value = '';
     const keyInput = document.getElementById('create-gemini-key');
@@ -192,11 +192,10 @@ async function logoutUser() {
 async function checkConfig() {
     try {
         const data = await fetchAPI('/api/status');
-        const wizard = document.getElementById('overlay-wizard');
         if (!data.is_configured && activeUsername !== 'test_user') {
-            if (wizard) wizard.classList.remove('hidden');
+            openOverlay('overlay-wizard', typeof closeSetupWizard === 'function' ? closeSetupWizard : null);
         } else {
-            if (wizard) wizard.classList.add('hidden');
+            if (typeof closeSetupWizard === 'function') closeSetupWizard();
             if (typeof loadDashboard === 'function') loadDashboard();
         }
     } catch (e) {

@@ -38,21 +38,17 @@ function _paywallError(message) {
 
 
 function openPaywall(stepId = 'paywall-step-standard') {
-    const overlay = document.getElementById('overlay-paywall');
-    if (!overlay) return;
     _paywallShowStep(stepId);
-    overlay.classList.remove('hidden');
-    // Stop the page behind the modal from scrolling, so it cannot be read past the overlay.
-    document.body.style.overflow = 'hidden';
+    // No close function: this overlay has no Escape route by design, see openOverlay in core.js.
+    openOverlay('overlay-paywall');
     if (typeof renderIcons === 'function') renderIcons();
 }
 
 
 function closePaywall() {
     const overlay = document.getElementById('overlay-paywall');
-    if (!overlay) return;
-    overlay.classList.add('hidden');
-    document.body.style.overflow = '';
+    if (overlay) overlay.classList.add('hidden');
+    closeOverlay('overlay-paywall');
 }
 
 
@@ -641,7 +637,7 @@ const TESTER_NOTICES = {
 function closeTesterNotice() {
     const overlay = document.getElementById('overlay-tester-notice');
     if (overlay) overlay.classList.add('hidden');
-    document.body.classList.remove('overflow-hidden');
+    closeOverlay('overlay-tester-notice');
     // Written on dismiss rather than on open: a notice the user never actually saw, because
     // the tab was closed first, should still be waiting for them next time.
     if (_openTesterNotice) {
@@ -672,8 +668,7 @@ function openTesterNotice(kind, tester) {
         : () => { closeTesterNotice(); openPaywall('paywall-step-beta'); };
 
     _openTesterNotice = kind;
-    overlay.classList.remove('hidden');
-    document.body.classList.add('overflow-hidden');
+    openOverlay('overlay-tester-notice', closeTesterNotice);
     if (typeof renderIcons === 'function') renderIcons();
 }
 

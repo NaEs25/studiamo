@@ -101,6 +101,35 @@ class TestStreakDeadline(unittest.TestCase):
         self.assertLess(hours_until_streak_lapses(MON_09, now=THU_09), 0)
 
 
+class TestDeadlineWireFormat(unittest.TestCase):
+    """Pins the string /api/dashboard sends as user.streak_deadline.
+
+    app.js stopped deriving the countdown itself (it used last_quiz_at + 24 rolling hours, the
+    rule this module replaced, and showed an expiry up to a day early) and now renders whatever
+    this field says. Its frontend parser, parseDate() in static/js/core.js, appends a Z only
+    when the string carries no zone at all, so a value that is naive-but-not-UTC, or offset in
+    any way, is read as a different instant than the server meant, silently shifting the
+    countdown. The stored column is naive UTC, hence the explicit Z.
+    """
+
+    def _wire_value(self, last_quiz_at):
+        """The exact transformation app/routers/dashboard.py applies."""
+        deadline = streak_deadline(last_quiz_at)
+        return deadline.isoformat() + "Z" if deadline else None
+
+    def test_deadline_is_sent_as_explicit_utc(self):
+        self.assertEqual(self._wire_value(MON_09), "2026-08-19T00:00:00Z")
+
+    def test_no_last_quiz_sends_null_rather_than_a_guess(self):
+        self.assertIsNone(self._wire_value(None))
+
+    def test_wire_value_round_trips_to_the_same_instant(self):
+        """Guards a 'simplification' that drops the Z and shifts the instant by the reader's offset."""
+        wire = self._wire_value(MON_09)
+        parsed = datetime.fromisoformat(wire.replace("Z", "+00:00"))
+        self.assertEqual(parsed, streak_deadline(MON_09).replace(tzinfo=timezone.utc))
+
+
 class TestLevelForXp(unittest.TestCase):
     def test_known_boundaries(self):
         self.assertEqual(level_for_xp(0), 1)

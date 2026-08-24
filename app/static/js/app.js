@@ -354,21 +354,6 @@ async function playRecommendedVideo(ytId, wrapperId, title, goalId, lastPosition
 }
 window.playRecommendedVideo = playRecommendedVideo;
 
-function playVideoModal(ytId, title) {
-    const modal = document.getElementById('overlay-rec-player') || document.getElementById('overlay-video-player');
-    const iframe = document.getElementById('rec-player-iframe');
-    const titleEl = document.getElementById('rec-player-title') || document.getElementById('video-player-title');
-
-    if (titleEl) titleEl.textContent = title || 'YouTube Player';
-    if (iframe) {
-        iframe.src = `https://www.youtube-nocookie.com/embed/${ytId}?autoplay=1&rel=0`;
-    }
-    if (modal) modal.classList.remove('hidden');
-    if (typeof renderIcons === 'function') renderIcons();
-    else if (typeof lucide !== 'undefined') lucide.createIcons();
-}
-window.playVideoModal = playVideoModal;
-
 async function loadDailyRecommendations() {
     const grid = document.getElementById('daily-recommendations-grid');
     const panel = document.getElementById('daily-recommendations-panel');
@@ -400,7 +385,7 @@ async function loadDailyRecommendations() {
         grid.innerHTML = data.recommendations.map(rec => {
             const ytId = rec.youtube_id || rec.id;
             const draftVideoId = rec.video_id || window._dailyRecsDrafts[ytId] || null;
-            const isDraft = Boolean(rec.is_temporary === 1 || rec.is_temporary === true || (draftVideoId && window._dailyRecsDrafts[ytId]));
+            const isDraft = Boolean(isTemporaryVideo(rec) || (draftVideoId && window._dailyRecsDrafts[ytId]));
             const isQueued = Boolean(draftVideoId);
             const thumbUrl = rec.thumbnail_url || rec.thumbnail || (ytId ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` : '/static/images/notes-icon.svg');
             const cleanTitle = escapeRecQuotes(rec.title || '');
@@ -646,8 +631,8 @@ async function refreshDailyRecommendations() {
 }
 
 function updateStreakTimer() {
-    const streakCount = currentUserStats ? (currentUserStats.streak || 0) : 0;
     const lastQuizAt = currentUserStats ? currentUserStats.last_quiz_at : null;
+    const deadlineStr = currentUserStats ? currentUserStats.streak_deadline : null;
 
     const headerTimer = document.getElementById('header-streak-timer');
     const subtextEl = document.getElementById('stats-streak-subtext');
@@ -665,11 +650,21 @@ function updateStreakTimer() {
         return;
     }
 
-    const lastDate = parseDate(lastQuizAt);
-    if (!lastDate) return;
+    // The deadline is the server's (gamification.streak_deadline: midnight UTC ending the day
+    // after the last quiz, so a quiz on day D survives through the end of D+1). It is never
+    // recomputed here. This used to be lastQuizAt + 24 rolling hours, the rule the backend had
+    // already replaced for being wrong, and the two drifted for exactly as long as the number
+    // lived in two places. With no deadline from the server, show nothing rather than a guess.
+    if (!deadlineStr) {
+        if (subtextEl) {
+            subtextEl.textContent = '';
+            subtextEl.className = 'text-[11px] text-stone-500';
+        }
+        if (headerTimer) headerTimer.classList.add('hidden');
+        return;
+    }
 
-    // 24-hour expiration deadline from last quiz completion
-    const expireTime = lastDate.getTime() + (24 * 60 * 60 * 1000);
+    const expireTime = parseDate(deadlineStr).getTime();
     const msLeft = expireTime - now.getTime();
     const hoursLeft = msLeft / (1000 * 60 * 60);
 

@@ -186,7 +186,7 @@ async def get_app_settings(username: str = Depends(get_active_username)):
             "leaderboard_hidden": _parse_bool(settings_row.get("leaderboard_hidden", 0)),
             "review_mode": settings_row.get("review_mode") or "mixed",
             "voice_engine": settings_row.get("voice_engine") or "browser",
-            "voice_speed": _safe_float(settings_row.get("voice_speed"), 1.25),
+            "voice_speed": _safe_float(settings_row.get("voice_speed"), 1.0),
             "enable_stage_5_repetition": _parse_bool(srs_row.get("enable_stage_5_repetition") if srs_row.get("enable_stage_5_repetition") is not None else user_cfg.get("ENABLE_STAGE_5_REPETITION", config.DEFAULT_ENABLE_STAGE_5_REPETITION)),
             "stage_5_repeat_interval": _safe_int(srs_row.get("stage_5_repeat_interval") if srs_row.get("stage_5_repeat_interval") is not None else user_cfg.get("STAGE_5_REPEAT_INTERVAL"), config.DEFAULT_STAGE_5_REPEAT_INTERVAL),
             "subscription_status": settings_row.get("subscription_status") or "inactive",
@@ -374,7 +374,7 @@ async def save_app_settings(
                 settings_params.append(voice_engine)
 
             if voice_speed is not None:
-                sp_val = _safe_float(voice_speed, 1.25)
+                sp_val = _safe_float(voice_speed, 1.0)
                 user_cfg["voice_speed"] = sp_val
                 user_cfg["VOICE_SPEED"] = sp_val
                 settings_updates.append("voice_speed = %s")

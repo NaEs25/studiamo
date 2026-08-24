@@ -586,7 +586,7 @@ async function openFocusModal(videoId) {
         const subtitle = document.getElementById('focus-modal-subtitle');
         if (subtitle) subtitle.textContent = data.title || '';
 
-        overlay.classList.remove('hidden');
+        openOverlay('overlay-focus', closeFocusModal);
         renderFocusStageTabs();
         renderFocusTopics();
         renderIcons();
@@ -598,6 +598,7 @@ async function openFocusModal(videoId) {
 function closeFocusModal() {
     const overlay = document.getElementById('overlay-focus');
     if (overlay) overlay.classList.add('hidden');
+    closeOverlay('overlay-focus');
     focusState = null;
 }
 
@@ -641,15 +642,12 @@ function initFocusModalEvents() {
     if (save) save.addEventListener('click', saveFocusSelection);
     if (reset) reset.addEventListener('click', resetFocusToRecommendation);
     if (overlay) {
+        // Click-outside-to-close. Escape is handled centrally by openOverlay/closeOverlay
+        // in core.js now, which this modal's own open/close functions already call into.
         overlay.addEventListener('click', (e) => {
             if (e.target === overlay) closeFocusModal();
         });
     }
-    document.addEventListener('keydown', (e) => {
-        if (e.key !== 'Escape') return;
-        const ov = document.getElementById('overlay-focus');
-        if (ov && !ov.classList.contains('hidden')) closeFocusModal();
-    });
 }
 
 // Brings a freshly queued import's card into view and flashes it, so the user can see where
@@ -699,7 +697,7 @@ function renderVideoCard(video, quizzes, goals) {
     }
     
     let actionControlsHTML = '';
-    if (video.is_temporary === 1 || video.is_temporary === true) {
+    if (isTemporaryVideo(video)) {
         actionControlsHTML = `
             <button onclick="confirmPreviewImport(${video.id}, this)" class="btn-primary w-full py-2 font-extrabold rounded-xl text-xs transition flex items-center justify-center space-x-1.5 h-[38px]">
                  <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
@@ -732,7 +730,7 @@ function renderVideoCard(video, quizzes, goals) {
 
     const titleHTML = `<a href="javascript:void(0)" onclick="openStudyStudio(${video.id})" class="block font-bold text-sm text-stone-900 truncate hover:text-amber-700 transition" title="Open in Study Studio: ${escapeHtml(video.title)}">${escapeHtml(video.title)}</a>`;
     
-    const stageBadgeHTML = (video.is_temporary === 1 || video.is_temporary === true)
+    const stageBadgeHTML = isTemporaryVideo(video)
         ? `<span class="text-[9px] bg-amber-500/15 border border-amber-500/30 text-amber-900 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider flex items-center space-x-1" title="Preview mode: expires in ~24h unless imported"><i data-lucide="clock" class="w-3 h-3 text-amber-700"></i><span>24h Preview</span></span>`
         : (isPaused
             ? `<span class="text-[9px] bg-stone-100 border border-stone-200 text-stone-600 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider flex items-center space-x-1" title="SRS Review Intervals Paused"><i data-lucide="pause-circle" class="w-3 h-3 text-stone-500"></i><span>Stage ${srsStage} (Paused)</span></span>`
@@ -753,7 +751,7 @@ function renderVideoCard(video, quizzes, goals) {
 
     const validSummaryBullets = Array.isArray(video.summary) ? video.summary.filter(isRealSummaryBullet) : [];
 
-    const isTemp = video.is_temporary === 1 || video.is_temporary === true;
+    const isTemp = isTemporaryVideo(video);
     const hasTakeaways = validSummaryBullets.length > 0;
     const hasNotes = typeof video.custom_notes === 'string' && video.custom_notes.trim().length > 0;
     const hasDetails = !isTemp && (hasTakeaways || hasNotes);
@@ -854,26 +852,14 @@ function toggleVideoDetails(event, id) {
 }
 
 function closeVideoMenu() {
-    const portal = document.getElementById('video-context-menu-portal');
-    if (portal) portal.remove();
+    closeContextMenuPortal('video-context-menu-portal');
 }
 
 function toggleVideoMenu(event, id) {
     if (event) event.stopPropagation();
-    
-    const existingPortal = document.getElementById('video-context-menu-portal');
-    if (existingPortal) {
-        if (existingPortal.dataset.forId === String(id)) {
-            existingPortal.remove();
-            return;
-        }
-        existingPortal.remove();
-    }
-    
+
     const btn = event ? event.currentTarget : document.querySelector(`[data-menuid="${id}"]`);
-    if (!btn) return;
-    const rect = btn.getBoundingClientRect();
-    
+
     const cardData = window._videoCardCache && window._videoCardCache[id];
     const isPaused = cardData ? cardData.is_paused : false;
     const isWatchlist = cardData ? cardData.is_watchlist : false;
@@ -883,11 +869,7 @@ function toggleVideoMenu(event, id) {
     // overlay would have nothing to show, so the entry is hidden rather than opening empty.
     const hasConceptPool = !!(cardData && cardData.has_concept_pool);
 
-    const portal = document.createElement('div');
-    portal.id = 'video-context-menu-portal';
-    portal.dataset.forId = String(id);
-    portal.className = 'fixed w-56 rounded-xl bg-white border border-[#e7dfd3] shadow-2xl z-[9999] overflow-hidden';
-    portal.innerHTML = `<div class="py-1">
+    const html = `<div class="py-1">
         ${isImported && hasConceptPool ? `
         <button data-focus-video="${id}" class="flex items-center space-x-2.5 w-full text-left px-4 py-2.5 text-xs text-stone-700 hover:bg-stone-50 hover:text-stone-900 transition">
             <i data-lucide="target" class="w-4 h-4 text-amber-600"></i><span>Adjust Learning Focus</span>
@@ -920,44 +902,20 @@ function toggleVideoMenu(event, id) {
             <i data-lucide="trash-2" class="w-4 h-4 text-rose-500"></i><span>Permanently Delete</span>
         </button>
     </div>`;
-    
-    document.body.appendChild(portal);
 
-    const focusBtn = portal.querySelector('[data-focus-video]');
-    if (focusBtn) {
-        focusBtn.addEventListener('click', () => {
-            closeVideoMenu();
-            openFocusModal(id);
-        });
-    }
-
-    renderIcons();
-
-    // Measured rather than assumed. This was a hardcoded 250px, which silently stopped
-    // matching the moment the menu gained or lost an entry, flipping it to the wrong side
-    // of the button near a viewport edge.
-    const menuH = portal.offsetHeight || 250;
-    const spaceBelow = window.innerHeight - rect.bottom;
-    const spaceAbove = rect.top;
-    if (spaceBelow >= menuH || spaceBelow >= spaceAbove) {
-        portal.style.top = `${rect.bottom + 6}px`;
-    } else {
-        portal.style.top = `${rect.top - menuH - 6}px`;
-    }
-    const rightEdge = rect.right;
-    portal.style.right = `${window.innerWidth - rightEdge}px`;
+    toggleContextMenuPortal('video-context-menu-portal', id, btn, html, {
+        extraClasses: 'w-56 border border-[#e7dfd3]',
+        onMount: (portal) => {
+            const focusBtn = portal.querySelector('[data-focus-video]');
+            if (focusBtn) {
+                focusBtn.addEventListener('click', () => {
+                    closeVideoMenu();
+                    openFocusModal(id);
+                });
+            }
+        }
+    });
 }
-
-// Global window event listener to remove context menus on outside click / scroll
-window.addEventListener('click', (e) => {
-    const portal = document.getElementById('video-context-menu-portal');
-    if (portal && !portal.contains(e.target)) portal.remove();
-});
-
-window.addEventListener('scroll', () => {
-    const portal = document.getElementById('video-context-menu-portal');
-    if (portal) portal.remove();
-}, true);
 
 async function pauseVideo(id) {
     await fetchAPI(`/api/videos/${id}/pause`, { method: 'POST' });
@@ -1138,9 +1096,8 @@ async function showFactCheck(id) {
     showLoader("Verifying Factual Accuracy", "Gemini is analyzing the transcript against scientific and historical consensus...");
     try {
         const data = await fetchAPI(`/api/videos/${id}/factcheck`);
-        const overlay = document.getElementById('overlay-factcheck');
-        if (overlay) overlay.classList.remove('hidden');
-        
+        openOverlay('overlay-factcheck', closeFactCheckModal);
+
         const claimsContainer = document.getElementById('factcheck-claims-container');
         if (claimsContainer) {
             claimsContainer.innerHTML = '';
@@ -1260,17 +1217,20 @@ async function openEditVideoModal(id, category, goalId, rating, notes) {
         goalSelect.value = activeGoalId;
     }
     
-    overlay.classList.remove('hidden');
+    openOverlay('overlay-edit-video', closeEditVideoModal);
+}
+
+function closeEditVideoModal() {
+    document.getElementById('overlay-edit-video')?.classList.add('hidden');
+    closeOverlay('overlay-edit-video');
 }
 
 function initEditVideoEvents() {
     const btnClose = document.getElementById('btn-close-edit-video');
     const form = document.getElementById('edit-video-form');
-    
+
     if (btnClose) {
-        btnClose.onclick = () => {
-            document.getElementById('overlay-edit-video')?.classList.add('hidden');
-        };
+        btnClose.onclick = closeEditVideoModal;
     }
     if (form) {
         form.onsubmit = async (e) => {
@@ -1291,7 +1251,7 @@ function initEditVideoEvents() {
             
             try {
                 await fetchAPI(`/api/videos/${id}/edit`, { method: 'POST', body: formData });
-                document.getElementById('overlay-edit-video')?.classList.add('hidden');
+                closeEditVideoModal();
                 if (typeof loadDashboard === 'function') loadDashboard();
                 if (typeof loadGoals === 'function') loadGoals();
             } catch (err) {
@@ -1323,9 +1283,9 @@ async function openVideoStatsModal(id) {
             </div>
         `;
     }
-    
-    overlay.classList.remove('hidden');
-    
+
+    openOverlay('overlay-video-stats', closeVideoStatsModal);
+
     try {
         const stats = await fetchAPI(`/api/videos/${id}/stats`);
         
@@ -1506,11 +1466,13 @@ function toggleVideoStatSession(sessionId) {
 function closeVideoStatsModal() {
     const overlay = document.getElementById('overlay-video-stats');
     if (overlay) overlay.classList.add('hidden');
+    closeOverlay('overlay-video-stats');
 }
 
 function closeFactCheckModal() {
     const overlay = document.getElementById('overlay-factcheck');
     if (overlay) overlay.classList.add('hidden');
+    closeOverlay('overlay-factcheck');
 }
 
 function initFactCheckEvents() {
@@ -1725,7 +1687,7 @@ async function openStudyStudio(id) {
         }
     }
     
-    overlay.classList.remove('hidden');
+    openOverlay('overlay-study-studio', closeStudyStudio);
     initStudioResizer();
     if (typeof renderIcons === 'function') renderIcons();
 }
@@ -1806,6 +1768,7 @@ function closeStudyStudio() {
 
     const overlay = document.getElementById('overlay-study-studio');
     if (overlay) overlay.classList.add('hidden');
+    closeOverlay('overlay-study-studio');
 
     const ytWrapper = document.getElementById('studio-yt-wrapper');
     if (ytWrapper) ytWrapper.innerHTML = '';
@@ -1875,6 +1838,10 @@ function minimizeStudio() {
     if (miniTitle) miniTitle.textContent = cardData ? cardData.title : 'Now Playing';
 
     if (overlay) overlay.classList.add('hidden');
+    // The big overlay is gone but the session isn't closed - it continues as the floating
+    // mini-player - so this unlocks scroll/Escape (closeOverlay) without running
+    // closeStudyStudio's full teardown (stopping playback, clearing the save interval, etc.).
+    closeOverlay('overlay-study-studio');
     miniPlayer.classList.remove('hidden');
     initMiniPlayerDrag();
 }
@@ -1883,13 +1850,12 @@ function restoreStudio() {
     const iframe = document.getElementById('studio-yt-iframe');
     const ytWrapper = document.getElementById('studio-yt-wrapper');
     const miniPlayer = document.getElementById('studio-mini-player');
-    const overlay = document.getElementById('overlay-study-studio');
 
     if (iframe && ytWrapper) {
         relocateStudioPlayer(iframe, ytWrapper);
     }
     if (miniPlayer) miniPlayer.classList.add('hidden');
-    if (overlay) overlay.classList.remove('hidden');
+    openOverlay('overlay-study-studio', closeStudyStudio);
 }
 
 function closeMiniPlayer() {

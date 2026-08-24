@@ -35,6 +35,27 @@
     --color-text-muted-rgb:     120 113 108;
     --color-primary-rgb:        217 119 6;
     --color-primary-hover-rgb:  180 83 9;
+
+    /* iOS home-screen PWA: apple-mobile-web-app-status-bar-style=black-translucent
+       (index.html) draws the status bar/home-indicator area over the page, so anything
+       anchored to the true viewport edge needs to add clearance for it. env()'s own
+       0px fallback covers browsers without notch/inset support, so no @supports guard
+       is needed here. Every safe-area rule in this file should read these two tokens
+       rather than calling env() directly, so there is exactly one place this is defined. */
+    --safe-top:    env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+    /* Every id="overlay-*" modal sits at the baseline z-50 Tailwind utility except these two,
+       which previously read as arbitrary bracket values (z-[60], z-[120]) with nothing recording
+       why one wins over the other or what either is for. Named here so a future change to either
+       is a deliberate edit to a documented tier, not a guess at what an unlabeled number meant:
+       --z-overlay-paywall is the account-blocking subscription gate (index.html has its own
+       comment on why it must stay above everything); --z-overlay-account-delete is the two-step
+       delete-account confirmation. Whether the two can ever legitimately be open at once is not
+       verified either way - these names preserve the existing relative order, they don't assert
+       a reason for it. */
+    --z-overlay-paywall: 60;
+    --z-overlay-account-delete: 120;
 }
 
 /* ── Global Reset & Base ────────────────────────────────── */
@@ -711,26 +732,42 @@ body[data-app-mode="cloud"] .selfhosted-only {
 }
 
 /* ── Mobile Safe Area & Accessibility Enhancements ──────── */
-@supports (padding-bottom: env(safe-area-inset-bottom)) {
-    .pb-safe {
-        padding-bottom: env(safe-area-inset-bottom);
+/* [data-standalone] is set on <html> by the inline script in index.html's <head>, which
+   checks both matchMedia('(display-mode: standalone)') and the iOS-only
+   navigator.standalone (the CSS media feature alone isn't honored on iOS before 15.4).
+   Every rule below keys off that attribute rather than the media query directly, so this
+   detection lives in exactly one place. A regular browser tab reserves its own chrome
+   space already, so none of this must apply there — hence gating on the attribute at all. */
+
+.pb-safe {
+    padding-bottom: var(--safe-bottom);
+}
+
+html[data-standalone="true"] #app-header {
+    padding-top: calc(0.625rem + var(--safe-top));
+}
+
+@media (min-width: 640px) {
+    html[data-standalone="true"] #app-header {
+        padding-top: calc(0.75rem + var(--safe-top));
     }
 }
 
-/* Installed iOS PWA only: apple-mobile-web-app-status-bar-style=black-translucent
-   draws the status bar over the page, so the sticky header needs extra top padding
-   to clear the clock/wifi icons. A regular Safari tab already reserves that space
-   via its own chrome, so this must not apply there, hence display-mode: standalone. */
-@media (display-mode: standalone) {
-    #app-header {
-        padding-top: calc(0.625rem + env(safe-area-inset-top));
-    }
+/* Shared by every id="overlay-*" modal (see index.html). scroll-padding protects any
+   modal whose content grows tall enough to reach the top/bottom edge under scroll, without
+   touching each modal's own background/blur/z-index/padding, which vary intentionally
+   per modal. New modals inherit this automatically just by carrying the class. */
+html[data-standalone="true"] .app-overlay {
+    scroll-padding-top: var(--safe-top);
+    scroll-padding-bottom: var(--safe-bottom);
+}
 
-    @media (min-width: 640px) {
-        #app-header {
-            padding-top: calc(0.75rem + env(safe-area-inset-top));
-        }
-    }
+/* The quiz overlay pins its header at the true top of the modal (see index.html) instead of
+   centering the whole header+card block like every other .app-overlay, so unlike them it
+   doesn't get free clearance from vertical centering - its first frame needs real padding,
+   not just scroll clearance. */
+html[data-standalone="true"] #overlay-quiz {
+    padding-top: calc(1rem + var(--safe-top));
 }
 
 :focus-visible {

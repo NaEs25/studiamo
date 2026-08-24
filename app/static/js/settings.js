@@ -486,13 +486,14 @@ function openChangePasswordModal() {
         err.textContent = '';
         err.classList.add('hidden');
     }
-    modal.classList.remove('hidden');
+    openOverlay('overlay-change-password-modal', closeChangePasswordModal);
     if (typeof renderIcons === 'function') renderIcons();
 }
 
 function closeChangePasswordModal() {
     const modal = document.getElementById('overlay-change-password-modal');
     if (modal) modal.classList.add('hidden');
+    closeOverlay('overlay-change-password-modal');
 }
 
 async function handleChangePassword(event) {
@@ -679,7 +680,7 @@ async function _submitSettings(silent = true) {
     if (rmSel?.value) formData.append('review_mode', rmSel.value);
 
     const voiceEngine = localStorage.getItem('studiamo_voice_engine') || 'browser';
-    const voiceSpeed = localStorage.getItem('studiamo_voice_speed') || '1.25';
+    const voiceSpeed = localStorage.getItem('studiamo_voice_speed') || '1.0';
     formData.append('voice_engine', voiceEngine);
     formData.append('voice_speed', voiceSpeed);
 
@@ -733,6 +734,15 @@ function initSettingsTab() {
     }
 }
 
+// Consolidates the three places this modal used to hide itself directly (checkConfig and
+// continueAsTestUser in auth.js, the setup form's success handler below) into one place that
+// also tells the shared overlay layer, rather than each repeating the same two lines.
+function closeSetupWizard() {
+    const wizard = document.getElementById('overlay-wizard');
+    if (wizard) wizard.classList.add('hidden');
+    closeOverlay('overlay-wizard');
+}
+
 function initSetupWizard() {
     const wizardBaseUrl = document.getElementById('wizard-base-url');
     if (wizardBaseUrl && (!wizardBaseUrl.value || wizardBaseUrl.value === "http://127.0.0.1:5004")) {
@@ -775,7 +785,7 @@ function initSetupWizard() {
 
             try {
                 await fetchAPI('/api/setup', { method: 'POST', body: formData });
-                document.getElementById('overlay-wizard').classList.add('hidden');
+                closeSetupWizard();
                 window.location.reload();
             } catch (err) {
                 console.error("Setup wizard error:", err);
@@ -796,7 +806,7 @@ function initSetupWizard() {
                 icon: "settings"
             });
             if (confirmed) {
-                document.getElementById('overlay-wizard').classList.remove('hidden');
+                openOverlay('overlay-wizard', closeSetupWizard);
             }
         });
     }
@@ -1014,7 +1024,7 @@ function setVoiceSpeed(val) {
 
 function initVoiceSettings() {
     const savedEngine = localStorage.getItem('studiamo_voice_engine') || 'browser';
-    const savedSpeed = parseFloat(localStorage.getItem('studiamo_voice_speed') || '1.25');
+    const savedSpeed = parseFloat(localStorage.getItem('studiamo_voice_speed') || '1.0');
 
     // Restore toggle state
     setVoiceEngine(savedEngine);
@@ -1073,7 +1083,7 @@ async function testVoiceSample(btn) {
     }
 
     const engine = localStorage.getItem('studiamo_voice_engine') || 'browser';
-    const speed = parseFloat(localStorage.getItem('studiamo_voice_speed') || '1.25');
+    const speed = parseFloat(localStorage.getItem('studiamo_voice_speed') || '1.0');
     const text = "Welcome to Studiamo. Active recall is the fastest way to master new knowledge.";
     const origContent = btn.innerHTML;
 
@@ -1190,9 +1200,7 @@ function openTabGuideModal(e) {
     if (e && typeof e.preventDefault === 'function') e.preventDefault();
     const el = document.getElementById('overlay-tab-guide');
     if (el) {
-        el.classList.remove('hidden');
-        el.style.display = 'flex';
-        document.body.classList.add('overflow-hidden');
+        openOverlay('overlay-tab-guide', closeTabGuideModal);
         if (typeof renderIcons === 'function') renderIcons();
         if (typeof lucide !== 'undefined') lucide.createIcons();
     }
@@ -1203,8 +1211,7 @@ function closeTabGuideModal(e) {
     const el = document.getElementById('overlay-tab-guide');
     if (el) {
         el.classList.add('hidden');
-        el.style.display = 'none';
-        document.body.classList.remove('overflow-hidden');
+        closeOverlay('overlay-tab-guide');
     }
 }
 
@@ -1227,9 +1234,7 @@ function openUpdatesModal(e) {
     if (e && typeof e.preventDefault === 'function') e.preventDefault();
     const el = document.getElementById('overlay-updates-modal');
     if (el) {
-        el.classList.remove('hidden');
-        el.style.display = 'flex';
-        document.body.classList.add('overflow-hidden');
+        openOverlay('overlay-updates-modal', closeUpdatesModal);
         if (typeof renderIcons === 'function') renderIcons();
         if (typeof lucide !== 'undefined') lucide.createIcons();
     }
@@ -1240,8 +1245,7 @@ function closeUpdatesModal(e) {
     const el = document.getElementById('overlay-updates-modal');
     if (el) {
         el.classList.add('hidden');
-        el.style.display = 'none';
-        document.body.classList.remove('overflow-hidden');
+        closeOverlay('overlay-updates-modal');
     }
 }
 
@@ -1670,7 +1674,7 @@ function openDeleteAccountStep1() {
         note.classList.add('hidden');
         note.classList.remove('flex');
     }
-    document.getElementById('overlay-delete-account-step1')?.classList.remove('hidden');
+    openOverlay('overlay-delete-account-step1', closeDeleteAccountModals);
     if (typeof renderIcons === 'function') renderIcons();
 }
 
@@ -1687,6 +1691,7 @@ function markExportDownloaded() {
 
 function openDeleteAccountStep2() {
     document.getElementById('overlay-delete-account-step1')?.classList.add('hidden');
+    closeOverlay('overlay-delete-account-step1');
 
     const hint = document.getElementById('delete-account-username-hint');
     if (hint) hint.textContent = activeUsername || 'your username';
@@ -1698,7 +1703,7 @@ function openDeleteAccountStep2() {
     }
     validateDeleteAccountConfirm();
 
-    document.getElementById('overlay-delete-account-step2')?.classList.remove('hidden');
+    openOverlay('overlay-delete-account-step2', closeDeleteAccountModals);
     if (typeof renderIcons === 'function') renderIcons();
     setTimeout(() => input?.focus(), 50);
 }
@@ -1706,6 +1711,8 @@ function openDeleteAccountStep2() {
 function closeDeleteAccountModals() {
     document.getElementById('overlay-delete-account-step1')?.classList.add('hidden');
     document.getElementById('overlay-delete-account-step2')?.classList.add('hidden');
+    closeOverlay('overlay-delete-account-step1');
+    closeOverlay('overlay-delete-account-step2');
     const input = document.getElementById('delete-account-confirm-input');
     if (input) input.value = '';
     validateDeleteAccountConfirm();

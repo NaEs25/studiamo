@@ -1,4 +1,5 @@
-const CACHE_NAME = 'studiamo-pwa-v3';
+// Bump this by hand when a precached asset changes and the new version must reach users.
+const CACHE_NAME = 'studiamo-pwa-v4';
 const ASSETS_TO_CACHE = [
   '/',
   '/static/css/style.css',

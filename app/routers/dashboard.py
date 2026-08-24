@@ -96,6 +96,13 @@ async def get_dashboard_data(username: str = Depends(require_app_access)):
         user_data.get("streak"), user_data.get("last_quiz_at")
     )
 
+    # The instant the streak lapses, sent so the frontend countdown reads the rule instead of
+    # reimplementing it. app.js used to derive this itself as last_quiz_at + 24 rolling hours,
+    # i.e. the exact rule this module replaced, and so displayed an expiry up to a day earlier
+    # than the real one. Serialized with an explicit Z because the stored value is naive UTC.
+    _streak_deadline = gamification.streak_deadline(user_data.get("last_quiz_at"))
+    user_data["streak_deadline"] = _streak_deadline.isoformat() + "Z" if _streak_deadline else None
+
     # 2. Fetch all learning goals ordered by order_index (non-archived only)
     cursor.execute("""
         SELECT g.id, g.title, g.description, g.order_index,

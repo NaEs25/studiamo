@@ -72,7 +72,7 @@ async function speakText(text, btn = null) {
     }
 
     const engine = localStorage.getItem('studiamo_voice_engine') || 'browser';
-    const speed = parseFloat(localStorage.getItem('studiamo_voice_speed') || '1.25');
+    const speed = parseFloat(localStorage.getItem('studiamo_voice_speed') || '1.0');
     const cleanText = text.trim();
 
     if (engine === 'gemini') {
@@ -160,11 +160,10 @@ async function startQuiz(quizId, videoId = null, level = 3) {
             currentQuestionIndex = resumeIdx;
         }
         
-        const overlay = document.getElementById('overlay-quiz');
-        if (overlay) {
-            overlay.classList.remove('hidden');
-            overlay.style.display = 'flex';
-        }
+        // Escape here defers to the quiz's own options-menu handling first (see
+        // escapeCloseQuizOverlay/handleQuizKeydown below), rather than always closing the
+        // whole session on the same keypress that was meant to just dismiss that dropdown.
+        openOverlay('overlay-quiz', escapeCloseQuizOverlay);
 
         const titleEl = document.getElementById('quiz-source-title');
         const labelEl = document.getElementById('quiz-source-label');
@@ -482,13 +481,22 @@ function renderQuizQuestion() {
 function closeQuizOverlay() {
     stopCurrentSpeech();
     const overlay = document.getElementById('overlay-quiz');
-    if (overlay) {
-        overlay.classList.add('hidden');
-        overlay.style.display = 'none';
-    }
+    if (overlay) overlay.classList.add('hidden');
+    closeOverlay('overlay-quiz');
     activeQuizSession = null;
     if (typeof loadDashboard === 'function') loadDashboard();
     if (typeof loadGoals === 'function') loadGoals();
+}
+
+// The Escape path only: if the quiz's own options dropdown is open, handleQuizKeydown closes
+// just that (it owns the keyboard while open, see its comment there), so this defers to it
+// rather than the same keypress also ending the whole session. Anything closing the quiz
+// outright (the X button, finishing the last question, etc.) still calls closeQuizOverlay
+// directly, unaffected by this.
+function escapeCloseQuizOverlay() {
+    const settingsMenu = document.getElementById('quiz-settings-menu');
+    if (settingsMenu && !settingsMenu.classList.contains('hidden')) return;
+    closeQuizOverlay();
 }
 
 async function gradeQuestion(grade) {

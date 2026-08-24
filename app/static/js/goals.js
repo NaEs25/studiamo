@@ -321,13 +321,14 @@ function openCreateGoalModal() {
     document.getElementById('goal-modal-title').value = '';
     document.getElementById('goal-modal-desc').value = '';
     overlay.querySelector('h3 span').textContent = "Create Learning Goal";
-    overlay.classList.remove('hidden');
+    openOverlay('overlay-goal-modal', closeCreateGoalModal);
 }
 
 function closeCreateGoalModal() {
     const overlay = document.getElementById('overlay-goal-modal');
     if (!overlay) return;
     overlay.classList.add('hidden');
+    closeOverlay('overlay-goal-modal');
     document.getElementById('goal-modal-id').value = '';
     document.getElementById('goal-modal-title').value = '';
     document.getElementById('goal-modal-desc').value = '';
@@ -341,7 +342,7 @@ function openEditGoalModal(id, title, description) {
     const overlay = document.getElementById('overlay-goal-modal');
     if (overlay) {
         overlay.querySelector('h3 span').textContent = "Edit Learning Goal";
-        overlay.classList.remove('hidden');
+        openOverlay('overlay-goal-modal', closeCreateGoalModal);
     }
 }
 
@@ -383,7 +384,7 @@ function deleteGoal(id) {
         msg.innerHTML = `Are you sure you want to delete learning goal <strong class="text-stone-900">"${title}"</strong>?<br><span class="text-xs text-stone-500 mt-2 block">Choose how to handle the linked video materials:</span>`;
     }
     if (modal) {
-        modal.classList.remove('hidden');
+        openOverlay('overlay-delete-goal-modal', closeDeleteGoalModal);
         renderIcons();
     }
 }
@@ -391,6 +392,7 @@ function deleteGoal(id) {
 function closeDeleteGoalModal() {
     const modal = document.getElementById('overlay-delete-goal-modal');
     if (modal) modal.classList.add('hidden');
+    closeOverlay('overlay-delete-goal-modal');
 }
 
 async function confirmDeleteGoal(deleteMaterials) {
@@ -495,27 +497,6 @@ function closeRecommendationsDrawer(goalId) {
     updateRecsButtonState(goalId);
 }
 window.closeRecommendationsDrawer = closeRecommendationsDrawer;
-
-function openRecPlayerModal(ytId, title = "YouTube Video Preview") {
-    const overlay = document.getElementById('overlay-rec-player');
-    const iframe = document.getElementById('rec-player-iframe');
-    const titleEl = document.getElementById('rec-player-title');
-    if (!overlay || !iframe) return;
-
-    if (titleEl) titleEl.textContent = title;
-    iframe.src = `https://www.youtube.com/embed/${ytId}?autoplay=1&enablejsapi=1`;
-    overlay.classList.remove('hidden');
-    if (typeof renderIcons === 'function') renderIcons();
-}
-window.openRecPlayerModal = openRecPlayerModal;
-
-function closeRecPlayerModal() {
-    const overlay = document.getElementById('overlay-rec-player');
-    const iframe = document.getElementById('rec-player-iframe');
-    if (overlay) overlay.classList.add('hidden');
-    if (iframe) iframe.src = '';
-}
-window.closeRecPlayerModal = closeRecPlayerModal;
 
 function renderRecommendationCardHTML(v, goalId) {
     const videoUrl = v.url || `https://www.youtube.com/watch?v=${v.youtube_id}`;
@@ -849,35 +830,19 @@ function setAllAccordions(expand) {
 }
 
 function closeGoalMenu() {
-    const existingPortal = document.getElementById('portal-goal-menu');
-    if (existingPortal) existingPortal.remove();
+    closeContextMenuPortal('portal-goal-menu');
 }
 
 function toggleGoalMenu(event, id) {
     if (event) event.stopPropagation();
 
-    const existingPortal = document.getElementById('portal-goal-menu');
-    if (existingPortal) {
-        if (existingPortal.dataset.forId === String(id)) {
-            existingPortal.remove();
-            return;
-        }
-        existingPortal.remove();
-    }
-    
     const btn = event ? event.currentTarget : document.getElementById(`btn-goal-menu-${id}`);
-    if (!btn) return;
-    const rect = btn.getBoundingClientRect();
-    
+
     const goalData = window._goalsCache && window._goalsCache[id];
     const title = goalData ? (goalData.title || '').replace(/'/g, "\\'") : '';
     const desc = goalData ? (goalData.description || '').replace(/'/g, "\\'") : '';
-    
-    const portal = document.createElement('div');
-    portal.id = 'portal-goal-menu';
-    portal.dataset.forId = String(id);
-    portal.className = 'fixed w-52 rounded-xl bg-white border border-stone-200 shadow-2xl z-[9999] overflow-hidden';
-    portal.innerHTML = `<div class="py-1">
+
+    const html = `<div class="py-1">
         <button onclick="closeGoalMenu(); openEditGoalModal(${id}, '${title}', '${desc}')" class="flex items-center space-x-2.5 w-full text-left px-4 py-2.5 text-xs text-stone-700 hover:bg-stone-50 hover:text-stone-900 transition">
             <i data-lucide="edit-3" class="w-4 h-4 text-amber-600"></i><span>Edit Title &amp; Description</span>
         </button>
@@ -889,27 +854,8 @@ function toggleGoalMenu(event, id) {
             <i data-lucide="trash-2" class="w-4 h-4"></i><span>Permanently Delete</span>
         </button>
     </div>`;
-    
-    document.body.appendChild(portal);
-    renderIcons();
-    
-    const menuH = 140;
-    let top = rect.bottom + 6;
-    if (top + menuH > window.innerHeight) {
-        top = rect.top - menuH - 6;
-    }
-    const left = Math.min(rect.right - 208, window.innerWidth - 216);
-    
-    portal.style.top = `${top}px`;
-    portal.style.left = `${left}px`;
-    
-    const closeListener = (e) => {
-        if (!portal.contains(e.target) && !btn.contains(e.target)) {
-            portal.remove();
-            document.removeEventListener('click', closeListener);
-        }
-    };
-    setTimeout(() => document.addEventListener('click', closeListener), 10);
+
+    toggleContextMenuPortal('portal-goal-menu', id, btn, html, { extraClasses: 'w-52 border border-stone-200' });
 }
 
 // Window bindings for inline HTML attribute calls

@@ -1,5 +1,59 @@
 // --- Studiamo Core Module ---
 
+// The backend has sent this as both the integer 1 and the boolean true at different points, and
+// video/rec objects still carry either depending on when they were fetched - so every reader has
+// to check both. One place to check it, so a third representation only needs updating here.
+function isTemporaryVideo(v) {
+    return v.is_temporary === 1 || v.is_temporary === true;
+}
+
+// Shared open/close plumbing for the app's ~20 id="overlay-*" modals. Before this, each modal
+// hand-rolled its own show/hide + scroll-lock, and the two ever built (billing.js's paywall vs.
+// its own tester-notice) used two different scroll-lock mechanisms in the same file. Escape-to-
+// close existed for none of them. See karl-privat/TODOS for the audit this closes.
+//
+// _openOverlays tracks every currently-open overlay and the function that actually closes it -
+// not a generic hide, each modal's OWN close function - so existing per-modal cleanup (stopping
+// TTS, resetting a form, canceling a request) keeps running exactly as before. Body scroll only
+// unlocks once none remain open, so a modal opened on top of another (e.g. a delete confirmation
+// over a settings modal) doesn't unlock scroll prematurely when the top one closes.
+//
+// closeFn is optional: the paywall calls openOverlay(id) with none, by design - it has no close
+// button, no backdrop-click, and must have no Escape route either, since it exists to block an
+// account without a subscription from reaching the app (see its comment in index.html). It still
+// participates in scroll-locking like any other overlay; it just never hands the Escape handler
+// below anything to call, and being the most recent entry stops Escape from reaching whatever
+// might be stacked underneath it too.
+const _openOverlays = new Map(); // id -> closeFn | null
+
+function openOverlay(id, closeFn = null) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove('hidden');
+    document.body.classList.add('overflow-hidden');
+    _openOverlays.set(id, closeFn);
+}
+
+// Call from within a modal's own close function once it has hidden itself, so scroll unlocks
+// and Escape stops targeting it. Safe to call even if the modal was never opened via openOverlay.
+function closeOverlay(id) {
+    _openOverlays.delete(id);
+    if (_openOverlays.size === 0) {
+        document.body.classList.remove('overflow-hidden');
+    }
+}
+
+document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || _openOverlays.size === 0) return;
+    // Only the most recently opened overlay is ever considered, so a modal stacked on top of
+    // another closes one at a time rather than all at once - and so a closeFn-less overlay
+    // (the paywall) sitting on top blocks Escape entirely rather than falling through to
+    // whatever's stacked beneath it.
+    const ids = Array.from(_openOverlays.keys());
+    const topClose = _openOverlays.get(ids[ids.length - 1]);
+    if (topClose) topClose();
+});
+
 // Escapes a string for safe interpolation into HTML markup built via template literals.
 // Required anywhere user- or third-party-supplied text (titles, descriptions, etc.) is
 // interpolated into an innerHTML/insertAdjacentHTML string rather than set via textContent.
@@ -470,15 +524,11 @@ function openTaskStudioAndDismiss(taskId, videoId) {
 }
 
 // Loader UI helpers
-let _currentActiveLoaderVideoId = null;
-
 function showLoader(title, desc, videoId = null) {
-    if (videoId) _currentActiveLoaderVideoId = videoId;
     globalImportBacklog.poll();
 }
 
 function showLoaderDone(title, desc, videoId = null) {
-    if (videoId) _currentActiveLoaderVideoId = videoId;
     globalImportBacklog.poll();
 }
 
@@ -486,29 +536,78 @@ function hideLoader(force = false, doneTitle = null, doneDesc = null, videoId = 
     globalImportBacklog.poll();
 }
 
-function minimizeLoader() {
-    globalImportBacklog.toggleDrawer(false);
-}
-
-function restoreLoader() {
-    globalImportBacklog.toggleDrawer(true);
-}
-
-function onLoaderPillClick() {
-    if (_currentActiveLoaderVideoId) {
-        const vid = _currentActiveLoaderVideoId;
-        if (typeof openStudyStudio === 'function') {
-            openStudyStudio(vid);
-        } else if (typeof switchTab === 'function') {
-            switchTab('dashboard');
-        }
-    }
-}
-
 function renderIcons() {
     if (typeof lucide !== 'undefined' && lucide.createIcons) {
         lucide.createIcons();
     }
+}
+
+// Shared plumbing for the app's floating "..." context menus (goal cards, video cards):
+// toggle-if-already-open-for-this-id, flip-to-fit vertical positioning measured against the
+// portal's actual rendered height (not a guessed constant - a hardcoded number silently
+// stops matching the moment a menu gains or loses an entry, flipping it to the wrong side of
+// the button near a viewport edge), right-edge horizontal alignment with the anchor, and
+// dismissal on outside click or scroll. Content is the caller's; this owns only the mechanics
+// that drifted apart between goals.js and videos.js before this existed - one had the
+// measured-height fix and a scroll listener, the other didn't. See karl-privat/TODOS.
+//
+// extraClasses lets each caller keep its own width/border look (they differ on purpose)
+// without duplicating the positioning logic itself. onMount, if given, runs after the portal
+// is in the DOM but before it's measured, for callers that need to attach listeners inside it.
+//
+// Returns the portal element, or null if this call closed an already-open menu for the same
+// id (the toggle-off case) or found no anchor element to position against.
+function toggleContextMenuPortal(portalId, forId, anchorEl, contentHtml, { extraClasses = '', onMount } = {}) {
+    const existingPortal = document.getElementById(portalId);
+    if (existingPortal) {
+        const wasForSameId = existingPortal.dataset.forId === String(forId);
+        (existingPortal._dismiss || (() => existingPortal.remove()))();
+        if (wasForSameId) return null;
+    }
+    if (!anchorEl) return null;
+    const rect = anchorEl.getBoundingClientRect();
+
+    const portal = document.createElement('div');
+    portal.id = portalId;
+    portal.dataset.forId = String(forId);
+    portal.className = `fixed rounded-xl bg-white shadow-2xl z-[9999] overflow-hidden ${extraClasses}`;
+    portal.innerHTML = contentHtml;
+    document.body.appendChild(portal);
+
+    renderIcons();
+    if (onMount) onMount(portal);
+
+    const menuH = portal.offsetHeight || 250;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    portal.style.top = (spaceBelow >= menuH || spaceBelow >= spaceAbove)
+        ? `${rect.bottom + 6}px`
+        : `${Math.max(6, rect.top - menuH - 6)}px`;
+    portal.style.right = `${window.innerWidth - rect.right}px`;
+
+    // Stashed on the element so closeContextMenuPortal (every menu-item onclick routes
+    // through it) tears down these two listeners too, not just the element - removing only
+    // the element and leaving its listeners on document/window is a per-open leak, since a
+    // menu is closed by clicking one of its own items far more often than by an outside
+    // click or scroll.
+    const dismiss = () => {
+        portal.remove();
+        document.removeEventListener('click', onOutsideClick);
+        window.removeEventListener('scroll', dismiss, true);
+    };
+    portal._dismiss = dismiss;
+    const onOutsideClick = (e) => {
+        if (!portal.contains(e.target) && !anchorEl.contains(e.target)) dismiss();
+    };
+    setTimeout(() => document.addEventListener('click', onOutsideClick), 10);
+    window.addEventListener('scroll', dismiss, true);
+
+    return portal;
+}
+
+function closeContextMenuPortal(portalId) {
+    const existing = document.getElementById(portalId);
+    if (existing) (existing._dismiss || (() => existing.remove()))();
 }
 
 // Shared thumbnail renderer for videos/PDFs/notes: real image for YouTube videos,
@@ -585,9 +684,6 @@ window.showErrorBanner = showErrorBanner;
 window.showLoader = showLoader;
 window.showLoaderDone = showLoaderDone;
 window.hideLoader = hideLoader;
-window.minimizeLoader = minimizeLoader;
-window.restoreLoader = restoreLoader;
-window.onLoaderPillClick = onLoaderPillClick;
 window.renderIcons = renderIcons;
 window.toggleImportBacklogDrawer = toggleImportBacklogDrawer;
 window.toggleTaskStepDetails = toggleTaskStepDetails;
