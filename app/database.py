@@ -23,7 +23,7 @@ _schema_ensured = False
 _initialized_users = set()
 
 POOL_MIN_CONN = int(os.environ.get("SUPABASE_POOL_MIN_CONN", "4"))
-POOL_MAX_CONN = int(os.environ.get("SUPABASE_POOL_MAX_CONN", "50"))
+POOL_MAX_CONN = int(os.environ.get("SUPABASE_POOL_MAX_CONN", "55"))
 
 # How long a connection may sit unused in the pool before it is pinged on the way out, and
 # how many dead ones a single borrow will discard before giving up. See

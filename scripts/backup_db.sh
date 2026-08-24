@@ -9,7 +9,7 @@ set -euo pipefail
 
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENV_FILE="$BASE_DIR/.env"
-BACKUP_DIR="/media/cloudbrand/sambashare/fileserver/studiamo-backups/db"
+BACKUP_DIR="/home/naes/studiamo-backups/db"
 RETENTION_DAYS=14
 
 if [ ! -f "$ENV_FILE" ]; then
@@ -40,15 +40,10 @@ TIMESTAMP="$(date +%Y-%m-%d_%H%M)"
 OUT_FILE="$BACKUP_DIR/studiamo_${TIMESTAMP}.sql.gz"
 TMP_FILE="${OUT_FILE}.part"
 
-# Supabase runs Postgres 17; Ubuntu 24.04's postgresql-client package only
-# ships pg_dump 16, which refuses to dump a newer-major-version server. Using
-# a matching pg_dump via Docker avoids adding a third-party apt repo just for
-# this one binary.
-# --network host: Supabase's direct-connection endpoint is IPv6-only, and
-# Docker's default bridge network doesn't route IPv6 even though the host
-# does. Host networking borrows the host's route instead of touching
-# /etc/docker/daemon.json (which would affect every container on this box).
-if docker run --rm --network host postgres:17-alpine pg_dump --no-owner --no-privileges "$DB_URL" | gzip > "$TMP_FILE"; then
+# Supabase runs Postgres 17; this box's apt-provided postgresql-client (18)
+# is newer than the server, which pg_dump supports fine (a newer client can
+# always dump an older server), so no Docker workaround is needed here.
+if pg_dump --no-owner --no-privileges "$DB_URL" | gzip > "$TMP_FILE"; then
     mv "$TMP_FILE" "$OUT_FILE"
     echo "$(date -Iseconds) OK backup written: $OUT_FILE ($(du -h "$OUT_FILE" | cut -f1))"
 else
