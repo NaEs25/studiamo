@@ -1,4 +1,6 @@
+import json
 import os
+import re
 import shutil
 import tempfile
 import uuid
@@ -7,10 +9,12 @@ import logging
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Optional
+from urllib.parse import quote as _urlquote
 
 import psycopg2.errors
 from fastapi import APIRouter, Form, File, UploadFile, HTTPException, Depends, Request
 from fastapi.responses import FileResponse, JSONResponse
+from jinja2 import Environment, FileSystemLoader
 from starlette.background import BackgroundTask
 
 from app import config, database, storage, ai, gamification, moderation
@@ -26,6 +30,15 @@ from app.dependencies import (
 
 router = APIRouter(prefix="/api", tags=["Settings & Backup"])
 logger = logging.getLogger("studiamo")
+
+# Standalone from the app's own Jinja2Templates (app/main.py): the export report is a static
+# file opened from disk, not served by the app, so it never uses url_for or a request context,
+# and autoescape must stay on since it renders free-text the user wrote (custom_notes, quiz
+# question text) that a stored-XSS payload could otherwise ride into the user's own browser.
+_EXPORT_TEMPLATES = Environment(
+    loader=FileSystemLoader(Path(__file__).resolve().parent.parent / "templates"),
+    autoescape=True,
+)
 
 
 def _parse_bool(val) -> bool:
@@ -976,6 +989,15 @@ _EXPORT_REDACTED_COLUMNS = {
     "granted_by",
     "note",
     "revoked_reason",
+    # Set by the app, not the user, same as the admin-set tester_access fields above.
+    "monthly_budget_usd",
+    # Identifies a different account (whoever referred this user), not this user's own record.
+    "referred_by",
+    # App-recorded UI-state timestamps, not something the user entered or produced.
+    "welcome_seen_at",
+    "reminder_7d_seen_at",
+    "reminder_1d_seen_at",
+    "expiry_seen_at",
 }
 
 
@@ -988,11 +1010,282 @@ def _json_safe(value):
     return str(value)
 
 
+# Vocabulary mirrors the app's own labels (videos.js, settings.js) so the export doesn't
+# introduce a second wording for the same states.
+_IMPORTANCE_LABELS = {
+    1: "Reference Material (1 Star)",
+    2: "Basic Concepts (2 Stars)",
+    3: "Standard Study (3 Stars)",
+    4: "High Detail (4 Stars)",
+    5: "Crucial Retention (5 Stars)",
+}
+_VIDEO_STATUS_LABELS = {"ready": "Ready", "processing": "Importing", "failed": "Import Failed"}
+
+
+def _fmt_seconds(seconds):
+    """Formats a video-offset in seconds as h:mm:ss / m:ss, or None if unavailable."""
+    try:
+        total = int(seconds)
+    except (TypeError, ValueError):
+        return None
+    m, s = divmod(max(total, 0), 60)
+    h, m = divmod(m, 60)
+    return f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"
+
+
+_STUDIO_TIMESTAMP_RE = re.compile(r"\{\{ts=(\d+)\}\}")
+
+
+def _render_export_notes(text: str) -> str:
+    """custom_notes is Markdown (see videos.js htmlToMarkdown/renderMarkdownSafe) with one
+    non-standard extension: a {{ts=N}} chip inserted by the "add timestamp" button, which
+    the app's own renderer turns into a clickable [m:ss]. Markdown itself reads fine as
+    plain text, but that marker means nothing outside the app, so it's swapped for the same
+    label the app displays rather than being exported as-is."""
+    return _STUDIO_TIMESTAMP_RE.sub(lambda m: f"[{_fmt_seconds(m.group(1))}]", text)
+
+
+def _prepare_export_video(row: dict) -> dict:
+    video = dict(row)
+    video["status_label"] = _VIDEO_STATUS_LABELS.get(
+        video.get("status"), (video.get("status") or "Unknown").capitalize()
+    )
+    video["importance_label"] = _IMPORTANCE_LABELS.get(
+        video.get("importance_rating"), f"{video.get('importance_rating')} Star(s)"
+    )
+    video["outline"] = [
+        {**o, "time_label": _fmt_seconds(o.get("timestamp_seconds"))}
+        for o in (video.get("outline") or []) if isinstance(o, dict)
+    ]
+    fact_check = video.get("fact_check") or {}
+    if isinstance(fact_check, dict):
+        fact_check = dict(fact_check)
+        for key in ("disputed_claims", "verified_claims"):
+            fact_check[key] = [
+                {**c, "time_label": _fmt_seconds(c.get("timestamp_seconds"))}
+                for c in (fact_check.get(key) or []) if isinstance(c, dict)
+            ]
+    video["fact_check"] = fact_check
+    video["summary"] = video.get("summary") or []
+    return video
+
+
+def _prepare_export_question(item: dict) -> dict:
+    q = dict(item)
+    q["time_label"] = _fmt_seconds(q.get("timestamp_seconds"))
+    options = q.get("options")
+    correct_index = q.get("correct_index")
+    if isinstance(options, list) and isinstance(correct_index, int) and 0 <= correct_index < len(options):
+        q["correct_option_text"] = options[correct_index]
+    return q
+
+
+def _prepare_export_quiz(row: dict) -> dict:
+    """questions_json holds only the questions active for the quiz's *current* SRS stage;
+    concept_pool (when present) is the complete set the AI generated across every stage, each
+    item carrying its own `stage`. Older quizzes predate concept_pool and have it empty, so
+    they fall back to questions_json as their only stage."""
+    quiz = dict(row)
+    current_stage = quiz.get("srs_stage") or 0
+    quiz["stage_label"] = f"Stage {current_stage}"
+
+    pool = [item for item in (quiz.get("concept_pool") or []) if isinstance(item, dict)]
+    if pool:
+        by_stage: dict = {}
+        for item in pool:
+            by_stage.setdefault(item.get("stage") or 0, []).append(_prepare_export_question(item))
+        stages = [
+            {"stage": stage, "stage_label": f"Stage {stage}", "is_current": stage == current_stage, "questions": qs}
+            for stage, qs in sorted(by_stage.items(), key=lambda kv: kv[0])
+        ]
+    else:
+        current_questions = [
+            _prepare_export_question(item) for item in (quiz.get("questions_json") or []) if isinstance(item, dict)
+        ]
+        stages = (
+            [{"stage": current_stage, "stage_label": quiz["stage_label"], "is_current": True, "questions": current_questions}]
+            if current_questions else []
+        )
+
+    quiz["stages"] = stages
+    quiz["questions"] = [q for stage in stages for q in stage["questions"]]
+    return quiz
+
+
+def _build_export_report_context(export: dict) -> dict:
+    """Reshapes the already-redacted export["tables"] dict (see export_user_data) into
+    goals -> videos -> quiz nesting for the human-readable report. Never re-queries the
+    database, so a column added to _EXPORT_REDACTED_COLUMNS stays redacted here too.
+
+    Deliberately narrower than the full export: this report is the readable layer for the
+    goals/videos/quizzes someone actually wants to revisit, not a rendering of every table.
+    Telemetry (ai_usage_logs, xp_events), quiz attempt history, recommendations, import
+    history, and tester access stay out of the HTML; they're still complete in data.json.
+    """
+    tables = export["tables"]
+
+    goals_by_id = {g["id"]: dict(g, videos=[], review_quizzes=[]) for g in tables.get("goals", [])}
+
+    quizzes_by_video_id = {}
+    for row in tables.get("quizzes", []):
+        quiz = _prepare_export_quiz(row)
+        if quiz.get("quiz_type") == "goal":
+            goal = goals_by_id.get(quiz.get("goal_id"))
+            if goal is not None:
+                goal["review_quizzes"].append(quiz)
+        elif quiz.get("video_id") is not None:
+            quizzes_by_video_id[quiz["video_id"]] = quiz
+
+    uncategorized_videos = []
+    for row in tables.get("videos", []):
+        video = _prepare_export_video(row)
+        video["quiz"] = quizzes_by_video_id.get(video["id"])
+        goal = goals_by_id.get(video.get("learning_goal_id"))
+        (goal["videos"] if goal is not None else uncategorized_videos).append(video)
+
+    goals = sorted(
+        goals_by_id.values(),
+        key=lambda g: (bool(g.get("is_archived")), g.get("order_index") or 0, g.get("id") or 0),
+    )
+
+    profile = dict((tables.get("user_profile") or [{}])[0])
+    try:
+        profile["badges"] = json.loads(profile.get("badges") or "[]")
+    except (TypeError, ValueError):
+        profile["badges"] = []
+
+    return {
+        "exported_at": export["exported_at"],
+        "username": export["username"],
+        "profile": profile,
+        "goals": goals,
+        "uncategorized_videos": uncategorized_videos,
+    }
+
+
+_EXPORT_NAME_STRIP_RE = re.compile(r'[\\/:*?"<>|\x00-\x1f]')
+
+
+def _safe_export_name(name: Optional[str], fallback: str) -> str:
+    """Turns a free-text title into a filesystem-safe name for use as a zip folder/file
+    name. Titles are user-authored and unbounded, so this must never let a title escape
+    its intended directory (stripped path separators) or collide with reserved names."""
+    name = _EXPORT_NAME_STRIP_RE.sub(" ", name or "")
+    name = re.sub(r"\s+", " ", name).strip(" .")
+    return name[:80].strip(" .,;:-([{") or fallback
+
+
+def _dedupe_export_name(base: str, seen: dict) -> str:
+    count = seen.get(base, 0)
+    seen[base] = count + 1
+    return base if count == 0 else f"{base} ({count})"
+
+
+def _export_href(*parts: str) -> str:
+    """Zip-relative href for an <a> tag: each path segment percent-encoded on its own so a
+    literal '/' inside a title can't be mistaken for a path separator."""
+    return "/".join(_urlquote(p, safe="") for p in parts)
+
+
+def _assign_video_export_paths(video: dict, parent_dir_parts: list, seen: dict) -> None:
+    video["dir_name"] = _dedupe_export_name(_safe_export_name(video.get("title"), f"video-{video['id']}"), seen)
+    dir_parts = parent_dir_parts + [video["dir_name"]]
+    video["export_dir"] = "/".join(dir_parts)
+    video["yt_data_href"] = _export_href(*dir_parts, "YT data.html")
+    video["back_href"] = "../" * len(dir_parts) + "index.html"
+
+    quiz = video.get("quiz")
+    if quiz and quiz.get("questions"):
+        video["quiz_href"] = _export_href(*dir_parts, "quizzes", "quiz.html")
+        quiz["back_href"] = "../" * (len(dir_parts) + 1) + "index.html"
+    else:
+        video["quiz_href"] = None
+
+    # notes.txt, not notes.html: it's the user's own words verbatim, not app-generated
+    # content, so it gets no HTML wrapper or escaping between them and what they wrote.
+    video["notes_href"] = _export_href(*dir_parts, "notes.txt") if video.get("custom_notes") else None
+
+
+def _assign_export_paths(context: dict) -> None:
+    """Assigns filesystem-safe folder names and relative hrefs so the export can be laid
+    out as goals/<goal>/<video>/{files, quizzes, YT data.html} rather than one combined
+    page. Mutates the goal/video/quiz dicts in context in place."""
+    goal_names_seen = {}
+    for goal in context["goals"]:
+        goal["dir_name"] = _dedupe_export_name(_safe_export_name(goal.get("title"), f"goal-{goal['id']}"), goal_names_seen)
+        goal_dir_parts = ["goals", goal["dir_name"]]
+        goal["export_dir"] = "/".join(goal_dir_parts)
+
+        review_names_seen = {}
+        for rq in goal["review_quizzes"]:
+            rq["export_name"] = _dedupe_export_name("review-quiz", review_names_seen) + ".html"
+            rq["href"] = _export_href(*goal_dir_parts, rq["export_name"])
+            rq["back_href"] = "../" * len(goal_dir_parts) + "index.html"
+
+        video_names_seen = {}
+        for video in goal["videos"]:
+            _assign_video_export_paths(video, goal_dir_parts, video_names_seen)
+
+    video_names_seen = {}
+    for video in context["uncategorized_videos"]:
+        _assign_video_export_paths(video, ["uncategorized"], video_names_seen)
+
+
+def _write_export_tree(zf: zipfile.ZipFile, context: dict, items_dir: Path) -> None:
+    """Writes the readable layer as an actual folder tree: goals/<goal>/<video>/ with
+    files/, quizzes/, and "YT data.html" nested per video. data.json (written separately,
+    unchanged) stays the complete raw copy regardless of how this tree is organized."""
+    zf.writestr("index.html", _EXPORT_TEMPLATES.get_template("export/index.html").render(context))
+
+    written_docs = set()
+
+    def write_video(video: dict) -> None:
+        zf.writestr(
+            f"{video['export_dir']}/YT data.html",
+            _EXPORT_TEMPLATES.get_template("export/video.html").render(video=video),
+        )
+        quiz = video.get("quiz")
+        if quiz and quiz.get("questions"):
+            zf.writestr(
+                f"{video['export_dir']}/quizzes/quiz.html",
+                _EXPORT_TEMPLATES.get_template("export/quiz.html").render(quiz=quiz, title=video.get("title")),
+            )
+        if video.get("custom_notes"):
+            zf.writestr(f"{video['export_dir']}/notes.txt", _render_export_notes(video["custom_notes"]))
+        if items_dir.is_dir():
+            for doc in sorted(items_dir.glob(f"doc_{video['id']}.*")):
+                zf.write(doc, arcname=f"{video['export_dir']}/files/{doc.name}")
+                written_docs.add(doc.name)
+
+    for goal in context["goals"]:
+        for rq in goal["review_quizzes"]:
+            zf.writestr(
+                f"{goal['export_dir']}/{rq['export_name']}",
+                _EXPORT_TEMPLATES.get_template("export/quiz.html").render(
+                    quiz=rq, title=f"{goal.get('title')} (goal review)"
+                ),
+            )
+        for video in goal["videos"]:
+            write_video(video)
+
+    for video in context["uncategorized_videos"]:
+        write_video(video)
+
+    # Safety net: an uploaded document that didn't match any video above (e.g. its video
+    # row was deleted separately) still ships rather than silently vanishing from the export.
+    if items_dir.is_dir():
+        for f in sorted(items_dir.iterdir()):
+            if f.is_file() and f.name not in written_docs:
+                zf.write(f, arcname=f"files/{f.name}")
+
+
 @router.get("/user/export")
 @limiter.limit("5/minute")
 async def export_user_data(request: Request, username: str = Depends(get_active_username)):
-    """Downloads everything stored about this account as a ZIP: one JSON file
-    per table plus every uploaded document.
+    """Downloads everything stored about this account as a ZIP: a human-readable folder
+    tree (goals/<goal>/<video>/{files, quizzes, YT data.html}), the raw data.json (one
+    entry per table, unaffected by how the tree above is organized), and an index.html
+    entry point.
 
     Exported tables are read from database._USER_DATA_TABLES_DELETE_ORDER, the
     same list account deletion uses, so anything the app stores about a user is
@@ -1022,21 +1315,21 @@ async def export_user_data(request: Request, username: str = Depends(get_active_
     finally:
         conn.close()
 
+    report_context = _build_export_report_context(export)
+    _assign_export_paths(report_context)
+
     # Built in a temp dir rather than in memory: an export includes every
     # uploaded document, which can be far larger than the 20 MB per-file cap.
     tmp_dir = Path(tempfile.mkdtemp(prefix="studiamo_export_"))
     zip_path = tmp_dir / f"studiamo-export-{username}.zip"
     try:
         with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+            items_dir = config.USERS_DIR / user_uuid / "items"
+            _write_export_tree(zf, report_context, items_dir)
             zf.writestr(
                 "data.json",
                 _json.dumps(export, indent=2, ensure_ascii=False, default=_json_safe),
             )
-            items_dir = config.USERS_DIR / user_uuid / "items"
-            if items_dir.is_dir():
-                for f in sorted(items_dir.iterdir()):
-                    if f.is_file():
-                        zf.write(f, arcname=f"files/{f.name}")
     except Exception:
         shutil.rmtree(tmp_dir, ignore_errors=True)
         raise
