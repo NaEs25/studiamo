@@ -312,14 +312,8 @@ def require_dev_tools_enabled() -> None:
 _admin_signer = URLSafeSerializer(SECRET_KEY, salt="bugs-admin-v1")
 ADMIN_COOKIE_NAME = "studiamo_admin"
 
-# Previous name for the same cookie, still read so the rename does not sign anyone out.
-# Both are cleared on logout. Safe to delete once no live browser holds one.
-LEGACY_ADMIN_COOKIE_NAME = "bugs_admin"
-
-# app_settings key holding the shared admin password. The old key is read as a fallback so
-# this keeps working before scripts/set_admin_password.py has been re-run.
+# app_settings key holding the shared admin password (bcrypt, set via scripts/set_admin_password.py).
 ADMIN_PASSWORD_SETTING_KEY = "admin_password_hash"
-ADMIN_PASSWORD_LEGACY_KEY = "admin_bug_password_hash"
 
 
 def make_admin_token() -> str:
@@ -333,18 +327,13 @@ def is_admin(request: Request) -> bool:
 
     This gate is no longer only about bug reports: the same password opens the Users page
     in the private admin cockpit, which lists accounts by email."""
-    token = (request.cookies.get(ADMIN_COOKIE_NAME)
-             or request.cookies.get(LEGACY_ADMIN_COOKIE_NAME))
+    token = request.cookies.get(ADMIN_COOKIE_NAME)
     if not token:
         return False
     try:
         return _admin_signer.loads(token) == "bugs-admin"
     except BadSignature:
         return False
-
-
-# Old name, kept so nothing importing it breaks mid-rename.
-is_bugs_admin = is_admin
 
 
 def require_admin_auth(request: Request) -> None:

@@ -33,9 +33,7 @@ from app.dependencies import (
     require_admin_auth,
     verify_password,
     ADMIN_COOKIE_NAME,
-    LEGACY_ADMIN_COOKIE_NAME,
     ADMIN_PASSWORD_SETTING_KEY,
-    ADMIN_PASSWORD_LEGACY_KEY,
 )
 
 router = APIRouter(tags=["Bugs"])
@@ -129,13 +127,9 @@ async def admin_login(request: Request, password: str = Form(...)):
     """Checks the shared admin password (set via scripts/set_admin_password.py) and, on
     success, sets the signed admin cookie.
 
-    Accepts both bcrypt and the legacy unsalted SHA-256 this used to store, and writes the
-    bcrypt replacement back on a successful legacy match, so the stored credential upgrades
-    itself on the next login rather than needing a migration. That matters more than it used
-    to: this password no longer gates only bug reports, it also opens the Users page in the
+    This password no longer gates only bug reports, it also opens the Users page in the
     admin cockpit, which lists accounts by email."""
-    expected_hash = (database.get_app_setting(ADMIN_PASSWORD_SETTING_KEY)
-                     or database.get_app_setting(ADMIN_PASSWORD_LEGACY_KEY))
+    expected_hash = database.get_app_setting(ADMIN_PASSWORD_SETTING_KEY)
     if not expected_hash:
         raise HTTPException(status_code=503, detail="Admin password has not been configured yet.")
 
@@ -165,10 +159,9 @@ async def admin_login(request: Request, password: str = Form(...)):
 
 @router.post("/api/dev/bugs/admin/logout")
 async def admin_logout():
-    """Clears the admin cookie, both the current name and the one it replaced."""
+    """Clears the admin cookie."""
     response = JSONResponse({"status": "success"})
     response.delete_cookie(key=ADMIN_COOKIE_NAME, path="/")
-    response.delete_cookie(key=LEGACY_ADMIN_COOKIE_NAME, path="/")
     return response
 
 
