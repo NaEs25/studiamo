@@ -23,26 +23,28 @@
 
 ## 🛠 Status & Architecture Note
 
-Studiamo is an agile project built and shipped in a rapid 4-week sprint using modern AI-assisted workflows. 
-The core focus has been speed, working features, and getting an active recall engine into learners' hands. 
+Studiamo is in beta. If you're using the cloud version, bug reports through the in-app bug
+button are appreciated. 
 
 Refactoring, optimizations, and PRs are always welcome!
 
-
- **[Screenshot: Dashboard, study goals with video/PDF cards grouped by learning goal, SRS stage badges visible]**
+<p align="center">
+  <img src=".github/screenshots/Artboard1.png" alt="Importing a video: importance rating, learning goal association, and the resulting card with its SRS stage badge" width="800">
+</p>
 
 ## What it does
 
 1. **Import** a YouTube video, PDF, or pasted text.
-2. **AI analysis** (Google Gemini) extracts a summary, matches it to a learning goal, and
+2. **AI analysis** (Google Gemini) extracts a summary and
    generates active-recall quiz questions at five difficulty stages.
 3. **Spaced scheduling** assigns each card a review date on an Ebbinghaus-inspired
    interval, so review happens right before you'd naturally forget it.
 4. **Review** in the web app, or get a Telegram nudge when a card comes due.
-5. **Fact-checking** cross-references generated claims so you're not memorizing an AI
-   hallucination.
+5. **Fact-checking** cross-references video claims against common consensus, flagging anything disputed.
 
-> **[Screenshot: Study Studio, video/PDF pane on the left, synced notes and flashcard generation on the right]**
+<p align="center">
+  <img src=".github/screenshots/Artboard3.png" alt="Study Studio: video pane on the left, synced notes and key takeaways on the right" width="800">
+</p>
 
 ## Features
 
@@ -53,28 +55,30 @@ Refactoring, optimizations, and PRs are always welcome!
   repeated.
 - **AI fact-verification**: disputed claims in generated content are flagged with the
   actual consensus and a severity rating.
-- **Telegram review bot**: get a deep-linked notification when a card is due, review it
-  from your phone.
+- **Telegram review bot**: get a notification with a link back into the app when a card
+  is due, review it from your phone.
 - **Gamification**: XP, levels, streaks, and a cross-user leaderboard.
-- **PWA**: installable, works offline for already-loaded content.
+- **PWA**: installable, app shell loads offline; study content requires a connection.
 - **No data lock-in**: export your data (flashcards, stats, documents) as a structured
   archive at any time.
 
-> **[Screenshot: Quiz/flashcard review, a flipped flashcard showing the AI-generated answer and grading buttons]**
+<p align="center">
+  <img src=".github/screenshots/Artboard2.png" alt="Quiz and flashcard review: multiple choice, free-recall flashcard, and graded answer with I Forgot / I Remembered buttons" width="800">
+</p>
 
 ## Self-hosted or cloud, your choice
 
 Studiamo runs from a single codebase in two modes, controlled by the `APP_MODE`
 environment variable.
 
-| | Self-Hosted (`APP_MODE=selfhosted`) | Cloud (`APP_MODE=cloud`) |
-|---|---|---|
-| Cost | Free, open source | Managed subscription |
-| Auth | Local username + password | Google Sign-In |
-| Gemini API key | Bring your own (free tier from Google AI Studio works) | Included |
-| Database | Your own PostgreSQL (Docker Compose provided) | Managed |
-| Telegram | Bring your own bot via `@BotFather` | Shared managed bot |
-| Data | 100% yours, on your own infrastructure | Hosted for you |
+|                | Self-Hosted (`APP_MODE=selfhosted`)                    | Cloud (`APP_MODE=cloud`) |
+| -------------- | ------------------------------------------------------ | ------------------------ |
+| Cost           | Free, open source                                      | Managed subscription     |
+| Auth           | Local username + password                              | Google Sign-In           |
+| Gemini API key | Bring your own (free tier from Google AI Studio works) | Included                 |
+| Database       | Your own PostgreSQL (Docker Compose provided)          | Managed                  |
+| Telegram       | Bring your own bot via `@BotFather`                    | Shared managed bot       |
+| Data           | 100% yours, on your own infrastructure                 | Hosted for you           |
 
 ## Quickstart (self-hosted)
 
@@ -107,7 +111,6 @@ else works, recommendations just stay empty, see
 - [`SELFHOSTING.md`](SELFHOSTING.md): self-hosting setup, Docker Compose, backups, and configuration.
 - [`CONTRIBUTING.md`](CONTRIBUTING.md): dev environment setup, schema conventions, and PR guidelines.
 - [`SECURITY.md`](SECURITY.md): how to report a vulnerability.
-
 
 ## Tech stack
 

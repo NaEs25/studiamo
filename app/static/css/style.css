@@ -765,9 +765,42 @@ html[data-standalone="true"] .app-overlay {
 /* The quiz overlay pins its header at the true top of the modal (see index.html) instead of
    centering the whole header+card block like every other .app-overlay, so unlike them it
    doesn't get free clearance from vertical centering - its first frame needs real padding,
-   not just scroll clearance. */
+   not just scroll clearance.
+
+   Below the sm breakpoint, that's just safe-area clearance (only in installed standalone mode
+   - --quiz-safe-top defaults to 0 and is only overridden to the real inset below) plus the
+   plain 1rem baseline: phones stay exactly top-aligned, unchanged.
+
+   At sm and above, an "optical centering" offset is added on top: it treats the header+card
+   block as if it were a fixed ~400px tall and centers *that* in the viewport, rather than the
+   block's own real height. Real height was tried first (a flex-1 + items-center wrapper) and
+   rejected: it re-centers on every height change - flipping to the answer side, a
+   longer/shorter question - which reads as the card jumping around. A constant sidesteps that
+   entirely: the offset can only change when the viewport itself resizes, never when the quiz's
+   content does.
+
+   The sm gate matters on its own, separately from the constant: viewport *height* alone can't
+   tell a phone from a small desktop window, since they overlap (a compact browser window is
+   often no taller than a phone in portrait) - but width reliably can, since even a small
+   desktop window is far wider than any phone. Gating on it is what lets the offset below be
+   tuned for "definitely not a phone" without also degrading small phones toward the same
+   behavior.
+
+   100dvh over 100vh so iOS Safari's collapsing/expanding address bar doesn't throw the
+   calculation off by the height it temporarily reserves. */
+#overlay-quiz {
+    --quiz-safe-top: 0px;
+}
 html[data-standalone="true"] #overlay-quiz {
-    padding-top: calc(1rem + var(--safe-top));
+    --quiz-safe-top: var(--safe-top);
+}
+#overlay-quiz {
+    padding-top: calc(var(--quiz-safe-top) + 1rem);
+}
+@media (min-width: 640px) {
+    #overlay-quiz {
+        padding-top: calc(var(--quiz-safe-top) + max(1rem, (100dvh - 400px) / 2));
+    }
 }
 
 :focus-visible {
