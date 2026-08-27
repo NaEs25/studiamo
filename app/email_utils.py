@@ -392,7 +392,7 @@ def send_promotion_email(recipient_email: str) -> bool:
                 Good news, a spot just opened up and your Studiamo account is now active.
                 Sign in with Google whenever you're ready.
             </p>
-            <a href="https://studiamo.cloud/login" style="display: inline-block; background: #d97706; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 14px; padding: 12px 24px; border-radius: 12px; margin: 8px 0 20px;">Sign in to Studiamo</a>
+            <a href="https://studiamo.cloud/login?src=waitlist_promotion" style="display: inline-block; background: #d97706; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 14px; padding: 12px 24px; border-radius: 12px; margin: 8px 0 20px;">Sign in to Studiamo</a>
             <div style="font-size: 12px; color: #a8a29e; margin-top: 28px; text-align: center; border-top: 1px solid #e7dfd3; padding-top: 20px; line-height: 1.6;">
                 © 2026 Studiamo Learning System<br>
                 <a href="{unsubscribe_url(recipient_email)}" style="color: #a8a29e; text-decoration: underline;">Unsubscribe</a>
@@ -404,7 +404,7 @@ def send_promotion_email(recipient_email: str) -> bool:
     text_content = (
         "Your spot is ready!\n\n"
         "A spot just opened up and your Studiamo account is now active. "
-        "Sign in at https://studiamo.cloud/login whenever you're ready.\n\n"
+        "Sign in at https://studiamo.cloud/login?src=waitlist_promotion whenever you're ready.\n\n"
         f"Unsubscribe: {unsubscribe_url(recipient_email)}\n"
     )
     return _send_via_resend(recipient_email, subject, html_content, text_content, "PROMOTION EMAIL")
