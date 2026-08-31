@@ -182,8 +182,7 @@ class YouTubeTaskProcessor(IImportTaskProcessor):
         t_meta = time.time()
         fetch_metadata_sec = round(t_meta - t0, 2)
 
-        user_config = config.load_user_config(username)
-        q_counts = get_question_counts(user_config)
+        q_counts = get_question_counts(username)
         question_count = q_counts.get(5, 5)
 
         update_stage_fn("Step 2/2: Gemini Analyzing Video & Generating Quizzes...")
@@ -380,8 +379,7 @@ class DocumentTaskProcessor(IImportTaskProcessor):
         finally:
             conn_goals.close()
 
-        user_config = config.load_user_config(username)
-        q_counts = get_question_counts(user_config)
+        q_counts = get_question_counts(username)
         question_count = q_counts.get(5, 5)
 
         update_stage_fn("Step 3/3: AI Generating 25 Quiz Items...")
@@ -479,8 +477,7 @@ class NotesTaskProcessor(IImportTaskProcessor):
         finally:
             conn_goals.close()
 
-        user_config = config.load_user_config(username)
-        q_counts = get_question_counts(user_config)
+        q_counts = get_question_counts(username)
         question_count = q_counts.get(5, 5)
 
         word_count = len(text_content.split())

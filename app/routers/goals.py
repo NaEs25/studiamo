@@ -6,7 +6,7 @@ from typing import Optional
 from fastapi import APIRouter, Form, HTTPException, Depends, Query
 from fastapi.responses import JSONResponse
 
-from app import config, database, storage, ai, youtube
+from app import database, storage, ai, youtube
 from app.dependencies import (
     get_active_username,
     get_srs_intervals,
@@ -575,7 +575,6 @@ async def generate_goal_practice_quiz(
         raise HTTPException(status_code=400, detail="No video summaries or description available for this goal.")
 
 
-    user_config = config.load_user_config(username)
     intervals = get_srs_intervals(cursor, user_uuid=user_uuid)
     multipliers = get_srs_multipliers(username)
     multiplier = multipliers.get(3, 1.5)

@@ -344,14 +344,33 @@ def require_admin_auth(request: Request) -> None:
 
 
 def get_srs_multipliers(username: str) -> dict:
-    """Returns SRS interval multipliers based on user configuration."""
-    user_config = config.load_user_config(username)
+    """Returns this user's per-importance SRS review-interval multipliers from srs_settings,
+    defaulting fields that are NULL (never customized) or the row itself (no srs_settings row
+    yet). Opens its own connection rather than taking a cursor: some callers (e.g.
+    import_manager, ahead of the AI call) need this before they have a cursor of their own."""
+    from app.config import DEFAULT_SRS_MULTIPLIERS
+    conn = database.get_db_connection(username)
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """SELECT srs_multiplier_1, srs_multiplier_2, srs_multiplier_3, srs_multiplier_4, srs_multiplier_5
+                 FROM srs_settings WHERE user_uuid = %s;""",
+            (conn.user_uuid,)
+        )
+        row = cursor.fetchone() or {}
+    finally:
+        conn.close()
+
+    def val(key, default):
+        v = row.get(key)
+        return float(v) if v is not None else default
+
     return {
-        5: float(user_config.get("SRS_MULTIPLIER_5") if user_config.get("SRS_MULTIPLIER_5") is not None else user_config.get("srs_mult_5", 0.7)),
-        4: float(user_config.get("SRS_MULTIPLIER_4") if user_config.get("SRS_MULTIPLIER_4") is not None else user_config.get("srs_mult_4", 1.0)),
-        3: float(user_config.get("SRS_MULTIPLIER_3") if user_config.get("SRS_MULTIPLIER_3") is not None else user_config.get("srs_mult_3", 1.5)),
-        2: float(user_config.get("SRS_MULTIPLIER_2") if user_config.get("SRS_MULTIPLIER_2") is not None else user_config.get("srs_mult_2", 2.5)),
-        1: float(user_config.get("SRS_MULTIPLIER_1") if user_config.get("SRS_MULTIPLIER_1") is not None else user_config.get("srs_mult_1", 4.0))
+        1: val("srs_multiplier_1", DEFAULT_SRS_MULTIPLIERS[0]),
+        2: val("srs_multiplier_2", DEFAULT_SRS_MULTIPLIERS[1]),
+        3: val("srs_multiplier_3", DEFAULT_SRS_MULTIPLIERS[2]),
+        4: val("srs_multiplier_4", DEFAULT_SRS_MULTIPLIERS[3]),
+        5: val("srs_multiplier_5", DEFAULT_SRS_MULTIPLIERS[4]),
     }
 
 
@@ -369,14 +388,33 @@ def adjust_next_review(next_review: datetime, pref_hour: int) -> datetime:
     return adjusted_local - utc_offset
 
 
-def get_question_counts(user_config: dict) -> dict:
-    """Returns question counts per importance rating, strictly capped at 15 max per rating level."""
+def get_question_counts(username: str) -> dict:
+    """Returns this user's per-importance quiz question counts from srs_settings, strictly
+    capped at 15 max per rating level. Same self-contained-connection rationale as
+    get_srs_multipliers."""
+    from app.config import DEFAULT_QUESTION_COUNTS
+    conn = database.get_db_connection(username)
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """SELECT question_count_1, question_count_2, question_count_3, question_count_4, question_count_5
+                 FROM srs_settings WHERE user_uuid = %s;""",
+            (conn.user_uuid,)
+        )
+        row = cursor.fetchone() or {}
+    finally:
+        conn.close()
+
+    def val(key, default):
+        v = row.get(key)
+        return int(v) if v is not None else default
+
     raw = {
-        1: int(user_config.get("QUESTION_COUNT_1") if user_config.get("QUESTION_COUNT_1") is not None else user_config.get("question_count_1", 2)),
-        2: int(user_config.get("QUESTION_COUNT_2") if user_config.get("QUESTION_COUNT_2") is not None else user_config.get("question_count_2", 3)),
-        3: int(user_config.get("QUESTION_COUNT_3") if user_config.get("QUESTION_COUNT_3") is not None else user_config.get("question_count_3", 5)),
-        4: int(user_config.get("QUESTION_COUNT_4") if user_config.get("QUESTION_COUNT_4") is not None else user_config.get("question_count_4", 8)),
-        5: int(user_config.get("QUESTION_COUNT_5") if user_config.get("QUESTION_COUNT_5") is not None else user_config.get("question_count_5", 12))
+        1: val("question_count_1", DEFAULT_QUESTION_COUNTS[0]),
+        2: val("question_count_2", DEFAULT_QUESTION_COUNTS[1]),
+        3: val("question_count_3", DEFAULT_QUESTION_COUNTS[2]),
+        4: val("question_count_4", DEFAULT_QUESTION_COUNTS[3]),
+        5: val("question_count_5", DEFAULT_QUESTION_COUNTS[4]),
     }
     return {k: min(15, max(1, v)) for k, v in raw.items()}
 
@@ -500,6 +538,53 @@ def get_srs_intervals(cursor, user_uuid: Optional[str] = None) -> list:
                 ]
             return [row[0], row[1], row[2], row[3], row[4]]
     return DEFAULT_SRS_INTERVALS
+
+
+def get_srs_caps_and_repetition(cursor, user_uuid: Optional[str] = None) -> dict:
+    """Fetches this user's importance-based stage-cap and stage-5-repetition settings from
+    srs_settings, defaulting fields that are NULL (never customized) or the row itself
+    (no srs_settings row yet). Both features live in the same table as the stage day
+    intervals (see get_srs_intervals) but are read separately since most callers need only
+    one or the other."""
+    from app.config import (DEFAULT_SRS_CAPS, DEFAULT_ENABLE_STAGE_5_REPETITION,
+                             DEFAULT_STAGE_5_REPEAT_INTERVAL)
+    row = {}
+    if user_uuid:
+        cursor.execute(
+            """SELECT cap_stages_by_importance, srs_cap_1, srs_cap_2, srs_cap_3, srs_cap_4, srs_cap_5,
+                      enable_stage_5_repetition, stage_5_repeat_interval
+                 FROM srs_settings WHERE user_uuid = %s;""",
+            (user_uuid,)
+        )
+        row = cursor.fetchone() or {}
+
+    def val(key, default):
+        v = row.get(key)
+        return v if v is not None else default
+
+    return {
+        "cap_by_importance": bool(val("cap_stages_by_importance", False)),
+        "caps": {
+            1: val("srs_cap_1", DEFAULT_SRS_CAPS[0]),
+            2: val("srs_cap_2", DEFAULT_SRS_CAPS[1]),
+            3: val("srs_cap_3", DEFAULT_SRS_CAPS[2]),
+            4: val("srs_cap_4", DEFAULT_SRS_CAPS[3]),
+            5: val("srs_cap_5", DEFAULT_SRS_CAPS[4]),
+        },
+        "enable_stage_5_repetition": bool(val("enable_stage_5_repetition", DEFAULT_ENABLE_STAGE_5_REPETITION)),
+        "stage_5_repeat_interval": val("stage_5_repeat_interval", DEFAULT_STAGE_5_REPEAT_INTERVAL),
+    }
+
+
+def compute_max_stages(cap_by_importance: bool, caps: dict, importance: int, num_stages: int) -> int:
+    """Highest SRS stage a quiz with this importance rating can reach for this user:
+    num_stages normally, or the user's configured per-importance cap when stage capping
+    is enabled. `caps` is keyed 1-5 (importance_rating), as returned by
+    get_srs_caps_and_repetition()["caps"]."""
+    if not cap_by_importance:
+        return num_stages
+    imp = importance if importance in caps else 3
+    return max(1, min(caps.get(imp, num_stages), num_stages))
 
 
 def get_preferred_hour(cursor, user_uuid: Optional[str] = None) -> int:

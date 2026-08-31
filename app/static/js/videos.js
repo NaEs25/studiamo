@@ -679,6 +679,7 @@ function renderVideoCard(video, quizzes, goals) {
         quizzes.find(q => String(q.video_id) === String(video.id))
     );
     const srsStage = activeQuiz ? activeQuiz.srs_stage : 0;
+    const isMastered = activeQuiz ? !!activeQuiz.mastered : false;
     const isPaused = video.is_paused ? true : false;
     
     const username = typeof activeUsername !== 'undefined' ? activeUsername : 'default';
@@ -733,8 +734,8 @@ function renderVideoCard(video, quizzes, goals) {
     const stageBadgeHTML = isTemporaryVideo(video)
         ? `<span class="text-[9px] bg-amber-500/15 border border-amber-500/30 text-amber-900 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider flex items-center space-x-1" title="Preview mode: expires in ~24h unless imported"><i data-lucide="clock" class="w-3 h-3 text-amber-700"></i><span>24h Preview</span></span>`
         : (isPaused
-            ? `<span class="text-[9px] bg-stone-100 border border-stone-200 text-stone-600 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider flex items-center space-x-1" title="SRS Review Intervals Paused"><i data-lucide="pause-circle" class="w-3 h-3 text-stone-500"></i><span>Stage ${srsStage} (Paused)</span></span>`
-            : `<span class="text-[9px] bg-amber-100 border border-amber-200 text-amber-800 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Stage ${srsStage}</span>`);
+            ? `<span class="text-[9px] bg-stone-100 border border-stone-200 text-stone-600 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider flex items-center space-x-1" title="SRS Review Intervals Paused"><i data-lucide="pause-circle" class="w-3 h-3 text-stone-500"></i><span>${isMastered ? 'Mastered' : `Stage ${srsStage}`} (Paused)</span></span>`
+            : `<span class="text-[9px] bg-amber-100 border border-amber-200 text-amber-800 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">${isMastered ? 'Mastered' : `Stage ${srsStage}`}</span>`);
 
     
     const isWatchlist = video.is_watchlist === 1 || video.is_watchlist === true;
@@ -1294,7 +1295,7 @@ async function openVideoStatsModal(id) {
         }
         
         if (stageEl) {
-            stageEl.textContent = `Stage ${stats.srs_stage ?? 0}`;
+            stageEl.textContent = stats.mastered ? 'Mastered' : `Stage ${stats.srs_stage ?? 0}`;
         }
         
         if (reviewEl) {
@@ -1364,6 +1365,7 @@ function renderVideoStatsAttempts(container, attempts) {
                 id: att.id,
                 quiz_id: att.quiz_id,
                 srs_stage: att.srs_stage,
+                mastered: att.mastered,
                 lastTime: t,
                 created_at: att.created_at,
                 attempts: [att]
@@ -1428,7 +1430,7 @@ function renderVideoStatsAttempts(container, attempts) {
                 <button type="button" onclick="toggleVideoStatSession(${session.id})" class="w-full p-3 flex justify-between items-center text-left hover:bg-stone-100 transition focus:outline-none">
                     <div class="min-w-0 flex-grow pr-2 space-y-1">
                         <div class="flex items-center space-x-2">
-                            <span class="text-[9px] bg-amber-100 border border-amber-200 text-amber-800 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Stage ${session.srs_stage ?? 0}</span>
+                            <span class="text-[9px] bg-amber-100 border border-amber-200 text-amber-800 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">${session.mastered ? 'Mastered' : `Stage ${session.srs_stage ?? 0}`}</span>
                             <span class="text-[10px] text-stone-500 font-medium">${dateStr}</span>
                         </div>
                     </div>

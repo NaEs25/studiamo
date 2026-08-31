@@ -6,16 +6,17 @@ from typing import Optional
 
 from fastapi import APIRouter, Form, HTTPException, Depends
 
-from app import config, database, ai, gamification
+from app import database, ai, gamification
 from app.ai import UsageLimitExceeded
 from app.dependencies import (
     get_active_username,
     get_srs_intervals,
     get_srs_multipliers,
+    get_srs_caps_and_repetition,
+    compute_max_stages,
     get_question_counts,
     get_preferred_hour,
     adjust_next_review,
-    parse_bool,
     require_app_access,
     build_concept_pool,
     select_stage_questions,
@@ -69,8 +70,7 @@ async def get_quiz(id: int, username: str = Depends(require_app_access)):
         title = v_row.get("title")
 
         video_data = database.get_video_row(video_id, username=username)
-        user_config = config.load_user_config(username)
-        q_counts = get_question_counts(user_config)
+        q_counts = get_question_counts(username)
         question_count = q_counts.get(5, 5)
         
         try:
@@ -124,8 +124,7 @@ async def get_quiz(id: int, username: str = Depends(require_app_access)):
     elif isinstance(quiz_data, dict) and "importance_level" in quiz_data:
         level = quiz_data.get("importance_level", 3)
 
-    user_config = config.load_user_config(username)
-    q_counts = get_question_counts(user_config)
+    q_counts = get_question_counts(username)
     target_count = q_counts.get(level, 5)
 
     # The stage-appropriate questions come from quizzes.concept_pool, which holds every
@@ -279,25 +278,8 @@ async def grade_quiz(
         active_intervals = [1, 3, 7, 14, 30]
         
     num_stages = len(active_intervals)
-    user_config = config.load_user_config(username)
-    cap_by_importance = user_config.get("CAP_STAGES_BY_IMPORTANCE", False)
-    
-    if cap_by_importance:
-        cap_1 = int(user_config.get("SRS_CAP_1", 2))
-        cap_2 = int(user_config.get("SRS_CAP_2", 3))
-        cap_3 = int(user_config.get("SRS_CAP_3", 4))
-        cap_4 = int(user_config.get("SRS_CAP_4", 5))
-        cap_5 = int(user_config.get("SRS_CAP_5", 5))
-        importance_caps = {
-            5: max(1, min(cap_5, num_stages)),
-            4: max(1, min(cap_4, num_stages)),
-            3: max(1, min(cap_3, num_stages)),
-            2: max(1, min(cap_2, num_stages)),
-            1: max(1, min(cap_1, num_stages))
-        }
-        max_stages = importance_caps.get(importance, num_stages)
-    else:
-        max_stages = num_stages
+    srs_caps_cfg = get_srs_caps_and_repetition(cursor, user_uuid=user_uuid)
+    max_stages = compute_max_stages(srs_caps_cfg["cap_by_importance"], srs_caps_cfg["caps"], importance, num_stages)
 
     multipliers = get_srs_multipliers(username)
     multiplier = multipliers.get(importance, 1.5)
@@ -316,8 +298,8 @@ async def grade_quiz(
         xp_gain = 3
         
     pref_hour = get_preferred_hour(cursor, conn.user_uuid)
-    enable_stage_5_rep = parse_bool(user_config.get("ENABLE_STAGE_5_REPETITION") if user_config.get("ENABLE_STAGE_5_REPETITION") is not None else user_config.get("enable_stage_5_repetition", config.DEFAULT_ENABLE_STAGE_5_REPETITION))
-    stage_5_repeat_interval = int(user_config.get("STAGE_5_REPEAT_INTERVAL") if user_config.get("STAGE_5_REPEAT_INTERVAL") is not None else user_config.get("stage_5_repeat_interval", config.DEFAULT_STAGE_5_REPEAT_INTERVAL))
+    enable_stage_5_rep = srs_caps_cfg["enable_stage_5_repetition"]
+    stage_5_repeat_interval = srs_caps_cfg["stage_5_repeat_interval"]
 
     if next_stage < max_stages or enable_stage_5_rep:
         if next_stage >= max_stages:
@@ -441,6 +423,8 @@ async def grade_quiz(
     return {
         "status": "success",
         "new_stage": next_stage,
+        "max_stages": max_stages,
+        "mastered": next_stage >= max_stages,
         "xp_gained": xp_gain,
         "total_xp": new_xp,
         "level": new_level,

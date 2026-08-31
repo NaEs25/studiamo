@@ -20,7 +20,6 @@ from starlette.background import BackgroundTask
 from app import config, database, storage, ai, gamification, moderation
 from app.dependencies import (
     get_active_username,
-    get_question_counts,
     get_srs_intervals,
     limiter,
     hash_password,
@@ -96,7 +95,10 @@ async def get_app_settings(username: str = Depends(get_active_username)):
 
             cursor.execute(
                 """
-                SELECT enable_stage_5_repetition, stage_5_repeat_interval
+                SELECT enable_stage_5_repetition, stage_5_repeat_interval,
+                       cap_stages_by_importance, srs_cap_1, srs_cap_2, srs_cap_3, srs_cap_4, srs_cap_5,
+                       srs_multiplier_1, srs_multiplier_2, srs_multiplier_3, srs_multiplier_4, srs_multiplier_5,
+                       question_count_1, question_count_2, question_count_3, question_count_4, question_count_5
                 FROM srs_settings WHERE user_uuid = %s LIMIT 1;
                 """,
                 (user_uuid,)
@@ -105,7 +107,7 @@ async def get_app_settings(username: str = Depends(get_active_username)):
         finally:
             conn.close()
 
-        cap_by_imp = user_cfg.get("CAP_STAGES_BY_IMPORTANCE") if "CAP_STAGES_BY_IMPORTANCE" in user_cfg else user_cfg.get("cap_stages_by_importance", True)
+        cap_by_imp = srs_row.get("cap_stages_by_importance", False)
 
         def _mask_key(k):
             if not k or not isinstance(k, str) or not k.strip():
@@ -117,10 +119,10 @@ async def get_app_settings(username: str = Depends(get_active_username)):
         gemini_key_raw = user_cfg.get("GEMINI_API_KEY") or user_cfg.get("gemini_api_key", "") or ""
         telegram_token_raw = user_cfg.get("TELEGRAM_BOT_TOKEN") or user_cfg.get("telegram_bot_token", "") or ""
 
-        has_custom_srs = bool(user_cfg.get("srs_stage_1") is not None or user_cfg.get("SRS_STAGE_1") is not None)
-        has_custom_question_counts = bool(user_cfg.get("QUESTION_COUNT_1") is not None or user_cfg.get("question_count_1") is not None)
-        has_custom_multipliers = bool(user_cfg.get("SRS_MULTIPLIER_1") is not None or user_cfg.get("srs_mult_1") is not None)
-        has_custom_caps = bool(user_cfg.get("SRS_CAP_1") is not None or user_cfg.get("srs_cap_1") is not None)
+        has_custom_srs = bool(srs_row)
+        has_custom_question_counts = bool(srs_row)
+        has_custom_multipliers = bool(srs_row)
+        has_custom_caps = bool(srs_row)
 
         return {
             "username": username,
@@ -164,25 +166,25 @@ async def get_app_settings(username: str = Depends(get_active_username)):
             },
             "cap_stages_by_importance": _parse_bool(cap_by_imp),
             "srs_multipliers": {
-                "multiplier_1": _safe_float(user_cfg.get("SRS_MULTIPLIER_1") if user_cfg.get("SRS_MULTIPLIER_1") is not None else user_cfg.get("srs_mult_1"), config.DEFAULT_SRS_MULTIPLIERS[0]),
-                "multiplier_2": _safe_float(user_cfg.get("SRS_MULTIPLIER_2") if user_cfg.get("SRS_MULTIPLIER_2") is not None else user_cfg.get("srs_mult_2"), config.DEFAULT_SRS_MULTIPLIERS[1]),
-                "multiplier_3": _safe_float(user_cfg.get("SRS_MULTIPLIER_3") if user_cfg.get("SRS_MULTIPLIER_3") is not None else user_cfg.get("srs_mult_3"), config.DEFAULT_SRS_MULTIPLIERS[2]),
-                "multiplier_4": _safe_float(user_cfg.get("SRS_MULTIPLIER_4") if user_cfg.get("SRS_MULTIPLIER_4") is not None else user_cfg.get("srs_mult_4"), config.DEFAULT_SRS_MULTIPLIERS[3]),
-                "multiplier_5": _safe_float(user_cfg.get("SRS_MULTIPLIER_5") if user_cfg.get("SRS_MULTIPLIER_5") is not None else user_cfg.get("srs_mult_5"), config.DEFAULT_SRS_MULTIPLIERS[4]),
+                "multiplier_1": _safe_float(srs_row.get("srs_multiplier_1"), config.DEFAULT_SRS_MULTIPLIERS[0]),
+                "multiplier_2": _safe_float(srs_row.get("srs_multiplier_2"), config.DEFAULT_SRS_MULTIPLIERS[1]),
+                "multiplier_3": _safe_float(srs_row.get("srs_multiplier_3"), config.DEFAULT_SRS_MULTIPLIERS[2]),
+                "multiplier_4": _safe_float(srs_row.get("srs_multiplier_4"), config.DEFAULT_SRS_MULTIPLIERS[3]),
+                "multiplier_5": _safe_float(srs_row.get("srs_multiplier_5"), config.DEFAULT_SRS_MULTIPLIERS[4]),
             },
             "srs_caps": {
-                "cap_1": _safe_int(user_cfg.get("SRS_CAP_1") if user_cfg.get("SRS_CAP_1") is not None else user_cfg.get("srs_cap_1"), config.DEFAULT_SRS_CAPS[0]),
-                "cap_2": _safe_int(user_cfg.get("SRS_CAP_2") if user_cfg.get("SRS_CAP_2") is not None else user_cfg.get("srs_cap_2"), config.DEFAULT_SRS_CAPS[1]),
-                "cap_3": _safe_int(user_cfg.get("SRS_CAP_3") if user_cfg.get("SRS_CAP_3") is not None else user_cfg.get("srs_cap_3"), config.DEFAULT_SRS_CAPS[2]),
-                "cap_4": _safe_int(user_cfg.get("SRS_CAP_4") if user_cfg.get("SRS_CAP_4") is not None else user_cfg.get("srs_cap_4"), config.DEFAULT_SRS_CAPS[3]),
-                "cap_5": _safe_int(user_cfg.get("SRS_CAP_5") if user_cfg.get("SRS_CAP_5") is not None else user_cfg.get("srs_cap_5"), config.DEFAULT_SRS_CAPS[4]),
+                "cap_1": _safe_int(srs_row.get("srs_cap_1"), config.DEFAULT_SRS_CAPS[0]),
+                "cap_2": _safe_int(srs_row.get("srs_cap_2"), config.DEFAULT_SRS_CAPS[1]),
+                "cap_3": _safe_int(srs_row.get("srs_cap_3"), config.DEFAULT_SRS_CAPS[2]),
+                "cap_4": _safe_int(srs_row.get("srs_cap_4"), config.DEFAULT_SRS_CAPS[3]),
+                "cap_5": _safe_int(srs_row.get("srs_cap_5"), config.DEFAULT_SRS_CAPS[4]),
             },
             "question_counts": {
-                "count_1": _safe_int(user_cfg.get("QUESTION_COUNT_1") if user_cfg.get("QUESTION_COUNT_1") is not None else user_cfg.get("question_count_1"), config.DEFAULT_QUESTION_COUNTS[0]),
-                "count_2": _safe_int(user_cfg.get("QUESTION_COUNT_2") if user_cfg.get("QUESTION_COUNT_2") is not None else user_cfg.get("question_count_2"), config.DEFAULT_QUESTION_COUNTS[1]),
-                "count_3": _safe_int(user_cfg.get("QUESTION_COUNT_3") if user_cfg.get("QUESTION_COUNT_3") is not None else user_cfg.get("question_count_3"), config.DEFAULT_QUESTION_COUNTS[2]),
-                "count_4": _safe_int(user_cfg.get("QUESTION_COUNT_4") if user_cfg.get("QUESTION_COUNT_4") is not None else user_cfg.get("question_count_4"), config.DEFAULT_QUESTION_COUNTS[3]),
-                "count_5": _safe_int(user_cfg.get("QUESTION_COUNT_5") if user_cfg.get("QUESTION_COUNT_5") is not None else user_cfg.get("question_count_5"), config.DEFAULT_QUESTION_COUNTS[4]),
+                "count_1": _safe_int(srs_row.get("question_count_1"), config.DEFAULT_QUESTION_COUNTS[0]),
+                "count_2": _safe_int(srs_row.get("question_count_2"), config.DEFAULT_QUESTION_COUNTS[1]),
+                "count_3": _safe_int(srs_row.get("question_count_3"), config.DEFAULT_QUESTION_COUNTS[2]),
+                "count_4": _safe_int(srs_row.get("question_count_4"), config.DEFAULT_QUESTION_COUNTS[3]),
+                "count_5": _safe_int(srs_row.get("question_count_5"), config.DEFAULT_QUESTION_COUNTS[4]),
             },
             # Read directly from dedicated user_profile columns
             "preferred_hour": _safe_int(settings_row.get("preferred_hour"), -1),
@@ -299,9 +301,16 @@ async def save_app_settings(
             if display_name is not None and display_name.strip():
                 cursor.execute("UPDATE user_profile SET display_name = %s WHERE user_uuid = %s;", (display_name.strip(), user_uuid))
 
-            # Handle SRS stage intervals
+            # Handle SRS stage intervals, importance-based stage caps, per-importance interval
+            # multipliers, and per-importance quiz question counts. All four groups live in the
+            # same srs_settings row, so they're written together in one upsert -- writing them
+            # in separate INSERT-if-absent blocks would race (a later insert would hit the row
+            # an earlier one just created and fail the UNIQUE constraint on user_uuid).
             has_srs_input = any(s is not None and str(s).strip() != "" for s in [stage_1, stage_2, stage_3, stage_4, stage_5])
-            if has_srs_input:
+            has_cap_input = cap_stages is not None or any(c is not None and str(c).strip() != "" for c in [cap_1, cap_2, cap_3, cap_4, cap_5])
+            has_mult_input = any(m is not None and str(m).strip() != "" for m in [multiplier_1, multiplier_2, multiplier_3, multiplier_4, multiplier_5])
+            has_qc_input = any(q is not None and str(q).strip() != "" for q in [question_count_1, question_count_2, question_count_3, question_count_4, question_count_5])
+            if has_srs_input or has_cap_input or has_mult_input or has_qc_input:
                 s1 = int(stage_1) if stage_1 and str(stage_1).isdigit() else config.DEFAULT_SRS_INTERVALS[0]
                 s2 = int(stage_2) if stage_2 and str(stage_2).isdigit() else config.DEFAULT_SRS_INTERVALS[1]
                 s3 = int(stage_3) if stage_3 and str(stage_3).isdigit() else config.DEFAULT_SRS_INTERVALS[2]
@@ -311,54 +320,57 @@ async def save_app_settings(
                 rep_bool = _parse_bool(enable_stage_5_repetition) if enable_stage_5_repetition is not None else config.DEFAULT_ENABLE_STAGE_5_REPETITION
                 rep_int = max(1, min(365, int(stage_5_repeat_interval))) if stage_5_repeat_interval is not None and str(stage_5_repeat_interval).strip().isdigit() else config.DEFAULT_STAGE_5_REPEAT_INTERVAL
 
+                cap_bool = _parse_bool(cap_stages) if cap_stages is not None else False
+                c1 = int(cap_1) if cap_1 and str(cap_1).isdigit() else config.DEFAULT_SRS_CAPS[0]
+                c2 = int(cap_2) if cap_2 and str(cap_2).isdigit() else config.DEFAULT_SRS_CAPS[1]
+                c3 = int(cap_3) if cap_3 and str(cap_3).isdigit() else config.DEFAULT_SRS_CAPS[2]
+                c4 = int(cap_4) if cap_4 and str(cap_4).isdigit() else config.DEFAULT_SRS_CAPS[3]
+                c5 = int(cap_5) if cap_5 and str(cap_5).isdigit() else config.DEFAULT_SRS_CAPS[4]
+
+                m1 = _safe_float(multiplier_1, config.DEFAULT_SRS_MULTIPLIERS[0])
+                m2 = _safe_float(multiplier_2, config.DEFAULT_SRS_MULTIPLIERS[1])
+                m3 = _safe_float(multiplier_3, config.DEFAULT_SRS_MULTIPLIERS[2])
+                m4 = _safe_float(multiplier_4, config.DEFAULT_SRS_MULTIPLIERS[3])
+                m5 = _safe_float(multiplier_5, config.DEFAULT_SRS_MULTIPLIERS[4])
+
+                qc1 = int(question_count_1) if question_count_1 and str(question_count_1).isdigit() else config.DEFAULT_QUESTION_COUNTS[0]
+                qc2 = int(question_count_2) if question_count_2 and str(question_count_2).isdigit() else config.DEFAULT_QUESTION_COUNTS[1]
+                qc3 = int(question_count_3) if question_count_3 and str(question_count_3).isdigit() else config.DEFAULT_QUESTION_COUNTS[2]
+                qc4 = int(question_count_4) if question_count_4 and str(question_count_4).isdigit() else config.DEFAULT_QUESTION_COUNTS[3]
+                qc5 = int(question_count_5) if question_count_5 and str(question_count_5).isdigit() else config.DEFAULT_QUESTION_COUNTS[4]
+
                 cursor.execute("SELECT COUNT(*) FROM srs_settings WHERE user_uuid = %s;", (user_uuid,))
                 if database.first_val(cursor.fetchone()) == 0:
                     cursor.execute(
-                        "INSERT INTO srs_settings (user_uuid, stage_1_days, stage_2_days, stage_3_days, stage_4_days, stage_5_days, enable_stage_5_repetition, stage_5_repeat_interval) VALUES (%s, %s, %s, %s, %s, %s, %s, %s);",
-                        (user_uuid, s1, s2, s3, s4, s5, rep_bool, rep_int)
+                        """INSERT INTO srs_settings
+                           (user_uuid, stage_1_days, stage_2_days, stage_3_days, stage_4_days, stage_5_days,
+                            enable_stage_5_repetition, stage_5_repeat_interval,
+                            cap_stages_by_importance, srs_cap_1, srs_cap_2, srs_cap_3, srs_cap_4, srs_cap_5,
+                            srs_multiplier_1, srs_multiplier_2, srs_multiplier_3, srs_multiplier_4, srs_multiplier_5,
+                            question_count_1, question_count_2, question_count_3, question_count_4, question_count_5)
+                           VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);""",
+                        (user_uuid, s1, s2, s3, s4, s5, rep_bool, rep_int, cap_bool, c1, c2, c3, c4, c5,
+                         m1, m2, m3, m4, m5, qc1, qc2, qc3, qc4, qc5)
                     )
                 else:
                     cursor.execute(
-                        "UPDATE srs_settings SET stage_1_days=%s, stage_2_days=%s, stage_3_days=%s, stage_4_days=%s, stage_5_days=%s, enable_stage_5_repetition=%s, stage_5_repeat_interval=%s WHERE user_uuid=%s;",
-                        (s1, s2, s3, s4, s5, rep_bool, rep_int, user_uuid)
+                        """UPDATE srs_settings SET
+                               stage_1_days=%s, stage_2_days=%s, stage_3_days=%s, stage_4_days=%s, stage_5_days=%s,
+                               enable_stage_5_repetition=%s, stage_5_repeat_interval=%s,
+                               cap_stages_by_importance=%s, srs_cap_1=%s, srs_cap_2=%s, srs_cap_3=%s, srs_cap_4=%s, srs_cap_5=%s,
+                               srs_multiplier_1=%s, srs_multiplier_2=%s, srs_multiplier_3=%s, srs_multiplier_4=%s, srs_multiplier_5=%s,
+                               question_count_1=%s, question_count_2=%s, question_count_3=%s, question_count_4=%s, question_count_5=%s
+                           WHERE user_uuid=%s;""",
+                        (s1, s2, s3, s4, s5, rep_bool, rep_int, cap_bool, c1, c2, c3, c4, c5,
+                         m1, m2, m3, m4, m5, qc1, qc2, qc3, qc4, qc5, user_uuid)
                     )
-                user_cfg["srs_stage_1"] = s1
-                user_cfg["srs_stage_2"] = s2
-                user_cfg["srs_stage_3"] = s3
-                user_cfg["srs_stage_4"] = s4
-                user_cfg["srs_stage_5"] = s5
             elif all(s == "" for s in [stage_1, stage_2, stage_3, stage_4, stage_5] if s is not None):
                 # User cleared all SRS inputs to revert to global defaults
                 cursor.execute("DELETE FROM srs_settings WHERE user_uuid = %s;", (user_uuid,))
-                for k in ["srs_stage_1", "srs_stage_2", "srs_stage_3", "srs_stage_4", "srs_stage_5", "SRS_STAGE_1"]:
-                    user_cfg.pop(k, None)
 
             conn.commit()
         finally:
             conn.close()
-
-        # Handle Question Counts
-        has_qc_input = any(q is not None and str(q).strip() != "" for q in [question_count_1, question_count_2, question_count_3, question_count_4, question_count_5])
-        if has_qc_input:
-            user_cfg["QUESTION_COUNT_1"] = user_cfg["question_count_1"] = int(question_count_1) if question_count_1 and str(question_count_1).isdigit() else config.DEFAULT_QUESTION_COUNTS[0]
-            user_cfg["QUESTION_COUNT_2"] = user_cfg["question_count_2"] = int(question_count_2) if question_count_2 and str(question_count_2).isdigit() else config.DEFAULT_QUESTION_COUNTS[1]
-            user_cfg["QUESTION_COUNT_3"] = user_cfg["question_count_3"] = int(question_count_3) if question_count_3 and str(question_count_3).isdigit() else config.DEFAULT_QUESTION_COUNTS[2]
-            user_cfg["QUESTION_COUNT_4"] = user_cfg["question_count_4"] = int(question_count_4) if question_count_4 and str(question_count_4).isdigit() else config.DEFAULT_QUESTION_COUNTS[3]
-            user_cfg["QUESTION_COUNT_5"] = user_cfg["question_count_5"] = int(question_count_5) if question_count_5 and str(question_count_5).isdigit() else config.DEFAULT_QUESTION_COUNTS[4]
-        elif all(q == "" for q in [question_count_1, question_count_2, question_count_3, question_count_4, question_count_5] if q is not None):
-            for i in range(1, 6):
-                user_cfg.pop(f"QUESTION_COUNT_{i}", None)
-                user_cfg.pop(f"question_count_{i}", None)
-
-        if enable_stage_5_repetition is not None:
-            val_bool = _parse_bool(enable_stage_5_repetition)
-            user_cfg["ENABLE_STAGE_5_REPETITION"] = val_bool
-            user_cfg["enable_stage_5_repetition"] = val_bool
-
-        if stage_5_repeat_interval is not None and str(stage_5_repeat_interval).strip().isdigit():
-            val_int = max(1, min(365, int(stage_5_repeat_interval)))
-            user_cfg["STAGE_5_REPEAT_INTERVAL"] = val_int
-            user_cfg["stage_5_repeat_interval"] = val_int
 
         # Write all dedicated settings columns directly to user_profile
         conn2 = database.get_db_connection(username)

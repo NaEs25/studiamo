@@ -77,7 +77,9 @@ async function loadDashboard() {
 
         const activeQuizzes = (data.quizzes || [])
             .map(getActiveQuizInfo)
-            .filter(info => info !== null);
+            // A mastered quiz has no real next review (its next_review_at is a far-future
+            // sentinel, see grade_quiz), so it belongs in neither the due nor upcoming panel.
+            .filter(info => info !== null && !info.quiz.mastered);
 
         const dueQuizzes = activeQuizzes.filter(info => parseDate(info.quiz.next_review_at) <= now);
         const upcomingQuizzes = activeQuizzes
@@ -151,7 +153,7 @@ async function loadDashboard() {
                                 </a>
                                 <div class="min-w-0 flex-grow">
                                     <a href="${titleAction}" class="font-bold text-xs text-stone-800 truncate hover:text-amber-700 block" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</a>
-                                    <p class="text-[10px] text-stone-500 mt-0.5">Stage: ${q.srs_stage} • ${timeStr}${goalStr}</p>
+                                    <p class="text-[10px] text-stone-500 mt-0.5">${q.mastered ? 'Mastered' : `Stage: ${q.srs_stage}`} • ${timeStr}${goalStr}</p>
                                 </div>
                             </div>
                             <div class="flex items-center space-x-2 pt-1">
@@ -182,14 +184,14 @@ async function loadDashboard() {
                     const diffMins = Math.round(diffMs / 60000);
                     let relativeStr = "";
                     if (diffMins < 60) {
-                        relativeStr = `in ${diffMins} Min.`;
+                        relativeStr = `in ${diffMins} min`;
                     } else {
                         const diffHrs = Math.round(diffMins / 60);
                         if (diffHrs < 24) {
-                            relativeStr = `in ${diffHrs} Std.`;
+                            relativeStr = `in ${diffHrs} hr`;
                         } else {
                             const diffDays = Math.round(diffHrs / 24);
-                            relativeStr = `in ${diffDays} Tag(en)`;
+                            relativeStr = `in ${diffDays} day${diffDays === 1 ? '' : 's'}`;
                         }
                     }
                     const formattedDate = parseDate(q.next_review_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });

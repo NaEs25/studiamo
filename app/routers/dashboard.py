@@ -1,7 +1,13 @@
 import logging
 from fastapi import APIRouter, Depends
 from app import database, gamification, storage
-from app.dependencies import get_active_username, require_app_access
+from app.dependencies import (
+    get_active_username,
+    require_app_access,
+    get_srs_intervals,
+    get_srs_caps_and_repetition,
+    compute_max_stages,
+)
 from app.ai import get_usage_status
 
 logger = logging.getLogger("studiamo")
@@ -172,7 +178,7 @@ async def get_dashboard_data(username: str = Depends(require_app_access)):
     # 5. Fetch all quizzes
     cursor.execute("""
         SELECT q.id, q.video_id, q.goal_id, q.quiz_type, q.srs_stage, q.next_review_at, q.notified, q.importance_level, q.in_progress_index,
-               v.title AS video_title, COALESCE(g.title, g2.title) AS goal_title
+               v.title AS video_title, v.importance_rating, COALESCE(g.title, g2.title) AS goal_title
         FROM quizzes q
         LEFT JOIN videos v ON q.video_id = v.id
         LEFT JOIN goals g ON q.goal_id = g.id
@@ -180,7 +186,19 @@ async def get_dashboard_data(username: str = Depends(require_app_access)):
         WHERE q.user_uuid = %s;
     """, (user_uuid,))
     quizzes = [dict(r) for r in cursor.fetchall()]
-    
+
+    # Each quiz's "mastered" state: has it reached the highest SRS stage it can, given this
+    # user's stage-count and (optional) importance-based cap settings. Same rule grade_quiz
+    # uses to decide whether to keep scheduling reviews for it.
+    intervals = get_srs_intervals(cursor, user_uuid=user_uuid)
+    num_stages = len([x for x in intervals if x is not None]) or 5
+    srs_caps_cfg = get_srs_caps_and_repetition(cursor, user_uuid=user_uuid)
+    for q in quizzes:
+        q_importance = q.pop("importance_rating", None) or 3
+        q_max_stages = compute_max_stages(srs_caps_cfg["cap_by_importance"], srs_caps_cfg["caps"], q_importance, num_stages)
+        q["max_stages"] = q_max_stages
+        q["mastered"] = (q.get("srs_stage") or 0) >= q_max_stages
+
     conn.close()
     
     _attach_video_summaries(videos)
@@ -263,7 +281,8 @@ async def get_stats_history(username: str = Depends(require_app_access)):
             SELECT a.id, a.quiz_id, a.question_index, a.question, a.given_answer, a.correct_answer,
                    a.grade, a.created_at, a.explanation, a.feedback,
                    COALESCE(v.title, g.title) AS source_title,
-                   COALESCE(q.srs_stage, 0) AS srs_stage
+                   COALESCE(q.srs_stage, 0) AS srs_stage,
+                   v.importance_rating
             FROM quiz_attempts a
             LEFT JOIN videos v ON a.video_id = v.id
             LEFT JOIN goals g ON a.goal_id = g.id
@@ -272,11 +291,18 @@ async def get_stats_history(username: str = Depends(require_app_access)):
             ORDER BY a.id DESC
             LIMIT 200;
         """, (user_uuid,))
+        intervals = get_srs_intervals(cursor, user_uuid=user_uuid)
+        num_stages = len([x for x in intervals if x is not None]) or 5
+        srs_caps_cfg = get_srs_caps_and_repetition(cursor, user_uuid=user_uuid)
         recent_attempts = []
         for r in cursor.fetchall():
             att = dict(r)
             created_at = att.get("created_at")
             att["created_at"] = created_at.isoformat() if hasattr(created_at, "isoformat") else (str(created_at) if created_at else "")
+            att_importance = att.pop("importance_rating", None) or 3
+            att_max_stages = compute_max_stages(srs_caps_cfg["cap_by_importance"], srs_caps_cfg["caps"], att_importance, num_stages)
+            att["max_stages"] = att_max_stages
+            att["mastered"] = (att.get("srs_stage") or 0) >= att_max_stages
             recent_attempts.append(att)
 
         return {

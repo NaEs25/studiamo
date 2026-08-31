@@ -898,6 +898,7 @@ function renderAnalyticsHistory() {
                 quiz_id: attempt.quiz_id,
                 source_title: attempt.source_title,
                 srs_stage: attempt.srs_stage,
+                mastered: attempt.mastered,
                 lastTime: time,
                 created_at: attempt.created_at,
                 attempts: [attempt]
@@ -970,7 +971,7 @@ function renderAnalyticsHistory() {
                 <button type="button" onclick="toggleAnalyticsSession(${session.id})" class="w-full p-3.5 flex justify-between items-center text-left hover:bg-stone-100 transition focus:outline-none">
                     <div class="min-w-0 flex-grow pr-3 space-y-1">
                         <div class="flex flex-wrap items-center gap-1.5">
-                            <span class="text-[9px] bg-amber-500/10 border border-amber-200 text-amber-700 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Stage ${session.srs_stage}</span>
+                            <span class="text-[9px] bg-amber-500/10 border border-amber-200 text-amber-700 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">${session.mastered ? 'Mastered' : `Stage ${session.srs_stage}`}</span>
                             <span class="text-[9px] bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">${total} Qs</span>
                             <span class="text-[10px] text-stone-500 font-medium">${localTime}</span>
                         </div>

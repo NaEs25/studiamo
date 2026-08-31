@@ -16,6 +16,8 @@ from app.dependencies import (
     get_question_counts,
     get_srs_multipliers,
     get_srs_intervals,
+    get_srs_caps_and_repetition,
+    compute_max_stages,
     get_preferred_hour,
     adjust_next_review,
     require_app_access,
@@ -704,7 +706,6 @@ async def generate_video_quiz_for_level(
         conn.close()
         return {"status": "success", "quiz_id": q_row["id"]}
 
-    user_config = config.load_user_config(username)
     intervals = get_srs_intervals(cursor, user_uuid=user_uuid)
     multipliers = get_srs_multipliers(username)
     multiplier = multipliers.get(level, 1.5)
@@ -724,7 +725,7 @@ async def generate_video_quiz_for_level(
         conn.commit()
 
         video_data = database.get_video_row(id, username=username)
-        q_counts = get_question_counts(user_config)
+        q_counts = get_question_counts(username)
         # Generate a pool sized for the largest configured star level, not just this one,
         # so later star-rating changes can reslice the existing pool (see the lookup above)
         # instead of triggering another AI generation.
@@ -799,7 +800,7 @@ def _load_focus_context(video_id: int, username: str):
             detail="This material was imported before topic extraction existed, so it has no topics to choose from."
         )
 
-    q_counts = get_question_counts(config.load_user_config(username))
+    q_counts = get_question_counts(username)
     target_count = q_counts.get(row.get("importance_rating") or 3, 5)
     return row, pool, focus, target_count
 
@@ -931,7 +932,12 @@ async def get_video_stats(id: int, username: str = Depends(require_app_access)):
     srs_stage = q_row["srs_stage"] if (q_row and q_row.get("srs_stage") is not None) else 0
     raw_next = q_row.get("next_review_at") if q_row else None
     next_review_at = raw_next.isoformat() if hasattr(raw_next, "isoformat") else (str(raw_next) if raw_next else None)
-    
+
+    intervals = get_srs_intervals(cursor, user_uuid=user_uuid)
+    num_stages = len([x for x in intervals if x is not None]) or 5
+    srs_caps_cfg = get_srs_caps_and_repetition(cursor, user_uuid=user_uuid)
+    max_stages = compute_max_stages(srs_caps_cfg["cap_by_importance"], srs_caps_cfg["caps"], importance, num_stages)
+
     cursor.execute("""
         SELECT a.id, a.quiz_id, a.question_index, a.question, a.given_answer, 
                a.correct_answer, a.grade, a.created_at, a.explanation, a.feedback,
@@ -948,13 +954,16 @@ async def get_video_stats(id: int, username: str = Depends(require_app_access)):
         c_at = att.get("created_at")
         if hasattr(c_at, "isoformat"):
             att["created_at"] = c_at.isoformat()
+        att["mastered"] = att.get("srs_stage", 0) >= max_stages
         attempts.append(att)
     conn.close()
-    
+
     return {
         "video_id": id,
         "title": title,
         "srs_stage": srs_stage,
+        "max_stages": max_stages,
+        "mastered": srs_stage >= max_stages,
         "next_review_at": next_review_at,
         "attempts": attempts
     }

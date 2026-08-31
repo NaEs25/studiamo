@@ -268,6 +268,28 @@ TABLES_SQL = [
     -- Added as ALTERs rather than table columns so existing databases pick them up too.
     ALTER TABLE srs_settings ADD COLUMN IF NOT EXISTS enable_stage_5_repetition BOOLEAN DEFAULT FALSE;
     ALTER TABLE srs_settings ADD COLUMN IF NOT EXISTS stage_5_repeat_interval INTEGER DEFAULT 30;
+
+    -- Importance-based stage capping: whether a video's importance_rating limits how far its
+    -- quiz can advance through the SRS stages (see dependencies.get_srs_caps_and_repetition).
+    ALTER TABLE srs_settings ADD COLUMN IF NOT EXISTS cap_stages_by_importance BOOLEAN DEFAULT FALSE;
+    ALTER TABLE srs_settings ADD COLUMN IF NOT EXISTS srs_cap_1 INTEGER DEFAULT 2;
+    ALTER TABLE srs_settings ADD COLUMN IF NOT EXISTS srs_cap_2 INTEGER DEFAULT 3;
+    ALTER TABLE srs_settings ADD COLUMN IF NOT EXISTS srs_cap_3 INTEGER DEFAULT 4;
+    ALTER TABLE srs_settings ADD COLUMN IF NOT EXISTS srs_cap_4 INTEGER DEFAULT 5;
+    ALTER TABLE srs_settings ADD COLUMN IF NOT EXISTS srs_cap_5 INTEGER DEFAULT 5;
+
+    -- Per-importance review-interval multipliers (dependencies.get_srs_multipliers) and quiz
+    -- question counts (dependencies.get_question_counts).
+    ALTER TABLE srs_settings ADD COLUMN IF NOT EXISTS srs_multiplier_1 REAL DEFAULT 4.0;
+    ALTER TABLE srs_settings ADD COLUMN IF NOT EXISTS srs_multiplier_2 REAL DEFAULT 2.5;
+    ALTER TABLE srs_settings ADD COLUMN IF NOT EXISTS srs_multiplier_3 REAL DEFAULT 1.5;
+    ALTER TABLE srs_settings ADD COLUMN IF NOT EXISTS srs_multiplier_4 REAL DEFAULT 1.0;
+    ALTER TABLE srs_settings ADD COLUMN IF NOT EXISTS srs_multiplier_5 REAL DEFAULT 0.7;
+    ALTER TABLE srs_settings ADD COLUMN IF NOT EXISTS question_count_1 INTEGER DEFAULT 2;
+    ALTER TABLE srs_settings ADD COLUMN IF NOT EXISTS question_count_2 INTEGER DEFAULT 3;
+    ALTER TABLE srs_settings ADD COLUMN IF NOT EXISTS question_count_3 INTEGER DEFAULT 5;
+    ALTER TABLE srs_settings ADD COLUMN IF NOT EXISTS question_count_4 INTEGER DEFAULT 8;
+    ALTER TABLE srs_settings ADD COLUMN IF NOT EXISTS question_count_5 INTEGER DEFAULT 12;
     """,
     """
     CREATE TABLE IF NOT EXISTS quiz_attempts (
