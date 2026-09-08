@@ -57,9 +57,12 @@ def notify_promoted(row: dict, send_email: bool = True, conn=None) -> dict:
         logger.warning(f"[promotion] converted_at stamp failed for {username}: {e}")
 
     report = {"promoted": True, "username": username, "recipient": recipient,
-              "email_sent": False, "reason": None}
+              "email_sent": False, "email_skipped": False, "reason": None}
 
     if not send_email:
+        # Flagged, not just worded: this is the one reason the operator already knows,
+        # having just unchecked the box, and the only one a surface should not raise.
+        report["email_skipped"] = True
         report["reason"] = "Promoted without sending the email, as requested."
         return report
 
@@ -95,7 +98,7 @@ def promote_and_notify(user_uuid: str, send_email: bool = True, conn=None) -> di
     tell the operator which ones are true:
 
         {"promoted": bool, "username": str|None, "recipient": str|None,
-         "email_sent": bool, "reason": str|None}
+         "email_sent": bool, "email_skipped": bool, "reason": str|None}
 
     `reason` is set whenever something did not happen: the account was not on the waitlist,
     there was no address on file, or the send failed. It is meant to be shown, not logged
@@ -105,5 +108,6 @@ def promote_and_notify(user_uuid: str, send_email: bool = True, conn=None) -> di
         # Already active, or no such account. Deliberately not an error: a double click
         # should be a no-op, not a second email to someone promoted a week ago.
         return {"promoted": False, "username": None, "recipient": None,
-                "email_sent": False, "reason": "Account was not on the waitlist."}
+                "email_sent": False, "email_skipped": False,
+                "reason": "Account was not on the waitlist."}
     return notify_promoted(row, send_email=send_email, conn=conn)

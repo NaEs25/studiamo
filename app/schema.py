@@ -493,6 +493,14 @@ TABLES_SQL = [
     -- impossible to tell "I ended this" from "they subscribed".
     ALTER TABLE tester_access ADD COLUMN IF NOT EXISTS converted_at TIMESTAMPTZ;
 
+    -- When the "you're in the test group" email actually sent, stamped by
+    -- app/tester_notify.py after a successful send and never before it. This is the
+    -- counterpart to landing_waitlist.spot_ready_sent_at for the promotion email: without
+    -- it, "was this person ever told?" is only answerable from the logs, and a second grant
+    -- on the same account cannot tell a first send from a repeat. NULL means not told,
+    -- which is also what every grant made before this column existed truthfully was.
+    ALTER TABLE tester_access ADD COLUMN IF NOT EXISTS notified_at TIMESTAMPTZ;
+
     ALTER TABLE tester_access DROP CONSTRAINT IF EXISTS tester_access_period_expiry_check;
     ALTER TABLE tester_access ADD CONSTRAINT tester_access_period_expiry_check
         CHECK (

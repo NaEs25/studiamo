@@ -1430,6 +1430,50 @@ def mark_tester_notice_seen(username: str, kind: str) -> bool:
             release_pooled_connection(conn)
 
 
+def get_account_contact(username: str) -> "dict | None":
+    """The addresses one account can be emailed at: {"username", "google_email", "email"}.
+
+    Returns both rather than picking one. Which address wins is a decision the sending code
+    makes and documents (google_email first, see app/promotion.py), and burying that choice
+    in a lookup would leave two places making it independently."""
+    conn = None
+    try:
+        conn = get_pooled_raw_connection()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        cursor.execute(
+            "SELECT username, google_email, email FROM user_profile "
+            "WHERE LOWER(username) = LOWER(%s) LIMIT 1;",
+            (username,)
+        )
+        row = cursor.fetchone()
+        return dict(row) if row else None
+    finally:
+        if conn is not None:
+            release_pooled_connection(conn)
+
+
+def mark_tester_notified(grant_id, conn=None) -> None:
+    """Stamps tester_access.notified_at after the tester-access email actually sent.
+
+    Same job as landing_waitlist_db.mark_waitlist_email_sent does for the promotion email:
+    the send becomes auditable, and a repeated grant can be told apart from a first one.
+    Called only on success, so an unstamped row means nobody was told.
+
+    `conn` lets the caller keep the grant and its stamp on one database, which is what makes
+    stamping from the admin panel land where the grant did. A supplied connection is left
+    open; the caller owns it."""
+    if not grant_id:
+        return
+    borrowed = conn is None
+    conn = ConnectionWrapper(get_pooled_raw_connection()) if borrowed else conn
+    try:
+        conn.execute("UPDATE tester_access SET notified_at = NOW() WHERE id = ?;", (grant_id,))
+        conn.commit()
+    finally:
+        if borrowed:
+            conn.close()
+
+
 # Tables holding per-user data, keyed by user_uuid with no FK/cascade back to
 # user_profile, every one has to be cleaned explicitly. Ordered so rows with
 # FKs to other tables in this list are deleted before what they reference

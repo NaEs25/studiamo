@@ -408,3 +408,63 @@ def send_promotion_email(recipient_email: str) -> bool:
         f"Unsubscribe: {unsubscribe_url(recipient_email)}\n"
     )
     return _send_via_resend(recipient_email, subject, html_content, text_content, "PROMOTION EMAIL")
+
+
+def send_tester_access_email(recipient_email: str, expires_at=None) -> bool:
+    """Sends the "you're in the test group" email when an admin grants tester access.
+
+    `expires_at` is the end of the period, or None for a grant with no end date. The date is
+    the substance of this email, not decoration: the in-app welcome (tester_access.
+    welcome_seen_at) already greets a tester who opens the app, so what an email adds is
+    reaching someone who does not yet know there is anything to open, and telling them how
+    long they have. A version that only said "you have access" would carry less than the
+    dialog it was sent from."""
+    if expires_at is not None:
+        # Not %-d/%B directly in one format string: %-d is a GNU extension, and this same
+        # module already has to run wherever the app is self-hosted.
+        until = f"{expires_at:%B} {expires_at.day}, {expires_at.year}"
+        window_html = (f"Your tester access runs until <strong>{until}</strong>. "
+                       "We'll remind you inside the app before it ends.")
+        window_text = f"Your tester access runs until {until}."
+    else:
+        window_html = "Your tester access has no end date."
+        window_text = "Your tester access has no end date."
+
+    subject = "Your Studiamo tester access is live"
+
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+    <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f6f1e7; color: #1c1917; margin: 0; padding: 40px 20px;">
+        <div style="max-width: 540px; margin: 0 auto; background: #ffffff; border: 1px solid #e7dfd3; border-radius: 20px; padding: 36px 32px;">
+            <div style="display: inline-flex; align-items: center; gap: 10px; margin-bottom: 28px;">
+                <img src="https://studiamo.cloud/static/images/logo-icon.png" width="32" height="32" style="border-radius: 8px; vertical-align: middle;" alt="Studiamo Logo" />
+                <span style="font-size: 20px; font-weight: 800; color: #1c1917; letter-spacing: -0.5px;">Studiamo</span>
+            </div>
+            <h1 style="color: #1c1917; font-size: 26px; font-weight: 800; margin: 0 0 12px; letter-spacing: -0.5px;">You're in the test group 🎉</h1>
+            <p style="color: #57534e; font-size: 15px; line-height: 1.65; margin: 0 0 16px;">
+                Your Studiamo account now has tester access, which means the full app with no
+                subscription needed. {window_html}
+            </p>
+            <p style="color: #57534e; font-size: 15px; line-height: 1.65; margin: 0 0 16px;">
+                Use it the way you would actually use it, and tell us what gets in your way.
+                That's the whole point of a test phase.
+            </p>
+            <a href="https://studiamo.cloud/login?src=tester_access" style="display: inline-block; background: #d97706; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 14px; padding: 12px 24px; border-radius: 12px; margin: 8px 0 20px;">Open Studiamo</a>
+            <div style="font-size: 12px; color: #a8a29e; margin-top: 28px; text-align: center; border-top: 1px solid #e7dfd3; padding-top: 20px; line-height: 1.6;">
+                © 2026 Studiamo Learning System<br>
+                You're receiving this one-off email because your account was given tester access.
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    text_content = (
+        "You're in the test group.\n\n"
+        "Your Studiamo account now has tester access, which means the full app with no "
+        f"subscription needed. {window_text}\n\n"
+        "Open Studiamo: https://studiamo.cloud/login?src=tester_access\n\n"
+        "You're receiving this one-off email because your account was given tester access.\n"
+    )
+    return _send_via_resend(recipient_email, subject, html_content, text_content, "TESTER ACCESS EMAIL")

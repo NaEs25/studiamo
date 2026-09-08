@@ -8,6 +8,7 @@ Run:
     python scripts/grant_tester_access.py <username> --extend 7      # add days to the current grant
     python scripts/grant_tester_access.py <username> --end           # end the period now
     python scripts/grant_tester_access.py <username> --status        # print state, write nothing
+    python scripts/grant_tester_access.py <username> --no-email      # grant without telling them
 
 Tester access lets an account use the cloud app without a subscription
 (database.has_app_access(), enforced by the require_app_access dependency).
@@ -16,6 +17,10 @@ Grants are time-boxed: see the tester_access table in app/schema.py.
 An unlimited grant is only ever created by the explicit --unlimited flag.
 `--days 0` is rejected: 0 and 1 mean very different things, and a stray
 keystroke between them should not silently grant access forever.
+
+A grant emails the account holder by default, through app/tester_notify.py,
+which the admin panel uses too. --no-email is for your own accounts: skipping
+it otherwise leaves someone with a test period they were never told about.
 """
 import argparse
 import sys
@@ -24,7 +29,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE_DIR))
 
-from app import database
+from app import database, tester_notify
 
 
 def _describe(username: str, state: dict) -> str:
@@ -59,6 +64,8 @@ def main():
     parser.add_argument("--end", action="store_true", help="End the tester period now.")
     parser.add_argument("--status", action="store_true", help="Print state and exit.")
     parser.add_argument("--note", help="Internal note stored with the grant.")
+    parser.add_argument("--no-email", action="store_true",
+                        help="Grant without emailing the account holder.")
     args = parser.parse_args()
 
     if args.days is not None and args.days == 0:
@@ -71,6 +78,7 @@ def main():
     if sum(actions) > 1:
         parser.error("Choose one action at a time.")
 
+    report = None
     try:
         if args.status:
             state = database.get_tester_state(args.username)
@@ -80,9 +88,11 @@ def main():
             state = database.extend_tester_access(args.username, args.extend, extended_by="cli")
         else:
             days = 0 if args.unlimited else args.days
-            state = database.grant_tester_access(
-                args.username, days=days, granted_by="cli", note=args.note
+            report = tester_notify.grant_and_notify(
+                args.username, days=days, granted_by="cli", note=args.note,
+                send_email=not args.no_email,
             )
+            state = report["state"]
     except ValueError as e:
         print(f"Error: {e}")
         sys.exit(1)
@@ -92,6 +102,13 @@ def main():
         sys.exit(0 if args.status else 1)
 
     print(_describe(args.username, state))
+    # Printed after the state, and only for a grant: whether the person was told is a second
+    # fact about the same action, and a silent grant is the failure worth noticing here.
+    if report is not None:
+        if report["email_sent"]:
+            print(f"Emailed {report['recipient']}.")
+        else:
+            print(report["reason"] or "No email was sent.")
 
 
 if __name__ == "__main__":
