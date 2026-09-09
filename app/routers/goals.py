@@ -267,14 +267,16 @@ async def get_goal_recommendations(id: int, username: str = Depends(require_app_
         
     try:
         recs = await asyncio.to_thread(ai.generate_goal_recommendations, row["title"], row["description"], username)
+    except ai.UsageLimitExceeded as e:
+        raise HTTPException(status_code=429, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"AI recommendations generation failed: {e}")
-        
+
     queries = recs.get("search_queries", [])
     key_concepts = recs.get("key_concepts", [])
-    
+
     excluded_yt_ids = storage.get_excluded_youtube_ids(username=username)
-    
+
     videos = []
     seen_ids = set()
     for q in queries:
@@ -368,6 +370,8 @@ async def reload_all_goal_recommendations(
 
     try:
         recs = await asyncio.to_thread(ai.generate_goal_recommendations, row["title"], row["description"], username)
+    except ai.UsageLimitExceeded as e:
+        raise HTTPException(status_code=429, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"AI recommendations generation failed: {e}")
 

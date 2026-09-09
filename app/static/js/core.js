@@ -185,13 +185,17 @@ class ImportBacklogManager {
                 let statusChanged = false;
                 let justCompleted = 0;
                 let justFailed = 0;
+                let lastFailedMessage = null;
                 const now = Date.now();
                 for (const t of data) {
                     const prev = prevStatuses.get(t.id);
                     if (prev && (prev === 'pending' || prev === 'processing') && (t.status === 'completed' || t.status === 'failed')) {
                         statusChanged = true;
                         if (t.status === 'completed') justCompleted++;
-                        else justFailed++;
+                        else {
+                            justFailed++;
+                            lastFailedMessage = t.error_message || null;
+                        }
                     }
                     if (t.status === 'processing' && !this.taskStartTimes.has(t.id)) {
                         this.taskStartTimes.set(t.id, now);
@@ -208,7 +212,10 @@ class ImportBacklogManager {
                         showToast(`${justCompleted} imports finished!`, "saved");
                     }
                     if (justFailed === 1) {
-                        showToast("An import failed: see the import list for details.", "failed", 4000);
+                        // Show the curated reason (e.g. the usage-limit message with its reset
+                        // date) directly, instead of only in the import drawer the user has to
+                        // open. Falls back to the generic line if a task has no message yet.
+                        showToast(lastFailedMessage || "An import failed: see the import list for details.", "failed", 6000);
                     } else if (justFailed > 1) {
                         showToast(`${justFailed} imports failed: see the import list.`, "failed", 4000);
                     }

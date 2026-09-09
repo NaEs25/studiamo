@@ -19,7 +19,12 @@ async function loadStats() {
         const usageWarningEl = document.getElementById('ai-usage-warning');
         if (usageWarningEl && stats.usage_status) {
             if (stats.usage_status.show_warning) {
-                document.getElementById('ai-usage-remaining-pct').textContent = stats.usage_status.percent_remaining;
+                const contactLine = 'If you think this was caused by a bug, please contact '
+                    + '<a href="mailto:hello@studiamo.cloud" class="underline">hello@studiamo.cloud</a> and we\'ll look into it.';
+                const textEl = document.getElementById('ai-usage-warning-text');
+                textEl.innerHTML = stats.usage_status.is_exhausted
+                    ? `You've used all your AI usage for this month. It resets at the start of next month. ${contactLine}`
+                    : `You're about to run out of AI usage: ${stats.usage_status.percent_remaining}% left this month. ${contactLine}`;
                 usageWarningEl.classList.remove('hidden');
                 usageWarningEl.classList.add('flex');
             } else {

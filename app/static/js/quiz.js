@@ -697,6 +697,10 @@ function initQuizEvents() {
                 }
             } catch (e) {
                 console.error("Conceptual verification error:", e);
+                if (typeof showToast === 'function') {
+                    const msg = e?.message || String(e);
+                    showToast(e?.status === 429 ? msg : 'Could not check your answer: ' + msg, 'failed', 4000);
+                }
             } finally {
                 btnShow.disabled = false;
                 btnShow.textContent = originalText;

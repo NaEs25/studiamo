@@ -458,7 +458,10 @@ async def get_fact_check(id: int, username: str = Depends(require_app_access)):
         # confidently-worded verdict for content it never actually reviewed.
         raise HTTPException(status_code=409, detail="No content available to fact-check yet. Wait for the video's summary to finish generating.")
 
-    fact_check = ai.fact_check_transcript(text_content, video_id=id, username=username)
+    try:
+        fact_check = ai.fact_check_transcript(text_content, video_id=id, username=username)
+    except UsageLimitExceeded as e:
+        raise HTTPException(status_code=429, detail=str(e))
     database.save_video_analysis(id, username, fact_check=fact_check)
     return fact_check
 

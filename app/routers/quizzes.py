@@ -174,6 +174,11 @@ async def get_quiz(id: int, username: str = Depends(require_app_access)):
                         quiz_data["questions"] = questions_pool
                         database.save_quiz_active_questions(id, questions_pool, username=username)
                     database.save_quiz_concept_pool(id, build_concept_pool(ai_quiz_data), username=username)
+            except UsageLimitExceeded as e:
+                # Surfaced rather than swallowed: this path used to leave `questions_pool`
+                # empty and return 200 with a blank quiz, which looked like a bug rather
+                # than a usage cap the user could understand.
+                raise HTTPException(status_code=429, detail=str(e))
             except Exception as e:
                 logger.error(f"Auto-repair quiz {id} failed: {e}")
 
@@ -488,6 +493,11 @@ async def verify_quiz_guess(
         video_id = quiz_data.get("video_id") if isinstance(quiz_data, dict) else None
         res = ai.verify_user_guess(question_text, correct_answer, user_guess, quiz_id=quiz_id, video_id=video_id, username=username)
         return res
+    except UsageLimitExceeded as e:
+        # A usage cap is not a wrong answer: returning is_correct=False here (as the
+        # generic except below does) told the user their guess was wrong when the real
+        # reason was a quota, with the actual explanation buried in the feedback text.
+        raise HTTPException(status_code=429, detail=str(e))
     except Exception as e:
         logger.error(f"Error in verify_quiz_guess: {e}")
         return {

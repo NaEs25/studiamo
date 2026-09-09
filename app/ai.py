@@ -216,6 +216,10 @@ def get_usage_status(username: str) -> dict:
         "percent_used": round(pct_used, 1),
         "percent_remaining": round(pct_remaining, 1),
         "show_warning": pct_remaining <= warning_pct,
+        # Distinct from show_warning so the UI can stop saying "about to run out" once
+        # it actually has: pct_remaining hits exactly 0 while budget spend is metered in
+        # cents, so this rarely goes negative, but the check is <= to fail closed either way.
+        "is_exhausted": pct_remaining <= 0,
     }
 
 def get_gemini_client(username: str = "default_user") -> genai.Client:
