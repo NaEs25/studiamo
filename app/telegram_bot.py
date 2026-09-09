@@ -629,9 +629,14 @@ async def check_and_notify_inactivity():
                 conn.close()
 
 
+_last_tester_sweep_at: float = 0.0
+_TESTER_SWEEP_INTERVAL_SECONDS = 3600
+
+
 async def run_scheduler_daemon():
     """Runs a background loop to perform review scheduling checks every 1 minute."""
     print("Scheduler daemon started in background...")
+    global _last_tester_sweep_at
     while True:
         try:
             await check_and_notify_quizzes()
@@ -642,6 +647,17 @@ async def run_scheduler_daemon():
                 ImportQueueManager.get_instance().recover_all_pending_tasks()
             except Exception as e_recovery:
                 print(f"Periodic task recovery error in scheduler: {e_recovery}")
+            # Cosmetic admin-list hygiene only (see check_and_expire_testers' docstring),
+            # so this runs at most hourly rather than on every 60-second tick.
+            now = time.time()
+            if now - _last_tester_sweep_at >= _TESTER_SWEEP_INTERVAL_SECONDS:
+                _last_tester_sweep_at = now
+                try:
+                    flipped = await asyncio.to_thread(database.check_and_expire_testers)
+                    if flipped:
+                        print(f"Tester expiry sweep: flipped is_tester for {flipped} account(s).")
+                except Exception as e_sweep:
+                    print(f"Tester expiry sweep error: {e_sweep}")
         except Exception as e:
             print(f"Scheduler daemon error: {e}")
         await asyncio.sleep(60)

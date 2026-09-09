@@ -1050,6 +1050,46 @@ def _expire_tester_cache(user_uuid) -> None:
             release_pooled_connection(conn)
 
 
+def check_and_expire_testers() -> int:
+    """Bulk-flips user_profile.is_tester to FALSE for every account whose newest tester_access
+    grant has expired, unrevoked, without the account making a request since (which would
+    already have self-healed it via _expire_tester_cache on the has_app_access/get_tester_state
+    read path).
+
+    Purely cosmetic: nothing about access enforcement depends on this having run, only the
+    admin Users list's "is_tester" reflects reality more promptly for accounts that expired
+    and never logged back in. Mirrors _decide_access's cache_is_stale condition exactly
+    (newest grant by granted_at DESC, id DESC, not revoked, not unlimited, past expiry) so a
+    sweep and a live read can never disagree about which accounts qualify.
+
+    Returns the number of accounts flipped."""
+    conn = None
+    try:
+        conn = get_pooled_raw_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE user_profile p
+            SET is_tester = FALSE
+            FROM (
+                SELECT DISTINCT ON (user_uuid) user_uuid, expires_at, revoked_at
+                FROM tester_access
+                ORDER BY user_uuid, granted_at DESC, id DESC
+            ) t
+            WHERE p.user_uuid = t.user_uuid
+              AND p.is_tester IS TRUE
+              AND t.revoked_at IS NULL
+              AND t.expires_at IS NOT NULL
+              AND t.expires_at <= CURRENT_TIMESTAMP;
+        """)
+        return cursor.rowcount
+    except Exception as e:
+        logger.warning(f"[tester] Expiry sweep failed: {e}")
+        return 0
+    finally:
+        if conn is not None:
+            release_pooled_connection(conn)
+
+
 def _decide_access(row) -> tuple:
     """Access decision for one _TESTER_ACCESS_SQL row. Pure, no I/O.
 
