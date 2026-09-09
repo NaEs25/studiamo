@@ -72,6 +72,20 @@ pytest tests/
 Tests that need a real database connection skip themselves (with a clear reason) when one
 isn't configured, so the suite still runs somewhere without Postgres available.
 
+`tests/e2e/` drives the real app in a headless browser (Playwright) against a local server
+it starts itself (see `tests/e2e/conftest.py`), authenticating as a dedicated
+`e2e_test_bot` account rather than real Google OAuth. One-time setup, after
+`pip install -r requirements-dev.txt`:
+
+```bash
+playwright install chromium
+sudo $(python -c "import shutil; print(shutil.which('playwright'))") install-deps chromium
+```
+
+The second command installs OS-level shared libraries (`libnspr4`, `libnss3`, etc.) that
+headless Chromium needs to launch; `sudo playwright ...` alone fails with "command not
+found" because `sudo` resets `PATH` and can't see the venv's binary.
+
 ## APP_MODE
 
 Most behavior differences between self-hosted and cloud are gated on the `APP_MODE`

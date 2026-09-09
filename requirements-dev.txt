@@ -2,3 +2,4 @@
 # deploy.sh installs from requirements.txt alone, so none of this reaches prod's venv.
 -r requirements.txt
 pytest==9.1.1
+pytest-playwright==0.9.0
