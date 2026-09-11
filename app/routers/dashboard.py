@@ -256,10 +256,13 @@ async def get_ai_stats(username: str = Depends(require_app_access)):
 
 
 @router.get("/stats/history")
-async def get_stats_history(username: str = Depends(require_app_access)):
+async def get_stats_history(username: str = Depends(require_app_access), include_attempts: bool = False):
     """Returns active recall quiz attempt statistics and accuracy metrics for the active user.
     quiz_attempts stores one row per graded question (grade='remembered'/'forgot'), not one row
-    per quiz, there is no score/total_questions column, so aggregation happens over `grade`."""
+    per quiz, there is no score/total_questions column, so aggregation happens over `grade`.
+    The per-attempt detail (question/answer text for up to 200 rows, plus the SRS lookups
+    needed to grade each one) is behind include_attempts because the caller's In-Depth
+    Analytics panel starts collapsed: most page loads only need the aggregate counts."""
     conn = database.get_db_connection(username)
     user_uuid = conn.user_uuid
     try:
@@ -277,6 +280,15 @@ async def get_stats_history(username: str = Depends(require_app_access)):
         forgot = agg.get("forgot") or 0
         accuracy_pct = round((remembered / total_attempts * 100), 1) if total_attempts > 0 else 0.0
 
+        if not include_attempts:
+            return {
+                "total_attempts": total_attempts,
+                "remembered": remembered,
+                "forgot": forgot,
+                "accuracy_pct": accuracy_pct,
+                "recent_attempts": []
+            }
+
         cursor.execute("""
             SELECT a.id, a.quiz_id, a.question_index, a.question, a.given_answer, a.correct_answer,
                    a.grade, a.created_at, a.explanation, a.feedback,
@@ -291,11 +303,12 @@ async def get_stats_history(username: str = Depends(require_app_access)):
             ORDER BY a.id DESC
             LIMIT 200;
         """, (user_uuid,))
+        attempt_rows = cursor.fetchall()
         intervals = get_srs_intervals(cursor, user_uuid=user_uuid)
         num_stages = len([x for x in intervals if x is not None]) or 5
         srs_caps_cfg = get_srs_caps_and_repetition(cursor, user_uuid=user_uuid)
         recent_attempts = []
-        for r in cursor.fetchall():
+        for r in attempt_rows:
             att = dict(r)
             created_at = att.get("created_at")
             att["created_at"] = created_at.isoformat() if hasattr(created_at, "isoformat") else (str(created_at) if created_at else "")

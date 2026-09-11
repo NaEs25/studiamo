@@ -163,27 +163,30 @@ async function loadStats() {
         }
         
         try {
+            // Aggregate counts only, the per-attempt detail (up to 200 rows of question/answer
+            // text) loads lazily in toggleInDepthStats() the first time that panel is opened,
+            // since it starts collapsed and most visits to this tab never expand it.
             const historyData = await fetchAPI('/api/stats/history');
             const attEl = document.getElementById('analytics-total-attempts');
             const remEl = document.getElementById('analytics-remembered');
             const forgEl = document.getElementById('analytics-forgot');
             const accEl = document.getElementById('analytics-accuracy');
-            
+
             const ratioEl = document.getElementById('stats-ratio-val');
             const accBadgeEl = document.getElementById('stats-accuracy-badge');
             const ratioSubEl = document.getElementById('stats-ratio-subtext');
-            
+
             if (attEl) attEl.textContent = historyData.total_attempts;
             if (remEl) remEl.textContent = historyData.remembered;
             if (forgEl) forgEl.textContent = historyData.forgot;
             if (accEl) accEl.textContent = `${historyData.accuracy_pct}%`;
-            
+
             if (ratioEl) ratioEl.textContent = `${historyData.remembered} / ${historyData.forgot}`;
             if (accBadgeEl) accBadgeEl.textContent = `${historyData.accuracy_pct}%`;
             if (ratioSubEl) ratioSubEl.textContent = `${historyData.remembered} Right · ${historyData.forgot} Wrong`;
-            
-            window._analyticsAttemptsRaw = historyData.recent_attempts || [];
-            renderAnalyticsHistory();
+
+            window._analyticsAttemptsRaw = null;
+            window._analyticsAttemptsLoaded = false;
         } catch (err) {
             console.error("Failed to load in-depth analytics history:", err);
         }
@@ -821,16 +824,37 @@ function initSetupWizard() {
     // on at /api/user/export; re-importing an export is not built yet.
 }
 
-function toggleInDepthStats() {
+async function toggleInDepthStats() {
     const el = document.getElementById('indepth-stats-content');
     const chevron = document.getElementById('indepth-stats-chevron');
     if (!el) return;
     if (el.classList.contains('hidden')) {
         el.classList.remove('hidden');
         if (chevron) chevron.classList.add('rotate-180');
+        if (!window._analyticsAttemptsLoaded) {
+            await loadAnalyticsAttemptHistory();
+        }
     } else {
         el.classList.add('hidden');
         if (chevron) chevron.classList.remove('rotate-180');
+    }
+}
+
+async function loadAnalyticsAttemptHistory() {
+    const container = document.getElementById('analytics-history-container');
+    if (container) {
+        container.innerHTML = `<p class="text-xs text-stone-500 text-center py-4">Loading...</p>`;
+    }
+    try {
+        const historyData = await fetchAPI('/api/stats/history?include_attempts=true');
+        window._analyticsAttemptsRaw = historyData.recent_attempts || [];
+        window._analyticsAttemptsLoaded = true;
+        renderAnalyticsHistory();
+    } catch (err) {
+        console.error("Failed to load attempt history:", err);
+        if (container) {
+            container.innerHTML = `<p class="text-xs text-red-500 text-center py-4">Failed to load attempt history.</p>`;
+        }
     }
 }
 
