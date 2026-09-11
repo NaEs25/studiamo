@@ -832,8 +832,17 @@ def analyze_youtube_video(youtube_url: str, question_count: int, username: str =
     cost down; there is no officially supported audio-only mode for native YouTube ingestion."""
     client = get_gemini_client(username=username)
 
+    # Normalize to a bare watch URL before handing it to Gemini's server-side fetcher. A URL
+    # copied from the browser address bar (rather than the Share button) often carries extra
+    # params tied to the viewer's own session, e.g. `&list=WL` for Watch Later or a private
+    # playlist. Gemini fetches with no session of the caller's, so a playlist-scoped URL can
+    # 403 even though the video itself is public. Falls back to the raw string when no ID is
+    # found so an unrecognized-but-still-fetchable URL shape isn't made worse than before.
+    video_id = youtube.extract_video_id(youtube_url)
+    canonical_url = f"https://www.youtube.com/watch?v={video_id}" if video_id else youtube_url
+
     video_part = types.Part.from_uri(
-        file_uri=youtube_url,
+        file_uri=canonical_url,
         mime_type="video/mp4"
     )
 
@@ -841,7 +850,6 @@ def analyze_youtube_video(youtube_url: str, question_count: int, username: str =
     # MAX_VIDEO_ANALYSIS_SECONDS when we can determine the video is longer than that via
     # the official YouTube Data API. If no API key is configured duration is unknown, so
     # we don't clip (better to process the full video than to guess wrong and cut a short one).
-    video_id = youtube.extract_video_id(youtube_url)
     duration_seconds = youtube.get_video_duration_seconds(video_id) if video_id else None
     video_truncated = bool(duration_seconds and duration_seconds > MAX_VIDEO_ANALYSIS_SECONDS)
     if video_truncated:
