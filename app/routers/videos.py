@@ -89,7 +89,7 @@ async def add_content(
     if url and url.strip():
         yt_id = youtube.extract_video_id(url)
         if not yt_id:
-            raise HTTPException(status_code=400, detail="Invalid YouTube URL.")
+            raise HTTPException(status_code=400, detail=youtube.describe_unsupported_url(url) or "Invalid YouTube URL.")
         placeholder_title = f"YouTube Video ({yt_id})"
         placeholder_thumb = f"https://img.youtube.com/vi/{yt_id}/hqdefault.jpg"
         task_type = "youtube"

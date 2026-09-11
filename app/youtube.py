@@ -32,7 +32,21 @@ def extract_video_id(url: str) -> str:
             return parsed.path.strip('/')
     except Exception:
         pass
-        
+
+    return ""
+
+def describe_unsupported_url(url: str) -> str:
+    """Returns a specific, user-facing reason when a URL is recognizably YouTube but in a
+    format this app doesn't import (currently just in-progress livestreams, which have no
+    fixed video ID until they end), or "" when the generic "Invalid YouTube URL" message is
+    the right one. Call this only after extract_video_id has already failed on the same URL."""
+    if not url:
+        return ""
+    if re.search(r'youtube\.com/live/', url.strip()):
+        return (
+            "Live streams can't be imported while they're airing. Import this video after "
+            "the stream ends, once it has a regular youtube.com/watch?v=... URL."
+        )
     return ""
 
 def is_valid_duration(duration_str: str) -> bool:

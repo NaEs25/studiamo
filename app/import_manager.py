@@ -164,7 +164,7 @@ class YouTubeTaskProcessor(IImportTaskProcessor):
         update_stage_fn("Step 1/2: Fetching Video Info...")
         yt_id = youtube.extract_video_id(url)
         if not yt_id:
-            raise ImportInputError("Invalid YouTube URL.")
+            raise ImportInputError(youtube.describe_unsupported_url(url) or "Invalid YouTube URL.")
 
         meta = youtube.get_video_metadata(yt_id)
         metadata_title = meta.get("title", f"YouTube Video ({yt_id})")
