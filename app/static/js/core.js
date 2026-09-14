@@ -459,6 +459,15 @@ class ImportBacklogManager {
                 `;
             }
 
+            const isActiveImport = task.status === 'pending' || task.status === 'processing';
+            const closeBtnHTML = isActiveImport
+                ? `<button onclick="requestCancelImportTask('${task.id}')" class="p-1 hover:bg-red-50 text-stone-400 hover:text-red-600 rounded-md transition cursor-pointer" title="Cancel import">
+                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                    </button>`
+                : `<button onclick="dismissImportTask('${task.id}')" class="p-1 hover:bg-stone-100 text-stone-400 hover:text-stone-700 rounded-md transition cursor-pointer" title="Dismiss">
+                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                    </button>`;
+
             return `
                 <div class="bg-white border border-[#e7dfd3] p-2.5 rounded-xl flex flex-col space-y-1 shadow-sm text-stone-900 group">
                     <div class="flex items-center justify-between space-x-2">
@@ -468,9 +477,7 @@ class ImportBacklogManager {
                         </div>
                         <div class="flex items-center space-x-1.5 shrink-0">
                             ${actionBtnHTML}
-                            <button onclick="dismissImportTask('${task.id}')" class="p-1 hover:bg-stone-100 text-stone-400 hover:text-stone-700 rounded-md transition cursor-pointer" title="Dismiss">
-                                <i data-lucide="x" class="w-3.5 h-3.5"></i>
-                            </button>
+                            ${closeBtnHTML}
                         </div>
                     </div>
                     ${statusTextHTML}
@@ -514,9 +521,52 @@ async function dismissImportTask(taskId) {
     try {
         await fetchAPI(`/api/videos/import-tasks/${taskId}`, { method: 'DELETE' });
         globalImportBacklog.poll();
+        // Cancelling a pending/processing task also deletes its still-processing video row
+        // server-side, but the Goals page already rendered that video's "Processing..." card
+        // from an earlier loadGoals() snapshot and has no other reason to know it's gone -
+        // poll() only refreshes goals/dashboard on a status transition it observes itself,
+        // which a task that just vanished from the list never triggers. Without this, the
+        // stale placeholder card sat on the Goals page after the import widget had already
+        // cleared.
+        if (typeof loadGoals === 'function') loadGoals();
+        if (typeof loadDashboard === 'function') loadDashboard();
     } catch (e) {
         console.error("Failed to dismiss task:", e);
     }
+}
+
+// Cancelling a pending/processing task deletes its underlying (still-processing) video
+// row via dismissImportTask -> DELETE /import-tasks, so unlike dismissing a finished task
+// this is destructive and irreversible: confirm before sending it.
+async function requestCancelImportTask(taskId) {
+    const confirmFn = window.showConfirm || (typeof showConfirm === 'function' ? showConfirm : null);
+    const message = "This will stop the import and remove it from your list. Progress made so far will be lost.";
+    let confirmed = false;
+    if (confirmFn) {
+        confirmed = await confirmFn({
+            title: "Cancel Import?",
+            message,
+            confirmText: "Cancel Import",
+            confirmClass: "bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-xs shadow-sm transition",
+            icon: "x-circle"
+        });
+    } else {
+        confirmed = confirm(message);
+    }
+    if (confirmed) {
+        await dismissImportTask(taskId);
+    }
+}
+
+// Mirrors the auto-dismiss that already happens when a completed task's own "Open"
+// button is clicked (openTaskStudioAndDismiss), but for every other route into a video
+// (library card, goal card, watch button) which all funnel through openStudyStudio(id)
+// instead. Without this, the widget kept showing a finished import until the user found
+// their way back to this specific button.
+function dismissCompletedImportTaskForVideo(videoId) {
+    if (!videoId) return;
+    const match = globalImportBacklog.tasks.find(t => t.status === 'completed' && Number(t.video_id) === Number(videoId));
+    if (match) dismissImportTask(match.id);
 }
 
 function openTaskStudioAndDismiss(taskId, videoId) {

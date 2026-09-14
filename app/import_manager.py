@@ -1130,6 +1130,22 @@ class ImportQueueManager:
                     return False
 
             numeric_tid = int(task_id)
+            # Deleting only the import_tasks row left the videos row it points at stuck on
+            # status='processing' forever: the background _run_task_async coroutine has no
+            # cancellation hook, so it ran to completion regardless and wrote the video back
+            # to 'ready' as if nothing happened, while in the meantime get_user_backlog's
+            # orphan-video fallback (no matching import_tasks row) re-surfaced the same video
+            # as a new "v_<id>" task, so the cancelled import reappeared in the widget. Deleting
+            # the still-processing video row too - the same cleanup the "v_" branch above
+            # already does - closes both gaps: nothing to resurrect, and the processor's own
+            # writes to that video_id fail harmlessly (quizzes.video_id cascades / no match)
+            # once it eventually finishes instead of landing a completed import.
+            cursor.execute("SELECT video_id FROM import_tasks WHERE id = %s AND user_uuid = %s;", (numeric_tid, user_uuid))
+            task_row = cursor.fetchone()
+            if task_row:
+                video_id = task_row["video_id"] if isinstance(task_row, dict) else task_row[0]
+                if video_id:
+                    cursor.execute("DELETE FROM videos WHERE id = %s AND user_uuid = %s AND status = 'processing';", (video_id, user_uuid))
             cursor.execute("DELETE FROM import_tasks WHERE id = %s AND user_uuid = %s;", (numeric_tid, user_uuid))
             conn.commit()
             return True
