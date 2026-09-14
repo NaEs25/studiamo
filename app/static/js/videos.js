@@ -425,18 +425,17 @@ function initImportTab() {
                         await fetchAPI(`/api/videos/${result.video_id}/goal`, { method: 'POST', body: mapForm });
                     }
                 }
-                // Switch first so the dashboard is the visible tab, then await the reload:
-                // the new card cannot be scrolled to before loadDashboard has rendered it.
-                if (typeof switchTab === 'function') switchTab('dashboard');
+                // Refresh header stats/goal boxes first (they're visible across tabs),
+                // then land on the goals tab with the new card highlighted, the same
+                // way clicking a thumbnail on the dashboard does (navigateToVideoInGoals).
                 if (typeof loadDashboard === 'function') await loadDashboard();
-                if (typeof loadGoals === 'function') loadGoals();
 
                 if (window.globalImportBacklog) {
                     window.globalImportBacklog.toggleDrawer(true);
                     window.globalImportBacklog.poll();
                 }
 
-                scrollToVideoCard(result.video_id);
+                if (typeof navigateToVideoInGoals === 'function') navigateToVideoInGoals(result.video_id);
 
                 // Only queued at this point , the completion toast fires from the
                 // import backlog poll once the task actually finishes.
@@ -650,29 +649,6 @@ function initFocusModalEvents() {
     }
 }
 
-// Brings a freshly queued import's card into view and flashes it, so the user can see where
-// the material landed instead of hunting for it in the list.
-//
-// Polls rather than looking once: the card is created by loadDashboard's render pass, and a
-// card placed under a goal can take an extra frame to appear. Gives up quietly, since failing
-// to scroll must never look like the import itself failed.
-async function scrollToVideoCard(videoId, timeoutMs = 4000) {
-    if (!videoId) return false;
-
-    const deadline = Date.now() + timeoutMs;
-    while (Date.now() < deadline) {
-        const card = document.getElementById(`video-card-${videoId}`);
-        if (card) {
-            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            card.classList.add('video-card-arriving');
-            setTimeout(() => card.classList.remove('video-card-arriving'), 2400);
-            return true;
-        }
-        await new Promise(resolve => setTimeout(resolve, 120));
-    }
-    return false;
-}
-
 function renderVideoCard(video, quizzes, goals) {
     const activeQuiz = quizzes && (
         quizzes.find(q => String(q.video_id) === String(video.id) && Number(q.importance_level) === Number(video.importance_rating)) ||
@@ -685,7 +661,7 @@ function renderVideoCard(video, quizzes, goals) {
     const username = typeof activeUsername !== 'undefined' ? activeUsername : 'default';
     const savedProgress = activeQuiz ? localStorage.getItem(`quiz-progress-${username}-${activeQuiz.id}`) : null;
     const isContinued = activeQuiz && ((activeQuiz.in_progress_index !== undefined && activeQuiz.in_progress_index !== null && activeQuiz.in_progress_index > 0) || (savedProgress && parseInt(savedProgress, 10) > 0));
-    const studyLabel = isContinued ? 'Continue Quiz' : 'Study';
+    const studyLabel = isContinued ? 'Continue Quiz' : 'Quiz';
     
     let starsHTML = '';
     for (let i = 1; i <= 5; i++) {
@@ -698,6 +674,7 @@ function renderVideoCard(video, quizzes, goals) {
     }
     
     let actionControlsHTML = '';
+    let isNormalState = false;
     if (isTemporaryVideo(video)) {
         actionControlsHTML = `
             <button onclick="confirmPreviewImport(${video.id}, this)" class="btn-primary w-full py-2 font-extrabold rounded-xl text-xs transition flex items-center justify-center space-x-1.5 h-[38px]">
@@ -720,9 +697,10 @@ function renderVideoCard(video, quizzes, goals) {
             </button>
         `;
     } else {
+        isNormalState = true;
         const levelToUse = video.importance_rating || video.importance_level || 3;
         actionControlsHTML = `
-            <button onclick="handleStudyButtonClick(event, ${video.id}, ${levelToUse})" class="btn-primary w-full py-2 font-extrabold rounded-xl text-xs transition flex items-center justify-center space-x-1.5 h-[38px]">
+            <button onclick="handleStudyButtonClick(event, ${video.id}, ${levelToUse})" class="px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900 font-extrabold rounded-xl border border-stone-200 text-xs transition flex items-center justify-center space-x-1.5 h-[38px] shrink-0">
                  <i data-lucide="${isContinued ? 'play-circle' : 'brain'}" class="w-3.5 h-3.5"></i>
                  <span>${studyLabel}</span>
             </button>
@@ -758,17 +736,17 @@ function renderVideoCard(video, quizzes, goals) {
     const hasDetails = !isTemp && (hasTakeaways || hasNotes);
     
     const detailsSectionHTML = hasDetails ? `
-        <div class="pt-2 space-y-2">
+        <div class="!mt-2 space-y-1">
             <button onclick="toggleVideoDetails(event, ${video.id})" class="flex items-center space-x-1.5 text-xs font-bold text-stone-500 hover:text-stone-700 transition">
                 <i data-lucide="align-left" class="w-3.5 h-3.5 text-amber-600"></i>
                 <span>${hasTakeaways && hasNotes ? 'AI Takeaways & Personal Notes' : (hasTakeaways ? 'AI Takeaways' : 'Personal Notes')}</span>
                 <i data-lucide="chevron-down" id="details-chevron-${video.id}" class="w-3.5 h-3.5 text-stone-400 transition-transform"></i>
             </button>
-            
-            <div id="details-content-${video.id}" class="hidden space-y-3 pt-1 text-xs">
+
+            <div id="details-content-${video.id}" class="hidden space-y-2 pt-0.5 text-xs">
                 ${hasTakeaways ? `
-                <div class="space-y-1.5">
-                    <h5 class="font-semibold text-stone-400 text-[10px] uppercase tracking-wider">Key Takeaways</h5>
+                <div class="space-y-1">
+                    ${hasNotes ? '<h5 class="font-semibold text-stone-400 text-[10px] uppercase tracking-wider">Key Takeaways</h5>' : ''}
                     <ul class="list-disc list-inside space-y-1 text-stone-600 pl-1 leading-relaxed">
                         ${validSummaryBullets.map(s => `<li>${s}</li>`).join('')}
                     </ul>
@@ -793,6 +771,54 @@ function renderVideoCard(video, quizzes, goals) {
         title: 'Open Study Studio Workspace'
     });
 
+    const watchNotesButtonHTML = isNormalState ? `
+        <button onclick="event.stopPropagation(); openStudyStudio(${video.id})" class="btn-primary w-full py-2 font-extrabold rounded-xl text-xs transition flex items-center justify-center space-x-1.5 h-[38px]" title="Watch the video and take notes side by side">
+            <i data-lucide="book-open" class="w-3.5 h-3.5"></i>
+            <span>Watch &amp; Notes</span>
+        </button>
+    ` : `
+        <button onclick="event.stopPropagation(); openStudyStudio(${video.id})" class="px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900 font-extrabold rounded-xl border border-stone-200 text-xs transition flex items-center justify-center space-x-1.5 h-[38px] shrink-0" title="Open Study Studio: watch the video and take notes side by side">
+            <i data-lucide="book-open" class="w-3.5 h-3.5"></i>
+            <span>Watch &amp; Notes</span>
+        </button>
+    `;
+
+    const bookmarkButtonHTML = isWatchlist ? `
+        <button onclick="event.stopPropagation(); toggleWatchlist(${video.id})" class="p-2 bg-amber-50 hover:bg-amber-100 text-amber-600 hover:text-amber-700 rounded-xl border border-amber-200 transition flex items-center justify-center h-[38px] w-[38px] shrink-0" title="Remove from Study Queue">
+            <i data-lucide="bookmark" class="w-4 h-4 fill-amber-500 text-amber-500"></i>
+        </button>
+    ` : '';
+
+    const trailingButtonHTML = isTemp ? `
+        <button onclick="event.stopPropagation(); discardPreviewVideo(${video.id})" class="p-2 bg-stone-100 hover:bg-red-100 text-stone-500 hover:text-red-700 rounded-xl border border-stone-200 transition flex items-center justify-center h-[38px] w-[38px] shrink-0" title="Discard Preview">
+            <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+    ` : `
+        <button onclick="toggleVideoMenu(event, ${video.id})" data-menuid="${video.id}" class="p-2 bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900 rounded-xl border border-stone-200 transition flex items-center justify-center h-[38px] w-[38px] shrink-0" title="Material Options">
+            <i data-lucide="more-vertical" class="w-4 h-4"></i>
+        </button>
+    `;
+
+    const actionRowHTML = isNormalState ? `
+        <div class="flex-grow min-w-0">
+            ${watchNotesButtonHTML}
+        </div>
+        <div id="action-btn-container-${video.id}" class="flex items-center space-x-2 shrink-0">
+            ${actionControlsHTML}
+            ${bookmarkButtonHTML}
+            ${trailingButtonHTML}
+        </div>
+    ` : `
+        <div id="action-btn-container-${video.id}" class="flex-grow min-w-0">
+            ${actionControlsHTML}
+        </div>
+        <div class="flex items-center space-x-2 shrink-0">
+            ${video.status === 'processing' ? '' : watchNotesButtonHTML}
+            ${bookmarkButtonHTML}
+            ${trailingButtonHTML}
+        </div>
+    `;
+
     return `
         <div id="video-card-${video.id}" class="bg-white border border-[#e7dfd3] rounded-2xl p-4 flex flex-col justify-between space-y-4 shadow-sm relative">
             <div class="flex space-x-3 items-start">
@@ -810,29 +836,8 @@ function renderVideoCard(video, quizzes, goals) {
             ${detailsSectionHTML}
             
             
-            <div class="flex items-center justify-between pt-1 gap-2">
-                <div id="action-btn-container-${video.id}" class="flex-grow min-w-0">
-                    ${actionControlsHTML}
-                </div>
-                <div class="flex items-center space-x-2 shrink-0">
-                    <button onclick="event.stopPropagation(); openStudyStudio(${video.id})" class="p-2 bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900 rounded-xl border border-stone-200 transition flex items-center justify-center h-[38px] w-[38px] shrink-0" title="Open Study Studio">
-                        <i data-lucide="book-open" class="w-4 h-4"></i>
-                    </button>
-                    ${isWatchlist ? `
-                        <button onclick="event.stopPropagation(); toggleWatchlist(${video.id})" class="p-2 bg-amber-50 hover:bg-amber-100 text-amber-600 hover:text-amber-700 rounded-xl border border-amber-200 transition flex items-center justify-center h-[38px] w-[38px] shrink-0" title="Remove from Study Queue">
-                            <i data-lucide="bookmark" class="w-4 h-4 fill-amber-500 text-amber-500"></i>
-                        </button>
-                    ` : ''}
-                    ${isTemp ? `
-                        <button onclick="event.stopPropagation(); discardPreviewVideo(${video.id})" class="p-2 bg-stone-100 hover:bg-red-100 text-stone-500 hover:text-red-700 rounded-xl border border-stone-200 transition flex items-center justify-center h-[38px] w-[38px] shrink-0" title="Discard Preview">
-                            <i data-lucide="x" class="w-4 h-4"></i>
-                        </button>
-                    ` : `
-                        <button onclick="toggleVideoMenu(event, ${video.id})" data-menuid="${video.id}" class="p-2 bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900 rounded-xl border border-stone-200 transition flex items-center justify-center h-[38px] w-[38px] shrink-0" title="Material Options">
-                            <i data-lucide="more-vertical" class="w-4 h-4"></i>
-                        </button>
-                    `}
-                </div>
+            <div class="flex items-center justify-between ${hasDetails ? '!mt-2' : 'pt-1'} gap-2">
+                ${actionRowHTML}
             </div>
         </div>
     `;
@@ -1580,6 +1585,7 @@ function initStudioYTPlayerTracker() {
 
 async function openStudyStudio(id) {
     if (typeof stopActiveInlineTracker === 'function') stopActiveInlineTracker();
+    if (typeof dismissCompletedImportTaskForVideo === 'function') dismissCompletedImportTaskForVideo(id);
     _currentStudioVideoId = id;
     _currentStudioVideoCurrentTime = 0;
     const cardData = (window._videoCardCache && window._videoCardCache[id]) || null;
@@ -2160,7 +2166,6 @@ async function handleStudyButtonClick(event, videoId, level = 3) {
 window.handleStudyButtonClick = handleStudyButtonClick;
 window.initImportTab = initImportTab;
 window.renderVideoCard = renderVideoCard;
-window.scrollToVideoCard = scrollToVideoCard;
 window.openFocusModal = openFocusModal;
 window.closeFocusModal = closeFocusModal;
 window.initFocusModalEvents = initFocusModalEvents;

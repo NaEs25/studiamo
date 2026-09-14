@@ -778,33 +778,48 @@ function navigateToVideoInGoals(videoId) {
     if (typeof switchTab === 'function') {
         switchTab('goals');
     }
+
+    // loadGoals() (triggered by switchTab above) fetches and re-renders asynchronously, so
+    // the card and window._videoCardCache may not exist yet on the first check, especially
+    // right after an import. Poll for up to 3s rather than checking once and giving up.
+    const deadline = Date.now() + 3000;
     const scrollToCard = () => {
         const cached = (window._videoCardCache && window._videoCardCache[videoId]) || null;
-        if (cached) {
-            if (cached.is_watchlist === 1 || cached.is_watchlist === true) {
-                const content = document.getElementById('content-watchlist');
-                const chevron = document.getElementById('chevron-watchlist');
-                if (content && content.classList.contains('hidden')) {
-                    content.classList.remove('hidden');
-                    if (chevron) chevron.classList.add('rotate-180');
-                    localStorage.setItem('accordion-open-watchlist', 'true');
-                }
-            } else if (cached.learning_goal_id) {
-                const content = document.getElementById(`goal-materials-content-${cached.learning_goal_id}`);
-                const chevron = document.getElementById(`goal-materials-chevron-${cached.learning_goal_id}`);
-                if (content && content.classList.contains('hidden')) {
-                    content.classList.remove('hidden');
-                    if (chevron) chevron.classList.add('rotate-180');
-                    localStorage.setItem(`goal-materials-open-${cached.learning_goal_id}`, 'true');
-                }
+        const card = document.getElementById(`video-card-${videoId}`);
+        if (!cached || !card) {
+            if (Date.now() < deadline) setTimeout(scrollToCard, 150);
+            return;
+        }
+
+        if (cached.is_watchlist === 1 || cached.is_watchlist === true) {
+            const content = document.getElementById('content-watchlist');
+            const chevron = document.getElementById('chevron-watchlist');
+            if (content && content.classList.contains('hidden')) {
+                content.classList.remove('hidden');
+                if (chevron) chevron.classList.add('rotate-180');
+                localStorage.setItem('accordion-open-watchlist', 'true');
+            }
+        } else if (cached.learning_goal_id) {
+            const content = document.getElementById(`goal-materials-content-${cached.learning_goal_id}`);
+            const chevron = document.getElementById(`goal-materials-chevron-${cached.learning_goal_id}`);
+            if (content && content.classList.contains('hidden')) {
+                content.classList.remove('hidden');
+                if (chevron) chevron.classList.add('rotate-180');
+                localStorage.setItem(`goal-materials-open-${cached.learning_goal_id}`, 'true');
+            }
+        } else {
+            const content = document.getElementById('content-unassociated');
+            const chevron = document.getElementById('chevron-unassociated');
+            if (content && content.classList.contains('hidden')) {
+                content.classList.remove('hidden');
+                if (chevron) chevron.classList.add('rotate-180');
+                localStorage.setItem('accordion-open-unassociated', 'true');
             }
         }
-        const card = document.getElementById(`video-card-${videoId}`);
-        if (card) {
-            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            card.classList.add('ring-2', 'ring-amber-500', 'ring-offset-2');
-            setTimeout(() => card.classList.remove('ring-2', 'ring-amber-500', 'ring-offset-2'), 2500);
-        }
+
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        card.classList.add('ring-2', 'ring-amber-500', 'ring-offset-2');
+        setTimeout(() => card.classList.remove('ring-2', 'ring-amber-500', 'ring-offset-2'), 2500);
     };
     setTimeout(scrollToCard, 350);
 }
