@@ -899,8 +899,11 @@
                     </div>
                 </div>
 
-                <!-- 2. App Installation (PWA / Home Screen) Card -->
-                <div class="bg-white p-6 rounded-2xl border border-stone-200 space-y-4 shadow-sm">
+                <!-- 2. App Installation (PWA / Home Screen) Card. Hidden entirely once already
+                     running installed/standalone (data-standalone on <html>, set before first
+                     paint) - see style.css's Mobile Safe Area section for the other consumer of
+                     that attribute. -->
+                <div id="pwa-install-card" class="bg-white p-6 rounded-2xl border border-stone-200 space-y-4 shadow-sm">
                     <h3 class="font-bold text-base flex items-center space-x-2 border-b border-stone-200 pb-3">
                         <i data-lucide="smartphone" class="w-5 h-5 text-amber-600"></i>
                         <span>Install as App</span>
@@ -2609,7 +2612,11 @@
         </div>
     </div>
 
-    <!-- Overlay: Tab Overview / Onboarding Help Guide Modal -->
+    <!-- Overlay: Tab Overview / Onboarding Help Guide Modal.
+         One step visible at a time (see settings.js renderOnboardingStep) rather than all tabs
+         at once. The "pwa" step is filtered out at render time when data-standalone="true" is
+         already set on <html> (installed users have nothing to install) - see style.css's
+         Mobile Safe Area section for the other consumer of that attribute. -->
     <div id="overlay-tab-guide"
         class="app-overlay hidden fixed inset-0 bg-stone-950/85 backdrop-blur z-50 flex items-center justify-center p-4 overflow-y-auto">
         <div
@@ -2622,7 +2629,7 @@
                     </div>
                     <div>
                         <h3 class="text-base font-extrabold text-stone-900 tracking-tight">Welcome to Studiamo</h3>
-                        <p class="text-[11px] text-stone-500">Quick tour of application tabs</p>
+                        <p class="text-[11px] text-stone-500">Quick tour of the app</p>
                     </div>
                 </div>
                 <button type="button" onclick="closeTabGuideModal(event)"
@@ -2631,72 +2638,112 @@
                 </button>
             </div>
 
-            <div class="space-y-2">
+            <div id="onboarding-steps">
                 <!-- Home -->
-                <div class="bg-stone-50 border border-stone-200 rounded-xl p-2.5 sm:p-3 flex items-center space-x-3">
-                    <div class="p-2 bg-amber-500/10 text-amber-600 rounded-lg shrink-0">
-                        <i data-lucide="home" class="w-4 h-4"></i>
+                <div class="onboarding-step flex items-center space-x-3 py-2" data-step="home">
+                    <div class="p-3 bg-amber-500/10 text-amber-600 rounded-lg shrink-0">
+                        <i data-lucide="home" class="w-6 h-6"></i>
                     </div>
                     <div>
-                        <h4 class="font-bold text-xs text-stone-900">Home</h4>
-                        <p class="text-[11px] text-stone-500 leading-snug">Due quizzes, review schedule &amp; daily
+                        <h4 class="font-bold text-sm text-stone-900">Home</h4>
+                        <p class="text-xs text-stone-500 leading-snug">Due quizzes, review schedule &amp; daily
                             video recommendations.</p>
                     </div>
                 </div>
 
                 <!-- Goals -->
-                <div class="bg-stone-50 border border-stone-200 rounded-xl p-2.5 sm:p-3 flex items-center space-x-3">
-                    <div class="p-2 bg-violet-500/10 text-violet-600 rounded-lg shrink-0">
-                        <i data-lucide="target" class="w-4 h-4"></i>
+                <div class="onboarding-step flex items-center space-x-3 py-2" data-step="goals">
+                    <div class="p-3 bg-violet-500/10 text-violet-600 rounded-lg shrink-0">
+                        <i data-lucide="target" class="w-6 h-6"></i>
                     </div>
                     <div>
-                        <h4 class="font-bold text-xs text-stone-900">Goals</h4>
-                        <p class="text-[11px] text-stone-500 leading-snug">Group materials into structured learning
+                        <h4 class="font-bold text-sm text-stone-900">Goals</h4>
+                        <p class="text-xs text-stone-500 leading-snug">Group materials into structured learning
                             roadmaps.</p>
                     </div>
                 </div>
 
                 <!-- Import -->
-                <div class="bg-stone-50 border border-stone-200 rounded-xl p-2.5 sm:p-3 flex items-center space-x-3">
-                    <div class="p-2 bg-sky-500/10 text-sky-600 rounded-lg shrink-0">
-                        <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                <div class="onboarding-step flex items-center space-x-3 py-2" data-step="import">
+                    <div class="p-3 bg-sky-500/10 text-sky-600 rounded-lg shrink-0">
+                        <i data-lucide="plus-circle" class="w-6 h-6"></i>
                     </div>
                     <div>
-                        <h4 class="font-bold text-xs text-stone-900">Import</h4>
-                        <p class="text-[11px] text-stone-500 leading-snug">Add YouTube videos or documents, AI turns them
+                        <h4 class="font-bold text-sm text-stone-900">Import</h4>
+                        <p class="text-xs text-stone-500 leading-snug">Add YouTube videos or documents, AI turns them
                             into quizzes.</p>
                     </div>
                 </div>
 
                 <!-- Stats -->
-                <div class="bg-stone-50 border border-stone-200 rounded-xl p-2.5 sm:p-3 flex items-center space-x-3">
-                    <div class="p-2 bg-emerald-500/10 text-emerald-600 rounded-lg shrink-0">
-                        <i data-lucide="trophy" class="w-4 h-4"></i>
+                <div class="onboarding-step flex items-center space-x-3 py-2" data-step="stats">
+                    <div class="p-3 bg-emerald-500/10 text-emerald-600 rounded-lg shrink-0">
+                        <i data-lucide="trophy" class="w-6 h-6"></i>
                     </div>
                     <div>
-                        <h4 class="font-bold text-xs text-stone-900">Stats</h4>
-                        <p class="text-[11px] text-stone-500 leading-snug">Levels, XP, streaks &amp; leaderboards.</p>
+                        <h4 class="font-bold text-sm text-stone-900">Stats</h4>
+                        <p class="text-xs text-stone-500 leading-snug">Levels, XP, streaks &amp; leaderboards.</p>
                     </div>
                 </div>
 
                 <!-- Settings -->
-                <div class="bg-stone-50 border border-stone-200 rounded-xl p-2.5 sm:p-3 flex items-center space-x-3">
-                    <div class="p-2 bg-stone-500/10 text-stone-600 rounded-lg shrink-0">
-                        <i data-lucide="settings" class="w-4 h-4"></i>
+                <div class="onboarding-step flex items-center space-x-3 py-2" data-step="settings">
+                    <div class="p-3 bg-stone-500/10 text-stone-600 rounded-lg shrink-0">
+                        <i data-lucide="settings" class="w-6 h-6"></i>
                     </div>
                     <div>
-                        <h4 class="font-bold text-xs text-stone-900">Settings</h4>
-                        <p class="text-[11px] text-stone-500 leading-snug">Profile, notifications &amp; review settings.</p>
+                        <h4 class="font-bold text-sm text-stone-900">Settings</h4>
+                        <p class="text-xs text-stone-500 leading-snug">Profile, notifications &amp; review settings.</p>
+                    </div>
+                </div>
+
+                <!-- Install as App (PWA), skipped when already running standalone -->
+                <div class="onboarding-step space-y-3 py-2" data-step="pwa">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-3 bg-amber-500/10 text-amber-600 rounded-lg shrink-0">
+                            <i data-lucide="smartphone" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-sm text-stone-900">Install as App</h4>
+                            <p class="text-xs text-stone-500 leading-snug">Add Studiamo to your home screen for
+                                quick access and notifications, on mobile or desktop.</p>
+                        </div>
+                    </div>
+                    <button type="button" id="onboarding-pwa-install-btn"
+                        onclick="triggerPWAInstall('onboarding-pwa-ios-instructions')"
+                        class="btn-primary w-full py-2.5 font-bold text-xs rounded-xl transition flex items-center justify-center space-x-2">
+                        <i data-lucide="download" class="w-4 h-4"></i>
+                        <span>Install</span>
+                    </button>
+                    <div id="onboarding-pwa-ios-instructions"
+                        class="text-xs text-stone-700 bg-[#f3ebd9] p-3 rounded-xl border border-[#dfd5c5] hidden space-y-1">
+                        <p class="font-semibold text-amber-900 flex items-center space-x-1">
+                            <i data-lucide="apple" class="w-3.5 h-3.5 text-amber-700"></i>
+                            <span>Instructions for iPhone / iPad (Safari):</span>
+                        </p>
+                        <ol class="list-decimal list-inside space-y-0.5 text-[11px] text-stone-800">
+                            <li>Tap the <strong>Share icon</strong> at the bottom of Safari (square with upward
+                                arrow).</li>
+                            <li>Scroll down and select <strong>"Add to Home Screen"</strong>.</li>
+                            <li>Tap <strong>Add</strong> in the top-right corner.</li>
+                        </ol>
                     </div>
                 </div>
             </div>
 
-            <div class="pt-1">
-                <button type="button" onclick="dismissTabGuide(event)"
-                    class="btn-primary w-full py-2.5 font-extrabold text-xs rounded-xl transition flex items-center justify-center space-x-1.5">
-                    <span>Got it! Start Learning</span>
-                    <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
-                </button>
+            <div class="flex items-center justify-between pt-1">
+                <div id="onboarding-dots" class="flex items-center space-x-1.5"></div>
+                <div class="flex items-center space-x-2">
+                    <button type="button" id="onboarding-back-btn" onclick="onboardingBack(event)"
+                        class="hidden px-4 py-2.5 font-bold text-xs rounded-xl transition text-stone-600 hover:bg-stone-100">
+                        Back
+                    </button>
+                    <button type="button" id="onboarding-next-btn" onclick="onboardingNext(event)"
+                        class="btn-primary px-5 py-2.5 font-extrabold text-xs rounded-xl transition flex items-center justify-center space-x-1.5">
+                        <span>Next</span>
+                        <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>
             </div>
         </div>
     </div>

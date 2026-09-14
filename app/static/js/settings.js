@@ -1210,12 +1210,13 @@ async function testTelegramNotification() {
 }
 
 let _onboardingStatusCache = null;
+let _onboardingStepIndex = 0;
 
 async function checkOnboardingAndUpdates() {
     try {
         const data = await fetchAPI('/api/user/onboarding_status');
         _onboardingStatusCache = data;
-        
+
         if (!data.has_seen_onboarding) {
             openTabGuideModal();
         } else if (!data.has_seen_updates) {
@@ -1226,11 +1227,71 @@ async function checkOnboardingAndUpdates() {
     }
 }
 
+// Steps already running as an installed PWA have nothing to gain from the "Install as App"
+// step, so it's dropped from the sequence entirely rather than shown as a dead end.
+function _onboardingActiveSteps() {
+    const isStandalone = document.documentElement.dataset.standalone === 'true';
+    return Array.from(document.querySelectorAll('#onboarding-steps .onboarding-step'))
+        .filter(el => !(isStandalone && el.dataset.step === 'pwa'));
+}
+
+function renderOnboardingStep() {
+    const steps = _onboardingActiveSteps();
+    if (steps.length === 0) return;
+    if (_onboardingStepIndex >= steps.length) _onboardingStepIndex = steps.length - 1;
+
+    // Hide every step first, including ones filtered out of `steps` entirely (e.g. "pwa" when
+    // already standalone) - those never appear in the loop below, so without this they'd keep
+    // whatever visibility they had in the static markup.
+    document.querySelectorAll('#onboarding-steps .onboarding-step').forEach(el => el.classList.add('hidden'));
+    steps[_onboardingStepIndex].classList.remove('hidden');
+
+    const dotsEl = document.getElementById('onboarding-dots');
+    if (dotsEl) {
+        dotsEl.innerHTML = steps
+            .map((_, i) => `<span class="onboarding-dot${i === _onboardingStepIndex ? ' onboarding-dot-active' : ''}"></span>`)
+            .join('');
+    }
+
+    const backBtn = document.getElementById('onboarding-back-btn');
+    if (backBtn) backBtn.classList.toggle('hidden', _onboardingStepIndex === 0);
+
+    const nextBtn = document.getElementById('onboarding-next-btn');
+    if (nextBtn) {
+        const isLastStep = _onboardingStepIndex === steps.length - 1;
+        nextBtn.innerHTML = isLastStep
+            ? '<span>Got it! Start Learning</span><i data-lucide="check" class="w-3.5 h-3.5"></i>'
+            : '<span>Next</span><i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>';
+    }
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function onboardingNext(e) {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    const steps = _onboardingActiveSteps();
+    if (_onboardingStepIndex >= steps.length - 1) {
+        dismissTabGuide(e);
+        return;
+    }
+    _onboardingStepIndex++;
+    renderOnboardingStep();
+}
+
+function onboardingBack(e) {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    if (_onboardingStepIndex === 0) return;
+    _onboardingStepIndex--;
+    renderOnboardingStep();
+}
+
 function openTabGuideModal(e) {
     if (e && typeof e.preventDefault === 'function') e.preventDefault();
     const el = document.getElementById('overlay-tab-guide');
     if (el) {
+        _onboardingStepIndex = 0;
         openOverlay('overlay-tab-guide', closeTabGuideModal);
+        renderOnboardingStep();
         if (typeof renderIcons === 'function') renderIcons();
         if (typeof lucide !== 'undefined') lucide.createIcons();
     }
@@ -1296,6 +1357,8 @@ window.checkOnboardingAndUpdates = checkOnboardingAndUpdates;
 window.openTabGuideModal = openTabGuideModal;
 window.closeTabGuideModal = closeTabGuideModal;
 window.dismissTabGuide = dismissTabGuide;
+window.onboardingNext = onboardingNext;
+window.onboardingBack = onboardingBack;
 window.openUpdatesModal = openUpdatesModal;
 window.closeUpdatesModal = closeUpdatesModal;
 window.dismissUpdates = dismissUpdates;
@@ -1534,7 +1597,10 @@ window.addEventListener('appinstalled', () => {
     deferredPWAInstallPrompt = null;
 });
 
-function triggerPWAInstall() {
+// instructionsId lets the onboarding wizard's install step point at its own iOS-instructions
+// box (#onboarding-pwa-ios-instructions) instead of the Settings card's (#pwa-ios-instructions),
+// since both can exist in the DOM at once.
+function triggerPWAInstall(instructionsId = 'pwa-ios-instructions') {
     if (deferredPWAInstallPrompt) {
         deferredPWAInstallPrompt.prompt();
         deferredPWAInstallPrompt.userChoice.then((choice) => {
@@ -1542,7 +1608,7 @@ function triggerPWAInstall() {
         });
     } else {
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-        const iosBox = document.getElementById('pwa-ios-instructions');
+        const iosBox = document.getElementById(instructionsId);
         if (iosBox) iosBox.classList.toggle('hidden');
         if (!isIOS) {
             alert('To install Studiamo as an app, use the "Add to Home Screen" or "Install App" option in your browser menu.');

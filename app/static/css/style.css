@@ -753,6 +753,12 @@ html[data-standalone="true"] #app-header {
     }
 }
 
+/* The Settings "Install as App" card offers nothing to a user already running the installed
+   PWA, so it's dropped rather than left showing a redundant install button. */
+html[data-standalone="true"] #pwa-install-card {
+    display: none;
+}
+
 /* Shared by every id="overlay-*" modal (see index.html). scroll-padding protects any
    modal whose content grows tall enough to reach the top/bottom edge under scroll, without
    touching each modal's own background/blur/z-index/padding, which vary intentionally
@@ -760,6 +766,20 @@ html[data-standalone="true"] #app-header {
 html[data-standalone="true"] .app-overlay {
     scroll-padding-top: var(--safe-top);
     scroll-padding-bottom: var(--safe-bottom);
+}
+
+/* Step-progress dots for the onboarding wizard (#overlay-tab-guide, see settings.js
+   renderOnboardingStep). */
+.onboarding-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 9999px;
+    background-color: #d6d3d1;
+    transition: background-color 0.15s ease;
+}
+
+.onboarding-dot-active {
+    background-color: #f59e0b;
 }
 
 /* The quiz overlay pins its header at the true top of the modal (see index.html) instead of
