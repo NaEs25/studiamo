@@ -657,12 +657,7 @@ function renderVideoCard(video, quizzes, goals) {
     const srsStage = activeQuiz ? activeQuiz.srs_stage : 0;
     const isMastered = activeQuiz ? !!activeQuiz.mastered : false;
     const isPaused = video.is_paused ? true : false;
-    
-    const username = typeof activeUsername !== 'undefined' ? activeUsername : 'default';
-    const savedProgress = activeQuiz ? localStorage.getItem(`quiz-progress-${username}-${activeQuiz.id}`) : null;
-    const isContinued = activeQuiz && ((activeQuiz.in_progress_index !== undefined && activeQuiz.in_progress_index !== null && activeQuiz.in_progress_index > 0) || (savedProgress && parseInt(savedProgress, 10) > 0));
-    const studyLabel = isContinued ? 'Continue Quiz' : 'Quiz';
-    
+
     let starsHTML = '';
     for (let i = 1; i <= 5; i++) {
         const starClass = i <= video.importance_rating ? 'fill-amber-500 text-amber-500' : 'text-stone-300';
@@ -700,9 +695,9 @@ function renderVideoCard(video, quizzes, goals) {
         isNormalState = true;
         const levelToUse = video.importance_rating || video.importance_level || 3;
         actionControlsHTML = `
-            <button onclick="handleStudyButtonClick(event, ${video.id}, ${levelToUse})" class="px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900 font-extrabold rounded-xl border border-stone-200 text-xs transition flex items-center justify-center space-x-1.5 h-[38px] shrink-0">
-                 <i data-lucide="${isContinued ? 'play-circle' : 'brain'}" class="w-3.5 h-3.5"></i>
-                 <span>${studyLabel}</span>
+            <button onclick="handleStudyButtonClick(event, ${video.id}, ${levelToUse})" class="w-full px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900 font-extrabold rounded-xl border border-stone-200 text-xs transition flex items-center justify-center space-x-2 h-[38px]">
+                 <i data-lucide="brain" class="w-3.5 h-3.5"></i>
+                 <span>Quiz</span>
             </button>
         `;
     }
@@ -736,7 +731,7 @@ function renderVideoCard(video, quizzes, goals) {
     const hasDetails = !isTemp && (hasTakeaways || hasNotes);
     
     const detailsSectionHTML = hasDetails ? `
-        <div class="!mt-2 space-y-1">
+        <div class="mt-2 space-y-1">
             <button onclick="toggleVideoDetails(event, ${video.id})" class="flex items-center space-x-1.5 text-xs font-bold text-stone-500 hover:text-stone-700 transition">
                 <i data-lucide="align-left" class="w-3.5 h-3.5 text-amber-600"></i>
                 <span>${hasTakeaways && hasNotes ? 'AI Takeaways & Personal Notes' : (hasTakeaways ? 'AI Takeaways' : 'Personal Notes')}</span>
@@ -772,14 +767,14 @@ function renderVideoCard(video, quizzes, goals) {
     });
 
     const watchNotesButtonHTML = isNormalState ? `
-        <button onclick="event.stopPropagation(); openStudyStudio(${video.id})" class="btn-primary w-full py-2 font-extrabold rounded-xl text-xs transition flex items-center justify-center space-x-1.5 h-[38px]" title="Watch the video and take notes side by side">
-            <i data-lucide="book-open" class="w-3.5 h-3.5"></i>
-            <span>Watch &amp; Notes</span>
+        <button onclick="event.stopPropagation(); openStudyStudio(${video.id})" class="btn-primary w-full py-2 font-extrabold rounded-xl text-xs transition flex items-center justify-center space-x-2 min-h-[38px]" title="Watch the video and take notes side by side">
+            <i data-lucide="book-open" class="w-3.5 h-3.5 shrink-0"></i>
+            <span class="leading-tight">Watch &amp; Notes</span>
         </button>
     ` : `
-        <button onclick="event.stopPropagation(); openStudyStudio(${video.id})" class="px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900 font-extrabold rounded-xl border border-stone-200 text-xs transition flex items-center justify-center space-x-1.5 h-[38px] shrink-0" title="Open Study Studio: watch the video and take notes side by side">
-            <i data-lucide="book-open" class="w-3.5 h-3.5"></i>
-            <span>Watch &amp; Notes</span>
+        <button onclick="event.stopPropagation(); openStudyStudio(${video.id})" class="px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900 font-extrabold rounded-xl border border-stone-200 text-xs transition flex items-center justify-center space-x-2 min-h-[38px] shrink-0" title="Open Study Studio: watch the video and take notes side by side">
+            <i data-lucide="book-open" class="w-3.5 h-3.5 shrink-0"></i>
+            <span class="leading-tight">Watch &amp; Notes</span>
         </button>
     `;
 
@@ -800,11 +795,13 @@ function renderVideoCard(video, quizzes, goals) {
     `;
 
     const actionRowHTML = isNormalState ? `
-        <div class="flex-grow min-w-0">
+        <div class="flex-grow">
             ${watchNotesButtonHTML}
         </div>
-        <div id="action-btn-container-${video.id}" class="flex items-center space-x-2 shrink-0">
+        <div class="flex-grow">
             ${actionControlsHTML}
+        </div>
+        <div class="flex items-center space-x-2 shrink-0">
             ${bookmarkButtonHTML}
             ${trailingButtonHTML}
         </div>
@@ -819,8 +816,10 @@ function renderVideoCard(video, quizzes, goals) {
         </div>
     `;
 
+    const actionRowMarginClass = hasDetails ? 'mt-2' : 'mt-3';
+
     return `
-        <div id="video-card-${video.id}" class="bg-white border border-[#e7dfd3] rounded-2xl p-4 flex flex-col justify-between space-y-4 shadow-sm relative">
+        <div id="video-card-${video.id}" class="bg-white border border-[#e7dfd3] rounded-2xl p-4 flex flex-col justify-between shadow-sm relative">
             <div class="flex space-x-3 items-start">
                 ${mediaPreviewHTML}
                 <div class="min-w-0 flex-grow">
@@ -831,12 +830,11 @@ function renderVideoCard(video, quizzes, goals) {
                     </div>
                 </div>
             </div>
-            
-            ${failedNoticeHTML ? `<div class="pt-2">${failedNoticeHTML}</div>` : ''}
+
+            ${failedNoticeHTML ? `<div class="mt-3">${failedNoticeHTML}</div>` : ''}
             ${detailsSectionHTML}
-            
-            
-            <div class="flex items-center justify-between ${hasDetails ? '!mt-2' : 'pt-1'} gap-2">
+
+            <div class="flex items-center justify-between ${actionRowMarginClass} gap-2">
                 ${actionRowHTML}
             </div>
         </div>
