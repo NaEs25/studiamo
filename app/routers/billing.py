@@ -60,16 +60,19 @@ def _parse_ls_timestamp(value: Optional[str]) -> Optional[datetime]:
 # Checkout
 # --------------------------------------------------------------------------------------
 
-def build_checkout_url(user_uuid: str, email: str = "", apply_discount: bool = False) -> str:
+def build_checkout_url(
+    user_uuid: str, email: str = "", name: str = "", apply_discount: bool = False
+) -> str:
     """Builds the hosted Lemon Squeezy checkout URL for one user.
 
     user_uuid travels in checkout[custom][user_uuid] and comes back on every subscription
     webhook as meta.custom_data.user_uuid. That is the ONLY identity link between a payment
-    and an account: the email captured at checkout is the card-holder's and frequently
-    differs from the account email, so matching on it would attach subscriptions to the
-    wrong user or to no user at all.
+    and an account: the name and email captured at checkout are the card-holder's and
+    frequently differ from the account's, so matching on them would attach subscriptions to
+    the wrong user or to no user at all.
 
-    email is prefilled purely as a convenience and is never used to resolve identity.
+    email and name are prefilled purely as a convenience (the customer can still edit both
+    on Lemon Squeezy's page) and are never used to resolve identity.
 
     apply_discount controls whether the promotional code is attached to the URL, and it is
     False by default. Lemon Squeezy renders an applied discount as a line item near the
@@ -86,6 +89,8 @@ def build_checkout_url(user_uuid: str, email: str = "", apply_discount: bool = F
     params = {"checkout[custom][user_uuid]": user_uuid}
     if email:
         params["checkout[email]"] = email
+    if name:
+        params["checkout[name]"] = name
     if apply_discount and ls.get("beta_discount_code"):
         params["checkout[discount_code]"] = ls["beta_discount_code"]
     # safe="[]" keeps Lemon Squeezy's bracket syntax literal in the query string.
@@ -114,9 +119,10 @@ async def create_checkout(
 
     user_cfg = config.load_user_config(username)
     email = user_cfg.get("GOOGLE_EMAIL") or user_cfg.get("EMAIL") or ""
+    name = user_cfg.get("DISPLAY_NAME") or ""
 
     try:
-        url = build_checkout_url(user_uuid, email=email, apply_discount=apply_discount)
+        url = build_checkout_url(user_uuid, email=email, name=name, apply_discount=apply_discount)
     except RuntimeError as e:
         # require_env_for_cloud raises when a Lemon Squeezy value is missing.
         logger.error(f"Lemon Squeezy is not configured: {e}")
