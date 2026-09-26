@@ -147,9 +147,16 @@ async def capture_first_touch_referrer_middleware(request: Request, call_next):
 
 
 class NoCacheStaticFiles(StaticFiles):
-    """Static file handler ensuring fresh JS/CSS payloads on every client load."""
+    """Static file handler ensuring fresh JS/CSS payloads on every client load.
+
+    Files under vendor/ are third-party builds whose filename carries the version, so a
+    given URL never changes content and can be cached indefinitely.
+    """
     async def get_response(self, path: str, scope):
         response = await super().get_response(path, scope)
+        if path.startswith("vendor/"):
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+            return response
         response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
         response.headers["Pragma"] = "no-cache"
         response.headers["Expires"] = "0"
