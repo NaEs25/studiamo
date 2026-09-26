@@ -207,7 +207,9 @@ def get_usage_status(username: str) -> dict:
     """Current-month spend/percent-remaining, used to drive the low-balance UI warning."""
     budget = get_monthly_budget_usd(username)
     spent = get_monthly_cost_usd(username)
-    pct_used = min(100.0, (spent / budget) * 100) if budget > 0 else 0.0
+    # A zero budget is a deliberate cutoff (enforce_usage_limits blocks every call at
+    # spent >= 0), so report it as exhausted rather than dodging the division with 0%.
+    pct_used = min(100.0, (spent / budget) * 100) if budget > 0 else 100.0
     pct_remaining = max(0.0, 100.0 - pct_used)
     warning_pct = _get_app_setting_float("ai_warning_remaining_pct", _FALLBACK_WARNING_REMAINING_PCT)
     return {

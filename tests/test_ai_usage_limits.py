@@ -78,6 +78,16 @@ def test_usage_status_over_budget_clamps_and_exhausts(usage):
     assert status["is_exhausted"] is True
 
 
+
+def test_usage_status_reports_exhausted_when_budget_is_zero(usage):
+    # A per-user budget of 0 cuts the account off; the status has to agree with
+    # enforce_usage_limits instead of showing a full allowance.
+    usage["budget"], usage["spent"] = 0.0, 0.0
+    status = ai.get_usage_status("someone")
+    assert status["percent_used"] == 100.0
+    assert status["percent_remaining"] == 0.0
+    assert status["is_exhausted"] is True
+
 def test_enforce_usage_limits_noop_when_under_budget(usage):
     usage["budget"], usage["spent"] = 10.0, 1.0
     ai.enforce_usage_limits("someone")  # must not raise
