@@ -145,10 +145,14 @@ async function loadGoals() {
                             
                             <div id="recs-${g.id}" class="${isDrawerOpen ? '' : 'hidden'} p-3.5 bg-[#fbf8f2] border border-[#e7dfd3] rounded-xl space-y-3 shadow-sm">
                                 <div class="flex items-start justify-between pb-2 border-b border-[#e7dfd3]/80 gap-2">
-                                    <div class="flex items-start space-x-1.5 min-w-0 flex-1">
-                                        <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-700 shrink-0 mt-0.5"></i>
-                                        <span class="text-xs font-bold text-stone-800 shrink-0 mt-0.5">Concepts:</span>
-                                        <div id="concepts-${g.id}" class="text-[11px] text-stone-600 leading-relaxed break-words flex-1"></div>
+                                    <div class="min-w-0 flex-1 space-y-2">
+                                        <button type="button" class="concepts-toggle flex items-center space-x-1.5 text-xs font-bold text-stone-800 hover:text-amber-700 transition" data-goal-id="${g.id}" aria-expanded="false" aria-controls="concepts-${g.id}">
+                                            <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-700 shrink-0"></i>
+                                            <span>Concepts</span>
+                                            <span id="concepts-count-${g.id}" class="text-[10px] bg-amber-500/20 text-amber-700 px-1.5 py-0.5 rounded-full font-bold"></span>
+                                            <i data-lucide="chevron-down" class="concepts-chevron w-3.5 h-3.5 text-stone-400 transition-transform"></i>
+                                        </button>
+                                        <div id="concepts-${g.id}" class="hidden text-[11px] text-stone-600 leading-relaxed break-words"></div>
                                     </div>
                                     <div class="flex items-center space-x-1 shrink-0">
                                         <button onclick="reloadGoalRecommendations(${g.id}, this)" class="p-1.5 bg-stone-100 hover:bg-stone-200/80 text-stone-600 hover:text-amber-800 rounded-lg transition border border-stone-200/80 shadow-sm" title="Reload Recommendations">
@@ -577,6 +581,18 @@ async function reloadGoalRecommendations(goalId, btnEl = null) {
 }
 window.reloadGoalRecommendations = reloadGoalRecommendations;
 
+// Concept chips stay collapsed until the header is clicked. Delegated because the goal cards are
+// re-rendered wholesale by loadGoals.
+document.addEventListener('click', (e) => {
+    const toggle = e.target.closest('.concepts-toggle');
+    if (!toggle) return;
+    const list = document.getElementById(toggle.getAttribute('aria-controls'));
+    if (!list) return;
+    const nowHidden = list.classList.toggle('hidden');
+    toggle.setAttribute('aria-expanded', String(!nowHidden));
+    toggle.querySelector('.concepts-chevron')?.classList.toggle('rotate-180', !nowHidden);
+});
+
 function populateRecommendationDrawer(goalId, data) {
     if (!data) return;
     const recsDrawer = document.getElementById(`recs-${goalId}`);
@@ -585,6 +601,8 @@ function populateRecommendationDrawer(goalId, data) {
     const conceptsList = document.getElementById(`concepts-${goalId}`);
     if (conceptsList && data.key_concepts) {
         conceptsList.innerHTML = data.key_concepts.map(c => `<span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/10 text-amber-950 border border-amber-500/20 shadow-sm">${c}</span>`).join('');
+        const countEl = document.getElementById(`concepts-count-${goalId}`);
+        if (countEl) countEl.textContent = data.key_concepts.length;
     }
     
     const vidsList = document.getElementById(`vids-${goalId}`);
