@@ -24,6 +24,13 @@ from app.dependencies import (
     build_concept_pool,
     select_stage_questions,
     STAGE_KEYS,
+    CardEditError,
+    add_card_to_pool,
+    remove_card_from_pool,
+    edit_card_in_pool,
+    rename_topic_in_pool,
+    card_id_of,
+    topic_of,
 )
 
 logger = logging.getLogger("studiamo")
@@ -105,9 +112,50 @@ async def add_content(
     else:
         raise HTTPException(status_code=400, detail="Provide a YouTube URL, uploaded PDF/Text, or pasted notes.")
         
+    # Read and fingerprint an upload before any row exists, so a rejected or duplicate file
+    # leaves nothing behind. It used to be read after the INSERT, which left a stuck
+    # 'processing' row whenever the size or quota check failed.
+    file_bytes = None
+    content_hash = None
+    if file:
+        user_quota = config.get_user_storage_quota_bytes()
+        if user_quota > 0 and config.get_user_storage_bytes(username) >= user_quota:
+            quota_gb = user_quota / (1024 * 1024 * 1024)
+            quota_str = f"{quota_gb:.0f} GB" if quota_gb >= 1 else f"{user_quota / (1024 * 1024):.0f} MB"
+            raise HTTPException(
+                status_code=413,
+                detail=f"You've reached your {quota_str} storage limit. Delete some videos or documents before uploading more.",
+            )
+
+        max_file_bytes = config.get_max_file_upload_bytes()
+        if max_file_bytes > 0:
+            file_bytes = await file.read(max_file_bytes + 1)
+            if len(file_bytes) > max_file_bytes:
+                max_mb = max_file_bytes / (1024 * 1024)
+                size_str = f"{max_mb:.0f}MB" if max_mb >= 1 else f"{max_file_bytes // 1024}KB"
+                raise HTTPException(status_code=413, detail=f"Uploaded file is too large (maximum size is {size_str}).")
+        else:
+            file_bytes = await file.read()
+        content_hash = storage.content_hash_bytes(file_bytes)
+    elif task_type == "notes":
+        content_hash = storage.content_hash_text(text_content)
+
     conn = database.get_db_connection(username)
     cursor = conn.cursor()
-    
+
+    if content_hash:
+        # A failed import keeps its row, so it is excluded: uploading the same file again is
+        # how the user retries it.
+        cursor.execute(
+            """SELECT id FROM videos
+                WHERE user_uuid = %s AND content_hash = %s AND status <> 'failed'
+                LIMIT 1;""",
+            (conn.user_uuid, content_hash)
+        )
+        if cursor.fetchone():
+            conn.close()
+            raise HTTPException(status_code=400, detail="This content has already been processed.")
+
     if yt_id:
         user_uuid = conn.user_uuid
         cursor.execute("SELECT id, status, is_watchlist, is_temporary FROM videos WHERE youtube_id = %s AND user_uuid = %s;", (yt_id, user_uuid))
@@ -164,9 +212,9 @@ async def add_content(
     user_uuid = conn.user_uuid
     cursor.execute(
         """INSERT INTO videos 
-           (user_uuid, youtube_id, title, category, thumbnail_url, importance_rating, learning_goal_id, is_archived, is_paused, is_watchlist, status)
-           VALUES (%s, %s, %s, 'Processing', %s, %s, %s, 0, 0, %s, 'processing') RETURNING id;""",
-        (user_uuid, yt_id, placeholder_title, placeholder_thumb, importance_rating, learning_goal_id, is_watchlist)
+           (user_uuid, youtube_id, title, category, thumbnail_url, importance_rating, learning_goal_id, is_archived, is_paused, is_watchlist, status, content_hash)
+           VALUES (%s, %s, %s, 'Processing', %s, %s, %s, 0, 0, %s, 'processing', %s) RETURNING id;""",
+        (user_uuid, yt_id, placeholder_title, placeholder_thumb, importance_rating, learning_goal_id, is_watchlist, content_hash)
     )
     res = cursor.fetchone()
     video_id = res["id"] if isinstance(res, dict) and "id" in res else (res[0] if res else cursor.lastrowid)
@@ -174,25 +222,6 @@ async def add_content(
     conn.close()
     
     if file:
-        user_quota = config.get_user_storage_quota_bytes()
-        if user_quota > 0 and config.get_user_storage_bytes(username) >= user_quota:
-            quota_gb = user_quota / (1024 * 1024 * 1024)
-            quota_str = f"{quota_gb:.0f} GB" if quota_gb >= 1 else f"{user_quota / (1024 * 1024):.0f} MB"
-            raise HTTPException(
-                status_code=413,
-                detail=f"You've reached your {quota_str} storage limit. Delete some videos or documents before uploading more.",
-            )
-
-        max_file_bytes = config.get_max_file_upload_bytes()
-        if max_file_bytes > 0:
-            file_bytes = await file.read(max_file_bytes + 1)
-            if len(file_bytes) > max_file_bytes:
-                max_mb = max_file_bytes / (1024 * 1024)
-                size_str = f"{max_mb:.0f}MB" if max_mb >= 1 else f"{max_file_bytes // 1024}KB"
-                raise HTTPException(status_code=413, detail=f"Uploaded file is too large (maximum size is {size_str}).")
-        else:
-            file_bytes = await file.read()
-        
         # Written straight to its permanent items/doc_<video_id><ext> home, the
         # same path serve_video_document() reads and delete_video() removes.
         # It used to land in a separate uploads/ staging copy that the importer
@@ -808,14 +837,11 @@ def _load_focus_context(video_id: int, username: str):
     return row, pool, focus, target_count
 
 
-@router.get("/videos/{id}/concept-pool")
-async def get_concept_pool(id: int, username: str = Depends(require_app_access)):
-    """Returns the topics available per SRS stage, for the learning-focus overlay.
+def _build_focus_stages(pool: list, focus: dict) -> list:
+    """The per-stage topic listing the focus overlay renders, questions included.
 
     Selection state falls back to the AI's own picks when the user has never saved one, so the
     overlay opens pre-filled with a sensible quiz rather than nothing ticked."""
-    row, pool, focus, target_count = _load_focus_context(id, username)
-
     stages = []
     for stage_index, stage_key in enumerate(STAGE_KEYS):
         items = [q for q in pool if q.get("stage") == stage_index]
@@ -825,11 +851,20 @@ async def get_concept_pool(id: int, username: str = Depends(require_app_access))
         saved = focus.get(stage_key) if isinstance(focus, dict) else None
         topics = {}
         for item in items:
-            name = (item.get("topic") or "Ungrouped").strip() or "Ungrouped"
-            entry = topics.setdefault(name, {"topic": name, "count": 0, "recommended": False})
+            name = topic_of(item)
+            entry = topics.setdefault(
+                name, {"topic": name, "count": 0, "recommended": False, "questions": []}
+            )
             entry["count"] += 1
             if item.get("ai_recommended"):
                 entry["recommended"] = True
+            entry["questions"].append({
+                "id": card_id_of(item),
+                "question": item.get("question") or "",
+                "answer": item.get("answer") or "",
+                "origin": item.get("origin") or "ai",
+                "edited": bool(item.get("edited_at")),
+            })
 
         for entry in topics.values():
             # No saved choice means "use what the AI recommended", which is also what
@@ -845,6 +880,13 @@ async def get_concept_pool(id: int, username: str = Depends(require_app_access))
             "selected_questions": sum(t["count"] for t in ordered if t["selected"]),
             "has_saved_selection": bool(saved),
         })
+    return stages
+
+
+@router.get("/videos/{id}/concept-pool")
+async def get_concept_pool(id: int, username: str = Depends(require_app_access)):
+    """Returns the topics and questions available per SRS stage, for the learning-focus overlay."""
+    row, pool, focus, target_count = _load_focus_context(id, username)
 
     return {
         "video_id": id,
@@ -852,8 +894,149 @@ async def get_concept_pool(id: int, username: str = Depends(require_app_access))
         "title": row.get("title"),
         "current_stage": row.get("srs_stage") or 0,
         "target_count": target_count,
-        "stages": stages,
+        "stages": _build_focus_stages(pool, focus),
     }
+
+
+def _focus_edit_response(id: int, row: dict, pool: list, focus: dict, target_count: int) -> dict:
+    return {
+        "video_id": id,
+        "quiz_id": row["quiz_id"],
+        "current_stage": row.get("srs_stage") or 0,
+        "target_count": target_count,
+        "stages": _build_focus_stages(pool, focus),
+    }
+
+
+def _prune_focus(pool: list, focus: dict) -> dict:
+    """Drops saved topics that no longer exist for their stage, so a selection cannot point at
+    a topic with nothing left in it. A stage left with no topics falls back to the AI's picks."""
+    pruned = {}
+    for stage_index, key in enumerate(STAGE_KEYS):
+        chosen = (focus or {}).get(key)
+        if not isinstance(chosen, list):
+            continue
+        present = {topic_of(q) for q in pool if q.get("stage") == stage_index}
+        kept = [t for t in chosen if t in present]
+        if kept:
+            pruned[key] = kept
+    return pruned
+
+
+def _run_pool_edit(row: dict, username: str, edit):
+    """Runs a locked pool edit and maps its failures to HTTP errors."""
+    try:
+        return database.edit_quiz_pool(row["quiz_id"], username, edit)
+    except CardEditError as e:
+        raise HTTPException(status_code=e.status, detail=str(e))
+    except LookupError:
+        raise HTTPException(status_code=404, detail="No quiz found for this material yet.")
+
+
+@router.post("/videos/{id}/cards")
+async def add_focus_card(
+    id: int,
+    stage: int = Form(...),
+    topic: str = Form(...),
+    question: str = Form(...),
+    answer: str = Form(...),
+    username: str = Depends(require_app_access)
+):
+    """Adds a user-written question to a material's pool. Costs no AI call."""
+    row, _, _, target_count = _load_focus_context(id, username)
+
+    def edit(pool, focus, srs_stage):
+        new_pool, card = add_card_to_pool(pool, stage, topic, question, answer)
+        new_focus = dict(focus or {})
+        key = STAGE_KEYS[card["stage"]]
+        chosen = new_focus.get(key)
+        # A saved selection is honoured exactly, so a card in a topic it does not list would
+        # sit in the pool and never be served. Adding to it is an explicit act of wanting it.
+        if chosen and card["topic"] not in chosen:
+            new_focus[key] = list(chosen) + [card["topic"]]
+        active = select_stage_questions(new_pool, srs_stage, new_focus, target_count)
+        return new_pool, new_focus, active, (new_pool, new_focus), True
+
+    new_pool, new_focus = _run_pool_edit(row, username, edit)
+    return _focus_edit_response(id, row, new_pool, new_focus, target_count)
+
+
+@router.delete("/videos/{id}/cards/{card_id}")
+async def remove_focus_card(id: int, card_id: str, username: str = Depends(require_app_access)):
+    """Removes one question from a material's pool."""
+    row, _, _, target_count = _load_focus_context(id, username)
+
+    def edit(pool, focus, srs_stage):
+        new_pool, _removed = remove_card_from_pool(pool, card_id)
+        new_focus = _prune_focus(new_pool, focus)
+        active = select_stage_questions(new_pool, srs_stage, new_focus, target_count)
+        return new_pool, new_focus, active, (new_pool, new_focus), True
+
+    new_pool, new_focus = _run_pool_edit(row, username, edit)
+    return _focus_edit_response(id, row, new_pool, new_focus, target_count)
+
+
+@router.patch("/videos/{id}/cards/{card_id}")
+async def edit_focus_card(
+    id: int,
+    card_id: str,
+    topic: Optional[str] = Form(None),
+    question: Optional[str] = Form(None),
+    answer: Optional[str] = Form(None),
+    username: str = Depends(require_app_access)
+):
+    """Edits a question's text, answer or topic. A field left out is unchanged."""
+    row, _, _, target_count = _load_focus_context(id, username)
+
+    def edit(pool, focus, srs_stage):
+        before = next((q for q in pool if isinstance(q, dict) and card_id_of(q) == card_id), None)
+        new_pool, card = edit_card_in_pool(pool, card_id, topic=topic, question=question, answer=answer)
+
+        new_focus = dict(focus or {})
+        moved = before is not None and topic_of(card) != topic_of(before)
+        if moved:
+            key = STAGE_KEYS[max(0, min(int(card.get("stage") or 0), len(STAGE_KEYS) - 1))]
+            chosen = new_focus.get(key)
+            # Same reasoning as adding: a saved selection that does not list the card's new
+            # topic would leave the card in the pool and never serve it.
+            if chosen and topic_of(card) not in chosen:
+                new_focus[key] = list(chosen) + [topic_of(card)]
+            new_focus = _prune_focus(new_pool, new_focus)
+
+        active = select_stage_questions(new_pool, srs_stage, new_focus, target_count)
+        # Only a topic move can change which questions are served or in what order. A text
+        # edit leaves every position alone, so a half-finished session keeps its place.
+        return new_pool, new_focus, active, (new_pool, new_focus), moved
+
+    new_pool, new_focus = _run_pool_edit(row, username, edit)
+    return _focus_edit_response(id, row, new_pool, new_focus, target_count)
+
+
+@router.post("/videos/{id}/topics/rename")
+async def rename_focus_topic(
+    id: int,
+    old_topic: str = Form(...),
+    new_topic: str = Form(...),
+    username: str = Depends(require_app_access)
+):
+    """Renames a topic in every stage of a material, carrying any saved selection with it."""
+    row, _, _, target_count = _load_focus_context(id, username)
+
+    def edit(pool, focus, srs_stage):
+        new_pool, _count = rename_topic_in_pool(pool, old_topic, new_topic)
+        new_name = new_topic.strip()
+        new_focus = {}
+        for key, chosen in (focus or {}).items():
+            if isinstance(chosen, list):
+                new_focus[key] = [new_name if t == old_topic.strip() else t for t in chosen]
+            else:
+                new_focus[key] = chosen
+        active = select_stage_questions(new_pool, srs_stage, new_focus, target_count)
+        # Membership does not change, so neither do the served positions.
+        return new_pool, new_focus, active, (new_pool, new_focus), False
+
+    new_pool, new_focus = _run_pool_edit(row, username, edit)
+    return _focus_edit_response(id, row, new_pool, new_focus, target_count)
 
 
 @router.post("/videos/{id}/focus")

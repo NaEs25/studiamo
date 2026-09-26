@@ -437,18 +437,12 @@ function initImportTab() {
                 if (dropZone) dropZone.classList.remove('hidden');
                 
                 if (result.recommended_new_goal) {
-                    const confirmFn = window.showConfirm || (typeof showConfirm === 'function' ? showConfirm : null);
-                    let conf = false;
-                    if (confirmFn) {
-                        conf = await confirmFn({
-                            title: "Create Recommended Goal?",
-                            message: `AI Recommendation:\nThis material doesn't fit your active goals.\nShould we create a new Goal: "${result.recommended_new_goal.title}"?`,
-                            confirmText: "Create Goal",
-                            icon: "sparkles"
-                        });
-                    } else {
-                        conf = confirm(`AI Recommendation:\nThis material doesn't fit your active goals. Should we create a new Goal: "${result.recommended_new_goal.title}"?`);
-                    }
+                    const conf = await showConfirm({
+                        title: "Create Recommended Goal?",
+                        message: `AI Recommendation:\nThis material doesn't fit your active goals.\nShould we create a new Goal: "${result.recommended_new_goal.title}"?`,
+                        confirmText: "Create Goal",
+                        icon: "sparkles"
+                    });
                     if (conf) {
                         const goalForm = new FormData();
                         goalForm.append('title', result.recommended_new_goal.title);
@@ -500,16 +494,19 @@ function renderFocusStageTabs() {
     const tabs = document.getElementById('focus-stage-tabs');
     if (!tabs || !focusState) return;
 
-    tabs.innerHTML = focusState.stages.map(s => {
+    // One "Stage:" label and number-only buttons: five "Stage N" pills overflowed a phone and
+    // repeated the word. The full name of each stage stays in the tooltip and aria-label.
+    const buttons = focusState.stages.map(s => {
         const active = s.stage === focusState.activeStage;
         const cls = active
             ? 'bg-amber-100 border-amber-300 text-amber-900'
             : 'bg-white border-[#e7dfd3] text-stone-600 hover:bg-stone-50';
-        return `<button data-stage-tab="${s.stage}" title="${escapeHtml(s.label)}"
-            class="shrink-0 px-3 py-1.5 rounded-lg border text-[11px] font-bold transition ${cls}">
-            Stage ${s.stage}
-        </button>`;
+        return `<button type="button" data-stage-tab="${s.stage}" title="${escapeHtml(s.label)}"
+            aria-label="Stage ${s.stage}: ${escapeHtml(s.label)}" aria-pressed="${active}"
+            class="shrink-0 min-w-[2rem] h-8 px-2 rounded-lg border text-xs font-bold transition ${cls}">${s.stage}</button>`;
     }).join('');
+
+    tabs.innerHTML = `<span class="text-[11px] font-bold uppercase tracking-wider text-stone-500 mr-1.5 shrink-0">Stage</span>${buttons}`;
 
     tabs.querySelectorAll('[data-stage-tab]').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -525,33 +522,479 @@ function currentFocusStage() {
     return focusState.stages.find(s => s.stage === focusState.activeStage) || null;
 }
 
+// A card action (add, edit, remove or rename) disables every card control for at least this
+// long, with a spinner on the one that fired, so a double-click cannot queue a second edit
+// behind the first. The server serializes edits regardless; this only keeps the interface
+// honest about it.
+const FOCUS_CARD_COOLDOWN_MS = 1000;
+
+const FOCUS_FIELD_CLASS = 'w-full bg-[#fcfaf6] border border-[#e7dfd3] rounded-lg px-2.5 py-1.5 text-xs text-stone-900 focus:outline-none focus:border-amber-500';
+
+function focusTopicKey(stageIndex, topic) {
+    return `${stageIndex}|${topic}`;
+}
+
+function focusSpinnerHTML() {
+    return '<span class="inline-block animate-spin rounded-full h-3.5 w-3.5 border-2 border-amber-600 border-t-transparent" role="status" aria-label="Working"></span>';
+}
+
+const FOCUS_ICON_BUTTON = 'p-1 rounded-lg transition shrink-0 disabled:opacity-40 disabled:cursor-not-allowed';
+
+// The one inline editor open at a time: adding a question, editing one, or renaming a topic.
+//   { kind: 'add' | 'edit' | 'rename', stage, topic, cardId, draft: { topic, question, answer } }
+// `topic` is the topic being added to (null for a brand new topic), or the one being renamed.
+function focusEditorIs(kind, test) {
+    const ed = focusState && focusState.editor;
+    return !!(ed && ed.kind === kind && (!test || test(ed)));
+}
+
+function renderFocusEditorButtons(kind) {
+    const busy = focusState.busy;
+    const label = kind === 'add' ? 'Add' : 'Save';
+    return `
+        <div class="flex items-center gap-2">
+            <button type="button" data-editor-submit ${busy ? 'disabled' : ''}
+                class="btn-primary px-3 py-1.5 font-extrabold rounded-lg text-[11px] transition flex items-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed">
+                ${focusState.busyTarget === kind ? focusSpinnerHTML() : ''}<span>${label}</span>
+            </button>
+            <button type="button" data-editor-cancel ${busy ? 'disabled' : ''}
+                class="px-3 py-1.5 rounded-lg text-[11px] font-bold text-stone-600 hover:bg-stone-100 transition disabled:opacity-40">
+                Cancel
+            </button>
+        </div>`;
+}
+
+function renderFocusFields(draft, withTopic) {
+    return `
+        ${withTopic ? `<input type="text" data-draft-field="topic" list="focus-topic-options" maxlength="60" placeholder="Topic" value="${escapeHtml(draft.topic)}" class="${FOCUS_FIELD_CLASS}">` : ''}
+        <textarea data-draft-field="question" rows="2" maxlength="500" placeholder="Question" class="${FOCUS_FIELD_CLASS}">${escapeHtml(draft.question)}</textarea>
+        <textarea data-draft-field="answer" rows="2" maxlength="1000" placeholder="Answer" class="${FOCUS_FIELD_CLASS}">${escapeHtml(draft.answer)}</textarea>`;
+}
+
+function renderFocusQuestion(q) {
+    if (focusEditorIs('edit', ed => ed.cardId === q.id)) {
+        return `
+            <div class="py-2 space-y-1.5">
+                ${renderFocusFields(focusState.editor.draft, true)}
+                ${renderFocusEditorButtons('edit')}
+            </div>`;
+    }
+
+    const busy = focusState.busy;
+    const pending = focusState.busyTarget === q.id;
+    let badge = '';
+    if (q.origin === 'human') {
+        badge = '<span class="text-[9px] font-bold uppercase tracking-wider text-stone-600 bg-stone-100 border border-stone-200 rounded px-1.5 py-0.5 shrink-0">You</span>';
+    } else if (q.edited) {
+        badge = '<span class="text-[9px] font-bold uppercase tracking-wider text-sky-700 bg-sky-50 border border-sky-200 rounded px-1.5 py-0.5 shrink-0">Edited</span>';
+    }
+    return `
+        <div class="flex items-start gap-1.5 py-1.5">
+            <div class="min-w-0 grow">
+                <p class="text-xs font-semibold text-stone-800 break-words">${escapeHtml(q.question)}</p>
+                <p class="text-[11px] text-stone-500 break-words mt-0.5">${escapeHtml(q.answer)}</p>
+            </div>
+            ${badge}
+            <button type="button" data-card-edit="${escapeHtml(q.id)}" ${busy ? 'disabled' : ''}
+                aria-label="Edit this question" title="Edit this question"
+                class="${FOCUS_ICON_BUTTON} text-stone-400 hover:text-stone-800 hover:bg-stone-100">
+                <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+            </button>
+            <button type="button" data-card-remove="${escapeHtml(q.id)}" ${busy ? 'disabled' : ''}
+                aria-label="Remove this question" title="Remove this question"
+                class="${FOCUS_ICON_BUTTON} text-stone-400 hover:text-red-600 hover:bg-red-50">
+                ${pending ? focusSpinnerHTML() : '<i data-lucide="x" class="w-3.5 h-3.5"></i>'}
+            </button>
+        </div>`;
+}
+
+function renderFocusAddControl(stageIndex, topic) {
+    const busy = focusState.busy;
+    if (focusEditorIs('add', ed => ed.stage === stageIndex && ed.topic === topic)) {
+        return `
+            <div class="mt-1.5 space-y-1.5">
+                ${renderFocusFields(focusState.editor.draft, topic === null)}
+                ${renderFocusEditorButtons('add')}
+            </div>`;
+    }
+    return `
+        <button type="button" data-card-add-open="${escapeHtml(topic === null ? '' : topic)}" data-new-topic="${topic === null ? '1' : '0'}" ${busy ? 'disabled' : ''}
+            class="mt-1 flex items-center gap-1.5 text-[11px] font-bold text-amber-700 hover:text-amber-900 transition disabled:opacity-40 disabled:cursor-not-allowed">
+            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+            <span>${topic === null ? 'New topic' : 'Add question'}</span>
+        </button>`;
+}
+
+function renderFocusTopicHeader(t, i, expanded) {
+    const busy = focusState.busy;
+    if (focusEditorIs('rename', ed => ed.topic === t.topic)) {
+        const saving = focusState.busyTarget === 'rename';
+        return `
+            <div class="flex items-center gap-1.5 p-2.5">
+                <input type="text" data-draft-field="topic" maxlength="60" aria-label="Topic name"
+                    value="${escapeHtml(focusState.editor.draft.topic)}" class="${FOCUS_FIELD_CLASS} grow min-w-0">
+                <button type="button" data-editor-submit ${busy ? 'disabled' : ''} aria-label="Save topic name" title="Save topic name"
+                    class="${FOCUS_ICON_BUTTON} text-emerald-700 hover:bg-emerald-50">
+                    ${saving ? focusSpinnerHTML() : '<i data-lucide="check" class="w-4 h-4"></i>'}
+                </button>
+                <button type="button" data-editor-cancel ${busy ? 'disabled' : ''} aria-label="Cancel" title="Cancel"
+                    class="${FOCUS_ICON_BUTTON} text-stone-500 hover:bg-stone-100">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>`;
+    }
+
+    return `
+        <div class="flex items-center justify-between gap-2 p-2.5">
+            <label class="flex items-center gap-2.5 min-w-0 grow cursor-pointer">
+                <input type="checkbox" data-topic-check="${i}" ${t.selected ? 'checked' : ''}
+                    class="w-4 h-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500 shrink-0">
+                <span class="text-xs font-semibold text-stone-800 truncate">${escapeHtml(t.topic)}</span>
+            </label>
+            <span class="flex items-center gap-1 shrink-0">
+                ${t.recommended ? '<span class="text-[9px] font-bold uppercase tracking-wider text-amber-700 bg-amber-100 border border-amber-200 rounded px-1.5 py-0.5">AI</span>' : ''}
+                <button type="button" data-topic-rename="${i}" ${busy ? 'disabled' : ''} aria-label="Rename this topic" title="Rename this topic (all stages)"
+                    class="${FOCUS_ICON_BUTTON} text-stone-400 hover:text-stone-800 hover:bg-stone-100">
+                    <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                </button>
+                <button type="button" data-topic-toggle="${i}" aria-expanded="${expanded}"
+                    class="flex items-center gap-1 text-[10px] text-stone-500 font-medium rounded-lg px-1.5 py-1 hover:bg-stone-100 transition">
+                    <span>${t.count} ${t.count === 1 ? 'question' : 'questions'}</span>
+                    <i data-lucide="chevron-down" class="w-3.5 h-3.5 transition-transform ${expanded ? 'rotate-180' : ''}"></i>
+                </button>
+            </span>
+        </div>`;
+}
+
 function renderFocusTopics() {
     const list = document.getElementById('focus-topic-list');
     const stage = currentFocusStage();
     if (!list || !stage) return;
 
-    list.innerHTML = stage.topics.map((t, i) => `
-        <label class="flex items-center justify-between gap-2 p-2.5 rounded-xl border border-[#e7dfd3] hover:bg-stone-50 cursor-pointer transition">
-            <span class="flex items-center gap-2.5 min-w-0">
-                <input type="checkbox" data-topic-index="${i}" ${t.selected ? 'checked' : ''}
-                    class="w-4 h-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500 shrink-0">
-                <span class="text-xs font-semibold text-stone-800 truncate">${escapeHtml(t.topic)}</span>
-            </span>
-            <span class="flex items-center gap-1.5 shrink-0">
-                ${t.recommended ? '<span class="text-[9px] font-bold uppercase tracking-wider text-amber-700 bg-amber-100 border border-amber-200 rounded px-1.5 py-0.5">AI</span>' : ''}
-                <span class="text-[10px] text-stone-500 font-medium">${t.count} ${t.count === 1 ? 'question' : 'questions'}</span>
-            </span>
-        </label>
-    `).join('');
+    const topicsHTML = stage.topics.map((t, i) => {
+        const expanded = focusState.expanded.has(focusTopicKey(stage.stage, t.topic));
+        const body = expanded ? `
+            <div class="border-t border-[#e7dfd3] px-3 py-1.5 divide-y divide-[#f0e9de]">
+                ${t.questions.map(renderFocusQuestion).join('')}
+                <div class="pt-1.5">${renderFocusAddControl(stage.stage, t.topic)}</div>
+            </div>` : '';
+        return `
+        <div class="rounded-xl border border-[#e7dfd3]">
+            ${renderFocusTopicHeader(t, i, expanded)}
+            ${body}
+        </div>`;
+    }).join('');
 
-    list.querySelectorAll('[data-topic-index]').forEach(box => {
-        box.addEventListener('change', () => {
-            stage.topics[parseInt(box.dataset.topicIndex, 10)].selected = box.checked;
-            renderFocusStatus();
-        });
-    });
+    // Suggestions for the topic field of the edit and new-topic forms, so moving a question to
+    // an existing topic is a pick rather than a retype.
+    const options = stage.topics.map(t => `<option value="${escapeHtml(t.topic)}"></option>`).join('');
 
+    list.innerHTML = `<datalist id="focus-topic-options">${options}</datalist>`
+        + topicsHTML
+        + `<div class="pt-1">${renderFocusAddControl(stage.stage, null)}</div>`;
+
+    renderIcons();
     renderFocusStatus();
+}
+
+// Folds a fresh server listing into the overlay without losing what the user has not saved:
+// the ticked topics, which topics are open, and the active stage. A topic the listing has not
+// seen before is one the user just created, so it starts ticked. `renamed` ({from, to}) carries
+// the state of a renamed topic across to its new name in every stage.
+function mergeFocusListing(data, renamed) {
+    const previous = new Map();
+    focusState.stages.forEach(s => s.topics.forEach(t => previous.set(focusTopicKey(s.stage, t.topic), t.selected)));
+    const expanded = new Set(focusState.expanded);
+
+    if (renamed) {
+        for (let stageIndex = 0; stageIndex < 5; stageIndex++) {
+            const from = focusTopicKey(stageIndex, renamed.from);
+            const to = focusTopicKey(stageIndex, renamed.to);
+            if (previous.has(from)) previous.set(to, previous.get(from));
+            if (expanded.delete(from)) expanded.add(to);
+        }
+    }
+
+    data.stages.forEach(s => s.topics.forEach(t => {
+        const key = focusTopicKey(s.stage, t.topic);
+        t.selected = previous.has(key) ? previous.get(key) : true;
+    }));
+
+    focusState.stages = data.stages;
+    focusState.targetCount = data.target_count;
+    focusState.expanded = expanded;
+    if (!focusState.stages.some(s => s.stage === focusState.activeStage) && focusState.stages.length) {
+        focusState.activeStage = focusState.stages[0].stage;
+    }
+}
+
+async function runFocusCardAction(target, request, renamed) {
+    const state = focusState;
+    if (!state || state.busy) return false;
+
+    state.busy = true;
+    state.busyTarget = target;
+    renderFocusTopics();
+
+    const started = Date.now();
+    let ok = false;
+    try {
+        const data = await request();
+        if (focusState === state) {
+            mergeFocusListing(data, renamed);
+            ok = true;
+        }
+    } catch (e) {
+        showToast(e.detail || e.message || 'Could not update the questions.', 'failed', 4000);
+    }
+
+    const remaining = FOCUS_CARD_COOLDOWN_MS - (Date.now() - started);
+    if (remaining > 0) await new Promise(resolve => setTimeout(resolve, remaining));
+
+    if (focusState === state) {
+        state.busy = false;
+        state.busyTarget = null;
+        renderFocusTopics();
+    }
+    return ok;
+}
+
+async function removeFocusCard(cardId) {
+    await runFocusCardAction(cardId, () =>
+        fetchAPI(`/api/videos/${focusState.videoId}/cards/${encodeURIComponent(cardId)}`, { method: 'DELETE' })
+    );
+}
+
+function findFocusTopic(stageIndex, name) {
+    const stage = focusState.stages.find(s => s.stage === stageIndex);
+    return stage && stage.topics.find(t => t.topic.toLowerCase() === name.toLowerCase());
+}
+
+async function submitFocusEditor() {
+    const ed = focusState && focusState.editor;
+    if (!ed || focusState.busy) return;
+
+    const draft = ed.draft;
+    const topic = (draft.topic || '').trim();
+    const question = (draft.question || '').trim();
+    const answer = (draft.answer || '').trim();
+    const videoId = focusState.videoId;
+
+    if (ed.kind === 'rename') {
+        if (!topic) { showToast('Give the topic a name.', 'failed', 3000); return; }
+        if (topic === ed.topic) { focusState.editor = null; renderFocusTopics(); return; }
+        const body = new FormData();
+        body.append('old_topic', ed.topic);
+        body.append('new_topic', topic);
+        const ok = await runFocusCardAction('rename',
+            () => fetchAPI(`/api/videos/${videoId}/topics/rename`, { method: 'POST', body }),
+            { from: ed.topic, to: topic });
+        if (ok && focusState) { focusState.editor = null; renderFocusTopics(); }
+        return;
+    }
+
+    if (ed.kind === 'add') {
+        const targetTopic = ed.topic === null ? topic : ed.topic;
+        if (!targetTopic || !question || !answer) {
+            showToast(ed.topic === null ? 'Add a topic, a question and an answer.' : 'Add both a question and an answer.', 'failed', 3000);
+            return;
+        }
+        const body = new FormData();
+        body.append('stage', String(ed.stage));
+        body.append('topic', targetTopic);
+        body.append('question', question);
+        body.append('answer', answer);
+        const ok = await runFocusCardAction('add',
+            () => fetchAPI(`/api/videos/${videoId}/cards`, { method: 'POST', body }));
+        if (ok && focusState) {
+            // Open the topic the card landed in. The server may have matched an existing topic
+            // with different capitalization, so look it up rather than trusting what was typed.
+            const landed = findFocusTopic(ed.stage, targetTopic);
+            if (landed) focusState.expanded.add(focusTopicKey(ed.stage, landed.topic));
+            focusState.editor = null;
+            renderFocusTopics();
+        }
+        return;
+    }
+
+    // edit
+    if (!topic || !question || !answer) {
+        showToast('A question needs a topic, a question and an answer.', 'failed', 3000);
+        return;
+    }
+    const body = new FormData();
+    body.append('topic', topic);
+    body.append('question', question);
+    body.append('answer', answer);
+    const ok = await runFocusCardAction('edit',
+        () => fetchAPI(`/api/videos/${videoId}/cards/${encodeURIComponent(ed.cardId)}`, { method: 'PATCH', body }));
+    if (ok && focusState) {
+        const landed = findFocusTopic(ed.stage, topic);
+        if (landed) focusState.expanded.add(focusTopicKey(ed.stage, landed.topic));
+        focusState.editor = null;
+        renderFocusTopics();
+    }
+}
+
+function openFocusEditor(editor, focusSelector) {
+    focusState.editor = editor;
+    renderFocusTopics();
+    const field = document.querySelector(focusSelector) || document.querySelector('[data-draft-field]');
+    if (field) {
+        field.focus();
+        if (field.select && field.tagName === 'INPUT') field.select();
+    }
+}
+
+function cancelFocusEditor() {
+    if (!focusState || focusState.busy || !focusState.editor) return;
+    focusState.editor = null;
+    renderFocusTopics();
+}
+
+// Editing questions and topics is built for a keyboard and a wide screen. On a phone the
+// controls stay visible so the feature can be discovered, but they explain instead of acting.
+// Same width the rest of the app treats as "small" (Tailwind's sm breakpoint).
+function focusEditingUnavailable() {
+    if (window.innerWidth >= 640) return false;
+    showToast('Editing questions is not available on phones yet. Open Studiamo on a computer to edit.', 'info', 5000);
+    return true;
+}
+
+let focusRemoveTimer = null;
+
+function armFocusRemove(btn) {
+    disarmFocusRemove();
+    focusState.pendingRemove = btn.dataset.cardRemove;
+    btn.dataset.idleHtml = btn.innerHTML;
+    btn.innerHTML = '<span class="text-[10px] font-bold px-1">Remove?</span>';
+    btn.classList.add('text-red-600', 'bg-red-50');
+    btn.title = 'Tap again to remove';
+    // An armed button that is never followed up should not stay armed indefinitely.
+    focusRemoveTimer = setTimeout(disarmFocusRemove, 4000);
+}
+
+function disarmFocusRemove() {
+    clearTimeout(focusRemoveTimer);
+    if (focusState) focusState.pendingRemove = null;
+    document.querySelectorAll('[data-card-remove]').forEach(b => {
+        if (b.dataset.idleHtml) {
+            b.innerHTML = b.dataset.idleHtml;
+            delete b.dataset.idleHtml;
+        }
+        b.classList.remove('text-red-600', 'bg-red-50');
+        b.title = 'Remove this question';
+    });
+}
+
+function handleFocusListClick(e) {
+    if (!focusState) return;
+    const stage = currentFocusStage();
+
+    // Any click that is not on the armed remove button disarms it.
+    const clickedRemove = e.target.closest('[data-card-remove]');
+    if (focusState.pendingRemove && (!clickedRemove || clickedRemove.dataset.cardRemove !== focusState.pendingRemove)) {
+        disarmFocusRemove();
+    }
+
+    const toggle = e.target.closest('[data-topic-toggle]');
+    if (toggle && stage) {
+        const key = focusTopicKey(stage.stage, stage.topics[parseInt(toggle.dataset.topicToggle, 10)].topic);
+        if (focusState.expanded.has(key)) focusState.expanded.delete(key);
+        else focusState.expanded.add(key);
+        renderFocusTopics();
+        return;
+    }
+
+    if (clickedRemove) {
+        if (clickedRemove.disabled) return;
+        // Two taps: the first arms the button, the second removes. Removal is permanent and
+        // the question may be one the user wrote, so a stray tap must not be enough.
+        if (focusEditingUnavailable()) return;
+        if (focusState.pendingRemove !== clickedRemove.dataset.cardRemove) {
+            armFocusRemove(clickedRemove);
+            return;
+        }
+        disarmFocusRemove();
+        removeFocusCard(clickedRemove.dataset.cardRemove);
+        return;
+    }
+
+    const add = e.target.closest('[data-card-add-open]');
+    if (add && stage) {
+        if (add.disabled || focusState.busy || focusEditingUnavailable()) return;
+        const isNewTopic = add.dataset.newTopic === '1';
+        openFocusEditor({
+            kind: 'add', stage: stage.stage, topic: isNewTopic ? null : add.dataset.cardAddOpen,
+            draft: { topic: '', question: '', answer: '' }
+        }, isNewTopic ? '[data-draft-field="topic"]' : '[data-draft-field="question"]');
+        return;
+    }
+
+    const edit = e.target.closest('[data-card-edit]');
+    if (edit && stage) {
+        if (edit.disabled || focusState.busy || focusEditingUnavailable()) return;
+        const cardId = edit.dataset.cardEdit;
+        for (const t of stage.topics) {
+            const q = t.questions.find(item => item.id === cardId);
+            if (q) {
+                openFocusEditor({
+                    kind: 'edit', stage: stage.stage, topic: t.topic, cardId,
+                    draft: { topic: t.topic, question: q.question, answer: q.answer }
+                }, '[data-draft-field="question"]');
+                break;
+            }
+        }
+        return;
+    }
+
+    const rename = e.target.closest('[data-topic-rename]');
+    if (rename && stage) {
+        if (rename.disabled || focusState.busy || focusEditingUnavailable()) return;
+        const t = stage.topics[parseInt(rename.dataset.topicRename, 10)];
+        openFocusEditor({
+            kind: 'rename', stage: stage.stage, topic: t.topic,
+            draft: { topic: t.topic, question: '', answer: '' }
+        }, '[data-draft-field="topic"]');
+        return;
+    }
+
+    if (e.target.closest('[data-editor-cancel]')) {
+        cancelFocusEditor();
+        return;
+    }
+
+    if (e.target.closest('[data-editor-submit]')) {
+        submitFocusEditor();
+    }
+}
+
+function handleFocusListChange(e) {
+    const box = e.target.closest('[data-topic-check]');
+    const stage = currentFocusStage();
+    if (!box || !stage) return;
+    stage.topics[parseInt(box.dataset.topicCheck, 10)].selected = box.checked;
+    renderFocusStatus();
+}
+
+function handleFocusListInput(e) {
+    const field = e.target.closest('[data-draft-field]');
+    if (field && focusState && focusState.editor) {
+        focusState.editor.draft[field.dataset.draftField] = field.value;
+    }
+}
+
+function handleFocusListKeydown(e) {
+    if (!focusState || !focusState.editor) return;
+    if (e.key === 'Escape') {
+        // Cancels the inline editor without also closing the overlay (core.js closes on Escape
+        // at document level, which this stops before it gets there).
+        e.stopPropagation();
+        cancelFocusEditor();
+    } else if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+        e.preventDefault();
+        submitFocusEditor();
+    }
 }
 
 function renderFocusStatus() {
@@ -611,6 +1054,11 @@ async function openFocusModal(videoId) {
             videoId: videoId,
             targetCount: data.target_count,
             stages: data.stages,
+            expanded: new Set(),
+            editor: null,
+            pendingRemove: null,
+            busy: false,
+            busyTarget: null,
             // Open on the stage the learner is actually on, not always stage 0.
             activeStage: data.stages.some(s => s.stage === data.current_stage)
                 ? data.current_stage
@@ -671,6 +1119,14 @@ function initFocusModalEvents() {
     const save = document.getElementById('btn-focus-save');
     const reset = document.getElementById('btn-focus-reset');
     const overlay = document.getElementById('overlay-focus');
+
+    const list = document.getElementById('focus-topic-list');
+    if (list) {
+        list.addEventListener('click', handleFocusListClick);
+        list.addEventListener('change', handleFocusListChange);
+        list.addEventListener('input', handleFocusListInput);
+        list.addEventListener('keydown', handleFocusListKeydown);
+    }
 
     if (close) close.addEventListener('click', closeFocusModal);
     if (save) save.addEventListener('click', saveFocusSelection);
@@ -971,19 +1427,13 @@ async function discardPreviewVideo(id) {
         promptMessage = "Warning: Discarding this draft preview will permanently delete all your notes taken for this video. Are you sure you want to discard it?";
     }
 
-    const confirmFn = window.showConfirm || (typeof showConfirm === 'function' ? showConfirm : null);
-    let confirmed = false;
-    if (confirmFn) {
-        confirmed = await confirmFn({
-            title: "Discard Draft Preview?",
-            message: promptMessage,
-            confirmText: "Discard Draft",
-            confirmClass: "bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-xs shadow-sm transition",
-            icon: "trash-2"
-        });
-    } else {
-        confirmed = confirm(promptMessage);
-    }
+    const confirmed = await showConfirm({
+        title: "Discard Draft Preview?",
+        message: promptMessage,
+        confirmText: "Discard Draft",
+        confirmClass: "bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-xs shadow-sm transition",
+        icon: "trash-2"
+    });
 
     if (confirmed) {
         try {
@@ -1020,19 +1470,13 @@ async function archiveVideo(id) {
 }
 
 async function deleteVideo(id) {
-    const confirmFn = window.showConfirm || (typeof showConfirm === 'function' ? showConfirm : null);
-    let confirmed = false;
-    if (confirmFn) {
-        confirmed = await confirmFn({
-            title: "Delete Material?",
-            message: "Are you sure you want to permanently delete this video? All historical quiz data will be deleted.",
-            confirmText: "Delete Material",
-            confirmClass: "bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-xs shadow-sm transition",
-            icon: "trash-2"
-        });
-    } else {
-        confirmed = confirm("Are you sure you want to permanently delete this video? All historical quiz data will be deleted.");
-    }
+    const confirmed = await showConfirm({
+        title: "Delete Material?",
+        message: "Are you sure you want to permanently delete this video? All historical quiz data will be deleted.",
+        confirmText: "Delete Material",
+        confirmClass: "bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-xs shadow-sm transition",
+        icon: "trash-2"
+    });
     if (confirmed) {
         await fetchAPI(`/api/videos/${id}`, { method: 'DELETE' });
         if (typeof showToast === 'function') {

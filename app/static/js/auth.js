@@ -204,18 +204,12 @@ async function checkConfig() {
 }
 
 async function promptReportBug() {
-    const confirmFn = window.showConfirm || (typeof showConfirm === 'function' ? showConfirm : null);
-    let confirmed = false;
-    if (confirmFn) {
-        confirmed = await confirmFn({
-            title: "Report a Bug?",
-            message: "You will be redirected to the bug reporting page.",
-            confirmText: "Go to Bug Tracker",
-            icon: "alert-circle"
-        });
-    } else {
-        confirmed = confirm("Möchtest du einen Bug melden?\n\nDu wirst zur Bug-Meldeseite weitergeleitet.");
-    }
+    const confirmed = await showConfirm({
+        title: "Report a Bug?",
+        message: "You will be redirected to the bug reporting page.",
+        confirmText: "Go to Bug Tracker",
+        icon: "alert-circle"
+    });
     if (confirmed) {
         window.location.href = "/bugs";
     }

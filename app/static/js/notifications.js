@@ -4,6 +4,7 @@
  */
 
 let _appToastTimer = null;
+let _appToastDuration = 0;
 
 /**
  * Display a non-blocking toast notification pill at the bottom of the screen.
@@ -22,7 +23,7 @@ function showToast(text, type = 'saved', duration = null) {
     if (textEl) textEl.textContent = text;
 
     let iconHtml = '';
-    let pillClasses = 'px-4 py-2 rounded-full text-xs font-bold shadow-2xl border backdrop-blur-md flex items-center space-x-2 ';
+    let pillClasses = 'px-4 py-2 rounded-2xl text-xs font-bold text-left shadow-2xl border backdrop-blur-md flex items-start space-x-2 ';
     let defaultDuration = 2500;
 
     if (type === 'saving' || type === 'loading') {
@@ -43,7 +44,16 @@ function showToast(text, type = 'saved', duration = null) {
         defaultDuration = 2000;
     }
 
-    if (pill) pill.className = pillClasses;
+    if (pill) {
+        pill.className = pillClasses;
+        // A swipe-dismissed toast leaves its transform and fade behind, so a new one starts clean.
+        pill.style.transition = '';
+        pill.style.transform = '';
+        pill.style.opacity = '';
+        // The container ignores pointer events so it never blocks the page; the pill takes them
+        // back while it is showing so it can be swiped away.
+        pill.style.pointerEvents = 'auto';
+    }
     if (iconEl) {
         iconEl.innerHTML = iconHtml;
         if (typeof renderIcons === 'function') renderIcons();
@@ -54,6 +64,7 @@ function showToast(text, type = 'saved', duration = null) {
 
     if (_appToastTimer) clearTimeout(_appToastTimer);
     const finalDuration = duration !== null ? duration : defaultDuration;
+    _appToastDuration = finalDuration;
     if (finalDuration > 0) {
         _appToastTimer = setTimeout(() => {
             hideToast();
@@ -68,8 +79,74 @@ function hideToast() {
     const indicator = document.getElementById('app-toast-indicator') || document.getElementById('settings-autosave-indicator');
     if (!indicator) return;
     if (_appToastTimer) clearTimeout(_appToastTimer);
+    const pill = document.getElementById('app-toast-pill');
+    if (pill) pill.style.pointerEvents = 'none';
     indicator.classList.remove('opacity-100', 'translate-y-0');
     indicator.classList.add('opacity-0', 'translate-y-2');
+}
+
+// Swipe the toast down to dismiss it. Pointer events cover touch, pen and mouse in one path, so
+// there is no separate touch handler. While a finger is down the auto-dismiss timer is paused,
+// and a release that did not travel far enough snaps back and resumes it.
+const TOAST_SWIPE_DISMISS_PX = 40;
+
+function initToastSwipe() {
+    const pill = document.getElementById('app-toast-pill');
+    if (!pill || pill._swipeBound) return;
+    pill._swipeBound = true;
+    // Without this the browser claims the vertical drag to scroll the page and cancels it.
+    // Text selection has to go too: starting one mid-drag cancels the pointer the same way,
+    // and on iOS a press on selectable text raises the copy callout instead of a swipe.
+    pill.style.touchAction = 'none';
+    pill.style.userSelect = 'none';
+    pill.style.webkitUserSelect = 'none';
+
+    let startY = null;
+    let pointerId = null;
+
+    pill.addEventListener('pointerdown', (e) => {
+        startY = e.clientY;
+        pointerId = e.pointerId;
+        pill.setPointerCapture(pointerId);
+        pill.style.transition = 'none';
+        if (_appToastTimer) clearTimeout(_appToastTimer);
+    });
+
+    pill.addEventListener('pointermove', (e) => {
+        if (startY === null || e.pointerId !== pointerId) return;
+        // Only downward: dragging up would fight the toast's own position.
+        const dy = Math.max(0, e.clientY - startY);
+        pill.style.transform = `translateY(${dy}px)`;
+        pill.style.opacity = String(Math.max(0.2, 1 - dy / 120));
+    });
+
+    const finish = (e) => {
+        if (startY === null || e.pointerId !== pointerId) return;
+        const dy = Math.max(0, e.clientY - startY);
+        startY = null;
+        pill.style.transition = 'transform 180ms ease, opacity 180ms ease';
+
+        if (e.type === 'pointerup' && dy >= TOAST_SWIPE_DISMISS_PX) {
+            pill.style.transform = 'translateY(140%)';
+            pill.style.opacity = '0';
+            setTimeout(hideToast, 180);
+            return;
+        }
+
+        pill.style.transform = '';
+        pill.style.opacity = '';
+        if (_appToastDuration > 0) {
+            _appToastTimer = setTimeout(hideToast, Math.min(_appToastDuration, 2500));
+        }
+    };
+    pill.addEventListener('pointerup', finish);
+    pill.addEventListener('pointercancel', finish);
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initToastSwipe);
+} else {
+    initToastSwipe();
 }
 
 /**

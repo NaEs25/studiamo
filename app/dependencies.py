@@ -2,6 +2,7 @@ import os
 import hmac
 import logging
 import hashlib
+import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
@@ -533,6 +534,238 @@ def select_stage_questions(concept_pool, srs_stage, focus_topics=None, limit=Non
     # stable, so the model's own ordering survives within each group.
     ordered = sorted(items, key=lambda q: not q.get("ai_recommended"))
     return ordered[:limit] if limit else ordered
+
+
+MAX_POOL_CARDS = 300
+MAX_TOPIC_LEN = 60
+MAX_QUESTION_LEN = 500
+MAX_ANSWER_LEN = 1000
+
+
+class CardEditError(ValueError):
+    """A card add/remove the caller should be told about. `status` is the HTTP code to use."""
+
+    def __init__(self, message: str, status: int = 400):
+        super().__init__(message)
+        self.status = status
+
+
+def topic_of(item: dict) -> str:
+    """The topic name an item is grouped under, matching how the focus overlay groups them."""
+    return (item.get("topic") or "Ungrouped").strip() or "Ungrouped"
+
+
+def card_id_of(item: dict) -> str:
+    """Stable identifier for a pool item.
+
+    Items the user adds carry a stored `card_id`. AI-generated ones have none, so theirs is
+    derived from what identifies them (stage, topic, question text) rather than written back
+    to every existing row. Identical question text in the same stage and topic would share an
+    id, which is why add_card_to_pool rejects duplicates.
+    """
+    stored = item.get("card_id")
+    if isinstance(stored, str) and stored:
+        return stored
+    key = f"{_stage_of(item)}|{topic_of(item)}|{(item.get('question') or '').strip()}"
+    return hashlib.sha1(key.encode("utf-8")).hexdigest()[:12]
+
+
+def add_card_to_pool(pool: list, stage, topic, question, answer) -> tuple:
+    """Returns (new_pool, new_card) with a user-written recall card added.
+
+    The card is a plain question and answer: no options, so it is answered by typing or by
+    flipping in every stage (the quiz falls back from choice mode when options are absent).
+    It is marked ai_recommended so the default ordering does not bury it behind generated
+    cards, and it is placed ahead of the existing cards of its stage and topic, because the
+    served list is a prefix of the pool and a card at the end could be cut off by the
+    per-session question count.
+    """
+    try:
+        stage = int(stage)
+    except (TypeError, ValueError):
+        raise CardEditError("Pick a stage between 0 and 4.")
+    if not 0 <= stage < len(STAGE_KEYS):
+        raise CardEditError("Pick a stage between 0 and 4.")
+
+    topic = (topic or "").strip()
+    question = (question or "").strip()
+    answer = (answer or "").strip()
+    if not topic:
+        raise CardEditError("Give the question a topic.")
+    if not question or not answer:
+        raise CardEditError("A card needs both a question and an answer.")
+    if len(topic) > MAX_TOPIC_LEN:
+        raise CardEditError(f"Topic names are limited to {MAX_TOPIC_LEN} characters.")
+    if len(question) > MAX_QUESTION_LEN:
+        raise CardEditError(f"Questions are limited to {MAX_QUESTION_LEN} characters.")
+    if len(answer) > MAX_ANSWER_LEN:
+        raise CardEditError(f"Answers are limited to {MAX_ANSWER_LEN} characters.")
+
+    pool = [item for item in (pool or []) if isinstance(item, dict)]
+    if len(pool) >= MAX_POOL_CARDS:
+        raise CardEditError(f"A material can hold at most {MAX_POOL_CARDS} questions.", 409)
+
+    # Match an existing topic case-insensitively so "algorithms" joins "Algorithms" instead
+    # of appearing as a second topic in the overlay.
+    for item in pool:
+        if topic_of(item).lower() == topic.lower():
+            topic = topic_of(item)
+            break
+
+    for item in pool:
+        if (_stage_of(item) == stage and topic_of(item) == topic
+                and (item.get("question") or "").strip().lower() == question.lower()):
+            raise CardEditError("That question already exists in this topic.", 409)
+
+    card = {
+        "topic": topic,
+        "question": question,
+        "answer": answer,
+        "explanation": "",
+        "timestamp_seconds": 0,
+        "ai_recommended": True,
+        "stage": stage,
+        "origin": "human",
+        "card_id": uuid.uuid4().hex[:12],
+    }
+
+    insert_at = len(pool)
+    for index, item in enumerate(pool):
+        if _stage_of(item) == stage and topic_of(item) == topic:
+            insert_at = index
+            break
+    return pool[:insert_at] + [card] + pool[insert_at:], card
+
+
+def remove_card_from_pool(pool: list, card_id: str) -> tuple:
+    """Returns (new_pool, removed_card). Refuses to empty the pool.
+
+    An empty pool makes GET /api/quiz treat the quiz as broken and regenerate it with a paid
+    AI call, which would bring back exactly what was just removed.
+    """
+    pool = [item for item in (pool or []) if isinstance(item, dict)]
+    for index, item in enumerate(pool):
+        if card_id_of(item) == card_id:
+            if len(pool) == 1:
+                raise CardEditError("A material needs at least one question.", 409)
+            return pool[:index] + pool[index + 1:], item
+    raise CardEditError("That question no longer exists.", 404)
+
+
+def _clean_topic(topic) -> str:
+    topic = (topic or "").strip()
+    if not topic:
+        raise CardEditError("Give the question a topic.")
+    if len(topic) > MAX_TOPIC_LEN:
+        raise CardEditError(f"Topic names are limited to {MAX_TOPIC_LEN} characters.")
+    return topic
+
+
+def _existing_topic_name(pool: list, topic: str) -> str:
+    """The pool's own spelling of `topic` if it has one, matched case-insensitively."""
+    for item in pool:
+        if topic_of(item).lower() == topic.lower():
+            return topic_of(item)
+    return topic
+
+
+def edit_card_in_pool(pool: list, card_id: str, topic=None, question=None, answer=None) -> tuple:
+    """Returns (new_pool, edited_card). A field left as None is unchanged.
+
+    The card keeps its identity: an AI card's id is derived from its stage, topic and question,
+    all of which this can change, so the id is frozen into `card_id` before anything moves.
+    `edited_at` is stamped only when something actually changed. `origin` is left alone, so a
+    modified AI card still reads as AI-made and modified.
+
+    A card that changes topic is placed ahead of that topic's other cards, as add does; a card
+    edited in place keeps its position, so the served order does not shift under a session.
+    """
+    pool = [item for item in (pool or []) if isinstance(item, dict)]
+    index = next((i for i, item in enumerate(pool) if card_id_of(item) == card_id), None)
+    if index is None:
+        raise CardEditError("That question no longer exists.", 404)
+
+    original = pool[index]
+    card = dict(original)
+    card["card_id"] = card_id
+
+    if question is not None:
+        question = question.strip()
+        if not question:
+            raise CardEditError("A card needs a question.")
+        if len(question) > MAX_QUESTION_LEN:
+            raise CardEditError(f"Questions are limited to {MAX_QUESTION_LEN} characters.")
+        card["question"] = question
+    if answer is not None:
+        answer = answer.strip()
+        if not answer:
+            raise CardEditError("A card needs an answer.")
+        if len(answer) > MAX_ANSWER_LEN:
+            raise CardEditError(f"Answers are limited to {MAX_ANSWER_LEN} characters.")
+        card["answer"] = answer
+    if topic is not None:
+        others = pool[:index] + pool[index + 1:]
+        card["topic"] = _existing_topic_name(others, _clean_topic(topic))
+
+    stage = _stage_of(card)
+    for i, item in enumerate(pool):
+        if (i != index and _stage_of(item) == stage and topic_of(item) == topic_of(card)
+                and (item.get("question") or "").strip().lower() == (card.get("question") or "").strip().lower()):
+            raise CardEditError("That question already exists in this topic.", 409)
+
+    changed = any(card.get(k) != original.get(k) for k in ("topic", "question", "answer"))
+    if not changed:
+        return pool, original
+    card["edited_at"] = datetime.now(timezone.utc).isoformat()
+
+    others = pool[:index] + pool[index + 1:]
+    if topic_of(card) == topic_of(original):
+        return pool[:index] + [card] + pool[index + 1:], card
+
+    insert_at = len(others)
+    for i, item in enumerate(others):
+        if _stage_of(item) == stage and topic_of(item) == topic_of(card):
+            insert_at = i
+            break
+    return others[:insert_at] + [card] + others[insert_at:], card
+
+
+def rename_topic_in_pool(pool: list, old: str, new: str) -> tuple:
+    """Returns (new_pool, renamed_count). Renames a topic in every stage it appears in.
+
+    Topic strings are shared across stages on purpose (the generation prompt asks for the same
+    string verbatim, and the overlay groups by it), so a rename that touched one stage would
+    split a topic in two. Renaming onto a different existing topic is refused rather than
+    merged: merging can create two identical questions in one topic, and moving individual
+    cards already covers the case where someone wants that.
+    """
+    pool = [item for item in (pool or []) if isinstance(item, dict)]
+    old = (old or "").strip()
+    new = _clean_topic(new)
+
+    if not any(topic_of(item) == old for item in pool):
+        raise CardEditError("That topic no longer exists.", 404)
+    if new == old:
+        return pool, 0
+    for item in pool:
+        name = topic_of(item)
+        if name != old and name.lower() == new.lower():
+            raise CardEditError("A topic with that name already exists.", 409)
+
+    stamp = datetime.now(timezone.utc).isoformat()
+    renamed = []
+    count = 0
+    for item in pool:
+        if topic_of(item) == old:
+            card = dict(item)
+            card["card_id"] = card_id_of(item)
+            card["topic"] = new
+            card["edited_at"] = stamp
+            renamed.append(card)
+            count += 1
+        else:
+            renamed.append(item)
+    return renamed, count
 
 
 def get_srs_intervals(cursor, user_uuid: Optional[str] = None) -> list:

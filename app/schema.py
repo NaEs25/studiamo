@@ -182,6 +182,7 @@ TABLES_SQL = [
         summary JSONB DEFAULT '[]'::jsonb,
         outline JSONB DEFAULT '[]'::jsonb,
         fact_check JSONB DEFAULT '{}'::jsonb,
+        content_hash TEXT,
         created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
     );
     """,
@@ -189,6 +190,12 @@ TABLES_SQL = [
     ALTER TABLE videos ADD COLUMN IF NOT EXISTS summary JSONB DEFAULT '[]'::jsonb;
     ALTER TABLE videos ADD COLUMN IF NOT EXISTS outline JSONB DEFAULT '[]'::jsonb;
     ALTER TABLE videos ADD COLUMN IF NOT EXISTS fact_check JSONB DEFAULT '{}'::jsonb;
+
+    -- SHA-256 of an uploaded document's bytes, or of pasted notes with whitespace collapsed.
+    -- NULL for YouTube rows (their identity is youtube_id) and for rows created before this
+    -- column existed. Not unique: a failed import keeps its row, and re-uploading the same
+    -- file to retry it must not be blocked by that row.
+    ALTER TABLE videos ADD COLUMN IF NOT EXISTS content_hash TEXT;
     ALTER TABLE videos DROP COLUMN IF EXISTS transcript;
     """,
     """
@@ -606,6 +613,7 @@ INDEXES_SQL = [
     # code path or a restored/replayed row.
     "CREATE UNIQUE INDEX IF NOT EXISTS idx_videos_one_per_youtube_id ON videos(user_uuid, youtube_id) WHERE youtube_id IS NOT NULL;",
     "CREATE INDEX IF NOT EXISTS idx_videos_user_goal ON videos(user_uuid, learning_goal_id);",
+    "CREATE INDEX IF NOT EXISTS idx_videos_user_content_hash ON videos(user_uuid, content_hash) WHERE content_hash IS NOT NULL;",
     "CREATE INDEX IF NOT EXISTS idx_quizzes_user_uuid ON quizzes(user_uuid);",
     "CREATE INDEX IF NOT EXISTS idx_quizzes_next_review ON quizzes(user_uuid, next_review_at);",
     # One 'video' quiz row per video: generate_video_quiz_for_level relies on this to

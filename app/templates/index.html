@@ -114,16 +114,6 @@
     <!-- Main Container -->
     <main class="flex-grow max-w-4xl w-full mx-auto p-4 md:p-6 pb-20 md:pb-24">
 
-        <!-- API Connection Warning (Hidden by default) -->
-        <div id="api-error-banner"
-            class="hidden mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl flex items-start space-x-3">
-            <i data-lucide="alert-triangle" class="w-5 h-5 text-red-500 shrink-0 mt-0.5"></i>
-            <div>
-                <h4 id="api-error-title" class="font-bold text-red-400 text-sm">System Notice</h4>
-                <p id="api-error-msg" class="text-xs text-stone-700 mt-1">An error occurred.</p>
-            </div>
-        </div>
-
         <!-- SPA Tab Panels -->
 
         <!-- 1. Dashboard Tab (Home) -->
@@ -1501,10 +1491,10 @@
 
     <!-- Global App Toast / Feedback Notification Indicator -->
     <div id="app-toast-indicator" role="status" aria-live="polite"
-        class="fixed bottom-20 left-1/2 -translate-x-1/2 z-[100] pointer-events-none transition-all duration-300 opacity-0 transform translate-y-2">
+        class="fixed bottom-20 left-1/2 -translate-x-1/2 z-[100] w-max max-w-[min(28rem,calc(100vw-2rem))] pointer-events-none transition-all duration-300 opacity-0 transform translate-y-2">
         <div id="app-toast-pill"
-            class="px-4 py-2 rounded-full text-xs font-bold shadow-2xl border backdrop-blur-md flex items-center space-x-2 bg-stone-900/95 text-stone-100 border-stone-700 ring-2 ring-stone-500/20">
-            <span id="app-toast-icon" class="flex items-center shrink-0"></span>
+            class="px-4 py-2 rounded-2xl text-xs font-bold text-left shadow-2xl border backdrop-blur-md flex items-start space-x-2 bg-stone-900/95 text-stone-100 border-stone-700 ring-2 ring-stone-500/20">
+            <span id="app-toast-icon" class="flex items-center shrink-0 h-4"></span>
             <span id="app-toast-text">Notification</span>
         </div>
     </div>
@@ -2026,7 +2016,7 @@
             <div id="focus-stage-tabs" class="flex items-center gap-1 px-5 py-2.5 overflow-x-auto border-b border-[#e7dfd3] shrink-0"></div>
 
             <div class="px-5 py-3 overflow-y-auto grow">
-                <p class="text-xs text-stone-600 font-medium mb-2.5">Choose the topics you want to actively review:</p>
+                <p class="text-xs text-stone-600 font-medium mb-2.5">Tick the topics to review. Open one to see or edit its questions.</p>
                 <div id="focus-topic-list" class="space-y-1.5"></div>
             </div>
 
@@ -2476,7 +2466,7 @@
 
     <!-- Persistent Bottom-Right Activity & Import Backlog Widget -->
     <div id="import-widget-container"
-        class="fixed bottom-20 right-4 sm:bottom-24 sm:right-6 z-50 flex flex-col items-end">
+        class="fixed bottom-[calc(4rem+var(--safe-bottom))] right-4 sm:right-6 z-50 flex flex-col items-end">
         <!-- Expanded Backlog Drawer Panel -->
         <div id="import-widget-panel"
             class="relative hidden w-80 sm:w-96 bg-[#fcfaf6]/95 text-stone-900 border border-[#e7dfd3] backdrop-blur-xl shadow-2xl rounded-2xl p-3 mb-3 transition-all duration-300">

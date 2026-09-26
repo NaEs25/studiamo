@@ -156,16 +156,6 @@ async function fetchAPI(url, options = {}) {
     return fetchPromise;
 }
 
-// Error UI helper
-function showErrorBanner(msg) {
-    const banner = document.getElementById('api-error-banner');
-    if (banner) {
-        banner.querySelector('p').textContent = msg;
-        banner.classList.remove('hidden');
-        setTimeout(() => banner.classList.add('hidden'), 8000);
-    }
-}
-
 // --- Task & Backlog Manager ---
 class ImportBacklogManager {
     constructor() {
@@ -539,20 +529,13 @@ async function dismissImportTask(taskId) {
 // row via dismissImportTask -> DELETE /import-tasks, so unlike dismissing a finished task
 // this is destructive and irreversible: confirm before sending it.
 async function requestCancelImportTask(taskId) {
-    const confirmFn = window.showConfirm || (typeof showConfirm === 'function' ? showConfirm : null);
-    const message = "This will stop the import and remove it from your list. Progress made so far will be lost.";
-    let confirmed = false;
-    if (confirmFn) {
-        confirmed = await confirmFn({
-            title: "Cancel Import?",
-            message,
-            confirmText: "Cancel Import",
-            confirmClass: "bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-xs shadow-sm transition",
-            icon: "x-circle"
-        });
-    } else {
-        confirmed = confirm(message);
-    }
+    const confirmed = await showConfirm({
+        title: "Cancel Import?",
+        message: "This will stop the import and remove it from your list. Progress made so far will be lost.",
+        confirmText: "Cancel Import",
+        confirmClass: "bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-xs shadow-sm transition",
+        icon: "x-circle"
+    });
     if (confirmed) {
         await dismissImportTask(taskId);
     }
@@ -737,7 +720,6 @@ document.addEventListener('DOMContentLoaded', () => {
 // Bind core helpers to global window scope for inline event handlers
 window.parseDate = parseDate;
 window.fetchAPI = fetchAPI;
-window.showErrorBanner = showErrorBanner;
 window.showLoader = showLoader;
 window.showLoaderDone = showLoaderDone;
 window.hideLoader = hideLoader;

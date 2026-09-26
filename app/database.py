@@ -445,6 +445,62 @@ def save_quiz_focus(quiz_id: int, focus_topics: dict, questions: list, username:
         conn.close()
 
 
+def edit_quiz_pool(quiz_id: int, username: str, edit) -> object:
+    """Runs a read-modify-write on a quiz's concept pool under a row lock.
+
+    `edit(pool, focus, srs_stage)` returns
+    `(new_pool, new_focus, active_questions, result, reset_progress)` and may raise to abort. The pool is one JSONB value, so without the lock two quick edits
+    would each read the same array and the second write would silently discard the first.
+    Connections here run in autocommit, hence the explicit transaction.
+
+    The pool, the focus selection and the served questions are written in one statement for
+    the same reason save_quiz_focus does: a quiz opened between separate writes would read a
+    served list that does not match its pool. in_progress_index is cleared when `reset_progress`
+    is true, because removing or inserting a card shifts the positions a half-finished session
+    was holding; an edit that leaves every position alone passes false and keeps the session.
+    """
+    conn = get_db_connection(username)
+    try:
+        cursor = conn.cursor()
+        cursor.execute("BEGIN;")
+        try:
+            cursor.execute(
+                """SELECT concept_pool, focus_topics, srs_stage
+                     FROM quizzes WHERE id = %s AND user_uuid = %s FOR UPDATE;""",
+                (quiz_id, conn.user_uuid)
+            )
+            row = cursor.fetchone()
+            if not row:
+                raise LookupError("quiz not found")
+
+            pool = row.get("concept_pool") or []
+            focus = row.get("focus_topics") or {}
+            if isinstance(pool, str):
+                pool = json.loads(pool)
+            if isinstance(focus, str):
+                focus = json.loads(focus)
+
+            new_pool, new_focus, active, result, reset_progress = edit(pool, focus, row.get("srs_stage") or 0)
+
+            cursor.execute(
+                """UPDATE quizzes
+                      SET concept_pool = %s::jsonb,
+                          focus_topics = %s::jsonb,
+                          questions_json = %s::jsonb,
+                          in_progress_index = CASE WHEN %s THEN NULL ELSE in_progress_index END
+                    WHERE id = %s AND user_uuid = %s;""",
+                (json.dumps(new_pool), json.dumps(new_focus or {}), json.dumps(active or []),
+                 bool(reset_progress), quiz_id, conn.user_uuid)
+            )
+            cursor.execute("COMMIT;")
+            return result
+        except BaseException:
+            cursor.execute("ROLLBACK;")
+            raise
+    finally:
+        conn.close()
+
+
 def get_quiz_pool_and_focus(quiz_id: int, username: str) -> tuple:
     """Returns (concept_pool, focus_topics) for a quiz, both already decoded from JSONB."""
     conn = get_db_connection(username)

@@ -742,9 +742,8 @@ async function openBillingPortal() {
         window.open(data.portal_url, '_blank', 'noopener');
     } catch (e) {
         console.error('Billing portal failed:', e);
-        if (typeof showErrorBanner === 'function') {
-            showErrorBanner("Couldn't open the billing portal. Please email hello@studiamo.cloud.");
-        }
+        // Long enough to read and copy the address in the message.
+        showToast("Couldn't open the billing portal. Please email hello@studiamo.cloud.", 'failed', 8000);
     }
 }
 

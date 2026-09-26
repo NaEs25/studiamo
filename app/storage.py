@@ -12,6 +12,7 @@ document's analysis was lost, how four fifths of each import's questions were di
 how a quiz payload could claim a video_filename the frontend then read as undefined. Callers
 now read and write the columns they mean, keyed on a primary key, via app.database.
 """
+import hashlib
 import json
 import os
 import re
@@ -50,6 +51,19 @@ def safe_doc_extension(filename) -> str:
     extensions already get decoded as) if nothing safe is found."""
     ext = Path(filename or "").suffix.lower()
     return ext if _SAFE_DOC_EXT_PATTERN.fullmatch(ext) else ".txt"
+
+
+def content_hash_bytes(data: bytes) -> str:
+    """Fingerprint of an uploaded file's exact bytes."""
+    return hashlib.sha256(data).hexdigest()
+
+
+def content_hash_text(text: str) -> str:
+    """Fingerprint of pasted notes, insensitive to whitespace: runs of spaces, tabs and line
+    breaks collapse to one space and the ends are trimmed, so re-pasting the same text out of
+    a different editor still matches. Case and punctuation are kept, since they can be the
+    difference between two distinct notes."""
+    return hashlib.sha256(" ".join((text or "").split()).encode("utf-8")).hexdigest()
 
 
 def get_document_path(video_id, extension: str, username: str = "default_user") -> Path:
