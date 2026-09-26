@@ -60,9 +60,9 @@ pycparser==3.0
 pydantic==2.13.4
 pydantic_core==2.46.4
 Pygments==2.21.0
-pypdf==6.15.0
+pypdf==6.16.1
 python-dotenv==1.2.3
-python-multipart==0.0.9
+python-multipart==0.0.31
 pytz==2026.3.post1
 pywebpush==2.4.0
 PyYAML==6.0.3
