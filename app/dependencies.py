@@ -120,11 +120,27 @@ def _decode_session_token(token: str) -> Optional[str]:
 _oauth_state_signer = URLSafeSerializer(SECRET_KEY, salt="yb-oauth-state-v1")
 
 
+_INTERNAL_REFERRER_DOMAINS = ("studiamo.cloud", "localhost")
+
+
+def _is_internal_referrer_host(host: str) -> bool:
+    """Exact domain or subdomain match. A substring test would also drop unrelated sites
+    whose names merely contain one of these, e.g. an Italian site with "studiamo" in its
+    domain."""
+    if host == "127.0.0.1":
+        return True
+    if host.startswith("accounts.google."):
+        return True
+    return any(host == d or host.endswith("." + d) for d in _INTERNAL_REFERRER_DOMAINS)
+
+
 def clean_external_referrer(url: Optional[str], request_host: Optional[str] = None) -> Optional[str]:
     """Returns an external referrer URL, or None if the URL is internal, empty, or an auth service.
 
-    Internal origins (studiamo.cloud, localhost, 127.0.0.1, or matching the current Host header)
-    and auth providers (e.g. accounts.google.com) are navigation steps, not acquisition channels.
+    Internal origins (studiamo.cloud and its subdomains, localhost, 127.0.0.1, or matching the
+    current Host header) and auth providers (accounts.google.*) are navigation steps, not
+    acquisition channels. A URL carrying credentials is dropped: browsers never send one as a
+    referrer, so it can only be a hand-crafted value.
     """
     if not url:
         return None
@@ -136,10 +152,10 @@ def clean_external_referrer(url: Optional[str], request_host: Optional[str] = No
     try:
         from urllib.parse import urlparse
         parsed = urlparse(raw)
-        host = (parsed.netloc or "").lower().split(":")[0]
-        if not host:
+        host = parsed.hostname or ""
+        if not host or "@" in parsed.netloc:
             return None
-        if "studiamo" in host or "localhost" in host or "127.0.0.1" in host or "accounts.google" in host:
+        if _is_internal_referrer_host(host):
             return None
         if request_host and host == request_host.lower().split(":")[0]:
             return None
