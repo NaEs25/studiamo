@@ -37,17 +37,61 @@ async function getUserQuestionCounts() {
     return { 1: 2, 2: 3, 3: 5, 4: 8, 5: 12 };
 }
 
+async function getImportanceMeta(rating) {
+    const counts = await getUserQuestionCounts();
+    const metaMap = {
+        1: { title: "Reference Material (1 Star)", qs: `${counts[1] || 2} Recall Questions`, text: `Low recall density & scaled back repetition frequency. Generates ${counts[1] || 2} questions.` },
+        2: { title: "Basic Concepts (2 Stars)", qs: `${counts[2] || 3} Recall Questions`, text: `Fundamental overview. Generates ${counts[2] || 3} active-recall questions.` },
+        3: { title: "Standard Study (3 Stars)", qs: `${counts[3] || 5} Recall Questions`, text: `Standard quiz depth & review interval frequency. Generates ${counts[3] || 5} questions.` },
+        4: { title: "High Detail (4 Stars)", qs: `${counts[4] || 8} Recall Questions`, text: `Comprehensive coverage with ${counts[4] || 8} recall questions for detailed retention.` },
+        5: { title: "Crucial Retention (5 Stars)", qs: `${counts[5] || 12} Recall Questions`, text: `Maximum quiz density with ${counts[5] || 12} recall questions and high-priority SRS review schedule.` }
+    };
+    return metaMap[rating] || metaMap[3];
+}
+
+// Fills the stars up to `rating` in the container rendered by partials/_star_selector.html.
+function paintStars(container, rating) {
+    container.querySelectorAll('.star-select-btn').forEach(btn => {
+        const icon = btn.querySelector('.star-icon') || btn.querySelector('svg');
+        if (!icon) return;
+        const filled = parseInt(btn.dataset.star) <= rating;
+        icon.setAttribute('fill', filled ? '#f59e0b' : 'none');
+        icon.setAttribute('stroke', filled ? '#f59e0b' : '#475569');
+        icon.classList.toggle('scale-105', filled);
+    });
+}
+
+// Wires the click handlers once per container and returns a setter that repaints the stars.
+// onSelect fires only for user clicks, not for programmatic set calls.
+function initStarSelector(containerId, onSelect) {
+    const container = document.getElementById(containerId);
+    if (!container) return null;
+    if (!container._setStars) {
+        container._onSelect = onSelect;
+        container._setStars = (rating) => paintStars(container, rating);
+        container.querySelectorAll('.star-select-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const val = parseInt(btn.dataset.star);
+                paintStars(container, val);
+                if (container._onSelect) container._onSelect(val);
+            });
+        });
+    }
+    return container._setStars;
+}
+
 function initImportanceStars() {
     const hiddenInput = document.getElementById('input-importance');
     const labelVal = document.getElementById('label-importance-value');
-    const starBtns = document.querySelectorAll('.star-select-btn');
     const descTitle = document.getElementById('importance-desc-title');
     const descQs = document.getElementById('importance-desc-qs');
     const descText = document.getElementById('importance-desc-text');
     const infoToggle = document.getElementById('importance-info-toggle');
     const descBox = document.getElementById('importance-desc-box');
 
-    if (infoToggle && descBox) {
+    if (infoToggle && descBox && !infoToggle._bound) {
+        infoToggle._bound = true;
         infoToggle.addEventListener('click', () => {
             const nowHidden = descBox.classList.toggle('hidden');
             infoToggle.setAttribute('aria-expanded', String(!nowHidden));
@@ -56,48 +100,39 @@ function initImportanceStars() {
 
     async function updateStars(rating) {
         if (hiddenInput) hiddenInput.value = rating;
-        const counts = await getUserQuestionCounts();
-
-        const metaMap = {
-            1: { title: "Reference Material (1 Star)", qs: `${counts[1] || 2} Recall Questions`, text: `Low recall density & scaled back repetition frequency. Generates ${counts[1] || 2} questions.` },
-            2: { title: "Basic Concepts (2 Stars)", qs: `${counts[2] || 3} Recall Questions`, text: `Fundamental overview. Generates ${counts[2] || 3} active-recall questions.` },
-            3: { title: "Standard Study (3 Stars)", qs: `${counts[3] || 5} Recall Questions`, text: `Standard quiz depth & review interval frequency. Generates ${counts[3] || 5} questions.` },
-            4: { title: "High Detail (4 Stars)", qs: `${counts[4] || 8} Recall Questions`, text: `Comprehensive coverage with ${counts[4] || 8} recall questions for detailed retention.` },
-            5: { title: "Crucial Retention (5 Stars)", qs: `${counts[5] || 12} Recall Questions`, text: `Maximum quiz density with ${counts[5] || 12} recall questions and high-priority SRS review schedule.` }
-        };
-
-        const info = metaMap[rating] || metaMap[3];
+        const info = await getImportanceMeta(rating);
         if (labelVal) labelVal.textContent = info.title;
         if (descTitle) descTitle.textContent = info.title;
         if (descQs) descQs.textContent = info.qs;
         if (descText) descText.textContent = info.text;
-
-        starBtns.forEach(btn => {
-            const btnStar = parseInt(btn.dataset.star);
-            const icon = btn.querySelector('.star-icon') || btn.querySelector('svg');
-            if (icon) {
-                if (btnStar <= rating) {
-                    icon.setAttribute('fill', '#f59e0b');
-                    icon.setAttribute('stroke', '#f59e0b');
-                    icon.classList.add('scale-105');
-                } else {
-                    icon.setAttribute('fill', 'none');
-                    icon.setAttribute('stroke', '#475569');
-                    icon.classList.remove('scale-105');
-                }
-            }
-        });
     }
 
-    starBtns.forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.preventDefault();
-            const val = parseInt(btn.dataset.star);
-            updateStars(val);
-        });
-    });
+    const setStars = initStarSelector('importance-star-container', updateStars);
+    const initial = hiddenInput ? parseInt(hiddenInput.value) || 3 : 3;
+    if (setStars) setStars(initial);
+    updateStars(initial);
+}
 
-    updateStars(hiddenInput ? parseInt(hiddenInput.value) || 3 : 3);
+// The edit modal's picker. #edit-video-rating is a hidden input so the submit handler reads it
+// like any other field.
+function initEditVideoStars() {
+    const ratingEl = document.getElementById('edit-video-rating');
+    const labelEl = document.getElementById('edit-video-rating-label');
+    if (!ratingEl) return null;
+
+    async function setRating(rating) {
+        ratingEl.value = rating;
+        if (!labelEl) return;
+        const info = await getImportanceMeta(rating);
+        // A later call may have landed while the counts were loading.
+        if (ratingEl.value === String(rating)) labelEl.textContent = `${info.title}: ${info.qs}`;
+    }
+
+    const setStars = initStarSelector('edit-video-star-container', setRating);
+    return (rating) => {
+        if (setStars) setStars(rating);
+        return setRating(rating);
+    };
 }
 
 window.getUserQuestionCounts = getUserQuestionCounts;
@@ -1191,8 +1226,8 @@ async function openEditVideoModal(id, category, goalId, rating, notes) {
     const titleEl = document.getElementById('edit-video-title');
     if (titleEl) titleEl.value = cardData ? (cardData.title || '') : '';
     
-    const ratingEl = document.getElementById('edit-video-rating');
-    if (ratingEl) ratingEl.value = cardData ? (cardData.importance_rating || rating || 3) : (rating || 3);
+    const setEditRating = initEditVideoStars();
+    if (setEditRating) setEditRating(parseInt(cardData ? (cardData.importance_rating || rating || 3) : (rating || 3)) || 3);
     
     const notesEl = document.getElementById('edit-video-notes');
     if (notesEl) notesEl.value = cardData ? (cardData.custom_notes || notes || '') : (notes || '');

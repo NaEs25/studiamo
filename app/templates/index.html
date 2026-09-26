@@ -357,53 +357,8 @@
                             </button>
                         </div>
                         <input type="hidden" id="input-importance" value="3">
-                        <div class="flex items-center space-x-2 my-2" id="importance-star-container">
-                            <button type="button" class="star-select-btn p-1.5 rounded-lg hover:bg-stone-100 transition"
-                                data-star="1" title="1 Star - Reference">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24"
-                                    fill="#f59e0b" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"
-                                    stroke-linejoin="round" class="w-7 h-7 star-icon transition-transform scale-105">
-                                    <polygon
-                                        points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                                </svg>
-                            </button>
-                            <button type="button" class="star-select-btn p-1.5 rounded-lg hover:bg-stone-100 transition"
-                                data-star="2" title="2 Stars - Basic Concepts">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24"
-                                    fill="#f59e0b" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"
-                                    stroke-linejoin="round" class="w-7 h-7 star-icon transition-transform scale-105">
-                                    <polygon
-                                        points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                                </svg>
-                            </button>
-                            <button type="button" class="star-select-btn p-1.5 rounded-lg hover:bg-stone-100 transition"
-                                data-star="3" title="3 Stars - Standard Study">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24"
-                                    fill="#f59e0b" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"
-                                    stroke-linejoin="round" class="w-7 h-7 star-icon transition-transform scale-105">
-                                    <polygon
-                                        points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                                </svg>
-                            </button>
-                            <button type="button" class="star-select-btn p-1.5 rounded-lg hover:bg-stone-100 transition"
-                                data-star="4" title="4 Stars - High Detail">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24"
-                                    fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round"
-                                    stroke-linejoin="round" class="w-7 h-7 star-icon transition-transform">
-                                    <polygon
-                                        points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                                </svg>
-                            </button>
-                            <button type="button" class="star-select-btn p-1.5 rounded-lg hover:bg-stone-100 transition"
-                                data-star="5" title="5 Stars - Crucial Retention">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24"
-                                    fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round"
-                                    stroke-linejoin="round" class="w-7 h-7 star-icon transition-transform">
-                                    <polygon
-                                        points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                                </svg>
-                            </button>
-                        </div>
+                        {% set star_container_id = 'importance-star-container' %}
+                        {% include 'partials/_star_selector.html' %}
                         <div id="importance-desc-box"
                             class="hidden bg-stone-100/60 p-3 rounded-xl border border-stone-200 text-xs text-stone-400 space-y-1">
                             <div class="flex items-center justify-between font-medium">
@@ -2152,14 +2107,10 @@
 
                 <div class="space-y-1">
                     <label class="block text-xs font-semibold text-stone-400">Importance Rating / Quiz Level</label>
-                    <select id="edit-video-rating"
-                        class="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-500">
-                        <option value="1">1 Star (Reference - 2 Qs)</option>
-                        <option value="2">2 Stars (Basic Concepts - 3 Qs)</option>
-                        <option value="3">3 Stars (Standard Study - 5 Qs)</option>
-                        <option value="4">4 Stars (Comprehensive - 8 Qs)</option>
-                        <option value="5">5 Stars (Crucial Retention - 12 Qs)</option>
-                    </select>
+                    <input type="hidden" id="edit-video-rating" value="3">
+                    {% set star_container_id = 'edit-video-star-container' %}
+                    {% include 'partials/_star_selector.html' %}
+                    <p id="edit-video-rating-label" class="text-xs text-stone-500"></p>
                 </div>
 
                 <div class="space-y-1">
