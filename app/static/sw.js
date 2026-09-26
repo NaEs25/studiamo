@@ -1,8 +1,17 @@
 // Bump this by hand when a precached asset changes and the new version must reach users.
-const CACHE_NAME = 'studiamo-pwa-v8';
+const CACHE_NAME = 'studiamo-pwa-v9';
 const ASSETS_TO_CACHE = [
   '/',
   '/static/css/style.css',
+  '/static/css/fonts.css',
+  '/static/vendor/fonts/outfit-v15-latin.woff2',
+  '/static/vendor/fonts/outfit-v15-latin-ext.woff2',
+  '/static/vendor/fonts/inter-v20-latin.woff2',
+  '/static/vendor/fonts/inter-v20-latin-ext.woff2',
+  '/static/vendor/lucide-1.48.0.min.js',
+  '/static/vendor/marked-12.0.2.min.js',
+  '/static/vendor/dompurify-3.1.5.min.js',
+  '/static/vendor/turndown-7.2.0.js',
   '/static/js/app.js',
   '/static/js/core.js',
   '/static/js/auth.js',
@@ -39,7 +48,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch handler: bypass for API and external cross-origin requests (e.g. analytics, CDNs).
+// Fetch handler: bypass for API and external cross-origin requests (e.g. analytics).
 // Navigation requests (HTML) stay network-first since the response depends on auth state.
 // Static assets (CSS/JS/images/manifest) use stale-while-revalidate so a cold app launch
 // paints instantly from cache while the cache quietly refreshes from the network.
