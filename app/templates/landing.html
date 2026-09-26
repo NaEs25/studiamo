@@ -607,7 +607,7 @@
                         </div>
                         <div
                             class="bg-[#fcfaf6] p-3 rounded-xl border border-[#e7dfd3] text-[11px] font-mono text-stone-600 flex items-center space-x-2 truncate">
-                            <i data-lucide="youtube" class="w-4 h-4 text-red-600 shrink-0"></i>
+                            {% with icon_class="w-4 h-4 text-red-600 shrink-0" %}{% include 'partials/_icon_youtube.html' %}{% endwith %}
                             <span class="truncate">https://youtu.be/v=9...</span>
                         </div>
                     </div>
@@ -1048,7 +1048,7 @@
 
                         <a href="https://github.com/NaEs25/studiamo" target="_blank" rel="noopener noreferrer"
                             class="w-full py-3.5 px-6 rounded-xl bg-[#fbf8f2] border border-[#e7dfd3] hover:border-stone-400 hover:bg-[#f3ede2] text-stone-800 font-bold text-sm transition flex items-center justify-center space-x-2 cursor-pointer shadow-sm">
-                            <i data-lucide="github" class="w-4 h-4"></i>
+                            {% include 'partials/_icon_github.html' %}
                             <span>Show on GitHub</span>
                         </a>
                     </div>
