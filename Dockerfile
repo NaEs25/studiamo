@@ -10,9 +10,13 @@ WORKDIR /build
 RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
+# SHA-256 of tailwindcss-linux-x64 for TAILWIND_VERSION, from the release's sha256sums.txt.
+# Bump both together (and in scripts/build_css.sh).
 ARG TAILWIND_VERSION=v3.4.19
-RUN curl -sL -o /usr/local/bin/tailwindcss \
+ARG TAILWIND_SHA256=4af3198c015616ea7d6617974ec3d70d987ecc00c1ca8463b0a30fd65cc7c06e
+RUN curl -sfL -o /usr/local/bin/tailwindcss \
         "https://github.com/tailwindlabs/tailwindcss/releases/download/${TAILWIND_VERSION}/tailwindcss-linux-x64" \
+    && echo "${TAILWIND_SHA256}  /usr/local/bin/tailwindcss" | sha256sum -c --quiet - \
     && chmod +x /usr/local/bin/tailwindcss
 
 # Only what tailwind.config.js's content globs scan, plus the input stylesheet, so this
