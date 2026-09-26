@@ -651,7 +651,7 @@ option {
         flex-direction: row;
     }
     .studio-pane-left {
-        width: 42%;
+        width: 62%;
         height: 100%;
         border-bottom: none;
         flex-shrink: 0;
@@ -675,8 +675,15 @@ option {
         overflow-y: auto;
     }
     .studio-pane-right {
-        width: 58%;
+        width: 38%;
         height: 100%;
+        container-type: inline-size;
+    }
+    /* Narrow notes pane: drop the decorative label so it cannot overlap the toolbar buttons */
+    @container (max-width: 520px) {
+        #studio-toolbar-label {
+            display: none;
+        }
     }
 }
 
