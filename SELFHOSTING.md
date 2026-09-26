@@ -131,7 +131,7 @@ If you'd rather run the app directly on the host and only containerize Postgres:
 docker compose up -d postgres
 cp .env.selfhosted.example .env  # already points DATABASE_URL at localhost:5432
 python -m venv venv && source venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements.txt -c constraints.txt
 ./scripts/build_css.sh
 uvicorn app.main:app --port 5004
 ```

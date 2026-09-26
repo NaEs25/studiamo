@@ -39,8 +39,8 @@ WORKDIR /app
 # mounted volume, not just static file serving, so it needs a real home to write into.
 RUN groupadd --gid 1000 studiamo && useradd --uid 1000 --gid studiamo --create-home studiamo
 
-COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements.txt constraints.txt ./
+RUN pip install --no-cache-dir -r requirements.txt -c constraints.txt
 
 COPY app ./app
 COPY scripts ./scripts

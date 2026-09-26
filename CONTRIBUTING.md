@@ -17,7 +17,7 @@ that split clean rather than out of pure preference.
 3. Install Python dependencies (Python 3.12):
    ```bash
    python -m venv venv && source venv/bin/activate
-   pip install -r requirements.txt
+   pip install -r requirements.txt -c constraints.txt
    ```
 4. Build the CSS once (see "Frontend" below), then run the app:
    ```bash
@@ -75,7 +75,7 @@ isn't configured, so the suite still runs somewhere without Postgres available.
 `tests/e2e/` drives the real app in a headless browser (Playwright) against a local server
 it starts itself (see `tests/e2e/conftest.py`), authenticating as a dedicated
 `e2e_test_bot` account rather than real Google OAuth. One-time setup, after
-`pip install -r requirements-dev.txt`:
+`pip install -r requirements-dev.txt -c constraints.txt`:
 
 ```bash
 playwright install chromium
