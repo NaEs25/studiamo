@@ -65,6 +65,11 @@ html, body {
     font-family: var(--font-sans);
     -webkit-tap-highlight-color: transparent;
     transition: background-color 0.25s ease, color 0.25s ease;
+    /* Stops the page bouncing past its top/bottom edge, which exposed the page background
+       above the header now that it scrolls with the page. */
+    overscroll-behavior-y: none;
+    /* Drops double-tap zoom (pinch stays available; iOS always allows it). */
+    touch-action: manipulation;
 }
 
 /* Accordion details summary reset */
