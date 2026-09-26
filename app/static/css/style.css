@@ -219,6 +219,18 @@ option {
     to   { opacity: 1; transform: translateY(0); }
 }
 
+/* A transformed ancestor becomes the containing block for position: fixed descendants, so while
+   fadeIn runs the import tab's floating submit bar is laid out against the section instead of the
+   viewport and snaps into place when the animation ends. This tab fades without a transform. */
+#tab-import {
+    animation-name: fadeInOpacity;
+}
+
+@keyframes fadeInOpacity {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
 /* ── Quiz Session Toggles ───────────────────────────────── */
 /* Compact chips replacing a row of bare checkboxes with text labels. The checkbox stays a
    real input (visually hidden, wrapped by the label) so it keeps native click and keyboard
