@@ -2057,7 +2057,9 @@ const STUDIO_MARKDOWN_SANITIZE_CONFIG = { ADD_ATTR: ['data-seconds', 'contentedi
 
 function renderMarkdownSafe(text) {
     if (!text) return '';
-    if (typeof marked === 'undefined' || typeof DOMPurify === 'undefined') return text;
+    // Callers assign the result to innerHTML, so if the sanitizer or parser failed to load
+    // the note is shown as escaped plain text rather than passed through as markup.
+    if (typeof marked === 'undefined' || typeof DOMPurify === 'undefined') return escapeHtml(text);
     ensureStudioMarkdownExtensions();
     return DOMPurify.sanitize(marked.parse(text), STUDIO_MARKDOWN_SANITIZE_CONFIG);
 }
