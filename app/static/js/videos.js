@@ -2061,6 +2061,20 @@ function initStudioYTPlayerTracker() {
 }
 
 async function openStudyStudio(id) {
+    // Only one studio session exists at a time. Reopening the video that is already in
+    // the mini-player just brings it back up; opening a different one ends the current
+    // session first, so its notes and position are saved under its own id and its
+    // player stops instead of playing on alongside the new one.
+    const activeOverlay = document.getElementById('overlay-study-studio');
+    const activeMini = document.getElementById('studio-mini-player');
+    const miniOpen = activeMini && !activeMini.classList.contains('hidden');
+    const studioOpen = activeOverlay && !activeOverlay.classList.contains('hidden');
+    if (miniOpen && Number(_currentStudioVideoId) === Number(id)) {
+        restoreStudio();
+        return;
+    }
+    if (miniOpen || studioOpen) closeStudyStudio();
+
     if (typeof stopActiveInlineTracker === 'function') stopActiveInlineTracker();
     if (typeof dismissCompletedImportTaskForVideo === 'function') dismissCompletedImportTaskForVideo(id);
     _currentStudioVideoId = id;
@@ -2245,6 +2259,10 @@ async function saveStudioVideoPosition() {
 }
 
 function closeStudyStudio() {
+    // The immediate save below covers whatever the debounce was waiting on. Left pending,
+    // it would fire after the next openStudyStudio and read that video's id.
+    if (_studioNotesSaveTimeout) clearTimeout(_studioNotesSaveTimeout);
+    _studioNotesSaveTimeout = null;
     saveStudioVideoPosition();
     saveStudioNotes(true);
     if (_studioPositionSaveInterval) clearInterval(_studioPositionSaveInterval);
