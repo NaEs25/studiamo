@@ -18,7 +18,7 @@
     --color-primary-hover:  #b45309;
     --color-primary-bg:     #fef3c7;
     --color-primary-border: #fde68a;
-    --font-sans:            'Outfit', 'Inter', sans-serif;
+    --font-sans:            'Outfit', system-ui, sans-serif;
 
     /* RGB-triplet mirrors of the tokens above, for Tailwind's
        rgb(var(...) / <alpha-value>) opacity-modifier syntax (see
@@ -376,7 +376,7 @@ option {
 .quiz-key-hint {
     display: none;
     font-size: 10px;
-    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     padding: 0.1rem 0.35rem;
     border-radius: 6px;
     background-color: rgb(0 0 0 / 0.06);

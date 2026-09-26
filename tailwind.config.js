@@ -44,9 +44,10 @@ module.exports = {
                 primary: "#f59e0b",
                 accent: "#fbbf24",
             },
+            // font-mono keeps Tailwind's default system monospace stack: it only styles
+            // short labels (timestamps, percentages, dates), so no webfont is loaded for it.
             fontFamily: {
-                sans: ["Outfit", "Inter", "sans-serif"],
-                mono: ["JetBrains Mono", "monospace"],
+                sans: ["Outfit", "system-ui", "sans-serif"],
             },
         },
     },

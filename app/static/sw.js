@@ -1,13 +1,11 @@
 // Bump this by hand when a precached asset changes and the new version must reach users.
-const CACHE_NAME = 'studiamo-pwa-v9';
+const CACHE_NAME = 'studiamo-pwa-v10';
 const ASSETS_TO_CACHE = [
   '/',
   '/static/css/style.css',
   '/static/css/fonts.css',
   '/static/vendor/fonts/outfit-v15-latin.woff2',
   '/static/vendor/fonts/outfit-v15-latin-ext.woff2',
-  '/static/vendor/fonts/inter-v20-latin.woff2',
-  '/static/vendor/fonts/inter-v20-latin-ext.woff2',
   '/static/vendor/lucide-1.48.0.min.js',
   '/static/vendor/marked-12.0.2.min.js',
   '/static/vendor/dompurify-3.1.5.min.js',
