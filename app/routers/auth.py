@@ -18,6 +18,7 @@ from app.dependencies import (
     _decode_session_token,
     _sign_oauth_state,
     _decode_oauth_state,
+    safe_local_path,
     clean_external_referrer,
     get_active_username,
     require_local_auth_enabled,
@@ -272,7 +273,7 @@ async def google_login(request: Request, redirect: Optional[str] = None, require
 
     redirect_uri = get_oauth_redirect_uri(request)
 
-    target_redirect = redirect.strip() if redirect and redirect.strip().startswith("/") else "/"
+    target_redirect = safe_local_path(redirect)
 
     # A referral code from /join?ref=<code> travels here via a short-lived
     # cookie (set by /join) rather than a query param, so it survives even if

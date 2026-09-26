@@ -147,6 +147,21 @@ def clean_external_referrer(url: Optional[str], request_host: Optional[str] = No
         return None
 
 
+def safe_local_path(value) -> str:
+    """Returns `value` if it is a same-site absolute path, otherwise "/".
+
+    A leading "/" alone is not enough: "//host" is a protocol-relative URL and browsers
+    treat "/\\host" the same way, and tabs or newlines inside a URL are stripped before
+    parsing, so "/<tab>/host" collapses to "//host". Every post-login redirect target goes
+    through this before it is signed or followed."""
+    path = str(value or "").strip()
+    if not path.startswith("/") or path.startswith("//") or "\\" in path:
+        return "/"
+    if any(ord(ch) < 32 or ord(ch) == 127 for ch in path):
+        return "/"
+    return path
+
+
 def _sign_oauth_state(dest_path: str, ref_code: str, require_existing: bool, referrer: str = "",
                       link_intent: bool = False) -> str:
     """Returns a signed, tamper-proof state string for Google OAuth 2.0 requests.
@@ -191,8 +206,7 @@ def _decode_oauth_state(state_str: Optional[str]) -> tuple[str, str, bool, str, 
         if time.time() - issued_at > 900:
             logger.warning("[google_oauth] OAuth state parameter expired (>15 minutes old).")
             return "/", "", False, "", False
-        dest_path = str(data.get("d", "/")).strip()
-        dest_path = dest_path if dest_path.startswith("/") else "/"
+        dest_path = safe_local_path(data.get("d", "/"))
         ref_code = str(data.get("r", "")).strip()
         require_existing = bool(data.get("e", 0))
         referrer = str(data.get("rf", "")).strip()
@@ -202,7 +216,7 @@ def _decode_oauth_state(state_str: Optional[str]) -> tuple[str, str, bool, str, 
         if "|" in state_str:
             raw_dest, _, raw_rest = state_str.partition("|")
             raw_ref, _, raw_require_existing = raw_rest.partition("|")
-            dest_path = raw_dest.strip() if raw_dest.strip().startswith("/") else "/"
+            dest_path = safe_local_path(raw_dest)
             ref_code = raw_ref.strip()
             require_existing = raw_require_existing.strip() == "1"
             return dest_path, ref_code, require_existing, "", False
