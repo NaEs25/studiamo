@@ -35,9 +35,9 @@ def test_link_flow_state_carries_link_intent():
 
 
 def test_round_trip_preserves_the_other_fields():
-    state = _sign_oauth_state("/dev/bugs", "abc123def456", True, "https://www.example.com/x", True)
+    state = _sign_oauth_state("/bugs", "abc123def456", True, "https://www.example.com/x", True)
     dest, ref, require_existing, referrer, link_intent = _decode_oauth_state(state)
-    assert dest == "/dev/bugs"
+    assert dest == "/bugs"
     assert ref == "abc123def456"
     assert require_existing is True
     assert referrer == "https://www.example.com/x"

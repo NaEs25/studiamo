@@ -175,7 +175,7 @@
 
                         <!-- Google SSO Option -->
                         <div id="google-sso-container">
-                            <a href="/api/auth/google?redirect=/dev/bugs&require_existing=true"
+                            <a href="/api/auth/google?redirect=/bugs&require_existing=true"
                                 class="min-h-[44px] w-full py-2.5 px-4 bg-slate-900 hover:bg-slate-800 active:scale-[0.98] border border-slate-700/80 rounded-xl text-xs font-semibold text-slate-200 hover:text-white transition flex items-center justify-center space-x-2.5 shadow-sm">
                                 <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24">
                                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -612,8 +612,8 @@
                     formData.append('viewport', `${window.innerWidth}x${window.innerHeight}`);
                     formData.append('online', navigator.onLine);
                     // Captured server-side when this page first loaded (see serve_bugs_page) --
-                    // by submit time the browser is already on /dev/bugs itself, so the POST
-                    // request's own Referer header would just say "/dev/bugs" every time.
+                    // by submit time the browser is already on /bugs itself, so the POST
+                    // request's own Referer header would just say "/bugs" every time.
                     formData.append('entry_referer', document.body.dataset.entryReferer || '');
                     // switchTab() in app.js writes this on every top-level tab change, so it's
                     // a free "what were they doing" signal -- localStorage is shared across

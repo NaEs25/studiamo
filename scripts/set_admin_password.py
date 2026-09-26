@@ -3,7 +3,7 @@ Admin tool: set (or change) the shared admin password.
 
 That password now gates two things, which is why it is no longer named after
 the first of them:
-  * the bug tracker's admin controls (/dev/bugs) -- real usernames, captured
+  * the bug tracker's admin controls (/bugs) -- real usernames, captured
     diagnostic context, and editing or deleting reports;
   * the Users page in the private admin cockpit, which searches every account
     by email and can grant or end tester access.
@@ -46,7 +46,7 @@ def main():
 
     database.set_app_setting(ADMIN_PASSWORD_SETTING_KEY, hash_password(password))
     print(f"Admin password updated (bcrypt, app_settings.{ADMIN_PASSWORD_SETTING_KEY}).")
-    print("It gates both /dev/bugs admin controls and the cockpit Users page.")
+    print("It gates both /bugs admin controls and the cockpit Users page.")
 
 
 if __name__ == "__main__":

@@ -7,8 +7,8 @@ which the running server rewrote on every submission, a git-tracked file
 being written at runtime meant a bug report filed on prod left the worktree
 dirty and aborted the next `git merge` in scripts/deploy.sh.
 
-Routes keep their historical /dev/bugs and /api/dev/bugs paths so existing
-links and bookmarks stay valid, even though this is no longer dev-only code.
+The page lives at /bugs. The historical /dev/bugs page path redirects there so existing
+links and bookmarks stay valid, and the /api/dev/bugs endpoints keep their old paths.
 """
 import os
 import uuid
@@ -20,7 +20,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Request, Form, HTTPException, Depends
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from psycopg2.extras import RealDictCursor
 
@@ -63,7 +63,14 @@ def _row_to_bug(row, include_admin_fields: bool) -> dict:
     return bug
 
 
-@router.get("/dev/bugs", response_class=HTMLResponse)
+@router.get("/dev/bugs", include_in_schema=False)
+async def redirect_legacy_bugs_page(request: Request):
+    """Old page path, still linked from bookmarks and in-flight sign-in redirects."""
+    query = f"?{request.url.query}" if request.url.query else ""
+    return RedirectResponse(url=f"/bugs{query}", status_code=301)
+
+
+@router.get("/bugs", response_class=HTMLResponse)
 async def serve_bugs_page(request: Request):
     """Serves the standalone Bug Tracker HTML page."""
     if not config.IS_CLOUD:
@@ -211,9 +218,9 @@ async def create_bug(
     if _truthy(include_context):
         context.update({
             "user_agent": request.headers.get("user-agent", ""),
-            # entry_referer is captured on the earlier GET /dev/bugs page load, when Referer
+            # entry_referer is captured on the earlier GET /bugs page load, when Referer
             # still named the page the Bugs button was pressed on; this POST's own Referer
-            # would just say "/dev/bugs" every time, since that's where the browser already is.
+            # would just say "/bugs" every time, since that's where the browser already is.
             "referer": entry_referer or request.headers.get("referer", ""),
             # app.js's switchTab() writes this to localStorage on every top-level tab change
             # (dashboard/goals/stats/settings/etc) -- the closest thing to "what were they

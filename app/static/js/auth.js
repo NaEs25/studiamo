@@ -217,7 +217,7 @@ async function promptReportBug() {
         confirmed = confirm("Möchtest du einen Bug melden?\n\nDu wirst zur Bug-Meldeseite weitergeleitet.");
     }
     if (confirmed) {
-        window.location.href = "/dev/bugs";
+        window.location.href = "/bugs";
     }
 }
 
