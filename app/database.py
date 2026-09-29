@@ -5,6 +5,7 @@ Provides unified connection pool & parameter wrapping for clean execution across
 import json
 import os
 import sys
+import threading
 import time
 import logging
 import psycopg2
@@ -22,8 +23,19 @@ _pool = None
 _schema_ensured = False
 _initialized_users = set()
 
-POOL_MIN_CONN = int(os.environ.get("SUPABASE_POOL_MIN_CONN", "4"))
-POOL_MAX_CONN = int(os.environ.get("SUPABASE_POOL_MAX_CONN", "55"))
+# Route handlers run in FastAPI's thread pool, so one page load borrows several connections at
+# once. psycopg2 closes a returned connection instead of keeping it whenever the pool already
+# holds POOL_MIN_CONN idle ones, so the minimum is what decides how much of a burst is served
+# by warm connections rather than fresh TLS handshakes to Supabase.
+#
+# The maximum has to stay below the database's max_connections minus what Supabase's own
+# services hold, and leave room for scripts and a second process; exceeding it on the server
+# side fails the connect outright.
+POOL_MIN_CONN = int(os.environ.get("SUPABASE_POOL_MIN_CONN", "16"))
+POOL_MAX_CONN = int(os.environ.get("SUPABASE_POOL_MAX_CONN", "40"))
+
+# How long a borrow waits for a connection to be returned once all POOL_MAX_CONN are out.
+POOL_WAIT_SECONDS = float(os.environ.get("SUPABASE_POOL_WAIT_SECONDS", "15"))
 
 # How long a connection may sit unused in the pool before it is pinged on the way out, and
 # how many dead ones a single borrow will discard before giving up. See
@@ -73,11 +85,51 @@ def get_supabase_db_url():
         return url
     raise ValueError("No database URL (CLOUD_DATABASE_URL / SELFHOSTED_DATABASE_URL / DATABASE_URL) found in environment or .env")
 
+class _WaitingConnectionPool(psycopg2.pool.ThreadedConnectionPool):
+    """ThreadedConnectionPool that waits for a free connection instead of failing at once.
+
+    The stock pool raises PoolError("connection pool exhausted") the moment every connection
+    is borrowed, which turns a short burst into failed requests. Here a borrow waits up to
+    `timeout` seconds for a putconn to free one, and only then raises that same error.
+
+    The condition shares the parent's lock, so every inherited method that takes self._lock
+    stays mutually exclusive with these."""
+
+    def __init__(self, minconn, maxconn, *args, **kwargs):
+        super().__init__(minconn, maxconn, *args, **kwargs)
+        self._available = threading.Condition(self._lock)
+
+    def getconn(self, key=None, timeout=None):
+        wait = POOL_WAIT_SECONDS if timeout is None else timeout
+        deadline = time.monotonic() + wait
+        with self._available:
+            while True:
+                try:
+                    return self._getconn(key)
+                except psycopg2.pool.PoolError as e:
+                    remaining = deadline - time.monotonic()
+                    if self.closed or "exhausted" not in str(e) or remaining <= 0:
+                        raise
+                    self._available.wait(remaining)
+
+    def putconn(self, conn=None, key=None, close=False):
+        with self._available:
+            try:
+                self._putconn(conn, key, close)
+            finally:
+                self._available.notify()
+
+    def closeall(self):
+        with self._available:
+            self._closeall()
+            self._available.notify_all()
+
+
 def _get_pool() -> psycopg2.pool.ThreadedConnectionPool:
     """Returns the shared connection pool, creating it lazily on first use."""
     global _pool
     if _pool is None:
-        _pool = psycopg2.pool.ThreadedConnectionPool(POOL_MIN_CONN, POOL_MAX_CONN, get_supabase_db_url())
+        _pool = _WaitingConnectionPool(POOL_MIN_CONN, POOL_MAX_CONN, get_supabase_db_url())
     return _pool
 
 def _verify_pooled_connection(conn) -> bool:

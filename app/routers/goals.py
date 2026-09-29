@@ -26,7 +26,7 @@ router = APIRouter(prefix="/api", tags=["Goals"])
 
 
 @router.get("/goals")
-async def get_goals(include_archived: bool = False, username: str = Depends(require_app_access)):
+def get_goals(include_archived: bool = False, username: str = Depends(require_app_access)):
     """Retrieves all active or archived goals along with their associated videos for active user."""
     conn = database.get_db_connection(username)
     try:
@@ -104,7 +104,7 @@ def _assert_title_available(cursor, user_uuid: str, title: str, exclude_goal_id:
 
 
 @router.post("/goals")
-async def create_goal(title: str = Form(...), description: str = Form(""), username: str = Depends(require_app_access)) -> JSONResponse:
+def create_goal(title: str = Form(...), description: str = Form(""), username: str = Depends(require_app_access)) -> JSONResponse:
     """Creates a new learning goal and saves its JSON file."""
     conn = database.get_db_connection(username)
     try:
@@ -133,7 +133,7 @@ async def create_goal(title: str = Form(...), description: str = Form(""), usern
 
 
 @router.post("/goals/{id}/edit")
-async def edit_goal(id: int, title: str = Form(...), description: str = Form(""), username: str = Depends(require_app_access)):
+def edit_goal(id: int, title: str = Form(...), description: str = Form(""), username: str = Depends(require_app_access)):
     """Edits a learning goal title and description, cascading video category renames."""
     conn = database.get_db_connection(username)
     try:
@@ -160,7 +160,7 @@ async def edit_goal(id: int, title: str = Form(...), description: str = Form("")
 
 
 @router.post("/goals/{id}/reorder")
-async def reorder_goal(id: int, direction: str = Form(...), username: str = Depends(require_app_access)):
+def reorder_goal(id: int, direction: str = Form(...), username: str = Depends(require_app_access)):
     """Reorders a goal position up or down among active goals."""
     conn = database.get_db_connection(username)
     try:
@@ -208,7 +208,7 @@ async def reorder_goal(id: int, direction: str = Form(...), username: str = Depe
 
 
 @router.delete("/goals/{id}")
-async def delete_goal(
+def delete_goal(
     id: int,
     delete_materials: bool = Query(False),
     username: str = Depends(require_app_access)
@@ -245,7 +245,7 @@ async def delete_goal(
 
 
 @router.post("/goals/{id}/archive")
-async def archive_goal(id: int, username: str = Depends(require_app_access)):
+def archive_goal(id: int, username: str = Depends(require_app_access)):
     """Toggles archived status for a learning goal."""
     conn = database.get_db_connection(username)
     try:
@@ -433,7 +433,7 @@ async def reload_all_goal_recommendations(
 
 
 @router.get("/daily-recommendations")
-async def get_daily_recommendations(username: str = Depends(require_app_access)):
+def get_daily_recommendations(username: str = Depends(require_app_access)):
     """Retrieves or generates daily video recommendations for active user, cached in local DB."""
     today_str = datetime.now().strftime("%Y-%m-%d")
     conn = database.get_db_connection(username)
@@ -520,7 +520,7 @@ async def get_daily_recommendations(username: str = Depends(require_app_access))
 
 
 @router.post("/daily-recommendations/dismiss")
-async def dismiss_daily_recommendation(
+def dismiss_daily_recommendation(
     youtube_id: str = Form(...),
     username: str = Depends(require_app_access)
 ):
@@ -530,7 +530,7 @@ async def dismiss_daily_recommendation(
 
 
 @router.post("/daily-recommendations/refresh")
-async def refresh_daily_recommendations(username: str = Depends(require_app_access)):
+def refresh_daily_recommendations(username: str = Depends(require_app_access)):
     """Refreshes daily recommendations by generating new queries and saving to DB."""
     storage.clear_daily_recommendation_cache(username=username)
     conn = database.get_db_connection(username)
@@ -579,7 +579,7 @@ async def refresh_daily_recommendations(username: str = Depends(require_app_acce
 
 
 @router.post("/goals/{id}/practice")
-async def generate_goal_practice_quiz(
+def generate_goal_practice_quiz(
     id: int,
     question_count: int = Form(5),
     username: str = Depends(require_app_access)

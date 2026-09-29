@@ -34,7 +34,7 @@ _REF_CODE_PATTERN = re.compile(r"^[a-f0-9]{12}$")
 
 @router.get("/waitlist-status")
 @limiter.limit("30/minute")
-async def get_waitlist_status(request: Request, ref: str = ""):
+def get_waitlist_status(request: Request, ref: str = ""):
     """Public, unauthenticated: returns referral progress for a referral code.
     Powers /waitlist-confirmation, which has no session to read (waitlist
     accounts never get one, see google_callback). Deliberately returns only
@@ -52,14 +52,14 @@ async def get_waitlist_status(request: Request, ref: str = ""):
 
 
 @router.get("/auth/capacity")
-async def get_auth_capacity():
+def get_auth_capacity():
     """Public: whether new signups are currently landing on the waitlist. Powers the login page banner."""
     return {"at_capacity": database.is_at_capacity()}
 
 
 @router.get("/users")
 @limiter.limit("20/minute")
-async def get_users(
+def get_users(
     request: Request,
     q: Optional[str] = None,
     _local_auth: None = Depends(require_local_auth_enabled),
@@ -152,7 +152,7 @@ async def create_user(
 
 @router.post("/users/verify")
 @limiter.limit("15/minute")
-async def verify_user(
+def verify_user(
     request: Request,
     username: str = Form(...),
     password: Optional[str] = Form(None),
@@ -197,7 +197,7 @@ async def verify_user(
 
 
 @router.post("/users/logout")
-async def logout_user(request: Request):
+def logout_user(request: Request):
     """Logs out the active user and clears session tracking cookies."""
     response = JSONResponse(content={"status": "success", "message": "Logged out"})
     response.delete_cookie("yb_session", path="/", secure=config.IS_CLOUD)
@@ -207,7 +207,7 @@ async def logout_user(request: Request):
 
 
 @router.get("/status")
-async def get_status(username: str = Depends(get_active_username)):
+def get_status(username: str = Depends(get_active_username)):
     """Returns application configuration status for active profile."""
     configured = config.is_configured(username)
     user_config = config.load_user_config(username)
@@ -221,7 +221,7 @@ async def get_status(username: str = Depends(get_active_username)):
 
 
 @router.post("/setup")
-async def setup_app(
+def setup_app(
     gemini_api_key: str = Form(...),
     telegram_bot_token: Optional[str] = Form(None),
     base_url: str = Form(...),

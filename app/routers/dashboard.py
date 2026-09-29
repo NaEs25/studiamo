@@ -52,7 +52,7 @@ def _attach_video_summaries(video_list: list):
 
 
 @router.get("/dashboard")
-async def get_dashboard_data(username: str = Depends(require_app_access)):
+def get_dashboard_data(username: str = Depends(require_app_access)):
     """Retrieves full aggregated dashboard data: user profile, active/archived goals, videos, and quizzes."""
     conn = database.get_db_connection(username)
     try:
@@ -218,7 +218,7 @@ async def get_dashboard_data(username: str = Depends(require_app_access)):
 
 
 @router.get("/stats")
-async def get_ai_stats(username: str = Depends(require_app_access)):
+def get_ai_stats(username: str = Depends(require_app_access)):
     """Returns AI API usage logs and total call count for the active user."""
     conn = database.get_db_connection(username)
     user_uuid = conn.user_uuid
@@ -259,7 +259,7 @@ async def get_ai_stats(username: str = Depends(require_app_access)):
 
 
 @router.get("/stats/history")
-async def get_stats_history(username: str = Depends(require_app_access), include_attempts: bool = False):
+def get_stats_history(username: str = Depends(require_app_access), include_attempts: bool = False):
     """Returns active recall quiz attempt statistics and accuracy metrics for the active user.
     quiz_attempts stores one row per graded question (grade='remembered'/'forgot'), not one row
     per quiz, there is no score/total_questions column, so aggregation happens over `grade`.

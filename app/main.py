@@ -290,7 +290,7 @@ async def serve_llms_full_txt():
 # --- HTML Template View Routes ---
 
 @app.get("/", response_class=HTMLResponse)
-async def serve_root(request: Request):
+def serve_root(request: Request):
     """Serves index dashboard for authenticated users, landing page for guests in cloud mode, or redirects to /login in selfhosted mode."""
     auth_user = get_authenticated_username(request)
     if not auth_user and config.IS_SELFHOSTED:
@@ -358,7 +358,7 @@ async def serve_join(ref: Optional[str] = None, src: Optional[str] = None):
 
 
 @app.get("/app", response_class=HTMLResponse)
-async def serve_app(request: Request):
+def serve_app(request: Request):
     auth_user = get_authenticated_username(request)
     if auth_user:
         template_path = Path(__file__).resolve().parent / "templates" / "index.html"

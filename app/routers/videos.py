@@ -39,7 +39,7 @@ router = APIRouter(prefix="/api", tags=["Videos & Content"])
 
 
 @router.get("/videos/import-tasks")
-async def get_import_tasks_route(username: str = Depends(require_app_access)):
+def get_import_tasks_route(username: str = Depends(require_app_access)):
     """Returns active and recent import backlog tasks."""
     return ImportQueueManager.get_instance().get_user_backlog(username)
 
@@ -54,7 +54,7 @@ async def retry_import_task_route(task_id: str, username: str = Depends(require_
 
 
 @router.delete("/videos/import-tasks/{task_id}")
-async def dismiss_import_task_route(task_id: str, username: str = Depends(require_app_access)):
+def dismiss_import_task_route(task_id: str, username: str = Depends(require_app_access)):
     """Dismisses/deletes an import task from backlog view."""
     success = ImportQueueManager.get_instance().dismiss_task(task_id, username)
     if not success:
@@ -346,7 +346,7 @@ def _document_media_type(target_file: Path) -> str:
 
 
 @router.get("/videos/{video_id}/document")
-async def serve_video_document(video_id: int, username: str = Depends(require_app_access)):
+def serve_video_document(video_id: int, username: str = Depends(require_app_access)):
     """Serves raw PDF/document file as a forced download."""
     target_file = _resolve_video_document(video_id, username)
     return FileResponse(
@@ -358,7 +358,7 @@ async def serve_video_document(video_id: int, username: str = Depends(require_ap
 
 
 @router.get("/videos/{video_id}/pdf")
-async def serve_video_pdf_inline(video_id: int, username: str = Depends(require_app_access)):
+def serve_video_pdf_inline(video_id: int, username: str = Depends(require_app_access)):
     """Serves raw PDF/document file inline for in-browser previewing."""
     target_file = _resolve_video_document(video_id, username)
     return FileResponse(
@@ -370,7 +370,7 @@ async def serve_video_pdf_inline(video_id: int, username: str = Depends(require_
 
 
 @router.post("/videos/{id}/archive")
-async def archive_video(id: int, username: str = Depends(require_app_access)):
+def archive_video(id: int, username: str = Depends(require_app_access)):
     """Toggles archived status for a video."""
     conn = database.get_db_connection(username)
     try:
@@ -391,7 +391,7 @@ async def archive_video(id: int, username: str = Depends(require_app_access)):
 
 
 @router.post("/videos/{id}/pause")
-async def pause_video(id: int, username: str = Depends(require_app_access)):
+def pause_video(id: int, username: str = Depends(require_app_access)):
     """Toggles paused status for a video SRS review schedule."""
     conn = database.get_db_connection(username)
     try:
@@ -412,7 +412,7 @@ async def pause_video(id: int, username: str = Depends(require_app_access)):
 
 
 @router.delete("/videos/{id}")
-async def delete_video(id: int, username: str = Depends(require_app_access)):
+def delete_video(id: int, username: str = Depends(require_app_access)):
     """Deletes a video and its associated quiz & JSON files."""
     conn = database.get_db_connection(username)
     try:
@@ -435,7 +435,7 @@ async def delete_video(id: int, username: str = Depends(require_app_access)):
 
 
 @router.post("/videos/{id}/goal")
-async def assign_video_goal(
+def assign_video_goal(
     id: int,
     learning_goal_id: Optional[int] = Form(None),
     username: str = Depends(require_app_access)
@@ -457,7 +457,7 @@ async def assign_video_goal(
 
 
 @router.post("/videos/{id}/watchlist")
-async def toggle_watchlist(id: int, username: str = Depends(require_app_access)):
+def toggle_watchlist(id: int, username: str = Depends(require_app_access)):
     """Toggles watchlist status for a video."""
     conn = database.get_db_connection(username)
     try:
@@ -478,7 +478,7 @@ async def toggle_watchlist(id: int, username: str = Depends(require_app_access))
 
 
 @router.get("/videos/{id}/factcheck")
-async def get_fact_check(id: int, username: str = Depends(require_app_access)):
+def get_fact_check(id: int, username: str = Depends(require_app_access)):
     """Returns AI fact-checking analysis for a video content payload, using cached result if available."""
     conn = database.get_db_connection(username)
     try:
@@ -523,7 +523,7 @@ async def get_fact_check(id: int, username: str = Depends(require_app_access)):
 
 
 @router.post("/videos/{id}/edit")
-async def edit_video(
+def edit_video(
     id: int,
     title: Optional[str] = Form(None),
     category: Optional[str] = Form(None),
@@ -567,7 +567,7 @@ async def edit_video(
 
 
 @router.post("/videos/{id}/position")
-async def update_video_position(
+def update_video_position(
     id: int,
     position: float = Form(0.0),
     username: str = Depends(require_app_access)
@@ -594,7 +594,7 @@ async def update_video_position(
 
 
 @router.post("/videos/preview")
-async def create_preview_video(
+def create_preview_video(
     url: str = Form(...),
     title: Optional[str] = Form(None),
     goal_id: Optional[int] = Form(None),
@@ -727,7 +727,7 @@ async def confirm_video_import(
 
 
 @router.post("/videos/{id}/generate_quiz")
-async def generate_video_quiz_for_level(
+def generate_video_quiz_for_level(
     id: int,
     level: int = Form(3),
     username: str = Depends(require_app_access)
@@ -914,7 +914,7 @@ def _build_focus_stages(pool: list, focus: dict) -> list:
 
 
 @router.get("/videos/{id}/concept-pool")
-async def get_concept_pool(id: int, username: str = Depends(require_app_access)):
+def get_concept_pool(id: int, username: str = Depends(require_app_access)):
     """Returns the topics and questions available per SRS stage, for the learning-focus overlay."""
     row, pool, focus, target_count = _load_focus_context(id, username)
 
@@ -964,7 +964,7 @@ def _run_pool_edit(row: dict, username: str, edit):
 
 
 @router.post("/videos/{id}/cards")
-async def add_focus_card(
+def add_focus_card(
     id: int,
     stage: int = Form(...),
     topic: str = Form(...),
@@ -992,7 +992,7 @@ async def add_focus_card(
 
 
 @router.delete("/videos/{id}/cards/{card_id}")
-async def remove_focus_card(id: int, card_id: str, username: str = Depends(require_app_access)):
+def remove_focus_card(id: int, card_id: str, username: str = Depends(require_app_access)):
     """Removes one question from a material's pool."""
     row, _, _, target_count = _load_focus_context(id, username)
 
@@ -1007,7 +1007,7 @@ async def remove_focus_card(id: int, card_id: str, username: str = Depends(requi
 
 
 @router.patch("/videos/{id}/cards/{card_id}")
-async def edit_focus_card(
+def edit_focus_card(
     id: int,
     card_id: str,
     topic: Optional[str] = Form(None),
@@ -1043,7 +1043,7 @@ async def edit_focus_card(
 
 
 @router.post("/videos/{id}/topics/rename")
-async def rename_focus_topic(
+def rename_focus_topic(
     id: int,
     old_topic: str = Form(...),
     new_topic: str = Form(...),
@@ -1070,7 +1070,7 @@ async def rename_focus_topic(
 
 
 @router.post("/videos/{id}/focus")
-async def save_concept_focus(
+def save_concept_focus(
     id: int,
     focus_topics: str = Form(...),
     username: str = Depends(require_app_access)
@@ -1113,7 +1113,7 @@ async def save_concept_focus(
 
 
 @router.get("/videos/{id}/stats")
-async def get_video_stats(id: int, username: str = Depends(require_app_access)):
+def get_video_stats(id: int, username: str = Depends(require_app_access)):
     """Returns analytics, SRS status, and attempt history for a specific material/video."""
     conn = database.get_db_connection(username)
     try:

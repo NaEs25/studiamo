@@ -64,14 +64,14 @@ def _row_to_bug(row, include_admin_fields: bool) -> dict:
 
 
 @router.get("/dev/bugs", include_in_schema=False)
-async def redirect_legacy_bugs_page(request: Request):
+def redirect_legacy_bugs_page(request: Request):
     """Old page path, still linked from bookmarks and in-flight sign-in redirects."""
     query = f"?{request.url.query}" if request.url.query else ""
     return RedirectResponse(url=f"/bugs{query}", status_code=301)
 
 
 @router.get("/bugs", response_class=HTMLResponse)
-async def serve_bugs_page(request: Request):
+def serve_bugs_page(request: Request):
     """Serves the standalone Bug Tracker HTML page."""
     if not config.IS_CLOUD:
         raise HTTPException(status_code=404, detail="Bug tracker is only available in cloud mode.")
@@ -82,7 +82,7 @@ async def serve_bugs_page(request: Request):
 
 
 @router.get("/api/dev/bugs/me")
-async def get_current_user_status(request: Request):
+def get_current_user_status(request: Request):
     """Returns current user session info and auth capability status.
 
     Deliberately trusts only the signed yb_session cookie (get_authenticated_username),
@@ -102,7 +102,7 @@ async def get_current_user_status(request: Request):
 
 
 @router.get("/api/dev/bugs")
-async def get_bugs(request: Request):
+def get_bugs(request: Request):
     """Returns all reported bugs sorted by newest first.
 
     Public endpoint by design (the board is meant to be browsable by everyone
@@ -123,14 +123,14 @@ async def get_bugs(request: Request):
 
 
 @router.get("/api/dev/bugs/admin/status")
-async def get_admin_status(request: Request):
+def get_admin_status(request: Request):
     """Tells the frontend whether this browser is currently logged in as admin."""
     return JSONResponse({"is_admin": is_admin(request)})
 
 
 @router.post("/api/dev/bugs/admin/login")
 @limiter.limit("10/minute")  # Single shared password, no lockout -- cap guesses per IP per minute.
-async def admin_login(request: Request, password: str = Form(...)):
+def admin_login(request: Request, password: str = Form(...)):
     """Checks the shared admin password (set via scripts/set_admin_password.py) and, on
     success, sets the signed admin cookie.
 
@@ -165,7 +165,7 @@ async def admin_login(request: Request, password: str = Form(...)):
 
 
 @router.post("/api/dev/bugs/admin/logout")
-async def admin_logout():
+def admin_logout():
     """Clears the admin cookie."""
     response = JSONResponse({"status": "success"})
     response.delete_cookie(key=ADMIN_COOKIE_NAME, path="/")
@@ -174,7 +174,7 @@ async def admin_logout():
 
 @router.post("/api/dev/bugs")
 @limiter.limit("10/minute")  # Prevent bot spam: cap reports per IP per minute.
-async def create_bug(
+def create_bug(
     request: Request,
     area: Optional[str] = Form("General / Other"),
     description: str = Form(...),
@@ -263,7 +263,7 @@ async def create_bug(
 
 
 @router.patch("/api/dev/bugs/{bug_id}")
-async def update_bug_status(bug_id: str, status: str = Form(...), _admin: None = Depends(require_admin_auth)):
+def update_bug_status(bug_id: str, status: str = Form(...), _admin: None = Depends(require_admin_auth)):
     """Updates status ('open' or 'resolved') of a reported bug. Admin-only."""
     if status not in ("open", "resolved", "in_progress"):
         raise HTTPException(status_code=400, detail="Invalid status.")
@@ -287,7 +287,7 @@ async def update_bug_status(bug_id: str, status: str = Form(...), _admin: None =
 
 
 @router.delete("/api/dev/bugs/{bug_id}")
-async def delete_bug(bug_id: str, _admin: None = Depends(require_admin_auth)):
+def delete_bug(bug_id: str, _admin: None = Depends(require_admin_auth)):
     """Deletes a bug report. Admin-only."""
     conn = None
     try:

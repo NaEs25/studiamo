@@ -38,7 +38,7 @@ class WaitlistRequest(BaseModel):
 
 @router.post("")
 @limiter.limit("8/minute")  # Prevent bot spam: max 8 signups per IP per minute
-async def join_waitlist(req: WaitlistRequest, background_tasks: BackgroundTasks, request: Request):
+def join_waitlist(req: WaitlistRequest, background_tasks: BackgroundTasks, request: Request):
     email = req.email.strip().lower()
     preference = (req.preference or "cloud").strip().lower()
 
@@ -185,7 +185,7 @@ async def join_waitlist(req: WaitlistRequest, background_tasks: BackgroundTasks,
 from fastapi.responses import HTMLResponse
 
 @router.get("/count")
-async def get_waitlist_count():
+def get_waitlist_count():
     """Returns the total number of waitlist signups (public, safe to expose)."""
     conn = get_waitlist_db()
     cursor = conn.cursor()
@@ -197,7 +197,7 @@ async def get_waitlist_count():
 
 
 @router.get("/unsubscribe", response_class=HTMLResponse)
-async def unsubscribe_waitlist(email: str = "", token: str = ""):
+def unsubscribe_waitlist(email: str = "", token: str = ""):
     """Handles waitlist email unsubscribe requests securely using HMAC tokens."""
     clean_email = (email or "").strip().lower()
     is_valid = verify_unsubscribe_token(clean_email, token)

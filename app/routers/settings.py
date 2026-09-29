@@ -70,7 +70,7 @@ def _safe_int(val, default: int) -> int:
 
 
 @router.get("/settings")
-async def get_app_settings(username: str = Depends(get_active_username)):
+def get_app_settings(username: str = Depends(get_active_username)):
     """Returns application configuration settings for active user."""
     try:
         user_cfg = config.load_user_config(username)
@@ -227,7 +227,7 @@ async def get_app_settings(username: str = Depends(get_active_username)):
 
 
 @router.post("/settings")
-async def save_app_settings(
+def save_app_settings(
     gemini_api_key: Optional[str] = Form(None),
     telegram_bot_token: Optional[str] = Form(None),
     telegram_chat_id: Optional[str] = Form(None),
@@ -455,7 +455,7 @@ async def save_app_settings(
 
 
 @router.get("/leaderboard")
-async def get_leaderboard(username: str = Depends(get_active_username)):
+def get_leaderboard(username: str = Depends(get_active_username)):
     """Returns gamification leaderboard directly across Supabase user profiles."""
     now = datetime.now(timezone.utc)
     start_of_week = (now - timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
@@ -571,7 +571,7 @@ async def get_leaderboard(username: str = Depends(get_active_username)):
 
 
 @router.post("/settings/review_mode")
-async def update_review_mode(
+def update_review_mode(
     mode: Optional[str] = Form(None),
     username: str = Depends(get_active_username)
 ):
@@ -604,7 +604,7 @@ async def update_review_mode(
 
 
 @router.get("/notifications/due")
-async def get_due_notifications(username: str = Depends(get_active_username)):
+def get_due_notifications(username: str = Depends(get_active_username)):
     """Returns due Active Recall quizzes for PWA / Web Push notifications."""
     user_uuid = config.get_user_uuid_from_db(username)
     if not user_uuid:
@@ -654,7 +654,7 @@ async def get_due_notifications(username: str = Depends(get_active_username)):
 
 
 @router.get("/user/onboarding_status")
-async def get_onboarding_status(username: str = Depends(get_active_username)):
+def get_onboarding_status(username: str = Depends(get_active_username)):
     """Returns onboarding status for current user.
 
     has_seen_updates in the DB is an integer version, not a boolean (see
@@ -677,7 +677,7 @@ async def get_onboarding_status(username: str = Depends(get_active_username)):
 
 
 @router.post("/user/onboarding_status")
-async def update_onboarding_status(
+def update_onboarding_status(
     has_seen_onboarding: Optional[str] = Form(None),
     has_seen_updates: Optional[str] = Form(None),
     username: str = Depends(get_active_username)
@@ -710,7 +710,7 @@ async def send_test_notification_route(username: str = Depends(get_active_userna
 
 
 @router.get("/settings/telegram/connect-link")
-async def get_telegram_connect_link(username: str = Depends(get_active_username)):
+def get_telegram_connect_link(username: str = Depends(get_active_username)):
     """Returns a signed /start deep link for the shared cloud managed Telegram bot."""
     if not config.IS_CLOUD:
         raise HTTPException(status_code=400, detail="Managed Telegram connect is only available in cloud mode.")
@@ -722,7 +722,7 @@ async def get_telegram_connect_link(username: str = Depends(get_active_username)
 
 
 @router.post("/settings/test-push")
-async def send_test_push_route(username: str = Depends(get_active_username)):
+def send_test_push_route(username: str = Depends(get_active_username)):
     """Triggers a test browser push notification for the active user."""
     from app.webpush_utils import send_user_web_push
     sent = send_user_web_push(username, {
@@ -736,7 +736,7 @@ async def send_test_push_route(username: str = Depends(get_active_username)):
 
 
 @router.post("/settings/test-email")
-async def send_test_email_route(username: str = Depends(get_active_username)):
+def send_test_email_route(username: str = Depends(get_active_username)):
     """Triggers a test notification email for the active user (cloud only, uses account's Google email)."""
     if not config.IS_CLOUD:
         raise HTTPException(status_code=400, detail="Email notifications are only available in cloud mode.")
@@ -803,7 +803,7 @@ async def test_schedule_due_now(
 
 
 @router.get("/push/vapid_public_key")
-async def get_vapid_key():
+def get_vapid_key():
     """Returns the VAPID Public Key for client push subscriptions."""
     from app.webpush_utils import get_vapid_public_key
     return {"public_key": get_vapid_public_key()}
@@ -836,7 +836,7 @@ async def unsubscribe_push(request: Request, username: str = Depends(get_active_
 
 
 @router.post("/test/reset_due")
-async def test_reset_due(
+def test_reset_due(
     _dev_only: None = Depends(require_dev_tools_enabled),
     username: str = Depends(get_active_username),
 ):
@@ -858,7 +858,7 @@ async def test_reset_due(
 
 
 @router.post("/settings/profile")
-async def update_selfhosted_profile(
+def update_selfhosted_profile(
     new_username: Optional[str] = Form(None),
     display_name: Optional[str] = Form(None),
     new_password: Optional[str] = Form(None),
@@ -1293,7 +1293,7 @@ def _write_export_tree(zf: zipfile.ZipFile, context: dict, items_dir: Path) -> N
 
 @router.get("/user/export")
 @limiter.limit("5/minute")
-async def export_user_data(request: Request, username: str = Depends(get_active_username)):
+def export_user_data(request: Request, username: str = Depends(get_active_username)):
     """Downloads everything stored about this account as a ZIP: a human-readable folder
     tree (goals/<goal>/<video>/{files, quizzes, YT data.html}), the raw data.json (one
     entry per table, unaffected by how the tree above is organized), and an index.html
@@ -1359,7 +1359,7 @@ async def export_user_data(request: Request, username: str = Depends(get_active_
 
 @router.post("/user/delete")
 @limiter.limit("3/minute")
-async def delete_own_account(
+def delete_own_account(
     request: Request,
     confirm_username: str = Form(...),
     username: str = Depends(get_active_username),

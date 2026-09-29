@@ -28,7 +28,7 @@ router = APIRouter(prefix="/api", tags=["Quizzes & SRS"])
 
 
 @router.get("/quiz/{id}")
-async def get_quiz(id: int, username: str = Depends(require_app_access)):
+def get_quiz(id: int, username: str = Depends(require_app_access)):
     """Retrieves full SRS quiz questions and stage metadata for a specific quiz ID."""
     with database.get_db_connection(username) as conn:
         user_uuid = conn.user_uuid
@@ -229,7 +229,7 @@ async def generate_edge_tts(
 
 
 @router.post("/quiz/{id}/grade")
-async def grade_quiz(
+def grade_quiz(
     id: int,
     grade: str = Form(...),
     question_index: int = Form(...),
@@ -437,7 +437,7 @@ async def grade_quiz(
 
 
 @router.post("/quiz/{id}/reschedule")
-async def reschedule_quiz(id: int, username: str = Depends(require_app_access)):
+def reschedule_quiz(id: int, username: str = Depends(require_app_access)):
     """Reschedules a quiz review by 1 day."""
     conn = database.get_db_connection(username)
     try:
@@ -464,7 +464,7 @@ async def reschedule_quiz(id: int, username: str = Depends(require_app_access)):
 
 
 @router.post("/quiz/verify-guess")
-async def verify_quiz_guess(
+def verify_quiz_guess(
     quiz_id: int = Form(...),
     question_index: int = Form(...),
     user_guess: str = Form(""),

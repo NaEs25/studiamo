@@ -99,7 +99,7 @@ def build_checkout_url(
 
 @router.get("/api/billing/checkout")
 @limiter.limit("20/minute")
-async def create_checkout(
+def create_checkout(
     request: Request,
     apply_discount: bool = False,
     username: str = Depends(get_active_username),
@@ -136,7 +136,7 @@ async def create_checkout(
 # --------------------------------------------------------------------------------------
 
 @router.get("/api/billing/status")
-async def get_billing_status(username: str = Depends(get_active_username)):
+def get_billing_status(username: str = Depends(get_active_username)):
     """Current access + subscription state for the signed-in user.
 
     Drives the paywall modal and the post-checkout poll, so it is deliberately cheap:
@@ -166,7 +166,7 @@ async def get_billing_status(username: str = Depends(get_active_username)):
 
 
 @router.post("/api/billing/tester/ack")
-async def acknowledge_tester_notice(
+def acknowledge_tester_notice(
     kind: str = Form(...),
     username: str = Depends(get_active_username),
 ):
@@ -185,7 +185,7 @@ async def acknowledge_tester_notice(
 
 @router.post("/api/billing/tester/feedback")
 @limiter.limit("5/minute")
-async def submit_tester_feedback(
+def submit_tester_feedback(
     request: Request,
     message: str = Form(...),
     username: str = Depends(get_active_username),
