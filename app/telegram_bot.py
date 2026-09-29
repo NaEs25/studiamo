@@ -323,7 +323,8 @@ async def check_and_notify_quizzes():
                 continue
 
             # Check preferred daily review hour
-            pref_hour = int(profile.get("preferred_hour") or -1)
+            raw_hour = profile.get("preferred_hour")
+            pref_hour = int(raw_hour) if raw_hour is not None else -1
             if pref_hour != -1:
                 current_hour = datetime.now().hour
                 if current_hour != pref_hour:

@@ -867,7 +867,9 @@ def get_preferred_hour(cursor, user_uuid: Optional[str] = None) -> int:
     try:
         cursor.execute("SELECT preferred_hour FROM user_profile WHERE user_uuid = %s LIMIT 1;", (user_uuid,))
         row = cursor.fetchone()
-        return int(row.get("preferred_hour") or -1) if row else -1
+        # Compared against None rather than tested for truth: 0 is a real choice (midnight).
+        hour = row.get("preferred_hour") if row else None
+        return int(hour) if hour is not None else -1
     except Exception as e:
         logger.warning(f"[get_preferred_hour] lookup failed for user_uuid={user_uuid}: {e}")
         return -1
