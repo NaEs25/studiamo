@@ -3,7 +3,7 @@ import httpx
 import math
 import secrets
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from app import config, database, gamification
 from app.config import USERS_DIR, load_user_config, write_user_config
@@ -322,11 +322,11 @@ async def check_and_notify_quizzes():
             if not profile.get("notify_cat_quizzes", 1):
                 continue
 
-            # Check preferred daily review hour
+            # Check preferred daily review hour, a UTC hour (see adjust_next_review)
             raw_hour = profile.get("preferred_hour")
             pref_hour = int(raw_hour) if raw_hour is not None else -1
             if pref_hour != -1:
-                current_hour = datetime.now().hour
+                current_hour = datetime.now(timezone.utc).hour
                 if current_hour != pref_hour:
                     continue
 

@@ -398,17 +398,19 @@ def get_srs_multipliers(username: str) -> dict:
 
 
 def adjust_next_review(next_review: datetime, pref_hour: int) -> datetime:
-    """Adjusts next review datetime to user's preferred review hour."""
+    """Moves a naive-UTC next_review to the user's preferred review hour on the same day, or
+    the next day if that moment has already passed.
+
+    The preferred hour is a UTC hour, and the settings page says so. It is applied in UTC
+    explicitly rather than in the server's local time zone, so the promise holds whatever
+    time zone the host runs in."""
     if pref_hour == -1:
         return next_review
     now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
-    now_local = datetime.now()
-    utc_offset = now_local - now_utc
-    next_review_local = next_review + utc_offset
-    adjusted_local = next_review_local.replace(hour=pref_hour, minute=0, second=0, microsecond=0)
-    if adjusted_local <= now_local:
-        adjusted_local += timedelta(days=1)
-    return adjusted_local - utc_offset
+    adjusted = next_review.replace(hour=pref_hour, minute=0, second=0, microsecond=0)
+    if adjusted <= now_utc:
+        adjusted += timedelta(days=1)
+    return adjusted
 
 
 def get_question_counts(username: str) -> dict:

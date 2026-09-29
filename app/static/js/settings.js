@@ -197,6 +197,25 @@ async function loadStats() {
     }
 }
 
+// The review hour is stored and applied as a UTC hour. This shows what the selected hour is
+// in the browser's own time zone, and stays hidden when the two are the same.
+function updatePreferredHourLocalHint() {
+    const select = document.getElementById('settings-preferred-hour');
+    const hint = document.getElementById('settings-preferred-hour-local');
+    if (!select || !hint) return;
+
+    const hour = parseInt(select.value, 10);
+    const now = new Date();
+    if (isNaN(hour) || hour < 0 || now.getTimezoneOffset() === 0) {
+        hint.classList.add('hidden');
+        return;
+    }
+    const at = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), hour));
+    const local = at.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    hint.textContent = `That is ${local} in your time zone.`;
+    hint.classList.remove('hidden');
+}
+
 async function loadSettings() {
     window._settingsLoading = true;
     try {
@@ -295,7 +314,14 @@ async function loadSettings() {
         }
         
         const prefHour = document.getElementById('settings-preferred-hour');
-        if (prefHour) prefHour.value = configData.preferred_hour !== undefined ? configData.preferred_hour : -1;
+        if (prefHour) {
+            prefHour.value = configData.preferred_hour !== undefined ? configData.preferred_hour : -1;
+            if (!prefHour.dataset.localHintBound) {
+                prefHour.addEventListener('change', updatePreferredHourLocalHint);
+                prefHour.dataset.localHintBound = '1';
+            }
+            updatePreferredHourLocalHint();
+        }
 
         const rmSel = document.getElementById('settings-review-mode');
         if (rmSel && configData.review_mode) rmSel.value = configData.review_mode;
