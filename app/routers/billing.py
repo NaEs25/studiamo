@@ -260,6 +260,12 @@ async def get_billing_portal(username: str = Depends(get_active_username)):
 # Events that carry a subscription object we care about. Anything else (orders, licences,
 # one-off payments) is acknowledged and ignored, see the handler for why acknowledging
 # matters more than handling.
+#
+# The subscription_payment_* events are deliberately absent. Their `data` is a subscription
+# invoice, not a subscription: its status is an invoice status ("paid", "void", ...) and its
+# id is the invoice id. Applying one would overwrite subscription_status with a value
+# has_app_access() does not recognize. The state change a payment causes (renewal, dunning,
+# recovery) arrives separately as subscription_updated.
 _SUBSCRIPTION_EVENTS = {
     "subscription_created",
     "subscription_updated",
@@ -268,9 +274,6 @@ _SUBSCRIPTION_EVENTS = {
     "subscription_expired",
     "subscription_paused",
     "subscription_unpaused",
-    "subscription_payment_success",
-    "subscription_payment_failed",
-    "subscription_payment_recovered",
 }
 
 
@@ -296,6 +299,15 @@ def _apply_subscription_event(event_name: str, payload: dict) -> bool:
     attrs = data.get("attributes") or {}
     meta = payload.get("meta") or {}
     custom = meta.get("custom_data") or {}
+
+    # Everything below reads `data` as a subscription. Any other object type would write its
+    # own status and id into the subscription columns, so it is refused rather than applied.
+    if data.get("type") != "subscriptions":
+        logger.warning(
+            f"Lemon Squeezy {event_name}: data.type is {data.get('type')!r}, not "
+            f"'subscriptions', ignoring."
+        )
+        return False
 
     subscription_id = str(data.get("id") or "")
     user_uuid = str(custom.get("user_uuid") or "")
