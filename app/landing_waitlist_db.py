@@ -47,7 +47,7 @@ def record_waitlist_lead(
         conn.execute(
             """
             INSERT INTO landing_waitlist (uuid, email, preference, referrer, country, user_agent)
-            VALUES (?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s, %s)
             ON CONFLICT (email) DO UPDATE SET uuid = EXCLUDED.uuid;
             """,
             (user_uuid, email, preference, referrer, country, user_agent),
@@ -82,12 +82,12 @@ def link_lead_to_account(user_uuid: str, *emails: str) -> int:
     try:
         cursor = conn.cursor()
         cursor.execute(
-            "UPDATE landing_waitlist SET uuid = ? WHERE id = ("
+            "UPDATE landing_waitlist SET uuid = %s WHERE id = ("
             "    SELECT id FROM landing_waitlist"
-            "     WHERE LOWER(email) = ANY(?)"
-            "     ORDER BY array_position(?::text[], LOWER(email))"
+            "     WHERE LOWER(email) = ANY(%s)"
+            "     ORDER BY array_position(%s::text[], LOWER(email))"
             "     LIMIT 1"
-            ") AND (uuid IS NULL OR uuid <> ?);",
+            ") AND (uuid IS NULL OR uuid <> %s);",
             (str(user_uuid), candidates, candidates, str(user_uuid)),
         )
         linked = cursor.rowcount
@@ -130,7 +130,7 @@ def mark_waitlist_converted(*emails: str, conn=None) -> int:
         cursor = conn.cursor()
         cursor.execute(
             "UPDATE landing_waitlist SET converted_at = NOW() "
-            "WHERE LOWER(email) = ANY(?) AND converted_at IS NULL;",
+            "WHERE LOWER(email) = ANY(%s) AND converted_at IS NULL;",
             (candidates,),
         )
         stamped = cursor.rowcount
@@ -157,13 +157,13 @@ def mark_waitlist_email_sent(email: str, email_type: str, conn=None) -> None:
         if email_type == "confirmation":
             conn.execute(
                 "UPDATE landing_waitlist SET email_sent = TRUE, confirmation_sent_at = NOW(), "
-                "emails_sent_count = COALESCE(emails_sent_count, 0) + 1 WHERE email = ?;",
+                "emails_sent_count = COALESCE(emails_sent_count, 0) + 1 WHERE email = %s;",
                 (email,),
             )
         elif email_type == "spot_ready":
             conn.execute(
                 "UPDATE landing_waitlist SET spot_ready_sent_at = NOW(), "
-                "emails_sent_count = COALESCE(emails_sent_count, 0) + 1 WHERE email = ?;",
+                "emails_sent_count = COALESCE(emails_sent_count, 0) + 1 WHERE email = %s;",
                 (email,),
             )
         else:

@@ -62,17 +62,17 @@ async def join_waitlist(req: WaitlistRequest, background_tasks: BackgroundTasks,
 
     try:
         # Check if this email is already on the waitlist
-        cursor.execute("SELECT id, unsubscribed, created_at FROM landing_waitlist WHERE email = ?;", (email,))
+        cursor.execute("SELECT id, unsubscribed, created_at FROM landing_waitlist WHERE email = %s;", (email,))
         existing = cursor.fetchone()
 
         if existing:
-            cursor.execute("SELECT COUNT(*) FROM landing_waitlist WHERE id <= ?;", (existing["id"],))
+            cursor.execute("SELECT COUNT(*) FROM landing_waitlist WHERE id <= %s;", (existing["id"],))
             position = database.first_val(cursor.fetchone())
 
             if existing["unsubscribed"]:
                 # User is re-subscribing! Reset unsubscribed = FALSE and send confirmation email
                 cursor.execute(
-                    "UPDATE landing_waitlist SET unsubscribed = FALSE, preference = ? WHERE id = ?;",
+                    "UPDATE landing_waitlist SET unsubscribed = FALSE, preference = %s WHERE id = %s;",
                     (preference, existing["id"]),
                 )
                 conn.commit()
@@ -84,7 +84,7 @@ async def join_waitlist(req: WaitlistRequest, background_tasks: BackgroundTasks,
                         try:
                             c = get_waitlist_db()
                             c.execute(
-                                "UPDATE landing_waitlist SET email_sent = TRUE, confirmation_sent_at = NOW(), emails_sent_count = COALESCE(emails_sent_count, 0) + 1 WHERE id = ?;",
+                                "UPDATE landing_waitlist SET email_sent = TRUE, confirmation_sent_at = NOW(), emails_sent_count = COALESCE(emails_sent_count, 0) + 1 WHERE id = %s;",
                                 (waitlist_id,),
                             )
                             c.commit()
@@ -130,16 +130,16 @@ async def join_waitlist(req: WaitlistRequest, background_tasks: BackgroundTasks,
 
         try:
             cursor.execute(
-                "INSERT INTO landing_waitlist (uuid, email, preference, referrer, country, user_agent, email_sent) VALUES (?, ?, ?, ?, ?, ?, FALSE) RETURNING id;",
+                "INSERT INTO landing_waitlist (uuid, email, preference, referrer, country, user_agent, email_sent) VALUES (%s, %s, %s, %s, %s, %s, FALSE) RETURNING id;",
                 (lead_uuid, email, preference, referrer, country, user_agent),
             )
             res = cursor.fetchone()
             waitlist_id = res["id"] if isinstance(res, dict) and "id" in res else (res[0] if res else cursor.lastrowid)
             conn.commit()
         except Exception:
-            cursor.execute("SELECT id FROM landing_waitlist WHERE email = ?;", (email,))
+            cursor.execute("SELECT id FROM landing_waitlist WHERE email = %s;", (email,))
             existing = cursor.fetchone()
-            cursor.execute("SELECT COUNT(*) FROM landing_waitlist WHERE id <= ?;", (existing["id"],))
+            cursor.execute("SELECT COUNT(*) FROM landing_waitlist WHERE id <= %s;", (existing["id"],))
             position = database.first_val(cursor.fetchone())
             conn.close()
             return {
@@ -160,7 +160,7 @@ async def join_waitlist(req: WaitlistRequest, background_tasks: BackgroundTasks,
                 try:
                     c = get_waitlist_db()
                     c.execute(
-                        "UPDATE landing_waitlist SET email_sent = TRUE, confirmation_sent_at = NOW(), emails_sent_count = COALESCE(emails_sent_count, 0) + 1 WHERE id = ?;",
+                        "UPDATE landing_waitlist SET email_sent = TRUE, confirmation_sent_at = NOW(), emails_sent_count = COALESCE(emails_sent_count, 0) + 1 WHERE id = %s;",
                         (waitlist_id,),
                     )
                     c.commit()
@@ -210,7 +210,7 @@ async def unsubscribe_waitlist(email: str = "", token: str = ""):
         escaped_email = html.escape(clean_email)
         try:
             conn = get_waitlist_db()
-            conn.execute("UPDATE landing_waitlist SET unsubscribed = TRUE WHERE email = ?;", (clean_email,))
+            conn.execute("UPDATE landing_waitlist SET unsubscribed = TRUE WHERE email = %s;", (clean_email,))
             conn.commit()
             conn.close()
             title = "You have been unsubscribed"

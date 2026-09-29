@@ -160,15 +160,11 @@ class CursorWrapper:
         self.cursor = cursor
 
     def execute(self, sql, params=None):
-        if isinstance(sql, str) and "?" in sql:
-            sql = sql.replace("?", "%s")
         if params is not None:
             return self.cursor.execute(sql, params)
         return self.cursor.execute(sql)
 
     def executemany(self, sql, param_list):
-        if isinstance(sql, str) and "?" in sql:
-            sql = sql.replace("?", "%s")
         return self.cursor.executemany(sql, param_list)
 
     def fetchone(self):
@@ -1563,7 +1559,7 @@ def mark_tester_notified(grant_id, conn=None) -> None:
     borrowed = conn is None
     conn = ConnectionWrapper(get_pooled_raw_connection()) if borrowed else conn
     try:
-        conn.execute("UPDATE tester_access SET notified_at = NOW() WHERE id = ?;", (grant_id,))
+        conn.execute("UPDATE tester_access SET notified_at = NOW() WHERE id = %s;", (grant_id,))
         conn.commit()
     finally:
         if borrowed:
