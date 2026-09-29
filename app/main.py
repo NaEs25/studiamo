@@ -299,7 +299,7 @@ def serve_root(request: Request):
     template_path = Path(__file__).resolve().parent / "templates" / template_name
     if not template_path.exists():
         raise HTTPException(status_code=404, detail="HTML template not found")
-    return templates.TemplateResponse(template_name, {"request": request})
+    return templates.TemplateResponse(request, template_name)
 
 
 @app.get("/landing")
@@ -320,7 +320,7 @@ async def serve_login(request: Request):
         template_path = Path(__file__).resolve().parent / "templates" / template_name
     if not template_path.exists():
         raise HTTPException(status_code=404, detail="Login HTML template not found")
-    return templates.TemplateResponse(template_name, {"request": request})
+    return templates.TemplateResponse(request, template_name)
 
 
 @app.get("/waitlist-confirmation", response_class=HTMLResponse)
@@ -328,7 +328,7 @@ async def serve_waitlist_confirmation(request: Request):
     template_path = Path(__file__).resolve().parent / "templates" / "waitlist_confirmation.html"
     if not template_path.exists():
         raise HTTPException(status_code=404, detail="Waitlist confirmation template not found")
-    return templates.TemplateResponse("waitlist_confirmation.html", {"request": request})
+    return templates.TemplateResponse(request, "waitlist_confirmation.html")
 
 
 @app.get("/join")
@@ -363,7 +363,7 @@ def serve_app(request: Request):
     if auth_user:
         template_path = Path(__file__).resolve().parent / "templates" / "index.html"
         if template_path.exists():
-            return templates.TemplateResponse("index.html", {"request": request})
+            return templates.TemplateResponse(request, "index.html")
     return RedirectResponse(url="/login", status_code=307)
 
 
@@ -372,7 +372,7 @@ async def serve_impressum(request: Request):
     template_path = Path(__file__).resolve().parent / "templates" / "impressum.html"
     if not template_path.exists():
         raise HTTPException(status_code=404, detail="Impressum HTML template not found")
-    return templates.TemplateResponse("impressum.html", {"request": request, "current_page": "impressum"})
+    return templates.TemplateResponse(request, "impressum.html", {"current_page": "impressum"})
 
 
 @app.get("/imprint")
@@ -386,7 +386,7 @@ async def serve_privacy(request: Request):
     template_path = Path(__file__).resolve().parent / "templates" / "privacy.html"
     if not template_path.exists():
         raise HTTPException(status_code=404, detail="Privacy HTML template not found")
-    return templates.TemplateResponse("privacy.html", {"request": request, "current_page": "privacy"})
+    return templates.TemplateResponse(request, "privacy.html", {"current_page": "privacy"})
 
 
 @app.get("/privacy-policy")
@@ -399,7 +399,7 @@ async def serve_terms(request: Request):
     template_path = Path(__file__).resolve().parent / "templates" / "terms.html"
     if not template_path.exists():
         raise HTTPException(status_code=404, detail="Terms HTML template not found")
-    return templates.TemplateResponse("terms.html", {"request": request, "current_page": "terms"})
+    return templates.TemplateResponse(request, "terms.html", {"current_page": "terms"})
 
 
 @app.get("/tos")
@@ -413,7 +413,7 @@ async def serve_science(request: Request):
     template_path = Path(__file__).resolve().parent / "templates" / "science.html"
     if not template_path.exists():
         raise HTTPException(status_code=404, detail="Science HTML template not found")
-    return templates.TemplateResponse("science.html", {"request": request, "current_page": "science"})
+    return templates.TemplateResponse(request, "science.html", {"current_page": "science"})
 
 
 @app.get("/research")

@@ -19,7 +19,11 @@ def test_review_hour_is_labeled_utc_with_local_hint(logged_in_page):
                if route.request.method == "POST" else route.continue_())
 
     page.goto("/app")
-    page.click("#nav-settings")
+    # loadSettings() writes the stored value into the dropdown when its fetch returns, so
+    # interacting before that races with it.
+    with page.expect_response(lambda r: r.url.endswith("/api/settings") and r.request.method == "GET", timeout=15000):
+        page.click("#nav-settings")
+    page.wait_for_load_state("networkidle")
     select = page.locator("#settings-preferred-hour")
     select.wait_for(state="attached", timeout=15000)
 

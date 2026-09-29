@@ -78,7 +78,7 @@ def serve_bugs_page(request: Request):
     if not BUGS_TEMPLATE_PATH.exists():
         raise HTTPException(status_code=404, detail="bugs.html template not found")
     entry_referer = request.headers.get("referer", "")
-    return templates.TemplateResponse("bugs.html", {"request": request, "entry_referer": entry_referer})
+    return templates.TemplateResponse(request, "bugs.html", {"entry_referer": entry_referer})
 
 
 @router.get("/api/dev/bugs/me")

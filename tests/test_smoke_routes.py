@@ -94,9 +94,23 @@ HIDDEN_IN_CLOUD = {
 }
 
 
+def _flatten(routes):
+    """Every concrete route, including the ones behind include_router.
+
+    FastAPI 0.140+ keeps an included router as a single wrapper entry in app.routes; its
+    effective_route_contexts() yields the routes with the prefix applied, exposing the same
+    path, methods, param_convertors and dependant that a plain route has."""
+    for route in routes:
+        contexts = getattr(route, "effective_route_contexts", None)
+        if contexts is not None:
+            yield from contexts()
+        else:
+            yield route
+
+
 def _iter_routes():
     from app.main import app
-    for route in app.routes:
+    for route in _flatten(app.routes):
         if getattr(route, "path", "").startswith(ADMIN_PREFIX):
             continue
         methods = getattr(route, "methods", None)
