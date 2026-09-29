@@ -51,10 +51,10 @@ def test_signed_state_never_decodes_to_an_off_site_target(value):
     assert _decode_oauth_state(state)[DEST] == "/"
 
 
-@pytest.mark.parametrize("value", ["//example.com", "/\\example.com"])
-def test_legacy_unsigned_state_never_decodes_to_an_off_site_target(value):
-    # The legacy "dest|ref|require_existing" format is unsigned, so anyone can hand-write it.
-    assert _decode_oauth_state(f"{value}|abc|0")[DEST] == "/"
+@pytest.mark.parametrize("value", ["//example.com", "/\\example.com", "/dash"])
+def test_unsigned_state_decodes_to_defaults(value):
+    # The old unsigned "dest|ref|require_existing" format is no longer read at all.
+    assert _decode_oauth_state(f"{value}|abc123def456|1") == ("/", "", False, "", False)
 
 
 def test_signed_state_keeps_a_normal_target():

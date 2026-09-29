@@ -209,11 +209,10 @@ def _sign_oauth_state(dest_path: str, ref_code: str, require_existing: bool, ref
 
 def _decode_oauth_state(state_str: Optional[str]) -> tuple[str, str, bool, str, bool]:
     """Decodes and validates a signed OAuth state token, rejecting expired (>15 min) or forged states.
-    Falls back gracefully to legacy plain string format if needed for backward compatibility.
 
-    Returns (dest_path, ref_code, require_existing, referrer, link_intent). Every failure and
-    legacy path returns link_intent False: an unreadable state must never be the thing that
-    authorizes rebinding an account's Google identity."""
+    Returns (dest_path, ref_code, require_existing, referrer, link_intent). Every failure path
+    returns the defaults, link_intent False included: an unreadable state must never be the
+    thing that authorizes rebinding an account's Google identity."""
     import time
     if not state_str:
         return "/", "", False, "", False
@@ -229,15 +228,8 @@ def _decode_oauth_state(state_str: Optional[str]) -> tuple[str, str, bool, str, 
         referrer = str(data.get("rf", "")).strip()
         link_intent = bool(data.get("l", 0))
         return dest_path, ref_code, require_existing, referrer, link_intent
-    except (BadSignature, Exception):
-        if "|" in state_str:
-            raw_dest, _, raw_rest = state_str.partition("|")
-            raw_ref, _, raw_require_existing = raw_rest.partition("|")
-            dest_path = safe_local_path(raw_dest)
-            ref_code = raw_ref.strip()
-            require_existing = raw_require_existing.strip() == "1"
-            return dest_path, ref_code, require_existing, "", False
-        logger.warning(f"[google_oauth] Invalid or tampered OAuth state parameter: {state_str}")
+    except Exception:
+        logger.warning(f"[google_oauth] Invalid or tampered OAuth state parameter: {state_str[:100]!r}")
         return "/", "", False, "", False
 
 
