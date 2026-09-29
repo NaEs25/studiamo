@@ -9,10 +9,11 @@ users/<user_uuid>/ directory, as one transaction (see
 database.delete_user_account). Anyone this user referred keeps their account;
 only their referred_by pointer is cleared.
 
-Deliberately a script, not an HTTP endpoint : same reasoning as
-grant_tester_access.py and promote_waitlist.py: there is no admin-auth concept
-in this codebase. A self-service "delete my account" route for users is a
-separate thing and does not exist yet.
+Users can also delete their own account from Settings (delete_own_account in
+app/routers/settings.py), which goes through the same database.delete_user_account.
+
+After --apply, restart the app service: this script runs in its own process, so
+it cannot clear the running service's in-memory user caches.
 
 Note: this does not touch the pre-launch landing-page email list
 (the landing_waitlist table, see app/landing_waitlist_db.py). That is a
@@ -57,7 +58,7 @@ def main():
     if not apply_it:
         print("\nDry run : re-run with --apply to delete for real.")
     else:
-        print("\nDone.")
+        print("\nDone. Restart the app service to clear its in-memory user caches.")
 
 
 if __name__ == "__main__":
