@@ -17,6 +17,13 @@ from starlette.testclient import TestClient
 
 @pytest.fixture(scope="session")
 def client():
+    """In-process client for the real app, deliberately without its lifespan.
+
+    Entering TestClient as a context manager would run app.main.lifespan, which starts the
+    Telegram pollers and the notification scheduler and resumes every pending import task
+    in the shared staging database, all alongside the running staging service. That means
+    Telegram getUpdates conflicts, possible duplicate notifications, and imports processed
+    twice. None of it is needed to serve a request, and the schema it would verify is the
+    one the staging service already applies on boot."""
     from app.main import app
-    with TestClient(app, follow_redirects=False) as c:
-        yield c
+    yield TestClient(app, follow_redirects=False)

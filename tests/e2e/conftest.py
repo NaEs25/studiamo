@@ -10,14 +10,16 @@ To keep that promise, all authenticated flows here run as one dedicated, clearly
 account (`E2E_TEST_USERNAME` below), not a real customer, and tests that create data
 through the UI (e.g. a learning goal) delete it again before finishing.
 
-The local server is started with lifespan="off". The real app lifespan starts Telegram
-long-polling and the notification scheduler daemon (see app/main.py's `lifespan`); the
-existing tests/conftest.py client fixture already runs that once per test session via
-TestClient. Starting it a second time here would run those background jobs twice
-concurrently, which can mean duplicate real Telegram/email notifications going out if a
-scheduler tick fires during the test run. None of that is needed to serve requests, so
-it's switched off for this fixture.
+The local server is started with lifespan="off", like the client fixture in
+tests/conftest.py. The real app lifespan starts Telegram long-polling and the notification
+scheduler daemon and resumes pending imports (see app/main.py's `lifespan`), all of which the
+staging service is already running against the same database. None of that is needed to
+serve requests.
+
+Analytics requests to Umami are aborted for every page, so test runs do not show up as
+visits in the real analytics.
 """
+import re
 import socket
 import threading
 import time
@@ -88,6 +90,15 @@ def e2e_session_cookies(live_server):
         {"name": "yb_session", "value": token, "url": live_server, "httpOnly": True, "sameSite": "Lax"},
         {"name": "username", "value": E2E_TEST_USERNAME, "url": live_server, "httpOnly": False, "sameSite": "Lax"},
     ]
+
+
+@pytest.fixture(autouse=True)
+def _block_analytics(request):
+    if "page" not in request.fixturenames:
+        return
+    page = request.getfixturevalue("page")
+    page.route(re.compile(r"^https://([a-z0-9-]+\.)*umami\.is/"),
+               lambda route: route.fulfill(status=200, content_type="application/javascript", body=""))
 
 
 @pytest.fixture
