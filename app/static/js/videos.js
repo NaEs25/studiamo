@@ -2575,7 +2575,52 @@ function handleStudioTimestampChipClick(event) {
 }
 
 function execEditorCommand(cmd, value = null) {
+    if (cmd === 'formatBlock' && value) {
+        applyStudioHeading(String(value).toLowerCase());
+        return;
+    }
     document.execCommand(cmd, false, value);
+}
+
+// The editor element enclosing the caret that matches `selector`, or null.
+function studioSelectionBlock(selector) {
+    const editor = document.getElementById('studio-notes-editor');
+    const selection = window.getSelection();
+    if (!editor || !selection || !selection.rangeCount) return null;
+    let node = selection.getRangeAt(0).startContainer;
+    if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
+    const found = node ? node.closest(selector) : null;
+    return found && editor.contains(found) ? found : null;
+}
+
+// H1/H2 toggle: pressing the heading a block already has turns it back into a paragraph.
+// Inside a list, formatBlock wraps the whole list in a new heading on every press, so the
+// item is taken out of its list first and becomes a heading of its own.
+function applyStudioHeading(tag) {
+    const heading = studioSelectionBlock('h1, h2');
+    if (heading && heading.tagName.toLowerCase() === tag) {
+        document.execCommand('formatBlock', false, 'P');
+        return;
+    }
+    const item = studioSelectionBlock('li');
+    if (item) {
+        const listCommand = item.parentElement && item.parentElement.tagName === 'OL' ? 'insertOrderedList' : 'insertUnorderedList';
+        document.execCommand(listCommand, false, null);
+    }
+    document.execCommand('formatBlock', false, tag.toUpperCase());
+    clearPinnedFontSize(studioSelectionBlock('h1, h2'));
+}
+
+// Taking an item out of a list makes Chrome pin the list's font size on the text in an inline
+// style, which would keep the new heading at body size. Drops that pin and unwraps spans left
+// with no other styling.
+function clearPinnedFontSize(block) {
+    if (!block) return;
+    block.querySelectorAll('span[style]').forEach(span => {
+        span.style.removeProperty('font-size');
+        if (!span.getAttribute('style').trim()) span.removeAttribute('style');
+        if (!span.attributes.length) span.replaceWith(...span.childNodes);
+    });
 }
 
 function insertStudioTimestamp() {
