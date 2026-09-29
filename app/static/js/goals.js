@@ -339,6 +339,14 @@ function closeCreateGoalModal() {
 }
 
 function openEditGoalModal(id, title, description) {
+    // Called with the id alone from the goal menu, which reads the text from the cache: a
+    // title or description can hold quotes, backslashes and line breaks, none of which
+    // survive being written into an inline handler.
+    const cached = window._goalsCache && window._goalsCache[id];
+    if (title === undefined && cached) {
+        title = cached.title || '';
+        description = cached.description || '';
+    }
     document.getElementById('goal-modal-id').value = id;
     document.getElementById('goal-modal-title').value = title;
     document.getElementById('goal-modal-desc').value = description || '';
@@ -385,7 +393,7 @@ function deleteGoal(id) {
     
     if (hiddenId) hiddenId.value = id;
     if (msg) {
-        msg.innerHTML = `Are you sure you want to delete learning goal <strong class="text-stone-900">"${title}"</strong>?<br><span class="text-xs text-stone-500 mt-2 block">Choose how to handle the linked video materials:</span>`;
+        msg.innerHTML = `Are you sure you want to delete learning goal <strong class="text-stone-900">"${escapeHtml(title)}"</strong>?<br><span class="text-xs text-stone-500 mt-2 block">Choose how to handle the linked video materials:</span>`;
     }
     if (modal) {
         openOverlay('overlay-delete-goal-modal', closeDeleteGoalModal);
@@ -856,12 +864,8 @@ function toggleGoalMenu(event, id) {
 
     const btn = event ? event.currentTarget : document.getElementById(`btn-goal-menu-${id}`);
 
-    const goalData = window._goalsCache && window._goalsCache[id];
-    const title = goalData ? (goalData.title || '').replace(/'/g, "\\'") : '';
-    const desc = goalData ? (goalData.description || '').replace(/'/g, "\\'") : '';
-
     const html = `<div class="py-1">
-        <button onclick="closeGoalMenu(); openEditGoalModal(${id}, '${title}', '${desc}')" class="flex items-center space-x-2.5 w-full text-left px-4 py-2.5 text-xs text-stone-700 hover:bg-stone-50 hover:text-stone-900 transition">
+        <button onclick="closeGoalMenu(); openEditGoalModal(${id})" class="flex items-center space-x-2.5 w-full text-left px-4 py-2.5 text-xs text-stone-700 hover:bg-stone-50 hover:text-stone-900 transition">
             <i data-lucide="edit-3" class="w-4 h-4 text-amber-600"></i><span>Edit Title &amp; Description</span>
         </button>
         <button onclick="closeGoalMenu(); archiveGoal(${id})" class="flex items-center space-x-2.5 w-full text-left px-4 py-2.5 text-xs text-stone-700 hover:bg-stone-50 hover:text-stone-900 transition">

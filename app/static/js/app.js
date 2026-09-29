@@ -236,9 +236,36 @@ async function loadDashboard() {
 
 window._dailyRecsDrafts = window._dailyRecsDrafts || {};
 
-function escapeRecQuotes(str) {
-    if (!str) return '';
-    return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+// One delegated listener for every rec card action. The card carries its values in escaped
+// data- attributes, so a video title (which a third party chooses) is only ever read back
+// through dataset and never becomes part of a script string.
+function handleRecommendationClick(event) {
+    const actionEl = event.target.closest('[data-rec-action]');
+    if (!actionEl) return;
+    const card = actionEl.closest('[data-rec-yt]');
+    if (!card) return;
+
+    const { recYt: ytId, recTitle: title, recGoal: goalId, recPos: lastPos } = card.dataset;
+    switch (actionEl.dataset.recAction) {
+        case 'play': {
+            // Once the iframe is in, a click on the wrapper's edge must not restart playback.
+            if (actionEl.id === `media-wrapper-${ytId}` && actionEl.querySelector('iframe')) return;
+            playRecommendedVideo(ytId, `media-wrapper-${ytId}`, title, goalId, lastPos);
+            break;
+        }
+        case 'queue':
+            queueRecommendationPreview(ytId, title, goalId);
+            break;
+        case 'view-queue':
+            navigateToVideoInGoals(Number(actionEl.dataset.recVideo));
+            break;
+        case 'studio':
+            openRecommendationInStudio(ytId, title, goalId);
+            break;
+        case 'dismiss':
+            dismissRecommendation(ytId);
+            break;
+    }
 }
 
 // --- Inline Video Player & Auto-Save Position Tracking ---
@@ -360,6 +387,10 @@ async function loadDailyRecommendations() {
     const grid = document.getElementById('daily-recommendations-grid');
     const panel = document.getElementById('daily-recommendations-panel');
     if (!grid) return;
+    if (!grid.dataset.recClickBound) {
+        grid.addEventListener('click', handleRecommendationClick);
+        grid.dataset.recClickBound = '1';
+    }
 
     try {
         const data = await fetchAPI('/api/daily-recommendations');
@@ -390,7 +421,6 @@ async function loadDailyRecommendations() {
             const isDraft = Boolean(isTemporaryVideo(rec) || (draftVideoId && window._dailyRecsDrafts[ytId]));
             const isQueued = Boolean(draftVideoId);
             const thumbUrl = rec.thumbnail_url || rec.thumbnail || (ytId ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` : '/static/images/notes-icon.svg');
-            const cleanTitle = escapeRecQuotes(rec.title || '');
             const wrapperId = `media-wrapper-${ytId}`;
 
             let progressPercent = 0;
@@ -401,10 +431,12 @@ async function loadDailyRecommendations() {
             }
 
             return `
-                <div class="bg-white border border-stone-200/90 rounded-2xl overflow-hidden flex flex-col justify-between hover:border-amber-400 hover:shadow-md transition-all duration-200 relative group select-none">
+                <div class="bg-white border border-stone-200/90 rounded-2xl overflow-hidden flex flex-col justify-between hover:border-amber-400 hover:shadow-md transition-all duration-200 relative group select-none"
+                     data-rec-yt="${escapeHtml(ytId)}" data-rec-title="${escapeHtml(rec.title || '')}"
+                     data-rec-goal="${escapeHtml(rec.goal_id || '')}" data-rec-pos="${lastPos}">
                     <!-- Inline Playable Media Wrapper -->
-                    <div id="${wrapperId}" class="w-full aspect-video relative overflow-hidden bg-stone-900 cursor-pointer group" onclick="playRecommendedVideo('${ytId}', '${wrapperId}', '${cleanTitle}', '${rec.goal_id || ''}', ${lastPos})">
-                        <img src="${thumbUrl}"
+                    <div id="${escapeHtml(wrapperId)}" data-rec-action="play" class="w-full aspect-video relative overflow-hidden bg-stone-900 cursor-pointer group">
+                        <img src="${escapeHtml(thumbUrl)}"
                              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                              draggable="false"
                              onerror="this.src='/static/images/notes-icon.svg'">
@@ -412,7 +444,7 @@ async function loadDailyRecommendations() {
                         <!-- Goal Badge (Top-Left) -->
                         <span class="absolute top-2 left-2 z-10 bg-amber-500/20 backdrop-blur-xs border border-amber-500/40 text-amber-900 text-[9px] font-extrabold px-2 py-0.5 rounded-md flex items-center space-x-1">
                             <i data-lucide="target" class="w-3 h-3 text-amber-900"></i>
-                            <span class="truncate max-w-[120px]">${rec.goal_title || 'AI Recommendation'}</span>
+                            <span class="truncate max-w-[120px]">${escapeHtml(rec.goal_title || 'AI Recommendation')}</span>
                         </span>
 
                         <!-- Draft Badge (Top-Right) -->
@@ -434,7 +466,7 @@ async function loadDailyRecommendations() {
                         ${rec.views && rec.views !== 'N/A' ? `
                             <span class="absolute bottom-2 left-2 z-10 bg-white/70 text-stone-900/80 text-[10px] font-extrabold px-1.5 py-0.5 rounded-md flex items-center space-x-1">
                                 <i data-lucide="eye" class="w-3 h-3 text-stone-900/80"></i>
-                                <span>${rec.views}</span>
+                                <span>${escapeHtml(rec.views)}</span>
                             </span>
                         ` : ''}
 
@@ -442,7 +474,7 @@ async function loadDailyRecommendations() {
                         ${rec.duration && rec.duration !== 'N/A' ? `
                             <span class="absolute bottom-2 right-2 z-10 bg-white/70 text-stone-900/80 text-[10px] font-extrabold px-1.5 py-0.5 rounded-md flex items-center space-x-1">
                                 <i data-lucide="clock" class="w-3 h-3 text-stone-900/80"></i>
-                                <span>${rec.duration}</span>
+                                <span>${escapeHtml(rec.duration)}</span>
                             </span>
                         ` : ''}
 
@@ -456,28 +488,27 @@ async function loadDailyRecommendations() {
 
                     <!-- Details Body -->
                     <div class="p-3.5 flex flex-col gap-2.5 bg-white">
-                        <h4 class="font-bold text-sm text-stone-900 leading-snug line-clamp-2 hover:text-amber-700 transition-colors cursor-pointer"
-                            onclick="playRecommendedVideo('${ytId}', '${wrapperId}', '${cleanTitle}', '${rec.goal_id || ''}', ${lastPos})">
+                        <h4 data-rec-action="play" class="font-bold text-sm text-stone-900 leading-snug line-clamp-2 hover:text-amber-700 transition-colors cursor-pointer">
                             ${escapeHtml(rec.title)}
                         </h4>
 
                         <!-- Action Bar -->
                         <div class="flex items-center space-x-2">
                             ${isQueued ? `
-                                <button id="btn-queue-${ytId}" onclick="navigateToVideoInGoals(${draftVideoId})" class="btn-primary flex-grow py-2 px-3 font-extrabold rounded-xl text-xs transition flex items-center justify-center space-x-1.5 active:scale-[0.98]">
+                                <button id="btn-queue-${escapeHtml(ytId)}" data-rec-action="view-queue" data-rec-video="${escapeHtml(draftVideoId)}" class="btn-primary flex-grow py-2 px-3 font-extrabold rounded-xl text-xs transition flex items-center justify-center space-x-1.5 active:scale-[0.98]">
                                     <i data-lucide="bookmark" class="w-3.5 h-3.5 fill-current"></i>
                                     <span>View in Queue</span>
                                 </button>
                             ` : `
-                                <button id="btn-queue-${ytId}" onclick="queueRecommendationPreview('${ytId}', '${cleanTitle}', '${rec.goal_id || ''}')" class="btn-primary flex-grow py-2 px-3 font-extrabold rounded-xl text-xs transition flex items-center justify-center space-x-1.5 active:scale-[0.98]">
+                                <button id="btn-queue-${escapeHtml(ytId)}" data-rec-action="queue" class="btn-primary flex-grow py-2 px-3 font-extrabold rounded-xl text-xs transition flex items-center justify-center space-x-1.5 active:scale-[0.98]">
                                     <i data-lucide="bookmark" class="w-3.5 h-3.5"></i>
                                     <span>Add to Queue</span>
                                 </button>
                             `}
-                            <button onclick="openRecommendationInStudio('${ytId}', '${cleanTitle}', '${rec.goal_id || ''}')" class="p-2 bg-stone-100 hover:bg-amber-100 text-stone-700 hover:text-amber-900 border border-stone-200 rounded-xl transition flex items-center justify-center min-w-[38px] h-[38px] shadow-sm" title="Open Study Studio (Notes)">
+                            <button data-rec-action="studio" class="p-2 bg-stone-100 hover:bg-amber-100 text-stone-700 hover:text-amber-900 border border-stone-200 rounded-xl transition flex items-center justify-center min-w-[38px] h-[38px] shadow-sm" title="Open Study Studio (Notes)">
                                 <i data-lucide="book-open" class="w-4 h-4"></i>
                             </button>
-                            <button onclick="dismissRecommendation('${ytId}')" class="p-2 bg-stone-100 hover:bg-red-100 text-stone-500 hover:text-red-700 border border-stone-200 rounded-xl transition flex items-center justify-center min-w-[38px] h-[38px] shadow-sm" title="Dismiss">
+                            <button data-rec-action="dismiss" class="p-2 bg-stone-100 hover:bg-red-100 text-stone-500 hover:text-red-700 border border-stone-200 rounded-xl transition flex items-center justify-center min-w-[38px] h-[38px] shadow-sm" title="Dismiss">
                                 <i data-lucide="x" class="w-4 h-4"></i>
                             </button>
                         </div>
@@ -540,7 +571,8 @@ async function importRecommendedVideo(youtubeId, title, goalId) {
 function markRecommendationQueued(youtubeId, videoId) {
     const btn = document.getElementById(`btn-queue-${youtubeId}`);
     if (!btn) return;
-    btn.setAttribute('onclick', `navigateToVideoInGoals(${videoId})`);
+    btn.dataset.recAction = 'view-queue';
+    btn.dataset.recVideo = String(videoId);
     btn.innerHTML = `<i data-lucide="bookmark" class="w-3.5 h-3.5 fill-current"></i><span>View in Queue</span>`;
     if (typeof renderIcons === 'function') renderIcons();
     else if (typeof lucide !== 'undefined') lucide.createIcons();

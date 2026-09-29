@@ -980,15 +980,15 @@ function renderAnalyticsHistory() {
                         <span class="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Question ${attempt.question_index + 1}</span>
                         <span class="text-[9px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider ${gradeBadgeClass}">${gradeLabel}</span>
                     </div>
-                    <p class="text-xs text-stone-900 font-semibold leading-relaxed">${attempt.question}</p>
+                    <p class="text-xs text-stone-900 font-semibold leading-relaxed">${escapeHtml(attempt.question)}</p>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-0.5 text-[11px] leading-relaxed">
                         <div>
                             <span class="text-stone-500 block text-[9px] uppercase font-extrabold tracking-wider mb-0.5">Your Guess:</span>
-                            <p class="text-stone-700 font-mono bg-stone-50 p-2 rounded-lg border border-stone-200 max-h-[100px] overflow-y-auto whitespace-pre-wrap">${attempt.given_answer || '<span class="text-stone-400 italic">No guess provided / flipped</span>'}</p>
+                            <p class="text-stone-700 font-mono bg-stone-50 p-2 rounded-lg border border-stone-200 max-h-[100px] overflow-y-auto whitespace-pre-wrap">${attempt.given_answer ? escapeHtml(attempt.given_answer) : '<span class="text-stone-400 italic">No guess provided / flipped</span>'}</p>
                         </div>
                         <div>
                             <span class="text-emerald-500 block text-[9px] uppercase font-extrabold tracking-wider mb-0.5">AI Correct Answer:</span>
-                            <p class="text-emerald-455 font-mono bg-stone-50 p-2 rounded-lg border border-stone-200 max-h-[100px] overflow-y-auto whitespace-pre-wrap">${attempt.correct_answer}</p>
+                            <p class="text-emerald-455 font-mono bg-stone-50 p-2 rounded-lg border border-stone-200 max-h-[100px] overflow-y-auto whitespace-pre-wrap">${escapeHtml(attempt.correct_answer)}</p>
                         </div>
                     </div>
                 </div>

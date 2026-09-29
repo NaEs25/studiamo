@@ -1887,20 +1887,20 @@ function renderVideoStatsAttempts(container, attempts) {
                         <span class="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Question ${(att.question_index ?? 0) + 1}</span>
                         ${gradeBadge}
                     </div>
-                    <p class="text-xs text-stone-900 font-semibold leading-relaxed">${att.question || ''}</p>
+                    <p class="text-xs text-stone-900 font-semibold leading-relaxed">${escapeHtml(att.question || '')}</p>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] pt-1">
                         <div>
                             <span class="text-stone-500 block text-[9px] uppercase font-bold tracking-wider mb-0.5">Your Answer:</span>
-                            <div class="text-stone-500 font-mono bg-stone-50 p-2 rounded-lg border border-stone-200 break-words whitespace-pre-wrap">${att.given_answer || '<span class="text-stone-400 italic">No answer recorded</span>'}</div>
+                            <div class="text-stone-500 font-mono bg-stone-50 p-2 rounded-lg border border-stone-200 break-words whitespace-pre-wrap">${att.given_answer ? escapeHtml(att.given_answer) : '<span class="text-stone-400 italic">No answer recorded</span>'}</div>
                         </div>
                         <div>
                             <span class="text-emerald-500 block text-[9px] uppercase font-bold tracking-wider mb-0.5">Correct Answer:</span>
-                            <div class="text-emerald-400 font-mono bg-stone-50 p-2 rounded-lg border border-stone-200 break-words whitespace-pre-wrap">${att.correct_answer || ''}</div>
+                            <div class="text-emerald-400 font-mono bg-stone-50 p-2 rounded-lg border border-stone-200 break-words whitespace-pre-wrap">${escapeHtml(att.correct_answer || '')}</div>
                         </div>
                     </div>
                     ${att.explanation ? `
                         <div class="text-[11px] text-stone-500 bg-stone-50 p-2 rounded-lg border border-stone-200">
-                            <span class="font-bold text-amber-700">Explanation:</span> ${att.explanation}
+                            <span class="font-bold text-amber-700">Explanation:</span> ${escapeHtml(att.explanation)}
                         </div>
                     ` : ''}
                 </div>
