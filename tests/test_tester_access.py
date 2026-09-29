@@ -174,7 +174,9 @@ def test_days_left_uses_calendar_dates_not_24_hour_blocks():
 
 
 def test_days_left_is_zero_on_the_final_day_not_negative():
-    assert database._tester_days_left(NOW + timedelta(hours=2)) == 0
+    # The last second of today, not NOW plus some hours: from 22:00 UTC, NOW + 2h is tomorrow.
+    later_today = NOW.replace(hour=23, minute=59, second=59, microsecond=0)
+    assert database._tester_days_left(later_today) == 0
     assert database._tester_days_left(NOW - timedelta(days=30)) == 0
 
 
