@@ -1,8 +1,10 @@
-fastapi==0.111.0
-# Held deliberately at 0.37.2 (fastapi 0.111.0 caps it <0.38.0). Moving to starlette 1.x
-# requires fastapi>=0.140, which is a separate upgrade with a much larger blast radius.
-starlette==0.37.2
-uvicorn==0.30.1
+fastapi==0.142.0
+starlette==1.7.0
+# [standard] keeps uvloop, httptools and websockets, which fastapi 0.111 used to pull in.
+uvicorn[standard]==0.30.1
+# Imported directly by app/config.py and app/email_utils.py to load .env. It used to arrive
+# only as a transitive dependency of the old fastapi, so it is declared here now.
+python-dotenv==1.2.3
 jinja2==3.1.6
 python-multipart==0.0.31
 pydantic==2.13.4

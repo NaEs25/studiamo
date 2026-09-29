@@ -4,3 +4,5 @@
 -r requirements.txt
 pytest==9.1.1
 pytest-playwright==0.9.0
+# Pinned so a fresh install matches the browser build `playwright install` already fetched.
+playwright==1.62.0
