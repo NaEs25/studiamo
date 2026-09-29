@@ -308,11 +308,7 @@ function initGoalsModal() {
                 if (typeof loadDashboard === 'function') loadDashboard();
             } catch (err) {
                 console.error(err);
-                if (typeof showToast === 'function') {
-                    showToast("Failed to save goal: " + err.message, "failed");
-                } else {
-                    alert("Failed to save goal: " + err.message);
-                }
+                showToast("Failed to save goal: " + err.message, "failed");
             }
         });
     }
@@ -423,11 +419,7 @@ async function confirmDeleteGoal(deleteMaterials) {
     } catch (e) {
         hideLoader();
         console.error("Delete goal error:", e);
-        if (typeof showToast === 'function') {
-            showToast("Failed to delete goal: " + e.message, "failed");
-        } else {
-            alert("Failed to delete goal: " + e.message);
-        }
+        showToast("Failed to delete goal: " + e.message, "failed");
     }
 }
 
@@ -770,11 +762,7 @@ async function generateGoalQuiz(goalId, btnEl = null) {
         }
     } catch (e) {
         console.error(e);
-        if (typeof showToast === 'function') {
-            showToast("Failed to synthesize goal quiz: " + e.message, "failed");
-        } else {
-            alert("Failed to synthesize goal quiz: " + e.message);
-        }
+        showToast("Failed to synthesize goal quiz: " + e.message, "failed");
     } finally {
         if (btnEl) {
             btnEl.innerHTML = origText;

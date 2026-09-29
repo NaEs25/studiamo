@@ -94,11 +94,7 @@ async function switchUserProfile(username) {
         if (typeof loadSettings === 'function') loadSettings();
     } catch (e) {
         console.error("Profile switch failed:", e);
-        if (typeof showToast === 'function') {
-            showToast("Failed to switch profile: " + e.message, "failed");
-        } else {
-            alert("Failed to switch profile: " + e.message);
-        }
+        showToast("Failed to switch profile: " + e.message, "failed");
         loadUserProfiles();
     }
 }
@@ -128,22 +124,14 @@ async function handleCreateUserSubmit(event) {
     const keyInput = document.getElementById('create-gemini-key');
     const geminiKey = keyInput ? keyInput.value.trim() : '';
     if (!geminiKey) {
-        if (typeof showToast === 'function') {
-            showToast("Google AI Studio API Key is required to create a profile.", "failed");
-        } else {
-            alert("Google AI Studio API Key is required to create a profile.");
-        }
+        showToast("Google AI Studio API Key is required to create a profile.", "failed");
         return;
     }
     
     const pwdInput = document.getElementById('create-user-password');
     const pwd = pwdInput ? pwdInput.value.trim() : '';
     if (!pwd) {
-        if (typeof showToast === 'function') {
-            showToast("A password is required to create a profile.", "failed");
-        } else {
-            alert('A password is required to create a profile.');
-        }
+        showToast("A password is required to create a profile.", "failed");
         return;
     }
     
@@ -170,11 +158,7 @@ async function handleCreateUserSubmit(event) {
     } catch (e) {
         hideLoader();
         console.error(e);
-        if (typeof showToast === 'function') {
-            showToast("Failed to create profile: " + e.message, "failed");
-        } else {
-            alert("Failed to create profile: " + e.message);
-        }
+        showToast("Failed to create profile: " + e.message, "failed");
     }
 }
 

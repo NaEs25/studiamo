@@ -1198,11 +1198,7 @@ async function testVoiceSample(btn) {
             }
         }
         _finishVoiceTest(btn, origContent);
-        if (typeof showToast === 'function') {
-            showToast('Could not play voice sample', 'failed');
-        } else {
-            alert('Could not play voice sample: ' + e.message);
-        }
+        showToast('Could not play voice sample', 'failed');
     }
 }
 
@@ -1592,7 +1588,7 @@ async function subscribeWebPush() {
 
 async function requestBrowserNotificationPermission() {
     if (!('Notification' in window)) {
-        alert('Browser notifications are not supported by this browser.');
+        showToast('Browser notifications are not supported by this browser.', 'failed');
         return;
     }
     try {
@@ -1637,7 +1633,7 @@ function triggerPWAInstall(instructionsId = 'pwa-ios-instructions') {
         const iosBox = document.getElementById(instructionsId);
         if (iosBox) iosBox.classList.toggle('hidden');
         if (!isIOS) {
-            alert('To install Studiamo as an app, use the "Add to Home Screen" or "Install App" option in your browser menu.');
+            showToast('To install Studiamo as an app, use "Add to Home Screen" or "Install App" in your browser menu.', 'info', 7000);
         }
     }
 }

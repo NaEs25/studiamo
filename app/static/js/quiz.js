@@ -106,11 +106,7 @@ async function startQuiz(quizId, videoId = null, level = 3) {
         if (videoId && videoId !== 'null' && videoId !== 'undefined') {
             return triggerStudy(videoId, level);
         }
-        if (typeof showToast === 'function') {
-            showToast("Quiz ID is unavailable.", "failed");
-        } else {
-            alert("Quiz ID is unavailable.");
-        }
+        showToast("Quiz ID is unavailable.", "failed");
         return;
     }
 
@@ -237,17 +233,7 @@ async function startQuiz(quizId, videoId = null, level = 3) {
             return triggerStudy(videoId, level);
         }
         // Show a friendly non-blocking toast
-        if (typeof showToast === 'function') {
-            showToast('Could not load quiz: ' + msg, 'failed', 4000);
-        }
-        const toastEl = document.getElementById('global-toast') || document.getElementById('toast');
-        if (toastEl) {
-            toastEl.textContent = 'Could not load quiz: ' + msg;
-            toastEl.classList.remove('hidden', 'opacity-0');
-            setTimeout(() => toastEl.classList.add('opacity-0'), 5000);
-        } else {
-            alert('Could not load quiz: ' + msg);
-        }
+        showToast('Could not load quiz: ' + msg, 'failed', 4000);
     }
 }
 
@@ -397,7 +383,7 @@ function showQuizBack({ suggest } = {}) {
 function renderQuizQuestion() {
     stopCurrentSpeech();
     if (!activeQuizSession || !activeQuizSession.questions || activeQuizSession.questions.length === 0) {
-        alert("This quiz doesn't contain any active recall questions.");
+        showToast("This quiz doesn't contain any active recall questions.", "failed");
         closeQuizOverlay();
         return;
     }
@@ -535,23 +521,23 @@ async function gradeQuestion(grade) {
             body: formData
         });
         
+        // A dialog rather than a toast: toasts are single-slot, so on a final question the
+        // "session complete" toast below would replace this one immediately.
         if (res.leveled_up) {
-            if (typeof showToast === 'function') {
-                showToast(`Level Up! You reached Level ${res.level}!`, 'saved', 4000);
-            } else {
-                alert(`Level Up!\nCongratulations! You have reached Level ${res.level}!`);
-            }
+            await showConfirm({
+                title: 'Level Up!',
+                message: `Congratulations! You have reached Level ${res.level}.`,
+                confirmText: 'Continue',
+                icon: 'trophy',
+                hideCancel: true,
+            });
         }
         
         currentQuestionIndex++;
         const progressKey = `quiz-progress-${activeUsername}-${activeQuizSession.id}`;
         if (currentQuestionIndex >= questions.length) {
             localStorage.removeItem(progressKey);
-            if (typeof showToast === 'function') {
-                showToast("Quiz Session Complete! Great job reviewing!", 'saved', 4000);
-            } else {
-                alert("Quiz Session Complete!\nGreat job reviewing your study materials!");
-            }
+            showToast("Quiz Session Complete! Great job reviewing!", 'saved', 4000);
             closeQuizOverlay();
         } else {
             localStorage.setItem(progressKey, currentQuestionIndex);
@@ -559,11 +545,7 @@ async function gradeQuestion(grade) {
         }
     } catch (e) {
         console.error("Error in gradeQuestion:", e);
-        if (typeof showToast === 'function') {
-            showToast("Error grading question: " + e.message, "failed");
-        } else {
-            alert("Error grading question: " + e.message);
-        }
+        showToast("Error grading question: " + e.message, "failed");
         if (typeof hideLoader === 'function') hideLoader();
     }
 }
@@ -876,7 +858,7 @@ async function triggerStudy(videoId, level, quizId = null) {
         }
     } catch (e) {
         console.error("Error starting study session:", e);
-        alert("Error launching quiz: " + (e.detail || e.message || e));
+        showToast("Error launching quiz: " + (e.detail || e.message || e), "failed");
     }
 }
 

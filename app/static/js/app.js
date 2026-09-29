@@ -556,11 +556,7 @@ async function importRecommendedVideo(youtubeId, title, goalId) {
         }
         loadDailyRecommendations();
     } catch (e) {
-        if (typeof showToast === 'function') {
-            showToast("Import failed: " + e.message, "failed");
-        } else {
-            alert("Import failed: " + e.message);
-        }
+        showToast("Import failed: " + e.message, "failed");
     } finally {
         if (btn) btn.disabled = false;
     }
@@ -653,11 +649,7 @@ async function refreshDailyRecommendations() {
         }
     } catch (e) {
         console.error("Daily recommendations refresh failed:", e);
-        if (typeof showToast === 'function') {
-            showToast("Failed to refresh recommendations: " + e.message, "failed");
-        } else {
-            alert("Failed to refresh recommendations: " + e.message);
-        }
+        showToast("Failed to refresh recommendations: " + e.message, "failed");
     } finally {
         if (btn) btn.disabled = false;
         if (icon) icon.classList.remove('animate-spin');

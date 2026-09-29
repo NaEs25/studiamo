@@ -176,7 +176,9 @@ function showConfirm(options = {}) {
             confirmText = 'Confirm',
             cancelText = 'Cancel',
             confirmClass = 'bg-[#fbbf24] hover:bg-[#f59e0b] text-[#78350f] font-bold rounded-xl text-xs shadow-sm transition',
-            icon = 'alert-triangle'
+            icon = 'alert-triangle',
+            // For a notice with a single OK button, where there is nothing to cancel.
+            hideCancel = false
         } = options;
 
         if (titleEl) titleEl.textContent = title;
@@ -185,7 +187,10 @@ function showConfirm(options = {}) {
             btnOk.textContent = confirmText;
             btnOk.className = `px-4 py-2 ${confirmClass}`;
         }
-        if (btnCancel) btnCancel.textContent = cancelText;
+        if (btnCancel) {
+            btnCancel.textContent = cancelText;
+            btnCancel.classList.toggle('hidden', hideCancel);
+        }
         if (iconEl) {
             iconEl.setAttribute('data-lucide', icon);
             if (typeof renderIcons === 'function') renderIcons();
@@ -221,7 +226,7 @@ function showConfirm(options = {}) {
         const onOk = () => cleanup(true);
         const onCancel = () => cleanup(false);
         const onKey = (e) => {
-            if (e.key === 'Escape') cleanup(false);
+            if (e.key === 'Escape') cleanup(hideCancel);
             if (e.key === 'Enter') cleanup(true);
         };
 

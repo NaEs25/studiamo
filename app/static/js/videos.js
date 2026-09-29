@@ -328,22 +328,14 @@ function initImportTab() {
             if (isYoutubeVisible) {
                 const urlVal = document.getElementById('input-youtube-url').value;
                 if (!urlVal) {
-                    if (typeof showToast === 'function') {
-                        showToast('Please enter a YouTube video URL', 'failed');
-                    } else {
-                        alert('Please enter a YouTube video URL');
-                    }
+                    showToast('Please enter a YouTube video URL', 'failed');
                     hideLoader();
                     return;
                 }
                 formData.append('url', urlVal);
             } else if (isDocVisible) {
                 if (!fileInput || fileInput.files.length === 0) {
-                    if (typeof showToast === 'function') {
-                        showToast('Please select a PDF or Text file to upload', 'failed');
-                    } else {
-                        alert('Please select a PDF or Text file to upload');
-                    }
+                    showToast('Please select a PDF or Text file to upload', 'failed');
                     hideLoader();
                     return;
                 }
@@ -352,11 +344,7 @@ function initImportTab() {
                 const titleVal = document.getElementById('input-notes-title').value;
                 const textVal = document.getElementById('input-notes-text').value;
                 if (!textVal) {
-                    if (typeof showToast === 'function') {
-                        showToast('Please paste some text content', 'failed');
-                    } else {
-                        alert('Please paste some text content');
-                    }
+                    showToast('Please paste some text content', 'failed');
                     hideLoader();
                     return;
                 }
@@ -374,11 +362,7 @@ function initImportTab() {
                 const newDesc = newDescInput ? newDescInput.value.trim() : '';
 
                 if (!newTitle) {
-                    if (typeof showToast === 'function') {
-                        showToast('Please enter a title for your learning goal', 'failed');
-                    } else {
-                        alert('Please enter a title for your new learning goal.');
-                    }
+                    showToast('Please enter a title for your learning goal', 'failed');
                     hideLoader();
                     return;
                 }
@@ -406,11 +390,7 @@ function initImportTab() {
                     // Surface the server's reason, which since goal titles became unique is
                     // usually "You already have a goal called X" rather than a real failure.
                     const reason = errGoal.detail || errGoal.message || errGoal;
-                    if (typeof showToast === 'function') {
-                        showToast('Could not create the goal: ' + reason, 'failed', 4000);
-                    } else {
-                        alert('Failed to create new learning goal: ' + reason);
-                    }
+                    showToast('Could not create the goal: ' + reason, 'failed', 4000);
                     hideLoader();
                     return;
                 }
@@ -473,11 +453,7 @@ function initImportTab() {
                 }
             } catch (err) {
                 console.error("Video creation error:", err);
-                if (typeof showToast === 'function') {
-                    showToast('Import failed: ' + (err.detail || err.message || err), 'failed', 4000);
-                } else {
-                    alert('Failed to add video resource: ' + (err.detail || err.message || err));
-                }
+                showToast('Import failed: ' + (err.detail || err.message || err), 'failed', 4000);
             }
         });
     }
@@ -1510,11 +1486,7 @@ async function retryVideoImport(id) {
         if (typeof loadDashboard === 'function') loadDashboard();
         if (typeof loadGoals === 'function') loadGoals();
     } catch (e) {
-        if (typeof showToast === 'function') {
-            showToast("Retry failed: " + (e.detail || e.message || e), "failed");
-        } else {
-            alert("Retry failed: " + (e.detail || e.message || e));
-        }
+        showToast("Retry failed: " + (e.detail || e.message || e), "failed");
         if (window.globalImportBacklog) window.globalImportBacklog.poll();
         if (typeof loadDashboard === 'function') loadDashboard();
         if (typeof loadGoals === 'function') loadGoals();
@@ -1649,11 +1621,7 @@ async function showFactCheck(id) {
         renderIcons();
     } catch (e) {
         console.error("Fact check failed:", e);
-        if (typeof showToast === 'function') {
-            showToast("Fact check failed: " + (e.detail || e.message || e), "failed");
-        } else {
-            alert("Fact check failed: " + (e.detail || e.message || e));
-        }
+        showToast("Fact check failed: " + (e.detail || e.message || e), "failed");
     } finally {
         hideLoader();
     }
@@ -1739,7 +1707,7 @@ function initEditVideoEvents() {
                 if (typeof loadGoals === 'function') loadGoals();
             } catch (err) {
                 console.error(err);
-                alert("Failed to edit video: " + err.message);
+                showToast("Failed to edit video: " + err.message, "failed");
             }
         };
     }
@@ -2654,11 +2622,7 @@ async function handleStudyButtonClick(event, videoId, level = 3) {
     console.log("handleStudyButtonClick fired:", { videoId, level });
     
     if (!videoId || videoId === 'null' || videoId === 'undefined') {
-        if (typeof showToast === 'function') {
-            showToast("Video ID is missing.", "failed");
-        } else {
-            alert("Video ID is missing.");
-        }
+        showToast("Video ID is missing.", "failed");
         return;
     }
 
@@ -2681,26 +2645,14 @@ async function handleStudyButtonClick(event, videoId, level = 3) {
             if (startFn) {
                 return startFn(res.quiz_id, videoId, liveLevel);
             } else {
-                if (typeof showToast === 'function') {
-                    showToast("Quiz module is still loading. Please try again in a moment.", "info");
-                } else {
-                    alert("Quiz module is still loading. Please try again in a moment.");
-                }
+                showToast("Quiz module is still loading. Please try again in a moment.", "info");
             }
         } else {
-            if (typeof showToast === 'function') {
-                showToast("Quiz generation response missing quiz_id.", "failed");
-            } else {
-                alert("Quiz generation response did not contain a valid quiz_id.");
-            }
+            showToast("Quiz generation response missing quiz_id.", "failed");
         }
     } catch (e) {
         console.error("Study click error:", e);
-        if (typeof showToast === 'function') {
-            showToast("Could not start quiz session: " + (e.detail || e.message || e), "failed");
-        } else {
-            alert("Could not start quiz session: " + (e.detail || e.message || e));
-        }
+        showToast("Could not start quiz session: " + (e.detail || e.message || e), "failed");
     }
 }
 

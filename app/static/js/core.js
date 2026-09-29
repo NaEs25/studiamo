@@ -499,11 +499,7 @@ async function retryImportTask(taskId) {
         if (typeof loadGoals === 'function') loadGoals();
         if (typeof loadDashboard === 'function') loadDashboard();
     } catch (e) {
-        if (typeof showToast === 'function') {
-            showToast("Failed to retry task: " + e.message, "failed");
-        } else {
-            alert("Failed to retry task: " + e.message);
-        }
+        showToast("Failed to retry task: " + e.message, "failed");
     }
 }
 
