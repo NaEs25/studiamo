@@ -247,21 +247,18 @@ def log_ai_usage(
 ):
     """Saves API token usage and performance metrics into Supabase PostgreSQL."""
     try:
-        conn = get_db_connection(username)
-        user_uuid = conn.user_uuid
-        cursor = conn.cursor()
-        cursor.execute(
-            """INSERT INTO ai_usage_logs (
-                user_uuid, model, prompt_tokens, completion_tokens, action_type,
-                cached_tokens, duration_ms, video_id, quiz_id, status, error_kind, attempts
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);""",
-            (
-                user_uuid, model, prompt_tokens, completion_tokens, action_type,
-                cached_tokens, duration_ms, video_id, quiz_id, status, error_kind, attempts
+        with get_db_connection(username) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """INSERT INTO ai_usage_logs (
+                    user_uuid, model, prompt_tokens, completion_tokens, action_type,
+                    cached_tokens, duration_ms, video_id, quiz_id, status, error_kind, attempts
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);""",
+                (
+                    conn.user_uuid, model, prompt_tokens, completion_tokens, action_type,
+                    cached_tokens, duration_ms, video_id, quiz_id, status, error_kind, attempts
+                )
             )
-        )
-        conn.commit()
-        conn.close()
     except Exception as e:
         print(f"Error logging AI usage for user {username}: {e}")
 

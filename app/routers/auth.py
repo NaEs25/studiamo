@@ -439,8 +439,6 @@ async def _google_callback(
             # else: cookie decoded to a uuid with no matching row (deleted account), # fall through to Case 2 and treat this as a fresh login.
 
         # Case 2: Logging in via Google SSO on /login
-        conn = database.get_db_connection("system")
-        cursor = conn.cursor()
         uname_base = email.split("@")[0].replace(".", "_").strip().lower()
 
         # Same resolution the link flow above checks against, so "which account owns this
@@ -450,7 +448,6 @@ async def _google_callback(
         if row:
             target_username = row["username"]
             target_user_uuid = row["user_uuid"]
-            conn.close()
 
             if row["status"] == "waitlist":
                 # Returning waitlist user: never issue a session for a
@@ -473,7 +470,6 @@ async def _google_callback(
                 # account for whichever Gmail the person happened to click. Sending them
                 # back to pick a different account (or go create one properly via /login)
                 # avoids leaving behind an orphaned account nobody meant to make.
-                conn.close()
                 return RedirectResponse(f"{dest_path}?google_error=no_account", status_code=303)
 
             # Usernames can be renamed (see routers/settings.py's username-change path), so a
@@ -485,17 +481,18 @@ async def _google_callback(
             # new one.
             base_username = uname_base or f"user_{str(uuid.uuid4())[:6]}"
             candidate_username = base_username
-            for _ in range(20):
-                cursor.execute(
-                    "SELECT 1 FROM user_profile WHERE LOWER(username) = LOWER(%s) LIMIT 1;",
-                    (candidate_username,)
-                )
-                if not cursor.fetchone():
-                    break
-                candidate_username = f"{base_username}{random.randint(100, 999999)}"
-            else:
-                candidate_username = f"user_{str(uuid.uuid4())[:8]}"
-            conn.close()
+            with database.get_db_connection("system") as conn:
+                cursor = conn.cursor()
+                for _ in range(20):
+                    cursor.execute(
+                        "SELECT 1 FROM user_profile WHERE LOWER(username) = LOWER(%s) LIMIT 1;",
+                        (candidate_username,)
+                    )
+                    if not cursor.fetchone():
+                        break
+                    candidate_username = f"{base_username}{random.randint(100, 999999)}"
+                else:
+                    candidate_username = f"user_{str(uuid.uuid4())[:8]}"
 
             target_username = candidate_username
 

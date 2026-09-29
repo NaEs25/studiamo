@@ -30,19 +30,18 @@ router = APIRouter(prefix="/api", tags=["Quizzes & SRS"])
 @router.get("/quiz/{id}")
 async def get_quiz(id: int, username: str = Depends(require_app_access)):
     """Retrieves full SRS quiz questions and stage metadata for a specific quiz ID."""
-    conn = database.get_db_connection(username)
-    user_uuid = conn.user_uuid
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT q.video_id, q.goal_id, q.importance_level, q.srs_stage, q.next_review_at, q.quiz_type, q.in_progress_index,
-               v.title AS video_title, v.youtube_id, g.title AS goal_title
-        FROM quizzes q
-        LEFT JOIN videos v ON q.video_id = v.id
-        LEFT JOIN goals g ON g.id = COALESCE(q.goal_id, v.learning_goal_id)
-        WHERE q.id = %s AND q.user_uuid = %s;
-    """, (id, user_uuid))
-    db_row = cursor.fetchone()
-    conn.close()
+    with database.get_db_connection(username) as conn:
+        user_uuid = conn.user_uuid
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT q.video_id, q.goal_id, q.importance_level, q.srs_stage, q.next_review_at, q.quiz_type, q.in_progress_index,
+                   v.title AS video_title, v.youtube_id, g.title AS goal_title
+            FROM quizzes q
+            LEFT JOIN videos v ON q.video_id = v.id
+            LEFT JOIN goals g ON g.id = COALESCE(q.goal_id, v.learning_goal_id)
+            WHERE q.id = %s AND q.user_uuid = %s;
+        """, (id, user_uuid))
+        db_row = cursor.fetchone()
 
     quiz_data = database.get_quiz_row(id, username=username)
     if not isinstance(quiz_data, dict):
@@ -58,12 +57,12 @@ async def get_quiz(id: int, username: str = Depends(require_app_access)):
         next_review_at = db_row.get("next_review_at")
         quiz_type = db_row.get("quiz_type") or "video"
         
-        conn = database.get_db_connection(username)
-        cursor = conn.cursor()
-        cursor.execute("SELECT youtube_id, title FROM videos WHERE id = %s AND user_uuid = %s;", (video_id, user_uuid))
-        v_row = cursor.fetchone()
+        # Released before the AI call below, which can run for a minute or more.
+        with database.get_db_connection(username) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT youtube_id, title FROM videos WHERE id = %s AND user_uuid = %s;", (video_id, user_uuid))
+            v_row = cursor.fetchone()
         if not v_row:
-            conn.close()
             raise HTTPException(status_code=404, detail="Video details not found for regeneration")
             
         yt_id = v_row.get("youtube_id")
@@ -85,13 +84,9 @@ async def get_quiz(id: int, username: str = Depends(require_app_access)):
                     username=username
                 )
         except UsageLimitExceeded as e:
-            conn.close()
             raise HTTPException(status_code=429, detail=str(e))
         except Exception as e:
-            conn.close()
             raise HTTPException(status_code=500, detail=f"Failed to automatically regenerate quiz: {e}")
-            
-        conn.close()
 
         
         # No video_filename key: it was the last caller of the filename-shaped
@@ -151,11 +146,10 @@ async def get_quiz(id: int, username: str = Depends(require_app_access)):
         video_id = db_row["video_id"]
         if video_id:
             try:
-                conn = database.get_db_connection(username)
-                cursor = conn.cursor()
-                cursor.execute("SELECT youtube_id, title FROM videos WHERE id = %s AND user_uuid = %s;", (video_id, user_uuid))
-                v_row = cursor.fetchone()
-                conn.close()
+                with database.get_db_connection(username) as conn:
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT youtube_id, title FROM videos WHERE id = %s AND user_uuid = %s;", (video_id, user_uuid))
+                    v_row = cursor.fetchone()
                 if v_row:
                     video_data = database.get_video_row(video_id, username=username)
                     yt_id = v_row["youtube_id"]
@@ -253,214 +247,220 @@ async def grade_quiz(
         raise HTTPException(status_code=400, detail="Invalid grade value.")
         
     conn = database.get_db_connection(username)
-    user_uuid = conn.user_uuid
-    cursor = conn.cursor()
+    try:
+        user_uuid = conn.user_uuid
+        cursor = conn.cursor()
     
-    cursor.execute("""
-        SELECT q.id, q.srs_stage, q.quiz_type, q.video_id, q.goal_id,
-               v.importance_rating
-        FROM quizzes q
-        LEFT JOIN videos v ON q.video_id = v.id
-        WHERE q.id = %s AND q.user_uuid = %s;
-    """, (id, user_uuid))
+        cursor.execute("""
+            SELECT q.id, q.srs_stage, q.quiz_type, q.video_id, q.goal_id,
+                   v.importance_rating
+            FROM quizzes q
+            LEFT JOIN videos v ON q.video_id = v.id
+            WHERE q.id = %s AND q.user_uuid = %s;
+        """, (id, user_uuid))
 
 
-    row = cursor.fetchone()
-    if not row:
-        conn.close()
-        raise HTTPException(status_code=404, detail="Quiz not found")
+        row = cursor.fetchone()
+        if not row:
+            conn.close()
+            raise HTTPException(status_code=404, detail="Quiz not found")
         
-    is_final_bool = is_final_question if isinstance(is_final_question, bool) else (str(is_final_question).lower() in ("true", "1"))
-    progress_srs_bool = progress_srs if isinstance(progress_srs, bool) else (str(progress_srs).lower() in ("true", "1"))
+        is_final_bool = is_final_question if isinstance(is_final_question, bool) else (str(is_final_question).lower() in ("true", "1"))
+        progress_srs_bool = progress_srs if isinstance(progress_srs, bool) else (str(progress_srs).lower() in ("true", "1"))
 
-    current_stage = row["srs_stage"] if (row["srs_stage"] is not None) else 0
-    importance = row["importance_rating"] if row["importance_rating"] is not None else 3
+        current_stage = row["srs_stage"] if (row["srs_stage"] is not None) else 0
+        importance = row["importance_rating"] if row["importance_rating"] is not None else 3
     
-    intervals = get_srs_intervals(cursor, user_uuid=user_uuid)
+        intervals = get_srs_intervals(cursor, user_uuid=user_uuid)
 
-    active_intervals = [x for x in intervals if x is not None]
-    if not active_intervals:
-        active_intervals = [1, 3, 7, 14, 30]
+        active_intervals = [x for x in intervals if x is not None]
+        if not active_intervals:
+            active_intervals = [1, 3, 7, 14, 30]
         
-    num_stages = len(active_intervals)
-    srs_caps_cfg = get_srs_caps_and_repetition(cursor, user_uuid=user_uuid)
-    max_stages = compute_max_stages(srs_caps_cfg["cap_by_importance"], srs_caps_cfg["caps"], importance, num_stages)
+        num_stages = len(active_intervals)
+        srs_caps_cfg = get_srs_caps_and_repetition(cursor, user_uuid=user_uuid)
+        max_stages = compute_max_stages(srs_caps_cfg["cap_by_importance"], srs_caps_cfg["caps"], importance, num_stages)
 
-    multipliers = get_srs_multipliers(username)
-    multiplier = multipliers.get(importance, 1.5)
+        multipliers = get_srs_multipliers(username)
+        multiplier = multipliers.get(importance, 1.5)
     
-    stage_unlocked_srs_5 = False
-    next_stage = min(current_stage + 1, max_stages)
-    if next_stage == num_stages and current_stage < num_stages:
-        stage_unlocked_srs_5 = True
+        stage_unlocked_srs_5 = False
+        next_stage = min(current_stage + 1, max_stages)
+        if next_stage == num_stages and current_stage < num_stages:
+            stage_unlocked_srs_5 = True
         
-    stage_idx = max(0, min(next_stage - 1, num_stages - 1))
-    days = active_intervals[stage_idx] * multiplier
+        stage_idx = max(0, min(next_stage - 1, num_stages - 1))
+        days = active_intervals[stage_idx] * multiplier
     
-    if grade == "remembered":
-        xp_gain = 10
-    else:
-        xp_gain = 3
-        
-    pref_hour = get_preferred_hour(cursor, conn.user_uuid)
-    enable_stage_5_rep = srs_caps_cfg["enable_stage_5_repetition"]
-    stage_5_repeat_interval = srs_caps_cfg["stage_5_repeat_interval"]
-
-    if next_stage < max_stages or enable_stage_5_rep:
-        if next_stage >= max_stages:
-            days = stage_5_repeat_interval * multiplier
-        next_review = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=days)
-        next_review = adjust_next_review(next_review, pref_hour)
-        next_review_iso = next_review.isoformat()
-    else:
-        # Graduated: final stage reached and stage-5 repetition is off (the default).
-        # next_review_at is NOT NULL, so this can't be left as None, that used to throw
-        # a DB error on the UPDATE below and abort grading before XP/streak were saved.
-        # Push it far into the future instead, which keeps the quiz out of every "due"
-        # query without giving it a real repeat schedule.
-        next_review_iso = datetime(2999, 1, 1).isoformat()
-
-    user_uuid = conn.user_uuid
-    next_in_progress = question_index + 1
-    if progress_srs_bool:
-        if is_final_bool:
-            cursor.execute(
-                "UPDATE quizzes SET srs_stage = %s, next_review_at = %s, notified = 0, in_progress_index = NULL WHERE id = %s AND user_uuid = %s;",
-                (next_stage, next_review_iso, id, user_uuid)
-            )
+        if grade == "remembered":
+            xp_gain = 10
         else:
-            cursor.execute(
-                "UPDATE quizzes SET in_progress_index = %s WHERE id = %s AND user_uuid = %s;",
-                (next_in_progress, id, user_uuid)
-            )
-    
-    cursor.execute(
-        """INSERT INTO quiz_attempts (user_uuid, quiz_id, video_id, goal_id, question_index, question, given_answer, correct_answer, grade, xp_gained, explanation, feedback)
-           VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id;""",
-        (user_uuid, id, row["video_id"], row["goal_id"], question_index, question, given_answer, correct_answer, grade, xp_gain, explanation, feedback)
-    )
-    attempt_row = cursor.fetchone()
-    attempt_id = attempt_row["id"] if attempt_row else None
+            xp_gain = 3
+        
+        pref_hour = get_preferred_hour(cursor, conn.user_uuid)
+        enable_stage_5_rep = srs_caps_cfg["enable_stage_5_repetition"]
+        stage_5_repeat_interval = srs_caps_cfg["stage_5_repeat_interval"]
 
-    # The weekly leaderboard reads this ledger, not quiz_attempts. Deleting a video deletes
-    # its attempts (routers/videos.py), which used to retroactively erase the XP those
-    # answers had already earned from the weekly ranking while leaving user_profile.xp
-    # untouched. The ledger row outlives the attempt, so the two totals stay reconcilable.
-    cursor.execute(
-        "INSERT INTO xp_events (user_uuid, xp, source, quiz_attempt_id) VALUES (%s, %s, 'quiz', %s);",
-        (user_uuid, xp_gain, attempt_id)
-    )
+        if next_stage < max_stages or enable_stage_5_rep:
+            if next_stage >= max_stages:
+                days = stage_5_repeat_interval * multiplier
+            next_review = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=days)
+            next_review = adjust_next_review(next_review, pref_hour)
+            next_review_iso = next_review.isoformat()
+        else:
+            # Graduated: final stage reached and stage-5 repetition is off (the default).
+            # next_review_at is NOT NULL, so this can't be left as None, that used to throw
+            # a DB error on the UPDATE below and abort grading before XP/streak were saved.
+            # Push it far into the future instead, which keeps the quiz out of every "due"
+            # query without giving it a real repeat schedule.
+            next_review_iso = datetime(2999, 1, 1).isoformat()
+
+        user_uuid = conn.user_uuid
+        next_in_progress = question_index + 1
+        if progress_srs_bool:
+            if is_final_bool:
+                cursor.execute(
+                    "UPDATE quizzes SET srs_stage = %s, next_review_at = %s, notified = 0, in_progress_index = NULL WHERE id = %s AND user_uuid = %s;",
+                    (next_stage, next_review_iso, id, user_uuid)
+                )
+            else:
+                cursor.execute(
+                    "UPDATE quizzes SET in_progress_index = %s WHERE id = %s AND user_uuid = %s;",
+                    (next_in_progress, id, user_uuid)
+                )
     
-    cursor.execute("SELECT xp, level, streak, last_quiz_at, badges, review_mode FROM user_profile WHERE user_uuid = %s LIMIT 1;", (user_uuid,))
-    row_user = cursor.fetchone()
-    if not row_user:
-        cursor.execute("SELECT xp, level, streak, last_quiz_at, badges, review_mode FROM user_profile WHERE LOWER(username) = LOWER(%s) LIMIT 1;", (username,))
+        cursor.execute(
+            """INSERT INTO quiz_attempts (user_uuid, quiz_id, video_id, goal_id, question_index, question, given_answer, correct_answer, grade, xp_gained, explanation, feedback)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id;""",
+            (user_uuid, id, row["video_id"], row["goal_id"], question_index, question, given_answer, correct_answer, grade, xp_gain, explanation, feedback)
+        )
+        attempt_row = cursor.fetchone()
+        attempt_id = attempt_row["id"] if attempt_row else None
+
+        # The weekly leaderboard reads this ledger, not quiz_attempts. Deleting a video deletes
+        # its attempts (routers/videos.py), which used to retroactively erase the XP those
+        # answers had already earned from the weekly ranking while leaving user_profile.xp
+        # untouched. The ledger row outlives the attempt, so the two totals stay reconcilable.
+        cursor.execute(
+            "INSERT INTO xp_events (user_uuid, xp, source, quiz_attempt_id) VALUES (%s, %s, 'quiz', %s);",
+            (user_uuid, xp_gain, attempt_id)
+        )
+    
+        cursor.execute("SELECT xp, level, streak, last_quiz_at, badges, review_mode FROM user_profile WHERE user_uuid = %s LIMIT 1;", (user_uuid,))
         row_user = cursor.fetchone()
-    if not row_user:
-        conn.close()
-        raise HTTPException(status_code=500, detail="User profile not found for XP grading.")
+        if not row_user:
+            cursor.execute("SELECT xp, level, streak, last_quiz_at, badges, review_mode FROM user_profile WHERE LOWER(username) = LOWER(%s) LIMIT 1;", (username,))
+            row_user = cursor.fetchone()
+        if not row_user:
+            conn.close()
+            raise HTTPException(status_code=500, detail="User profile not found for XP grading.")
         
-    user = dict(row_user)
+        user = dict(row_user)
     
-    old_xp = user["xp"]
-    new_xp = old_xp + xp_gain
+        old_xp = user["xp"]
+        new_xp = old_xp + xp_gain
     
-    new_level = gamification.level_for_xp(new_xp)
-    leveled_up = new_level > user["level"]
+        new_level = gamification.level_for_xp(new_xp)
+        leveled_up = new_level > user["level"]
     
-    now_utc = gamification.utc_now()
-    # A streak counts consecutive calendar days: quizzing today after a quiz yesterday
-    # extends it, a second quiz the same day does not, and a gap resets it to 1. This is the
-    # only place user_profile.streak is written; read paths derive what to show with
-    # gamification.effective_streak instead of correcting the column.
-    streak = gamification.advance_streak(user.get("streak"), user.get("last_quiz_at"), now=now_utc)
+        now_utc = gamification.utc_now()
+        # A streak counts consecutive calendar days: quizzing today after a quiz yesterday
+        # extends it, a second quiz the same day does not, and a gap resets it to 1. This is the
+        # only place user_profile.streak is written; read paths derive what to show with
+        # gamification.effective_streak instead of correcting the column.
+        streak = gamification.advance_streak(user.get("streak"), user.get("last_quiz_at"), now=now_utc)
         
-    badges = json.loads(user["badges"]) if user.get("badges") else []
-    new_badges = []
+        badges = json.loads(user["badges"]) if user.get("badges") else []
+        new_badges = []
     
-    if streak >= 5 and "5-Day Streak" not in badges:
-        new_badges.append("5-Day Streak")
-    if streak >= 10 and "10-Day Streak" not in badges:
-        new_badges.append("10-Day Streak")
+        if streak >= 5 and "5-Day Streak" not in badges:
+            new_badges.append("5-Day Streak")
+        if streak >= 10 and "10-Day Streak" not in badges:
+            new_badges.append("10-Day Streak")
         
-    if stage_unlocked_srs_5 and "SRS Stage 5 Master" not in badges:
-        new_badges.append("SRS Stage 5 Master")
+        if stage_unlocked_srs_5 and "SRS Stage 5 Master" not in badges:
+            new_badges.append("SRS Stage 5 Master")
         
-    if "Video Collector" not in badges:
-        cursor.execute("SELECT COUNT(*) FROM videos WHERE user_uuid = %s;", (user_uuid,))
-        video_count = database.first_val(cursor.fetchone())
-        if video_count >= 10:
-            new_badges.append("Video Collector")
+        if "Video Collector" not in badges:
+            cursor.execute("SELECT COUNT(*) FROM videos WHERE user_uuid = %s;", (user_uuid,))
+            video_count = database.first_val(cursor.fetchone())
+            if video_count >= 10:
+                new_badges.append("Video Collector")
         
-    if "Renaissance Learner" not in badges:
-        cursor.execute("SELECT COUNT(DISTINCT category) FROM videos WHERE user_uuid = %s;", (user_uuid,))
-        category_count = database.first_val(cursor.fetchone())
-        if category_count >= 3:
-            new_badges.append("Renaissance Learner")
+        if "Renaissance Learner" not in badges:
+            cursor.execute("SELECT COUNT(DISTINCT category) FROM videos WHERE user_uuid = %s;", (user_uuid,))
+            category_count = database.first_val(cursor.fetchone())
+            if category_count >= 3:
+                new_badges.append("Renaissance Learner")
 
         
-    badges.extend(new_badges)
+        badges.extend(new_badges)
     
-    cursor.execute(
-        """UPDATE user_profile 
-           SET xp = %s, level = %s, streak = %s, last_quiz_at = %s, badges = %s WHERE user_uuid = %s;""",
-        (new_xp, new_level, streak, now_utc.isoformat(), json.dumps(badges), user_uuid)
-    )
+        cursor.execute(
+            """UPDATE user_profile 
+               SET xp = %s, level = %s, streak = %s, last_quiz_at = %s, badges = %s WHERE user_uuid = %s;""",
+            (new_xp, new_level, streak, now_utc.isoformat(), json.dumps(badges), user_uuid)
+        )
 
 
     
-    if progress_srs_bool:
-        # The srs_stage and next_review_at columns were already written above; this keeps the
-        # in-progress position in step. Finishing a session clears it, mid-session advances it.
-        if is_final_bool:
-            database.update_quiz_progress(id, username=username, in_progress_index=None)
-        else:
-            database.update_quiz_progress(id, username=username, in_progress_index=next_in_progress)
+        if progress_srs_bool:
+            # The srs_stage and next_review_at columns were already written above; this keeps the
+            # in-progress position in step. Finishing a session clears it, mid-session advances it.
+            if is_final_bool:
+                database.update_quiz_progress(id, username=username, in_progress_index=None)
+            else:
+                database.update_quiz_progress(id, username=username, in_progress_index=next_in_progress)
 
-        # A block here previously read the video row, set srs_stage and next_review_at on the
-        # dict, and wrote it back. The videos table has neither column, and save_video_json
-        # persisted only summary, outline and fact_check, so it rewrote those three to
-        # themselves and changed nothing. Removed rather than translated.
+            # A block here previously read the video row, set srs_stage and next_review_at on the
+            # dict, and wrote it back. The videos table has neither column, and save_video_json
+            # persisted only summary, outline and fact_check, so it rewrote those three to
+            # themselves and changed nothing. Removed rather than translated.
                 
-    conn.commit()
-    conn.close()
+        conn.commit()
+        conn.close()
     
-    return {
-        "status": "success",
-        "new_stage": next_stage,
-        "max_stages": max_stages,
-        "mastered": next_stage >= max_stages,
-        "xp_gained": xp_gain,
-        "total_xp": new_xp,
-        "level": new_level,
-        "streak": streak,
-        "leveled_up": leveled_up,
-        "new_badges": new_badges
-    }
+        return {
+            "status": "success",
+            "new_stage": next_stage,
+            "max_stages": max_stages,
+            "mastered": next_stage >= max_stages,
+            "xp_gained": xp_gain,
+            "total_xp": new_xp,
+            "level": new_level,
+            "streak": streak,
+            "leveled_up": leveled_up,
+            "new_badges": new_badges
+        }
+    finally:
+        conn.close()
 
 
 @router.post("/quiz/{id}/reschedule")
 async def reschedule_quiz(id: int, username: str = Depends(require_app_access)):
     """Reschedules a quiz review by 1 day."""
     conn = database.get_db_connection(username)
-    user_uuid = conn.user_uuid
-    cursor = conn.cursor()
-    cursor.execute("SELECT id FROM quizzes WHERE id = %s AND user_uuid = %s;", (id, user_uuid))
-    row = cursor.fetchone()
-    if not row:
-        conn.close()
-        raise HTTPException(status_code=404, detail="Quiz not found")
+    try:
+        user_uuid = conn.user_uuid
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM quizzes WHERE id = %s AND user_uuid = %s;", (id, user_uuid))
+        row = cursor.fetchone()
+        if not row:
+            conn.close()
+            raise HTTPException(status_code=404, detail="Quiz not found")
         
-    pref_hour = get_preferred_hour(cursor, user_uuid)
-    next_review = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=1)
-    next_review = adjust_next_review(next_review, pref_hour)
+        pref_hour = get_preferred_hour(cursor, user_uuid)
+        next_review = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=1)
+        next_review = adjust_next_review(next_review, pref_hour)
 
-    cursor.execute("UPDATE quizzes SET next_review_at = %s, notified = 0 WHERE id = %s AND user_uuid = %s;", (next_review.isoformat(), id, user_uuid))
-    conn.commit()
-    conn.close()
+        cursor.execute("UPDATE quizzes SET next_review_at = %s, notified = 0 WHERE id = %s AND user_uuid = %s;", (next_review.isoformat(), id, user_uuid))
+        conn.commit()
+        conn.close()
 
 
-    return {"status": "success", "next_review_at": next_review.isoformat()}
+        return {"status": "success", "next_review_at": next_review.isoformat()}
+    finally:
+        conn.close()
 
 
 @router.post("/quiz/verify-guess")

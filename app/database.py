@@ -191,6 +191,7 @@ class ConnectionWrapper:
     def __init__(self, raw_conn, user_uuid=None):
         self._conn = raw_conn
         self.user_uuid = user_uuid
+        self._released = False
 
     def cursor(self, *args, **kwargs):
         if "cursor_factory" not in kwargs:
@@ -211,6 +212,12 @@ class ConnectionWrapper:
             self._conn.rollback()
 
     def close(self):
+        # Idempotent, so a `finally: conn.close()` can back up the early closes that many
+        # handlers do before returning or raising. Releasing the same connection twice would
+        # hand it to the pool twice.
+        if self._released:
+            return
+        self._released = True
         release_pooled_connection(self._conn)
 
     def __enter__(self):

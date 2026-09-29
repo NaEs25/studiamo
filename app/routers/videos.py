@@ -141,110 +141,113 @@ async def add_content(
         content_hash = storage.content_hash_text(text_content)
 
     conn = database.get_db_connection(username)
-    cursor = conn.cursor()
+    try:
+        cursor = conn.cursor()
 
-    if content_hash:
-        # A failed import keeps its row, so it is excluded: uploading the same file again is
-        # how the user retries it.
-        cursor.execute(
-            """SELECT id FROM videos
-                WHERE user_uuid = %s AND content_hash = %s AND status <> 'failed'
-                LIMIT 1;""",
-            (conn.user_uuid, content_hash)
-        )
-        if cursor.fetchone():
-            conn.close()
-            raise HTTPException(status_code=400, detail="This content has already been processed.")
-
-    if yt_id:
-        user_uuid = conn.user_uuid
-        cursor.execute("SELECT id, status, is_watchlist, is_temporary FROM videos WHERE youtube_id = %s AND user_uuid = %s;", (yt_id, user_uuid))
-        existing = cursor.fetchone()
-        if existing:
-            if existing["status"] == "failed" or existing.get("is_temporary") == 1 or existing.get("is_temporary") == True:
-                cursor.execute("UPDATE videos SET status = 'processing', status_error = NULL, is_temporary = 0, expires_at = NULL WHERE id = %s AND user_uuid = %s;", (existing["id"], user_uuid))
-                if is_watchlist == 1:
-                    cursor.execute("UPDATE videos SET is_watchlist = 1 WHERE id = %s AND user_uuid = %s;", (existing["id"], user_uuid))
-                conn.commit()
+        if content_hash:
+            # A failed import keeps its row, so it is excluded: uploading the same file again is
+            # how the user retries it.
+            cursor.execute(
+                """SELECT id FROM videos
+                    WHERE user_uuid = %s AND content_hash = %s AND status <> 'failed'
+                    LIMIT 1;""",
+                (conn.user_uuid, content_hash)
+            )
+            if cursor.fetchone():
                 conn.close()
-                task_id = ImportQueueManager.get_instance().enqueue_task(
-                    username=username,
-                    task_type="youtube",
-                    title=placeholder_title,
-                    payload=payload,
-                    video_id=existing["id"]
-                )
-                return {"status": "processing", "video_id": existing["id"], "task_id": task_id, "retrying": True}
-            elif existing["status"] == "processing":
-                cursor.execute(
-                    """SELECT id, status, updated_at FROM import_tasks 
-                       WHERE video_id = %s AND user_uuid = %s ORDER BY id DESC LIMIT 1;""",
-                    (existing["id"], user_uuid)
-                )
-                t_row = cursor.fetchone()
-                queue_mgr = ImportQueueManager.get_instance()
-                is_running = t_row and queue_mgr.is_task_inflight(t_row["id"])
-                if is_running:
+                raise HTTPException(status_code=400, detail="This content has already been processed.")
+
+        if yt_id:
+            user_uuid = conn.user_uuid
+            cursor.execute("SELECT id, status, is_watchlist, is_temporary FROM videos WHERE youtube_id = %s AND user_uuid = %s;", (yt_id, user_uuid))
+            existing = cursor.fetchone()
+            if existing:
+                if existing["status"] == "failed" or existing.get("is_temporary") == 1 or existing.get("is_temporary") == True:
+                    cursor.execute("UPDATE videos SET status = 'processing', status_error = NULL, is_temporary = 0, expires_at = NULL WHERE id = %s AND user_uuid = %s;", (existing["id"], user_uuid))
+                    if is_watchlist == 1:
+                        cursor.execute("UPDATE videos SET is_watchlist = 1 WHERE id = %s AND user_uuid = %s;", (existing["id"], user_uuid))
+                    conn.commit()
                     conn.close()
-                    return {"status": "processing", "video_id": existing["id"], "task_id": t_row["id"], "already_processing": True}
+                    task_id = ImportQueueManager.get_instance().enqueue_task(
+                        username=username,
+                        task_type="youtube",
+                        title=placeholder_title,
+                        payload=payload,
+                        video_id=existing["id"]
+                    )
+                    return {"status": "processing", "video_id": existing["id"], "task_id": task_id, "retrying": True}
+                elif existing["status"] == "processing":
+                    cursor.execute(
+                        """SELECT id, status, updated_at FROM import_tasks 
+                           WHERE video_id = %s AND user_uuid = %s ORDER BY id DESC LIMIT 1;""",
+                        (existing["id"], user_uuid)
+                    )
+                    t_row = cursor.fetchone()
+                    queue_mgr = ImportQueueManager.get_instance()
+                    is_running = t_row and queue_mgr.is_task_inflight(t_row["id"])
+                    if is_running:
+                        conn.close()
+                        return {"status": "processing", "video_id": existing["id"], "task_id": t_row["id"], "already_processing": True}
                 
-                cursor.execute("UPDATE videos SET status = 'processing', status_error = NULL WHERE id = %s AND user_uuid = %s;", (existing["id"], user_uuid))
-                if is_watchlist == 1:
+                    cursor.execute("UPDATE videos SET status = 'processing', status_error = NULL WHERE id = %s AND user_uuid = %s;", (existing["id"], user_uuid))
+                    if is_watchlist == 1:
+                        cursor.execute("UPDATE videos SET is_watchlist = 1 WHERE id = %s AND user_uuid = %s;", (existing["id"], user_uuid))
+                    conn.commit()
+                    conn.close()
+                    task_id = queue_mgr.enqueue_task(
+                        username=username,
+                        task_type="youtube",
+                        title=placeholder_title,
+                        payload=payload,
+                        video_id=existing["id"]
+                    )
+                    return {"status": "processing", "video_id": existing["id"], "task_id": task_id, "retrying": True}
+                elif is_watchlist == 1:
                     cursor.execute("UPDATE videos SET is_watchlist = 1 WHERE id = %s AND user_uuid = %s;", (existing["id"], user_uuid))
-                conn.commit()
+                    conn.commit()
+                    conn.close()
+                    return {"status": "success", "video_id": existing["id"], "already_existed": True}
                 conn.close()
-                task_id = queue_mgr.enqueue_task(
-                    username=username,
-                    task_type="youtube",
-                    title=placeholder_title,
-                    payload=payload,
-                    video_id=existing["id"]
-                )
-                return {"status": "processing", "video_id": existing["id"], "task_id": task_id, "retrying": True}
-            elif is_watchlist == 1:
-                cursor.execute("UPDATE videos SET is_watchlist = 1 WHERE id = %s AND user_uuid = %s;", (existing["id"], user_uuid))
-                conn.commit()
-                conn.close()
-                return {"status": "success", "video_id": existing["id"], "already_existed": True}
-            conn.close()
-            raise HTTPException(status_code=400, detail="This content has already been processed.")
+                raise HTTPException(status_code=400, detail="This content has already been processed.")
             
-    user_uuid = conn.user_uuid
-    cursor.execute(
-        """INSERT INTO videos 
-           (user_uuid, youtube_id, title, category, thumbnail_url, importance_rating, learning_goal_id, is_archived, is_paused, is_watchlist, status, content_hash)
-           VALUES (%s, %s, %s, 'Processing', %s, %s, %s, 0, 0, %s, 'processing', %s) RETURNING id;""",
-        (user_uuid, yt_id, placeholder_title, placeholder_thumb, importance_rating, learning_goal_id, is_watchlist, content_hash)
-    )
-    res = cursor.fetchone()
-    video_id = res["id"] if isinstance(res, dict) and "id" in res else (res[0] if res else cursor.lastrowid)
-    conn.commit()
-    conn.close()
+        user_uuid = conn.user_uuid
+        cursor.execute(
+            """INSERT INTO videos 
+               (user_uuid, youtube_id, title, category, thumbnail_url, importance_rating, learning_goal_id, is_archived, is_paused, is_watchlist, status, content_hash)
+               VALUES (%s, %s, %s, 'Processing', %s, %s, %s, 0, 0, %s, 'processing', %s) RETURNING id;""",
+            (user_uuid, yt_id, placeholder_title, placeholder_thumb, importance_rating, learning_goal_id, is_watchlist, content_hash)
+        )
+        res = cursor.fetchone()
+        video_id = res["id"] if isinstance(res, dict) and "id" in res else (res[0] if res else cursor.lastrowid)
+        conn.commit()
+        conn.close()
     
-    if file:
-        # Written straight to its permanent items/doc_<video_id><ext> home, the
-        # same path serve_video_document() reads and delete_video() removes.
-        # It used to land in a separate uploads/ staging copy that the importer
-        # then duplicated into items/ and nobody ever deleted, so every document
-        # upload leaked a second copy against the user's 2 GB quota.
-        # Only a validated extension is taken from the client filename, never
-        # the filename itself, so a crafted name (e.g. containing "../") can't
-        # write outside this directory.
-        safe_ext = storage.safe_doc_extension(file.filename)
-        saved_file_path = storage.get_document_path(video_id, safe_ext, username=username)
-        saved_file_path.write_bytes(file_bytes)
-        payload["file_path"] = str(saved_file_path)
-        payload["original_filename"] = file.filename
+        if file:
+            # Written straight to its permanent items/doc_<video_id><ext> home, the
+            # same path serve_video_document() reads and delete_video() removes.
+            # It used to land in a separate uploads/ staging copy that the importer
+            # then duplicated into items/ and nobody ever deleted, so every document
+            # upload leaked a second copy against the user's 2 GB quota.
+            # Only a validated extension is taken from the client filename, never
+            # the filename itself, so a crafted name (e.g. containing "../") can't
+            # write outside this directory.
+            safe_ext = storage.safe_doc_extension(file.filename)
+            saved_file_path = storage.get_document_path(video_id, safe_ext, username=username)
+            saved_file_path.write_bytes(file_bytes)
+            payload["file_path"] = str(saved_file_path)
+            payload["original_filename"] = file.filename
 
-    task_id = ImportQueueManager.get_instance().enqueue_task(
-        username=username,
-        task_type=task_type,
-        title=placeholder_title,
-        payload=payload,
-        video_id=video_id
-    )
+        task_id = ImportQueueManager.get_instance().enqueue_task(
+            username=username,
+            task_type=task_type,
+            title=placeholder_title,
+            payload=payload,
+            video_id=video_id
+        )
     
-    return {"status": "processing", "video_id": video_id, "task_id": task_id, "title": placeholder_title}
+        return {"status": "processing", "video_id": video_id, "task_id": task_id, "title": placeholder_title}
+    finally:
+        conn.close()
 
 
 @router.post("/videos/{video_id}/retry")
@@ -254,81 +257,87 @@ async def retry_video_import_route(
 ):
     """Retries a failed video/document import task via ImportQueueManager."""
     conn = database.get_db_connection(username)
-    user_uuid = conn.user_uuid
-    cursor = conn.cursor()
-    cursor.execute("SELECT id, youtube_id, title, importance_rating, learning_goal_id FROM videos WHERE id = %s AND user_uuid = %s;", (video_id, user_uuid))
-    video = cursor.fetchone()
-    if not video:
-        conn.close()
-        raise HTTPException(status_code=404, detail="Video not found")
+    try:
+        user_uuid = conn.user_uuid
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, youtube_id, title, importance_rating, learning_goal_id FROM videos WHERE id = %s AND user_uuid = %s;", (video_id, user_uuid))
+        video = cursor.fetchone()
+        if not video:
+            conn.close()
+            raise HTTPException(status_code=404, detail="Video not found")
         
-    cursor.execute("UPDATE videos SET status = 'processing', status_error = NULL WHERE id = %s AND user_uuid = %s;", (video_id, user_uuid))
+        cursor.execute("UPDATE videos SET status = 'processing', status_error = NULL WHERE id = %s AND user_uuid = %s;", (video_id, user_uuid))
     
-    # Check if existing task in import_tasks table
-    cursor.execute("SELECT id FROM import_tasks WHERE video_id = %s AND user_uuid = %s ORDER BY id DESC LIMIT 1;", (video_id, user_uuid))
-    task_row = cursor.fetchone()
-    conn.commit()
-    conn.close()
+        # Check if existing task in import_tasks table
+        cursor.execute("SELECT id FROM import_tasks WHERE video_id = %s AND user_uuid = %s ORDER BY id DESC LIMIT 1;", (video_id, user_uuid))
+        task_row = cursor.fetchone()
+        conn.commit()
+        conn.close()
     
-    if task_row:
-        task_id = task_row["id"]
-        success = ImportQueueManager.get_instance().retry_task(task_id, username)
-        return {"status": "processing", "video_id": video_id, "task_id": task_id}
-    else:
-        url = f"https://www.youtube.com/watch?v={video['youtube_id']}" if video.get("youtube_id") else None
-        task_type = "youtube" if video.get("youtube_id") else "document"
-        payload = {
-            "url": url,
-            "title": video["title"],
-            "importance_rating": video["importance_rating"],
-            "learning_goal_id": video["learning_goal_id"]
-        }
+        if task_row:
+            task_id = task_row["id"]
+            success = ImportQueueManager.get_instance().retry_task(task_id, username)
+            return {"status": "processing", "video_id": video_id, "task_id": task_id}
+        else:
+            url = f"https://www.youtube.com/watch?v={video['youtube_id']}" if video.get("youtube_id") else None
+            task_type = "youtube" if video.get("youtube_id") else "document"
+            payload = {
+                "url": url,
+                "title": video["title"],
+                "importance_rating": video["importance_rating"],
+                "learning_goal_id": video["learning_goal_id"]
+            }
 
-        # A document task is nothing without file_path: DocumentTaskProcessor reads it
-        # first and raises "Uploaded document file was not found on server" without one.
-        # This branch runs when no import_tasks row survives (the user dismissed the failed
-        # task from the backlog), and it built the payload without one, so retrying a
-        # document could only ever fail again with a message saying the upload was lost.
-        # It usually is not: the file sits at items/doc_<video_id>.*, exactly where
-        # serve_video_document reads it from. If it really is gone, the key stays absent
-        # and the task fails as before, which is then an accurate message.
-        if task_type == "document":
-            doc_matches = sorted(storage.get_user_items_dir(username).glob(f"doc_{video_id}.*"))
-            if doc_matches:
-                payload["file_path"] = str(doc_matches[0])
+            # A document task is nothing without file_path: DocumentTaskProcessor reads it
+            # first and raises "Uploaded document file was not found on server" without one.
+            # This branch runs when no import_tasks row survives (the user dismissed the failed
+            # task from the backlog), and it built the payload without one, so retrying a
+            # document could only ever fail again with a message saying the upload was lost.
+            # It usually is not: the file sits at items/doc_<video_id>.*, exactly where
+            # serve_video_document reads it from. If it really is gone, the key stays absent
+            # and the task fails as before, which is then an accurate message.
+            if task_type == "document":
+                doc_matches = sorted(storage.get_user_items_dir(username).glob(f"doc_{video_id}.*"))
+                if doc_matches:
+                    payload["file_path"] = str(doc_matches[0])
 
-        task_id = ImportQueueManager.get_instance().enqueue_task(
-            username=username,
-            task_type=task_type,
-            title=video["title"],
-            payload=payload,
-            video_id=video_id
-        )
-        return {"status": "processing", "video_id": video_id, "task_id": task_id}
+            task_id = ImportQueueManager.get_instance().enqueue_task(
+                username=username,
+                task_type=task_type,
+                title=video["title"],
+                payload=payload,
+                video_id=video_id
+            )
+            return {"status": "processing", "video_id": video_id, "task_id": task_id}
+    finally:
+        conn.close()
 
 
 def _resolve_video_document(video_id: int, username: str) -> Path:
     conn = database.get_db_connection(username)
-    user_uuid = conn.user_uuid
-    cursor = conn.cursor()
-    # Scoped to user_uuid: this is the ownership check for the document being served,
-    # not a data fetch. Nothing but the row's existence is used, so it selects id.
-    cursor.execute("SELECT id FROM videos WHERE id = %s AND user_uuid = %s;", (video_id, user_uuid))
-    row = cursor.fetchone()
-    conn.close()
+    try:
+        user_uuid = conn.user_uuid
+        cursor = conn.cursor()
+        # Scoped to user_uuid: this is the ownership check for the document being served,
+        # not a data fetch. Nothing but the row's existence is used, so it selects id.
+        cursor.execute("SELECT id FROM videos WHERE id = %s AND user_uuid = %s;", (video_id, user_uuid))
+        row = cursor.fetchone()
+        conn.close()
 
-    if not row:
-        raise HTTPException(status_code=404, detail="Document item not found")
+        if not row:
+            raise HTTPException(status_code=404, detail="Document item not found")
 
-    doc_dir = storage.get_user_items_dir(username)
-    if not doc_dir.exists():
-        raise HTTPException(status_code=404, detail="Document storage directory not found")
+        doc_dir = storage.get_user_items_dir(username)
+        if not doc_dir.exists():
+            raise HTTPException(status_code=404, detail="Document storage directory not found")
 
-    matching_files = list(doc_dir.glob(f"doc_{video_id}.*"))
-    if not matching_files:
-        raise HTTPException(status_code=404, detail="Document file not found")
+        matching_files = list(doc_dir.glob(f"doc_{video_id}.*"))
+        if not matching_files:
+            raise HTTPException(status_code=404, detail="Document file not found")
 
-    return matching_files[0]
+        return matching_files[0]
+    finally:
+        conn.close()
 
 
 def _document_media_type(target_file: Path) -> str:
@@ -364,56 +373,65 @@ async def serve_video_pdf_inline(video_id: int, username: str = Depends(require_
 async def archive_video(id: int, username: str = Depends(require_app_access)):
     """Toggles archived status for a video."""
     conn = database.get_db_connection(username)
-    user_uuid = conn.user_uuid
-    cursor = conn.cursor()
-    cursor.execute("SELECT is_archived FROM videos WHERE id = %s AND user_uuid = %s;", (id, user_uuid))
-    row = cursor.fetchone()
-    if not row:
+    try:
+        user_uuid = conn.user_uuid
+        cursor = conn.cursor()
+        cursor.execute("SELECT is_archived FROM videos WHERE id = %s AND user_uuid = %s;", (id, user_uuid))
+        row = cursor.fetchone()
+        if not row:
+            conn.close()
+            raise HTTPException(status_code=404, detail="Video not found")
+        new_state = 0 if row["is_archived"] else 1
+        cursor.execute("UPDATE videos SET is_archived = %s WHERE id = %s AND user_uuid = %s;", (new_state, id, user_uuid))
+        conn.commit()
         conn.close()
-        raise HTTPException(status_code=404, detail="Video not found")
-    new_state = 0 if row["is_archived"] else 1
-    cursor.execute("UPDATE videos SET is_archived = %s WHERE id = %s AND user_uuid = %s;", (new_state, id, user_uuid))
-    conn.commit()
-    conn.close()
-    return {"status": "success", "is_archived": new_state}
+        return {"status": "success", "is_archived": new_state}
+    finally:
+        conn.close()
 
 
 @router.post("/videos/{id}/pause")
 async def pause_video(id: int, username: str = Depends(require_app_access)):
     """Toggles paused status for a video SRS review schedule."""
     conn = database.get_db_connection(username)
-    user_uuid = conn.user_uuid
-    cursor = conn.cursor()
-    cursor.execute("SELECT is_paused FROM videos WHERE id = %s AND user_uuid = %s;", (id, user_uuid))
-    row = cursor.fetchone()
-    if not row:
+    try:
+        user_uuid = conn.user_uuid
+        cursor = conn.cursor()
+        cursor.execute("SELECT is_paused FROM videos WHERE id = %s AND user_uuid = %s;", (id, user_uuid))
+        row = cursor.fetchone()
+        if not row:
+            conn.close()
+            raise HTTPException(status_code=404, detail="Video not found")
+        new_state = 0 if row["is_paused"] else 1
+        cursor.execute("UPDATE videos SET is_paused = %s WHERE id = %s AND user_uuid = %s;", (new_state, id, user_uuid))
+        conn.commit()
         conn.close()
-        raise HTTPException(status_code=404, detail="Video not found")
-    new_state = 0 if row["is_paused"] else 1
-    cursor.execute("UPDATE videos SET is_paused = %s WHERE id = %s AND user_uuid = %s;", (new_state, id, user_uuid))
-    conn.commit()
-    conn.close()
-    return {"status": "success", "is_paused": new_state}
+        return {"status": "success", "is_paused": new_state}
+    finally:
+        conn.close()
 
 
 @router.delete("/videos/{id}")
 async def delete_video(id: int, username: str = Depends(require_app_access)):
     """Deletes a video and its associated quiz & JSON files."""
     conn = database.get_db_connection(username)
-    user_uuid = conn.user_uuid
-    cursor = conn.cursor()
-    cursor.execute("SELECT id FROM videos WHERE id = %s AND user_uuid = %s;", (id, user_uuid))
-    row = cursor.fetchone()
-    if not row:
+    try:
+        user_uuid = conn.user_uuid
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM videos WHERE id = %s AND user_uuid = %s;", (id, user_uuid))
+        row = cursor.fetchone()
+        if not row:
+            conn.close()
+            raise HTTPException(status_code=404, detail="Video not found")
+        storage.delete_video_document(id, username=username)
+        cursor.execute("DELETE FROM quiz_attempts WHERE video_id = %s AND user_uuid = %s;", (id, user_uuid))
+        cursor.execute("DELETE FROM quizzes WHERE video_id = %s AND user_uuid = %s;", (id, user_uuid))
+        cursor.execute("DELETE FROM videos WHERE id = %s AND user_uuid = %s;", (id, user_uuid))
+        conn.commit()
         conn.close()
-        raise HTTPException(status_code=404, detail="Video not found")
-    storage.delete_video_document(id, username=username)
-    cursor.execute("DELETE FROM quiz_attempts WHERE video_id = %s AND user_uuid = %s;", (id, user_uuid))
-    cursor.execute("DELETE FROM quizzes WHERE video_id = %s AND user_uuid = %s;", (id, user_uuid))
-    cursor.execute("DELETE FROM videos WHERE id = %s AND user_uuid = %s;", (id, user_uuid))
-    conn.commit()
-    conn.close()
-    return {"status": "success", "message": "Video deleted successfully"}
+        return {"status": "success", "message": "Video deleted successfully"}
+    finally:
+        conn.close()
 
 
 @router.post("/videos/{id}/goal")
@@ -424,75 +442,84 @@ async def assign_video_goal(
 ):
     """Assigns or updates the learning goal ID for a video."""
     conn = database.get_db_connection(username)
-    user_uuid = conn.user_uuid
-    cursor = conn.cursor()
-    cursor.execute("UPDATE videos SET learning_goal_id = %s WHERE id = %s AND user_uuid = %s;", (learning_goal_id, id, user_uuid))
-    if cursor.rowcount == 0:
+    try:
+        user_uuid = conn.user_uuid
+        cursor = conn.cursor()
+        cursor.execute("UPDATE videos SET learning_goal_id = %s WHERE id = %s AND user_uuid = %s;", (learning_goal_id, id, user_uuid))
+        if cursor.rowcount == 0:
+            conn.close()
+            raise HTTPException(status_code=404, detail="Video not found")
+        conn.commit()
         conn.close()
-        raise HTTPException(status_code=404, detail="Video not found")
-    conn.commit()
-    conn.close()
-    return {"status": "success", "learning_goal_id": learning_goal_id}
+        return {"status": "success", "learning_goal_id": learning_goal_id}
+    finally:
+        conn.close()
 
 
 @router.post("/videos/{id}/watchlist")
 async def toggle_watchlist(id: int, username: str = Depends(require_app_access)):
     """Toggles watchlist status for a video."""
     conn = database.get_db_connection(username)
-    user_uuid = conn.user_uuid
-    cursor = conn.cursor()
-    cursor.execute("SELECT is_watchlist FROM videos WHERE id = %s AND user_uuid = %s;", (id, user_uuid))
-    row = cursor.fetchone()
-    if not row:
+    try:
+        user_uuid = conn.user_uuid
+        cursor = conn.cursor()
+        cursor.execute("SELECT is_watchlist FROM videos WHERE id = %s AND user_uuid = %s;", (id, user_uuid))
+        row = cursor.fetchone()
+        if not row:
+            conn.close()
+            raise HTTPException(status_code=404, detail="Video not found")
+        new_state = 0 if row["is_watchlist"] else 1
+        cursor.execute("UPDATE videos SET is_watchlist = %s WHERE id = %s AND user_uuid = %s;", (new_state, id, user_uuid))
+        conn.commit()
         conn.close()
-        raise HTTPException(status_code=404, detail="Video not found")
-    new_state = 0 if row["is_watchlist"] else 1
-    cursor.execute("UPDATE videos SET is_watchlist = %s WHERE id = %s AND user_uuid = %s;", (new_state, id, user_uuid))
-    conn.commit()
-    conn.close()
-    return {"status": "success", "is_watchlist": new_state}
+        return {"status": "success", "is_watchlist": new_state}
+    finally:
+        conn.close()
 
 
 @router.get("/videos/{id}/factcheck")
 async def get_fact_check(id: int, username: str = Depends(require_app_access)):
     """Returns AI fact-checking analysis for a video content payload, using cached result if available."""
     conn = database.get_db_connection(username)
-    user_uuid = conn.user_uuid
-    cursor = conn.cursor()
-    cursor.execute("SELECT youtube_id, title, learning_goal_id FROM videos WHERE id = %s AND user_uuid = %s;", (id, user_uuid))
-    row = cursor.fetchone()
-    conn.close()
-    if not row:
-        raise HTTPException(status_code=404, detail="Video not found")
-        
-    video_json = database.get_video_row(id, username=username)
-    if not video_json:
-        raise HTTPException(status_code=404, detail="Video metadata not found")
-        
-    if "fact_check" in video_json and video_json["fact_check"]:
-        return video_json["fact_check"]
-
-    # "Key concept preview for {title}" is a display-only placeholder stamped onto
-    # `summary` for freshly-created preview videos (see /videos/preview) before any
-    # real content exists. It must never be treated as real transcript/notes content,
-    # and must not mask real custom_notes the way a plain `or` fallback would.
-    real_summary_lines = [
-        line for line in video_json.get("summary", [])
-        if not line.startswith("Key concept preview for ")
-    ]
-    text_content = "\n".join(real_summary_lines + [video_json.get("custom_notes") or ""]).strip()
-    if not text_content:
-        # Nothing to compare against consensus on yet. Fail loudly instead of
-        # asking Gemini to fact-check an empty string, which risks a
-        # confidently-worded verdict for content it never actually reviewed.
-        raise HTTPException(status_code=409, detail="No content available to fact-check yet. Wait for the video's summary to finish generating.")
-
     try:
-        fact_check = ai.fact_check_transcript(text_content, video_id=id, username=username)
-    except UsageLimitExceeded as e:
-        raise HTTPException(status_code=429, detail=str(e))
-    database.save_video_analysis(id, username, fact_check=fact_check)
-    return fact_check
+        user_uuid = conn.user_uuid
+        cursor = conn.cursor()
+        cursor.execute("SELECT youtube_id, title, learning_goal_id FROM videos WHERE id = %s AND user_uuid = %s;", (id, user_uuid))
+        row = cursor.fetchone()
+        conn.close()
+        if not row:
+            raise HTTPException(status_code=404, detail="Video not found")
+        
+        video_json = database.get_video_row(id, username=username)
+        if not video_json:
+            raise HTTPException(status_code=404, detail="Video metadata not found")
+        
+        if "fact_check" in video_json and video_json["fact_check"]:
+            return video_json["fact_check"]
+
+        # "Key concept preview for {title}" is a display-only placeholder stamped onto
+        # `summary` for freshly-created preview videos (see /videos/preview) before any
+        # real content exists. It must never be treated as real transcript/notes content,
+        # and must not mask real custom_notes the way a plain `or` fallback would.
+        real_summary_lines = [
+            line for line in video_json.get("summary", [])
+            if not line.startswith("Key concept preview for ")
+        ]
+        text_content = "\n".join(real_summary_lines + [video_json.get("custom_notes") or ""]).strip()
+        if not text_content:
+            # Nothing to compare against consensus on yet. Fail loudly instead of
+            # asking Gemini to fact-check an empty string, which risks a
+            # confidently-worded verdict for content it never actually reviewed.
+            raise HTTPException(status_code=409, detail="No content available to fact-check yet. Wait for the video's summary to finish generating.")
+
+        try:
+            fact_check = ai.fact_check_transcript(text_content, video_id=id, username=username)
+        except UsageLimitExceeded as e:
+            raise HTTPException(status_code=429, detail=str(e))
+        database.save_video_analysis(id, username, fact_check=fact_check)
+        return fact_check
+    finally:
+        conn.close()
 
 
 @router.post("/videos/{id}/edit")
@@ -507,33 +534,36 @@ async def edit_video(
 ):
     """Edits video details, rating, goal mapping, and notes safely supporting partial updates."""
     conn = database.get_db_connection(username)
-    user_uuid = conn.user_uuid
-    cursor = conn.cursor()
-    cursor.execute("SELECT title, category, importance_rating, learning_goal_id, custom_notes FROM videos WHERE id = %s AND user_uuid = %s;", (id, user_uuid))
-    existing = cursor.fetchone()
-    if not existing:
-        conn.close()
-        raise HTTPException(status_code=404, detail="Video not found")
+    try:
+        user_uuid = conn.user_uuid
+        cursor = conn.cursor()
+        cursor.execute("SELECT title, category, importance_rating, learning_goal_id, custom_notes FROM videos WHERE id = %s AND user_uuid = %s;", (id, user_uuid))
+        existing = cursor.fetchone()
+        if not existing:
+            conn.close()
+            raise HTTPException(status_code=404, detail="Video not found")
         
-    new_title = title.strip() if (title is not None and title.strip()) else existing["title"]
-    new_category = category.strip() if category is not None else existing["category"]
-    new_rating = importance_rating if importance_rating is not None else existing["importance_rating"]
+        new_title = title.strip() if (title is not None and title.strip()) else existing["title"]
+        new_category = category.strip() if category is not None else existing["category"]
+        new_rating = importance_rating if importance_rating is not None else existing["importance_rating"]
     
-    if learning_goal_id is not None:
-        new_goal_id = None if learning_goal_id == 0 else learning_goal_id
-    else:
-        new_goal_id = existing["learning_goal_id"]
+        if learning_goal_id is not None:
+            new_goal_id = None if learning_goal_id == 0 else learning_goal_id
+        else:
+            new_goal_id = existing["learning_goal_id"]
         
-    new_notes = custom_notes if custom_notes is not None else existing["custom_notes"]
+        new_notes = custom_notes if custom_notes is not None else existing["custom_notes"]
 
-    cursor.execute("""
-        UPDATE videos 
-        SET title = %s, category = %s, importance_rating = %s, learning_goal_id = %s, custom_notes = %s
-        WHERE id = %s AND user_uuid = %s;
-    """, (new_title, new_category, new_rating, new_goal_id, new_notes, id, user_uuid))
-    conn.commit()
-    conn.close()
-    return {"status": "success", "title": new_title}
+        cursor.execute("""
+            UPDATE videos 
+            SET title = %s, category = %s, importance_rating = %s, learning_goal_id = %s, custom_notes = %s
+            WHERE id = %s AND user_uuid = %s;
+        """, (new_title, new_category, new_rating, new_goal_id, new_notes, id, user_uuid))
+        conn.commit()
+        conn.close()
+        return {"status": "success", "title": new_title}
+    finally:
+        conn.close()
 
 
 @router.post("/videos/{id}/position")
@@ -1086,73 +1116,76 @@ async def save_concept_focus(
 async def get_video_stats(id: int, username: str = Depends(require_app_access)):
     """Returns analytics, SRS status, and attempt history for a specific material/video."""
     conn = database.get_db_connection(username)
-    user_uuid = conn.user_uuid
-    cursor = conn.cursor()
+    try:
+        user_uuid = conn.user_uuid
+        cursor = conn.cursor()
     
-    cursor.execute("SELECT id, title, importance_rating, learning_goal_id FROM videos WHERE id = %s AND user_uuid = %s;", (id, user_uuid))
-    v_row = cursor.fetchone()
-    if not v_row:
-        conn.close()
-        raise HTTPException(status_code=404, detail="Material not found")
+        cursor.execute("SELECT id, title, importance_rating, learning_goal_id FROM videos WHERE id = %s AND user_uuid = %s;", (id, user_uuid))
+        v_row = cursor.fetchone()
+        if not v_row:
+            conn.close()
+            raise HTTPException(status_code=404, detail="Material not found")
         
-    title = v_row["title"]
-    importance = v_row.get("importance_rating") or 3
+        title = v_row["title"]
+        importance = v_row.get("importance_rating") or 3
     
-    cursor.execute("""
-        SELECT srs_stage, next_review_at 
-        FROM quizzes 
-        WHERE video_id = %s AND user_uuid = %s AND importance_level = %s AND quiz_type = 'video'
-        ORDER BY id DESC LIMIT 1;
-    """, (id, user_uuid, importance))
-    q_row = cursor.fetchone()
-    
-    if not q_row:
         cursor.execute("""
             SELECT srs_stage, next_review_at 
             FROM quizzes 
-            WHERE video_id = %s AND user_uuid = %s
+            WHERE video_id = %s AND user_uuid = %s AND importance_level = %s AND quiz_type = 'video'
             ORDER BY id DESC LIMIT 1;
-        """, (id, user_uuid))
+        """, (id, user_uuid, importance))
         q_row = cursor.fetchone()
+    
+        if not q_row:
+            cursor.execute("""
+                SELECT srs_stage, next_review_at 
+                FROM quizzes 
+                WHERE video_id = %s AND user_uuid = %s
+                ORDER BY id DESC LIMIT 1;
+            """, (id, user_uuid))
+            q_row = cursor.fetchone()
         
-    srs_stage = q_row["srs_stage"] if (q_row and q_row.get("srs_stage") is not None) else 0
-    raw_next = q_row.get("next_review_at") if q_row else None
-    next_review_at = raw_next.isoformat() if hasattr(raw_next, "isoformat") else (str(raw_next) if raw_next else None)
+        srs_stage = q_row["srs_stage"] if (q_row and q_row.get("srs_stage") is not None) else 0
+        raw_next = q_row.get("next_review_at") if q_row else None
+        next_review_at = raw_next.isoformat() if hasattr(raw_next, "isoformat") else (str(raw_next) if raw_next else None)
 
-    intervals = get_srs_intervals(cursor, user_uuid=user_uuid)
-    num_stages = len([x for x in intervals if x is not None]) or 5
-    srs_caps_cfg = get_srs_caps_and_repetition(cursor, user_uuid=user_uuid)
-    max_stages = compute_max_stages(srs_caps_cfg["cap_by_importance"], srs_caps_cfg["caps"], importance, num_stages)
+        intervals = get_srs_intervals(cursor, user_uuid=user_uuid)
+        num_stages = len([x for x in intervals if x is not None]) or 5
+        srs_caps_cfg = get_srs_caps_and_repetition(cursor, user_uuid=user_uuid)
+        max_stages = compute_max_stages(srs_caps_cfg["cap_by_importance"], srs_caps_cfg["caps"], importance, num_stages)
 
-    cursor.execute("""
-        SELECT a.id, a.quiz_id, a.question_index, a.question, a.given_answer, 
-               a.correct_answer, a.grade, a.created_at, a.explanation, a.feedback,
-               COALESCE(q.srs_stage, 0) AS srs_stage
-        FROM quiz_attempts a
-        LEFT JOIN quizzes q ON a.quiz_id = q.id
-        WHERE a.user_uuid = %s AND (a.video_id = %s OR a.quiz_id IN (SELECT id FROM quizzes WHERE video_id = %s AND user_uuid = %s))
-        ORDER BY a.id DESC;
-    """, (user_uuid, id, id, user_uuid))
-    rows = cursor.fetchall()
-    attempts = []
-    for r in rows:
-        att = dict(r)
-        c_at = att.get("created_at")
-        if hasattr(c_at, "isoformat"):
-            att["created_at"] = c_at.isoformat()
-        att["mastered"] = att.get("srs_stage", 0) >= max_stages
-        attempts.append(att)
-    conn.close()
+        cursor.execute("""
+            SELECT a.id, a.quiz_id, a.question_index, a.question, a.given_answer, 
+                   a.correct_answer, a.grade, a.created_at, a.explanation, a.feedback,
+                   COALESCE(q.srs_stage, 0) AS srs_stage
+            FROM quiz_attempts a
+            LEFT JOIN quizzes q ON a.quiz_id = q.id
+            WHERE a.user_uuid = %s AND (a.video_id = %s OR a.quiz_id IN (SELECT id FROM quizzes WHERE video_id = %s AND user_uuid = %s))
+            ORDER BY a.id DESC;
+        """, (user_uuid, id, id, user_uuid))
+        rows = cursor.fetchall()
+        attempts = []
+        for r in rows:
+            att = dict(r)
+            c_at = att.get("created_at")
+            if hasattr(c_at, "isoformat"):
+                att["created_at"] = c_at.isoformat()
+            att["mastered"] = att.get("srs_stage", 0) >= max_stages
+            attempts.append(att)
+        conn.close()
 
-    return {
-        "video_id": id,
-        "title": title,
-        "srs_stage": srs_stage,
-        "max_stages": max_stages,
-        "mastered": srs_stage >= max_stages,
-        "next_review_at": next_review_at,
-        "attempts": attempts
-    }
+        return {
+            "video_id": id,
+            "title": title,
+            "srs_stage": srs_stage,
+            "max_stages": max_stages,
+            "mastered": srs_stage >= max_stages,
+            "next_review_at": next_review_at,
+            "attempts": attempts
+        }
+    finally:
+        conn.close()
 
 
 
