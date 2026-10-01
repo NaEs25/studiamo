@@ -1000,10 +1000,11 @@ button:active:not(:disabled) {
     bottom: 0.3125rem;
     left: 0;
     display: flex;
-    gap: 0.25rem;
     align-items: flex-end;
     transition: left 1.6s ease-in-out, transform 1.6s ease-in-out;
 }
+/* Notes in a group fan out sideways, each covering most of the one before it. */
+.belt-group .belt-doc + .belt-doc { margin-left: -0.75rem; }
 .belt-station-label {
     font-size: 0.625rem;
     font-weight: 700;
