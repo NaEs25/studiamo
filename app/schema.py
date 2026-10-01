@@ -71,8 +71,8 @@ TABLES_SQL = [
     -- chat or an unsubscribed browser), while the category filters are ON so that a user
     -- who does connect a channel receives everything rather than silence. Copied from the
     -- live database; inverting either group would quietly change behaviour for every new
-    -- account. Cloud signups override notify_email to TRUE at creation (database.init_db),
-    -- since their Google address is known from the start.
+    -- account. The onboarding reminders step turns on push, or email when push is not possible
+    -- (routers/settings.py complete_reminder_setup).
     ALTER TABLE user_profile ADD COLUMN IF NOT EXISTS notify_telegram BOOLEAN DEFAULT FALSE;
     ALTER TABLE user_profile ADD COLUMN IF NOT EXISTS notify_push BOOLEAN DEFAULT FALSE;
     ALTER TABLE user_profile ADD COLUMN IF NOT EXISTS notify_email BOOLEAN DEFAULT FALSE;
