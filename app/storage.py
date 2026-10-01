@@ -16,13 +16,10 @@ import hashlib
 import json
 import os
 import re
-import shutil
-import uuid
 import logging
 from pathlib import Path
-from datetime import datetime
 from app.database import get_db_connection
-from app.config import get_user_dir, get_user_uuid_from_db, get_user_storage_bytes, USERS_DIR
+from app.config import get_user_uuid_from_db, USERS_DIR
 
 logger = logging.getLogger("studiamo")
 

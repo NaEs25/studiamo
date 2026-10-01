@@ -144,26 +144,7 @@
                 </div>
             </div>
 
-            <!-- Due Quizzes Warning Banner -->
-            <div id="due-quizzes-hero"
-                class="hidden p-5 rounded-2xl bg-amber-500/10 border border-amber-500/30 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div class="flex items-center space-x-4">
-                    <div class="p-3 bg-amber-500/20 rounded-xl">
-                        <i data-lucide="clock" class="w-7 h-7 text-amber-600 animate-pulse"></i>
-                    </div>
-                    <div>
-                        <h3 class="font-bold text-lg text-stone-900">Active Recall Due!</h3>
-                        <p class="text-sm text-stone-700 mt-0.5"><span id="due-quizzes-count"
-                                class="font-bold text-amber-800">0</span> quizzes are
-                            waiting to test your memory.</p>
-                    </div>
-                </div>
-                <button id="btn-start-due"
-                    class="btn-primary px-5 py-2.5 font-extrabold rounded-xl text-sm transition flex items-center justify-center space-x-2">
-                    <span>Study Now</span>
-                    <i data-lucide="play" class="w-4 h-4 fill-amber-900"></i>
-                </button>
-            </div>
+            {% include 'partials/_chompy_belt.html' %}
 
             <!-- Quizzes Due Right Now Panel -->
             <div id="due-quizzes-panel" class="hidden space-y-3 mb-6">
@@ -230,11 +211,16 @@
 
             <!-- Upcoming Review Schedule -->
             <div id="upcoming-quizzes-panel" class="pt-6 border-t border-stone-300 space-y-3">
-                <h3 class="text-sm font-bold uppercase tracking-wider text-stone-600 flex items-center space-x-1.5">
+                <!-- Collapsed by default so the home tab leads with today's work; app.js
+                     initUpcomingToggle remembers the choice per browser. -->
+                <button type="button" id="upcoming-quizzes-toggle" aria-expanded="false" aria-controls="upcoming-quizzes-list"
+                    class="w-full text-sm font-bold uppercase tracking-wider text-stone-600 flex items-center space-x-1.5 hover:text-stone-900 transition">
                     <i data-lucide="calendar" class="w-4 h-4 text-amber-600"></i>
                     <span>Upcoming Review Schedule</span>
-                </h3>
-                <div id="upcoming-quizzes-list" class="space-y-2">
+                    <span id="upcoming-quizzes-count" class="text-[10px] bg-stone-200 text-stone-700 px-1.5 py-0.5 rounded-full normal-case tracking-normal hidden"></span>
+                    <i data-lucide="chevron-down" id="upcoming-quizzes-chevron" class="w-4 h-4 text-stone-400 transition-transform ml-auto"></i>
+                </button>
+                <div id="upcoming-quizzes-list" class="space-y-2 hidden">
                     <!-- Skeleton Loaders during initial fetch -->
                     <div class="animate-pulse bg-white border border-stone-200 rounded-xl p-3.5 flex items-center justify-between shadow-sm">
                         <div class="space-y-2 flex-1">
@@ -877,7 +863,7 @@
                 </div>
 
                 <!-- 3. Notifications & Network Setup Card -->
-                <div class="bg-white p-6 rounded-2xl border border-stone-200 space-y-4 shadow-sm">
+                <div id="notifications" class="bg-white p-6 rounded-2xl border border-stone-200 space-y-4 shadow-sm scroll-mt-4">
                     <div class="flex items-center justify-between border-b border-stone-200 pb-3">
                         <h3 class="font-bold text-base flex items-center space-x-2">
                             <i data-lucide="bell" class="w-5 h-5 text-emerald-600"></i>
@@ -894,6 +880,13 @@
                         </label>
                     </div>
 
+                    <div class="flex items-start space-x-3 bg-[#fbf8f2] p-3 rounded-xl border border-[#e7dfd3]">
+                        <img src="/static/images/chompy/chompy-icon.png" alt="" class="w-8 h-8 shrink-0" loading="lazy">
+                        <p class="text-xs text-stone-600 leading-snug">Spaced repetition only works if you review on the
+                            day a quiz is due. Reminders tell you when that is, and warn you before Chompy eats a quiz
+                            you left for too long. You can turn any of them off here.</p>
+                    </div>
+
                     <div id="notifications-panel-content" class="space-y-4 transition-all">
                         <!-- Notification Types (categories, apply across all enabled channels) -->
                         <div class="bg-[#fbf8f2] p-4 rounded-xl border border-[#e7dfd3] space-y-2">
@@ -902,18 +895,17 @@
                                 <span>Notification Types</span>
                             </label>
                             <label class="flex items-center justify-between py-1 cursor-pointer">
-                                <span class="text-sm text-stone-700">Quizzes due (Active Recall reviews ready)</span>
+                                <span class="text-sm text-stone-700">Daily reminder (quizzes due today)</span>
                                 <input type="checkbox" id="settings-notify-cat-quizzes" checked
                                     class="w-4 h-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500">
                             </label>
                             <label class="flex items-center justify-between py-1 cursor-pointer">
-                                <span class="text-sm text-stone-700">Streak in danger</span>
+                                <span class="text-sm text-stone-700">Evening warning (streak or Chompy at stake)</span>
                                 <input type="checkbox" id="settings-notify-cat-streak" checked
                                     class="w-4 h-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500">
                             </label>
                             <label class="flex items-center justify-between py-1 cursor-pointer">
-                                <span class="text-sm text-stone-700">Inactivity reminder (haven't studied in a
-                                    week)</span>
+                                <span class="text-sm text-stone-700">Welcome back (after a few days away)</span>
                                 <input type="checkbox" id="settings-notify-cat-inactivity" checked
                                     class="w-4 h-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500">
                             </label>
@@ -1063,39 +1055,44 @@
                             </div>
 
                             <div class="space-y-1">
-                                <label for="settings-preferred-hour" class="block text-sm font-semibold text-stone-800">Preferred Daily Review
-                                    Hour (UTC)</label>
-                                <select id="settings-preferred-hour"
+                                <label for="settings-reminder-hour" class="block text-sm font-semibold text-stone-800">Daily reminder time</label>
+                                <select id="settings-reminder-hour"
                                     class="w-full bg-[#fcfaf6] border border-[#e7dfd3] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900 font-medium">
-                                    <option value="-1">Any time (Immediately when due)</option>
-                                    <option value="0">00:00 UTC</option>
-                                    <option value="1">01:00 UTC</option>
-                                    <option value="2">02:00 UTC</option>
-                                    <option value="3">03:00 UTC</option>
-                                    <option value="4">04:00 UTC</option>
-                                    <option value="5">05:00 UTC</option>
-                                    <option value="6">06:00 UTC</option>
-                                    <option value="7">07:00 UTC</option>
-                                    <option value="8">08:00 UTC</option>
-                                    <option value="9">09:00 UTC</option>
-                                    <option value="10">10:00 UTC</option>
-                                    <option value="11">11:00 UTC</option>
-                                    <option value="12">12:00 UTC</option>
-                                    <option value="13">13:00 UTC</option>
-                                    <option value="14">14:00 UTC</option>
-                                    <option value="15">15:00 UTC</option>
-                                    <option value="16">16:00 UTC</option>
-                                    <option value="17">17:00 UTC</option>
-                                    <option value="18">18:00 UTC</option>
-                                    <option value="19">19:00 UTC</option>
-                                    <option value="20">20:00 UTC</option>
-                                    <option value="21">21:00 UTC</option>
-                                    <option value="22">22:00 UTC</option>
-                                    <option value="23">23:00 UTC</option>
+                                    <option value="0">00:00</option>
+                                    <option value="1">01:00</option>
+                                    <option value="2">02:00</option>
+                                    <option value="3">03:00</option>
+                                    <option value="4">04:00</option>
+                                    <option value="5">05:00</option>
+                                    <option value="6">06:00</option>
+                                    <option value="7">07:00</option>
+                                    <option value="8">08:00</option>
+                                    <option value="9">09:00</option>
+                                    <option value="10">10:00</option>
+                                    <option value="11">11:00</option>
+                                    <option value="12">12:00</option>
+                                    <option value="13">13:00</option>
+                                    <option value="14">14:00</option>
+                                    <option value="15">15:00</option>
+                                    <option value="16">16:00</option>
+                                    <option value="17">17:00</option>
+                                    <option value="18">18:00</option>
+                                    <option value="19">19:00</option>
+                                    <option value="20">20:00</option>
+                                    <option value="21">21:00</option>
+                                    <option value="22">22:00</option>
+                                    <option value="23">23:00</option>
                                 </select>
-                                <p id="settings-preferred-hour-local" class="text-[10px] text-stone-500 pl-1 hidden"></p>
-                                <p class="text-[10px] text-stone-500 pl-1">Hours are in UTC. Defers scheduled reviews
-                                    (Telegram &amp; App Push) until this hour. Streak warnings are sent immediately.</p>
+                                <p class="text-[10px] text-stone-500 pl-1">In your time zone. Reviews are due for the whole
+                                    day; this is when you get reminded about them.</p>
+                            </div>
+
+                            <div class="space-y-1">
+                                <label for="settings-timezone" class="block text-sm font-semibold text-stone-800">Time zone</label>
+                                <select id="settings-timezone"
+                                    class="w-full bg-[#fcfaf6] border border-[#e7dfd3] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900 font-medium">
+                                </select>
+                                <p id="settings-timezone-hint" class="text-[10px] text-stone-500 pl-1 hidden"></p>
                             </div>
                         </div>
                     </div>
@@ -2566,8 +2563,8 @@
                         <i data-lucide="compass" class="w-4 h-4"></i>
                     </div>
                     <div>
-                        <h3 class="text-base font-extrabold text-stone-900 tracking-tight">Welcome to Studiamo</h3>
-                        <p class="text-[11px] text-stone-500">Quick tour of the app</p>
+                        <h3 id="onboarding-title" class="text-base font-extrabold text-stone-900 tracking-tight">Welcome to Studiamo</h3>
+                        <p id="onboarding-subtitle" class="text-[11px] text-stone-500">Quick tour of the app</p>
                     </div>
                 </div>
                 <button type="button" onclick="closeTabGuideModal(event)"
@@ -2667,6 +2664,31 @@
                         </ol>
                     </div>
                 </div>
+                <!-- Reminders: makes sure every account leaves onboarding with a reminder channel.
+                     Push when this device can receive it, email otherwise (settings.js
+                     renderReminderStep). Also shown alone, once, to accounts that finished
+                     onboarding before this step existed and have no channel. -->
+                <div class="onboarding-step space-y-3 py-2" data-step="reminders">
+                    <div class="flex items-center space-x-3">
+                        <img src="/static/images/chompy/chompy-hungry.png" alt="Chompy, a small red brain monster"
+                            class="w-16 h-auto shrink-0" loading="lazy">
+                        <div>
+                            <h4 class="font-bold text-sm text-stone-900">Keep Chompy away</h4>
+                            <p class="text-xs text-stone-500 leading-snug">Chompy eats knowledge you don't review.
+                                Spaced repetition only works if you review on the right day, so Studiamo reminds you
+                                when something is due.</p>
+                        </div>
+                    </div>
+                    <button type="button" id="onboarding-reminder-push-btn"
+                        class="hidden btn-primary w-full py-2.5 font-bold text-xs rounded-xl transition flex items-center justify-center space-x-2">
+                        <i data-lucide="bell-ring" class="w-4 h-4"></i>
+                        <span>Turn on push reminders</span>
+                    </button>
+                    <p id="onboarding-reminder-status"
+                        class="text-xs text-stone-700 bg-[#fbf8f2] p-3 rounded-xl border border-[#e7dfd3] leading-snug"></p>
+                    <button type="button" id="onboarding-reminder-settings-btn"
+                        class="text-xs font-bold text-amber-700 hover:text-amber-800 underline">Notification settings</button>
+                </div>
             </div>
 
             <div class="flex items-center justify-between pt-1">
@@ -2685,6 +2707,8 @@
             </div>
         </div>
     </div>
+
+    {% include 'partials/_chompy_away.html' %}
 
     <!-- Overlay: Feature Updates Modal.
          Editing the items below? Also bump config.CURRENT_UPDATE_VERSION (app/config.py),

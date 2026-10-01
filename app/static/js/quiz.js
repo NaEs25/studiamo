@@ -204,15 +204,9 @@ async function startQuiz(quizId, videoId = null, level = 3) {
         // Auto-check SRS progress for due quizzes, auto-uncheck for premature reviews
         const progressCheckbox = document.getElementById('quiz-progress-srs-checkbox');
         if (progressCheckbox) {
-            let isDue = true;
-            if (activeQuizSession && activeQuizSession.next_review_at) {
-                const reviewDate = typeof parseDate === 'function' ? parseDate(activeQuizSession.next_review_at) : new Date(activeQuizSession.next_review_at);
-                const now = new Date();
-                if (reviewDate && reviewDate > now) {
-                    isDue = false;
-                }
-            }
-            progressCheckbox.checked = isDue;
+            // is_due comes from the server, in the user's time zone. Absent (no schedule
+            // row) counts as due, as before.
+            progressCheckbox.checked = !(activeQuizSession && activeQuizSession.is_due === false);
         }
 
         // Auto-read Aloud never carries over between quiz sessions: leaving it
@@ -533,6 +527,17 @@ async function gradeQuestion(grade) {
             });
         }
         
+        // Finishing the quiz of a video Chompy ate put it back on the schedule (grade_quiz).
+        if (res.won_back) {
+            await showConfirm({
+                title: 'Won back from Chompy!',
+                message: 'This quiz is back on your review schedule. Chompy will have to find something else to eat.',
+                confirmText: 'Nice',
+                icon: 'party-popper',
+                hideCancel: true,
+            });
+        }
+
         currentQuestionIndex++;
         const progressKey = `quiz-progress-${activeUsername}-${activeQuizSession.id}`;
         if (currentQuestionIndex >= questions.length) {
@@ -550,19 +555,19 @@ async function gradeQuestion(grade) {
     }
 }
 
+// "+1 Day" on a quiz that is due today. Overdue quizzes have no such button, and the server
+// refuses them too (routers/quizzes.py reschedule_quiz).
 async function rescheduleQuiz(quizId) {
     try {
-        const formData = new FormData();
-        formData.append('days', 1);
-        await fetchAPI(`/api/quiz/${quizId}/reschedule`, { method: 'POST', body: formData });
+        await fetchAPI(`/api/quiz/${quizId}/reschedule`, { method: 'POST' });
         if (typeof showToast === 'function') {
-            showToast('Rescheduled for tomorrow', 'info', 2500);
+            showToast('Moved to tomorrow', 'info', 2500);
         }
         if (typeof loadDashboard === 'function') loadDashboard();
     } catch (e) {
         console.error("Reschedule failed:", e);
         if (typeof showToast === 'function') {
-            showToast('Reschedule failed', 'failed', 3000);
+            showToast(e.detail || 'Reschedule failed', 'failed', 3000);
         }
     }
 }

@@ -1,12 +1,9 @@
 import asyncio
 import httpx
-import math
 import secrets
 import time
-from datetime import datetime, timedelta, timezone
-from pathlib import Path
-from app import config, database, gamification
-from app.config import USERS_DIR, load_user_config, write_user_config
+from app import config, database
+from app.config import load_user_config, write_user_config
 from app.database import get_db_connection
 
 def notification_app_link(stored_base_url: str = None) -> str:
@@ -62,38 +59,6 @@ async def send_telegram_message(text: str, username: str) -> bool:
     except Exception as e:
         print(f"Telegram notification transport error for {username}: {e}")
         return False
-
-def send_admin_telegram(text: str) -> bool:
-    """Sends an operator alert to one fixed chat. Returns False if none is configured.
-
-    Consults no user account, by design. send_telegram_message() looks its destination up
-    in a user_profile row, which is right for a user's own notifications and wrong for
-    operator alerts about other people: it would make the recipient of that data a property
-    of an account record rather than of the deployment's configuration.
-
-    Synchronous because the scheduler loop that calls it already is, and because there is
-    no reason for an alert to be worth an event loop."""
-    chat_id = config.ADMIN_TELEGRAM_CHAT_ID
-    token = config.ADMIN_TELEGRAM_BOT_TOKEN or config.TELEGRAM_MANAGED_BOT_TOKEN
-    if not chat_id or not token:
-        return False
-
-    try:
-        import httpx
-        resp = httpx.post(
-            f"https://api.telegram.org/bot{token}/sendMessage",
-            json={"chat_id": chat_id, "text": text, "parse_mode": "HTML"},
-            timeout=10.0,
-        )
-        if resp.status_code == 200:
-            return True
-        # Logged without the token or the chat id: this line ends up in journalctl.
-        print(f"Admin Telegram alert rejected: HTTP {resp.status_code}")
-        return False
-    except Exception as e:
-        print(f"Admin Telegram transport error: {e}")
-        return False
-
 
 def send_telegram_message_sync(text: str, username: str) -> bool:
     """Synchronous wrapper for sending Telegram messages from background worker threads."""
@@ -294,355 +259,32 @@ async def managed_telegram_long_polling():
             print(f"Managed Telegram poller error: {e} (attempt {failures}, retrying in {delay}s)")
             await asyncio.sleep(delay)
 
-last_check_times = {}
-
-async def check_and_notify_quizzes():
-    for username in database.get_all_users():
-        conn = None
-        try:
-            conn = get_db_connection(username)
-            user_uuid = conn.user_uuid
-            cursor = conn.cursor()
-
-            # Read notification settings directly from user_profile DB columns
-            cursor.execute(
-                """
-                SELECT notifications_enabled, notify_telegram, notify_push, notify_email,
-                       notify_cat_quizzes, preferred_hour, base_url, google_email,
-                       telegram_bot_token, telegram_chat_id
-                FROM user_profile WHERE user_uuid = %s LIMIT 1;
-                """,
-                (user_uuid,)
-            )
-            profile = cursor.fetchone() or {}
-
-            if not profile.get("notifications_enabled", 1):
-                continue
-
-            if not profile.get("notify_cat_quizzes", 1):
-                continue
-
-            # Check preferred daily review hour, a UTC hour (see adjust_next_review)
-            raw_hour = profile.get("preferred_hour")
-            pref_hour = int(raw_hour) if raw_hour is not None else -1
-            if pref_hour != -1:
-                current_hour = datetime.now(timezone.utc).hour
-                if current_hour != pref_hour:
-                    continue
-
-            cursor.execute("""
-                SELECT q.id, q.quiz_type, q.srs_stage, q.next_review_at, 
-                       v.title AS video_title
-                FROM quizzes q
-                LEFT JOIN videos v ON q.video_id = v.id
-                WHERE q.user_uuid = %s
-                  AND q.notified = 0
-                  AND q.quiz_type = 'video'
-                  AND v.is_paused = 0 
-                  AND v.is_archived = 0 
-                  AND v.is_watchlist = 0
-                  AND q.importance_level = v.importance_rating;
-            """, (user_uuid,))
-            rows = [dict(r) for r in cursor.fetchall()]
-            
-            now_utc = datetime.utcnow()
-            due_rows = []
-            for r in rows:
-                if r.get("next_review_at"):
-                    try:
-                        val = r["next_review_at"]
-                        dt = val if isinstance(val, datetime) else datetime.fromisoformat(str(val))
-                        if dt.tzinfo is not None:
-                            dt = dt.replace(tzinfo=None)
-                        if dt <= now_utc:
-                            due_rows.append(r)
-                    except Exception as e:
-                        print(f"Failed to parse next_review_at={r.get('next_review_at')!r} for quiz id={r.get('id')}: {e}")
-
-            if not due_rows:
-                continue
-
-            count = len(due_rows)
-            app_link = notification_app_link(profile.get("base_url"))
-
-            # Independent per-channel delivery , every enabled channel fires.
-            if profile.get("notify_push"):
-                try:
-                    from app.webpush_utils import send_user_web_push
-                    push_title = f"🧠 {count} reviews due!" if count > 1 else f"🧠 {due_rows[0].get('video_title') or 'Review'} due!"
-                    push_body = f"You have {count} review(s) due in Studiamo."
-                    send_user_web_push(username, {
-                        "title": push_title,
-                        "body": push_body,
-                        "url": "/#review-section"
-                    })
-                except Exception as e_push:
-                    print(f"Error triggering Web Push for {username}: {e_push}")
-
-            if count == 1:
-                title = due_rows[0].get("video_title") or "Review item"
-                msg = (
-                    f"🔔 <b>Review Due!</b>\n\n"
-                    f"Hi {username}, 1 item is ready for your Active Recall session:\n"
-                    f"• <b>{title}</b>\n\n"
-                    f"Start your session here:\n"
-                    f"{app_link}"
-                )
-            else:
-                msg = (
-                    f"🔔 <b>Reviews Due!</b>\n\n"
-                    f"Hi {username}, you have <b>{count} reviews due</b> for Active Recall.\n\n"
-                    f"Start your session here:\n"
-                    f"{app_link}"
-                )
-
-            if profile.get("notify_telegram"):
-                await send_telegram_message(msg, username)
-
-            if profile.get("notify_email") and profile.get("google_email"):
-                try:
-                    from app.email_utils import send_notification_email
-                    send_notification_email(
-                        profile["google_email"],
-                        f"🔔 {count} reviews due!" if count > 1 else "🔔 A review is due!",
-                        "Review Due" if count == 1 else "Reviews Due",
-                        f"You have {count} review(s) due for your Active Recall in Studiamo.",
-                        app_link,
-                        "Review Now"
-                    )
-                except Exception as e_mail:
-                    print(f"Error sending notification email for {username}: {e_mail}")
-
-            # Mark quizzes as notified in database using existing cursor
-            for r in due_rows:
-                cursor.execute("UPDATE quizzes SET notified = 1 WHERE id = %s AND user_uuid = %s;", (r["id"], user_uuid))
-            conn.commit()
-
-        except Exception as e:
-            print(f"Error checking notifications for {username}: {e}")
-        finally:
-            if conn is not None:
-                conn.close()
-
-
-last_streak_warned_dates = {}
-
-async def check_and_notify_streak():
-    """Checks user streaks and sends Telegram warning if <= 5 hours remain before expiration."""
-    now_utc = gamification.utc_now()
-    today_str = now_utc.strftime("%Y-%m-%d")
-
-    for username in database.get_all_users():
-        if last_streak_warned_dates.get(username) == today_str:
-            continue
-
-        conn = None
-        try:
-            conn = get_db_connection(username)
-            user_uuid = conn.user_uuid
-            cursor = conn.cursor()
-
-            # Read notification settings and streak in one query from user_profile
-            cursor.execute(
-                """
-                SELECT notifications_enabled, notify_telegram, notify_push, notify_email,
-                       notify_cat_streak, base_url, google_email,
-                       telegram_bot_token, telegram_chat_id,
-                       streak, last_quiz_at
-                FROM user_profile WHERE user_uuid = %s LIMIT 1;
-                """,
-                (user_uuid,)
-            )
-            row = cursor.fetchone()
-
-            if not row:
-                continue
-
-            if not row.get("notifications_enabled", 1):
-                continue
-
-            if not row.get("notify_cat_streak", 1):
-                continue
-
-            # Both the number quoted in the message and the deadline it is counting down to
-            # come from app/gamification.py, so this warning cannot promise a streak the app
-            # will not honor. It used to bill the deadline as 24 hours after the last quiz,
-            # which is not the rule anywhere: a streak survives to the end of the day after
-            # the last quiz.
-            streak_val = gamification.effective_streak(
-                row.get("streak"), row.get("last_quiz_at"), now=now_utc
-            )
-            if streak_val <= 0:
-                continue
-
-            hours_left = gamification.hours_until_streak_lapses(row.get("last_quiz_at"), now=now_utc)
-            if hours_left is None:
-                continue
-
-            if 0 < hours_left <= 5:
-                hours_fmt = int(math.ceil(hours_left))
-                app_link = notification_app_link(row.get("base_url"))
-
-                any_channel_enabled = bool(row.get("notify_telegram") or row.get("notify_push") or row.get("notify_email"))
-
-                if row.get("notify_push"):
-                    try:
-                        from app.webpush_utils import send_user_web_push
-                        send_user_web_push(username, {
-                            "title": f"🔥 Streak at risk ({streak_val} days)!",
-                            "body": f"Your streak expires in ~{hours_fmt} hour(s). Complete 1 quick review now!",
-                            "url": "/#review-section"
-                        })
-                    except Exception as e_push:
-                        print(f"Error triggering Web Push streak warning for {username}: {e_push}")
-
-                if row.get("notify_telegram"):
-                    msg = (
-                        f"🔥 <b>Streak Warning!</b>\n\n"
-                        f"Hi {username}, your <b>{streak_val}-day streak</b> expires in ~<b>{hours_fmt} hour(s)</b>!\n\n"
-                        f"Complete 1 quick review now to keep it active:\n"
-                        f"{app_link}"
-                    )
-                    await send_telegram_message(msg, username)
-
-                if row.get("notify_email") and row.get("google_email"):
-                    try:
-                        from app.email_utils import send_notification_email
-                        send_notification_email(
-                            row["google_email"],
-                            f"🔥 Streak Warning ({streak_val} days)!",
-                            "Your streak is about to expire",
-                            f"Your {streak_val}-day streak expires in ~{hours_fmt} hour(s). Complete 1 quick review now to keep it active.",
-                            app_link,
-                            "Review Now"
-                        )
-                    except Exception as e_mail:
-                        print(f"Error sending streak notification email for {username}: {e_mail}")
-
-                # Mark as warned for today regardless of per-channel delivery
-                # success , the scheduler re-checks every 60s, so this is what
-                # prevents retry spam within the same day.
-                if any_channel_enabled:
-                    last_streak_warned_dates[username] = today_str
-        except Exception as e:
-            print(f"Error checking streak notification for {username}: {e}")
-        finally:
-            if conn is not None:
-                conn.close()
-
-
-
-
-async def check_and_notify_inactivity():
-    """Sends a 'come back' reminder to users who haven't done a quiz in >= 7
-    days, at most once every 7 days. Skips users who have never done a quiz, nothing to compare against, and brand-new signups shouldn't be nagged."""
-    now_utc = datetime.utcnow()
-
-    for username in database.get_all_users():
-        conn = None
-        try:
-            conn = get_db_connection(username)
-            user_uuid = conn.user_uuid
-            cursor = conn.cursor()
-
-            cursor.execute(
-                """
-                SELECT notifications_enabled, notify_telegram, notify_push, notify_email,
-                       notify_cat_inactivity, base_url, google_email,
-                       last_quiz_at, last_inactivity_notified_at
-                FROM user_profile WHERE user_uuid = %s LIMIT 1;
-                """,
-                (user_uuid,)
-            )
-            row = cursor.fetchone()
-
-            if not row or not row.get("notifications_enabled", 1) or not row.get("notify_cat_inactivity", 1):
-                continue
-
-            if not row.get("last_quiz_at"):
-                continue
-
-            def _normalize(val):
-                dt = val if isinstance(val, datetime) else datetime.fromisoformat(str(val))
-                if dt.tzinfo is not None:
-                    dt = dt.replace(tzinfo=None)
-                return dt
-
-            last_quiz = _normalize(row["last_quiz_at"])
-            days_inactive = (now_utc - last_quiz).days
-            if days_inactive < 7:
-                continue
-
-            last_notified = row.get("last_inactivity_notified_at")
-            if last_notified and (now_utc - _normalize(last_notified)).days < 7:
-                continue
-
-            app_link = notification_app_link(row.get("base_url"))
-            sent_any = False
-
-            if row.get("notify_push"):
-                try:
-                    from app.webpush_utils import send_user_web_push
-                    if send_user_web_push(username, {
-                        "title": "👋 We miss you!",
-                        "body": f"You haven't practiced in {days_inactive} days. Time for a quick review!",
-                        "url": "/#review-section"
-                    }):
-                        sent_any = True
-                except Exception as e_push:
-                    print(f"Error sending inactivity Web Push for {username}: {e_push}")
-
-            if row.get("notify_telegram"):
-                msg = (
-                    f"👋 <b>We miss you!</b>\n\n"
-                    f"Hi {username}, you haven't practiced in Studiamo for <b>{days_inactive} days</b>.\n\n"
-                    f"Start a quick review now:\n"
-                    f"{app_link}"
-                )
-                if await send_telegram_message(msg, username):
-                    sent_any = True
-
-            if row.get("notify_email") and row.get("google_email"):
-                try:
-                    from app.email_utils import send_notification_email
-                    if send_notification_email(
-                        row["google_email"],
-                        "👋 We miss you on Studiamo!",
-                        "Time for a review",
-                        f"You haven't practiced in Studiamo for {days_inactive} days. Your due reviews are waiting for you.",
-                        app_link,
-                        "Review Now"
-                    ):
-                        sent_any = True
-                except Exception as e_mail:
-                    print(f"Error sending inactivity email for {username}: {e_mail}")
-
-            if sent_any:
-                cursor.execute(
-                    "UPDATE user_profile SET last_inactivity_notified_at = %s WHERE user_uuid = %s;",
-                    (now_utc, user_uuid)
-                )
-                conn.commit()
-        except Exception as e:
-            print(f"Error checking inactivity notification for {username}: {e}")
-        finally:
-            if conn is not None:
-                conn.close()
-
-
 _last_tester_sweep_at: float = 0.0
 _TESTER_SWEEP_INTERVAL_SECONDS = 3600
+# Chompy eats right after local midnight; a few minutes' delay does not matter, and each pass
+# reads every user's due reviews, so it runs less often than the reminder check.
+_last_chompy_pass_at: float = 0.0
+_CHOMPY_INTERVAL_SECONDS = 600
 
 
 async def run_scheduler_daemon():
     """Runs a background loop to perform review scheduling checks every 1 minute."""
     print("Scheduler daemon started in background...")
-    global _last_tester_sweep_at
+    global _last_tester_sweep_at, _last_chompy_pass_at
     while True:
         try:
-            await check_and_notify_quizzes()
-            await check_and_notify_streak()
-            await check_and_notify_inactivity()
+            if time.time() - _last_chompy_pass_at >= _CHOMPY_INTERVAL_SECONDS:
+                _last_chompy_pass_at = time.time()
+                try:
+                    from app.chompy import run_eating
+                    eaten = await asyncio.to_thread(run_eating)
+                    if eaten:
+                        print(f"Chompy paused {eaten} overdue review(s).")
+                except Exception as e_chompy:
+                    print(f"Chompy pass error: {e_chompy}")
+
+            from app.notifications import run_tick as run_reminder_tick
+            await run_reminder_tick()
             try:
                 from app.import_manager import ImportQueueManager
                 ImportQueueManager.get_instance().recover_all_pending_tasks()

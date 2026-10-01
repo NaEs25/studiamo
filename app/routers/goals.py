@@ -1,18 +1,14 @@
-import re
 import asyncio
-from datetime import datetime, timezone, timedelta
-from typing import Optional
+from datetime import datetime
 
 from fastapi import APIRouter, Form, HTTPException, Depends, Query
 from fastapi.responses import JSONResponse
 
-from app import database, storage, ai, youtube
+from app import database, storage, ai, youtube, local_days
 from app.dependencies import (
-    get_active_username,
     get_srs_intervals,
     get_srs_multipliers,
-    get_preferred_hour,
-    adjust_next_review,
+    get_user_timezone,
     require_app_access,
     build_concept_pool,
 )
@@ -347,6 +343,7 @@ async def replace_one_goal_recommendation(
         try:
             recs = await asyncio.to_thread(ai.generate_goal_recommendations, row["title"], row["description"], username)
         except Exception as e:
+            logger.warning(f"Goal recommendations failed for goal {id}, using the title as the search query: {e}")
             recs = {"search_queries": [f"{row['title']} tutorial"]}
 
         queries = recs.get("search_queries", [])
@@ -614,9 +611,7 @@ def generate_goal_practice_quiz(
         multipliers = get_srs_multipliers(username)
         multiplier = multipliers.get(3, 1.5)
         review_delay_days = intervals[0] * multiplier
-        pref_hour = get_preferred_hour(cursor, user_uuid)
-        next_review_dt = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=review_delay_days)
-        next_review = adjust_next_review(next_review_dt, pref_hour).isoformat()
+        next_review = local_days.schedule_review(review_delay_days, get_user_timezone(cursor, user_uuid)).isoformat()
 
         cursor.execute(
             """INSERT INTO quizzes (user_uuid, goal_id, quiz_type, srs_stage, next_review_at, notified, importance_level)
@@ -634,6 +629,7 @@ def generate_goal_practice_quiz(
                 username=username
             )
         except Exception as e:
+            logger.warning(f"Goal practice quiz generation failed for goal {id}: {e}")
             ai_quiz_data = {"quiz": [], "stages": {}}
 
         conn.commit()

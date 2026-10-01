@@ -1,5 +1,6 @@
 
 
+import html
 import os
 import smtplib
 import logging
@@ -21,6 +22,7 @@ logger = logging.getLogger("studiamo")
 
 RESEND_FROM = os.environ.get("SMTP_FROM", "Studiamo <hello@studiamo.cloud>")
 
+from app import config
 from app.config import require_env_for_cloud, BASE_DIR
 
 _SECRET_KEY_FILE = BASE_DIR / ".waitlist_secret_key"
@@ -52,17 +54,36 @@ def _ensure_self_hosted_secret_key() -> str:
 SECRET_KEY = require_env_for_cloud("SECRET_KEY") or _ensure_self_hosted_secret_key()
 
 
-def generate_unsubscribe_token(email: str) -> str:
-    """Generates a secure HMAC-SHA256 token for an email to prevent unauthorized unsubscribes."""
-    return hmac.new(SECRET_KEY.encode(), email.lower().strip().encode(), hashlib.sha256).hexdigest()[:32]
+def generate_unsubscribe_token(email: str, purpose: str = "") -> str:
+    """Generates a secure HMAC-SHA256 token for an email to prevent unauthorized unsubscribes.
+
+    `purpose` separates token families, so a waitlist unsubscribe link cannot be replayed
+    against the reminder-email switch or the other way around. The empty purpose is the
+    original waitlist token, unchanged so links already sent keep working."""
+    message = email.lower().strip() if not purpose else f"{purpose}:{email.lower().strip()}"
+    return hmac.new(SECRET_KEY.encode(), message.encode(), hashlib.sha256).hexdigest()[:32]
 
 
-def verify_unsubscribe_token(email: str, token: str) -> bool:
+def verify_unsubscribe_token(email: str, token: str, purpose: str = "") -> bool:
     """Verifies that an unsubscribe token matches the given email address."""
     if not email or not token:
         return False
-    expected = generate_unsubscribe_token(email)
+    expected = generate_unsubscribe_token(email, purpose)
     return hmac.compare_digest(expected, token.strip())
+
+
+REMINDER_EMAILS_PURPOSE = "reminders"
+
+
+def reminder_emails_off_url(recipient_email: str) -> str:
+    """Returns the tokenized link that turns off reminder emails for this address, without
+    signing in. Used in the footer and in the List-Unsubscribe header."""
+    base = "https://www.studiamo.cloud" if config.IS_CLOUD else (os.getenv("BASE_URL") or "https://studiamo.cloud").rstrip("/")
+    return (
+        f"{base}/api/notifications/email-off"
+        f"?email={urllib.parse.quote(recipient_email)}"
+        f"&token={generate_unsubscribe_token(recipient_email, REMINDER_EMAILS_PURPOSE)}"
+    )
 
 
 def unsubscribe_url(recipient_email: str) -> str:
@@ -259,7 +280,8 @@ def send_waitlist_confirmation_email(recipient_email: str) -> bool:
         return False
 
 
-def _send_via_resend(recipient_email: str, subject: str, html_content: str, text_content: str, log_tag: str) -> bool:
+def _send_via_resend(recipient_email: str, subject: str, html_content: str, text_content: str, log_tag: str,
+                     headers: dict | None = None) -> bool:
     """Shared Resend send path for the account-waitlist/promotion emails
     (separate from the SMTP path above, which the pre-launch landing-page
     waitlist emails still use). Returns False without raising if RESEND_API_KEY
@@ -272,13 +294,16 @@ def _send_via_resend(recipient_email: str, subject: str, html_content: str, text
     try:
         import resend
         resend.api_key = api_key
-        resend.Emails.send({
+        params = {
             "from": RESEND_FROM,
             "to": [recipient_email],
             "subject": subject,
             "html": html_content,
             "text": text_content,
-        })
+        }
+        if headers:
+            params["headers"] = headers
+        resend.Emails.send(params)
         logger.info(f"[{log_tag}] Sent to {recipient_email}")
         return True
     except Exception as e:
@@ -342,11 +367,19 @@ def send_waitlist_status_email(recipient_email: str, referral_code: str) -> bool
     return _send_via_resend(recipient_email, subject, html_content, text_content, "ACCOUNT WAITLIST EMAIL")
 
 
-def send_notification_email(recipient_email: str, subject: str, heading: str, body_text: str, cta_url: str, cta_label: str = "Open Studiamo") -> bool:
-    """Sends a branded transactional notification email (quiz due, streak
-    warning, inactivity reminder) via Resend. Cloud-only, self-hosted has
-    no guaranteed email delivery configured, see send_notification_email
-    callers in telegram_bot.py which gate on notify_email + google_email."""
+def send_notification_email(recipient_email: str, subject: str, heading: str, body_text: str, cta_url: str,
+                            cta_label: str = "Open Studiamo", settings_url: str | None = None) -> bool:
+    """Sends a branded reminder email (app/notifications.py) via Resend. Cloud-only in
+    practice: self-hosted has no guaranteed email delivery configured.
+
+    heading and body_text are plain text and escaped here: reminder texts carry video titles,
+    which are user content. The footer links to the notification settings and carries a
+    one-click switch that turns reminder emails off without signing in, mirrored in the
+    List-Unsubscribe headers so mail clients can offer the same."""
+    heading_html = html.escape(heading)
+    body_html = html.escape(body_text)
+    off_url = reminder_emails_off_url(recipient_email)
+    settings_link = settings_url or cta_url
     html_content = f"""
     <!DOCTYPE html>
     <html>
@@ -357,18 +390,32 @@ def send_notification_email(recipient_email: str, subject: str, heading: str, bo
                 <img src="https://studiamo.cloud/static/images/logo-icon.png" width="32" height="32" style="border-radius: 8px; vertical-align: middle;" alt="Studiamo Logo" />
                 <span style="font-size: 20px; font-weight: 800; color: #1c1917; letter-spacing: -0.5px;">Studiamo</span>
             </div>
-            <h1 style="color: #1c1917; font-size: 26px; font-weight: 800; margin: 0 0 12px; letter-spacing: -0.5px;">{heading}</h1>
-            <p style="color: #57534e; font-size: 15px; line-height: 1.65; margin: 0 0 16px;">{body_text}</p>
-            <a href="{cta_url}" style="display: inline-block; background: #d97706; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 14px; padding: 12px 24px; border-radius: 12px; margin: 8px 0 20px;">{cta_label}</a>
+            <h1 style="color: #1c1917; font-size: 26px; font-weight: 800; margin: 0 0 12px; letter-spacing: -0.5px;">{heading_html}</h1>
+            <p style="color: #57534e; font-size: 15px; line-height: 1.65; margin: 0 0 16px;">{body_html}</p>
+            <a href="{cta_url}" style="display: inline-block; background: #d97706; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 14px; padding: 12px 24px; border-radius: 12px; margin: 8px 0 20px;">{html.escape(cta_label)}</a>
+            <div style="font-size: 13px; color: #57534e; background: #fbf8f2; border: 1px solid #e7dfd3; border-radius: 12px; padding: 14px 16px; margin-top: 12px; line-height: 1.6;">
+                Rather get these as push notifications or on Telegram?
+                <a href="{settings_link}" style="color: #b45309; font-weight: 700;">Change it in your notification settings</a>.
+            </div>
             <div style="font-size: 12px; color: #a8a29e; margin-top: 28px; text-align: center; border-top: 1px solid #e7dfd3; padding-top: 20px; line-height: 1.6;">
-                © 2026 Studiamo Learning System · You can turn these off anytime in Settings → Notifications.
+                © 2026 Studiamo Learning System<br>
+                Reminders tell you when a review is due, which is what makes spaced repetition work.<br>
+                <a href="{off_url}" style="color: #a8a29e; text-decoration: underline;">Turn off reminder emails</a>
             </div>
         </div>
     </body>
     </html>
     """
-    text_content = f"{heading}\n\n{body_text}\n\n{cta_label}: {cta_url}\n"
-    return _send_via_resend(recipient_email, subject, html_content, text_content, "NOTIFICATION EMAIL")
+    text_content = (
+        f"{heading}\n\n{body_text}\n\n{cta_label}: {cta_url}\n\n"
+        f"Rather get these as push notifications or on Telegram? {settings_link}\n"
+        f"Turn off reminder emails: {off_url}\n"
+    )
+    headers = {
+        "List-Unsubscribe": f"<{off_url}>",
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+    }
+    return _send_via_resend(recipient_email, subject, html_content, text_content, "NOTIFICATION EMAIL", headers=headers)
 
 
 def send_promotion_email(recipient_email: str) -> bool:

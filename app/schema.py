@@ -71,7 +71,8 @@ TABLES_SQL = [
     -- chat or an unsubscribed browser), while the category filters are ON so that a user
     -- who does connect a channel receives everything rather than silence. Copied from the
     -- live database; inverting either group would quietly change behaviour for every new
-    -- account.
+    -- account. Cloud signups override notify_email to TRUE at creation (database.init_db),
+    -- since their Google address is known from the start.
     ALTER TABLE user_profile ADD COLUMN IF NOT EXISTS notify_telegram BOOLEAN DEFAULT FALSE;
     ALTER TABLE user_profile ADD COLUMN IF NOT EXISTS notify_push BOOLEAN DEFAULT FALSE;
     ALTER TABLE user_profile ADD COLUMN IF NOT EXISTS notify_email BOOLEAN DEFAULT FALSE;
@@ -79,6 +80,23 @@ TABLES_SQL = [
     ALTER TABLE user_profile ADD COLUMN IF NOT EXISTS notify_cat_streak BOOLEAN DEFAULT TRUE;
     ALTER TABLE user_profile ADD COLUMN IF NOT EXISTS notify_cat_inactivity BOOLEAN DEFAULT TRUE;
     ALTER TABLE user_profile ADD COLUMN IF NOT EXISTS last_inactivity_notified_at TIMESTAMPTZ;
+
+    -- IANA time zone name (e.g. 'Europe/Berlin'), captured from the browser on first load and
+    -- editable in settings. Due days, streak days and reminder hours are local to it; NULL
+    -- reads as UTC (app/local_days.py).
+    ALTER TABLE user_profile ADD COLUMN IF NOT EXISTS timezone TEXT;
+    -- Daily reminder hour in the user's local time. NULL means never chosen: a legacy
+    -- preferred_hour (a UTC hour) is converted on read, otherwise the default applies
+    -- (dependencies.effective_reminder_hour).
+    ALTER TABLE user_profile ADD COLUMN IF NOT EXISTS reminder_hour INTEGER;
+
+    -- Whether the user went through the onboarding step that sets up review reminders. Shown
+    -- once to accounts that finished onboarding before the step existed and have no reminder
+    -- channel yet.
+    ALTER TABLE user_profile ADD COLUMN IF NOT EXISTS has_seen_reminder_setup INTEGER DEFAULT 0;
+    -- When the user last saw the "Chompy ate N quizzes while you were away" message; videos
+    -- eaten after this are the ones it reports (routers/dashboard.py).
+    ALTER TABLE user_profile ADD COLUMN IF NOT EXISTS chompy_seen_at TIMESTAMPTZ;
 
     -- Referral system (see routers/auth.py's signup path and database.py's code generation).
     ALTER TABLE user_profile ADD COLUMN IF NOT EXISTS referral_code VARCHAR;
@@ -197,6 +215,10 @@ TABLES_SQL = [
     -- file to retry it must not be blocked by that row.
     ALTER TABLE videos ADD COLUMN IF NOT EXISTS content_hash TEXT;
     ALTER TABLE videos DROP COLUMN IF EXISTS transcript;
+    -- Set when Chompy ate this video's review (app/chompy.py): the video is paused at the same
+    -- time, keeping its SRS stage and schedule. Cleared when the user wins it back with a quiz
+    -- or reactivates it. NULL for every video paused by hand.
+    ALTER TABLE videos ADD COLUMN IF NOT EXISTS eaten_at TIMESTAMPTZ;
     """,
     """
     CREATE TABLE IF NOT EXISTS quizzes (
@@ -553,6 +575,35 @@ TABLES_SQL = [
     );
     """,
     """
+    -- One row per reminder actually sent (app/notifications.py). Serves the per-day cap, the
+    -- template rotation (least recently sent per user) and conversion attribution: grading
+    -- stamps converted_at on the latest open row. Rows older than 30 days are pruned by the
+    -- scheduler, so this stays small; long-term numbers live in notification_template_stats.
+    --
+    -- local_day is the user's calendar date at send time, so "already sent today" means the
+    -- user's today, not the server's. target_quiz_ids lists the quizzes an evening warning
+    -- was about; empty means any answer counts as a conversion.
+    CREATE TABLE IF NOT EXISTS notification_log (
+        id              SERIAL PRIMARY KEY,
+        user_uuid       UUID NOT NULL,
+        kind            TEXT NOT NULL,
+        template_id     TEXT NOT NULL,
+        channels        TEXT NOT NULL DEFAULT '',
+        local_day       DATE NOT NULL,
+        target_quiz_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
+        sent_at         TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        converted_at    TIMESTAMPTZ
+    );
+
+    -- Lifetime send and conversion counters per template. Not per user, so it holds no
+    -- personal data and is kept forever.
+    CREATE TABLE IF NOT EXISTS notification_template_stats (
+        template_id TEXT PRIMARY KEY,
+        sent        INTEGER NOT NULL DEFAULT 0,
+        converted   INTEGER NOT NULL DEFAULT 0
+    );
+    """,
+    """
     ALTER TABLE user_profile ENABLE ROW LEVEL SECURITY;
     ALTER TABLE goals ENABLE ROW LEVEL SECURITY;
     ALTER TABLE videos ENABLE ROW LEVEL SECURITY;
@@ -573,6 +624,8 @@ TABLES_SQL = [
     ALTER TABLE tester_access ENABLE ROW LEVEL SECURITY;
     ALTER TABLE tester_feedback ENABLE ROW LEVEL SECURITY;
     ALTER TABLE xp_events ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE notification_log ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE notification_template_stats ENABLE ROW LEVEL SECURITY;
     """,
 ]
 
@@ -628,6 +681,7 @@ INDEXES_SQL = [
     # The weekly leaderboard sums this table per user over a date range, for every ranked
     # account at once. Composite so that scan is index-only on both columns.
     "CREATE INDEX IF NOT EXISTS idx_xp_events_user_created ON xp_events(user_uuid, created_at);",
+    "CREATE INDEX IF NOT EXISTS idx_notification_log_user_sent ON notification_log(user_uuid, sent_at);",
     # Makes scripts/backfill_gamification.py safe to re-run: a second pass cannot insert a
     # second event for an attempt it already seeded. Partial because the adjustment rows the
     # backfill writes carry no attempt id and there is one per user.

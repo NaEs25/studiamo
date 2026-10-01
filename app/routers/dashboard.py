@@ -1,8 +1,7 @@
 import logging
 from fastapi import APIRouter, Depends
-from app import database, gamification, storage
+from app import chompy, database, gamification, local_days
 from app.dependencies import (
-    get_active_username,
     require_app_access,
     get_srs_intervals,
     get_srs_caps_and_repetition,
@@ -61,13 +60,15 @@ def get_dashboard_data(username: str = Depends(require_app_access)):
     
         # 1. Fetch user stats
         try:
-            cursor.execute("SELECT xp, level, streak, last_quiz_at, badges, review_mode FROM user_profile WHERE user_uuid = %s LIMIT 1;", (user_uuid,))
+            cursor.execute("SELECT xp, level, streak, last_quiz_at, badges, review_mode, timezone, chompy_seen_at FROM user_profile WHERE user_uuid = %s LIMIT 1;", (user_uuid,))
             user = cursor.fetchone()
         except Exception as e_prof:
             logger.error(f"Error fetching user profile for {username}: {e_prof}")
             user = None
 
-        user_data = dict(user) if user else {"xp": 0, "level": 1, "streak": 0, "last_quiz_at": None, "badges": "[]", "review_mode": "video"}
+        user_data = dict(user) if user else {"xp": 0, "level": 1, "streak": 0, "last_quiz_at": None, "badges": "[]", "review_mode": "video", "timezone": None, "chompy_seen_at": None}
+        chompy_seen_at = user_data.pop("chompy_seen_at", None)
+        user_tz = local_days.resolve_timezone(user_data.get("timezone"))
 
         # Self-healing: lift the cached profile total if the XP ledger accounts for more than it.
         # Reads xp_events rather than quiz_attempts because attempts are deleted along with their
@@ -100,14 +101,17 @@ def get_dashboard_data(username: str = Depends(require_app_access)):
         # the next is 24.5 hours apart, and the streak was gone before the second quiz was
         # graded. No account could hold a streak above 1. See app/gamification.py.
         user_data["streak"] = gamification.effective_streak(
-            user_data.get("streak"), user_data.get("last_quiz_at")
+            user_data.get("streak"), user_data.get("last_quiz_at"), tz=user_tz
         )
 
         # The instant the streak lapses, sent so the frontend countdown reads the rule instead of
         # reimplementing it. app.js used to derive this itself as last_quiz_at + 24 rolling hours,
         # i.e. the exact rule this module replaced, and so displayed an expiry up to a day earlier
         # than the real one. Serialized with an explicit Z because the stored value is naive UTC.
-        _streak_deadline = gamification.streak_deadline(user_data.get("last_quiz_at"))
+        _streak_deadline = gamification.streak_deadline(user_data.get("last_quiz_at"), tz=user_tz)
+        # Where in the user's local day we are, so the belt can place quizzes between stations
+        # and move them forward hourly in the browser without asking the server again.
+        user_data["day_progress"] = round(local_days.day_progress(user_tz), 4)
         user_data["streak_deadline"] = _streak_deadline.isoformat() + "Z" if _streak_deadline else None
 
         # 2. Fetch all learning goals ordered by order_index (non-archived only)
@@ -135,7 +139,7 @@ def get_dashboard_data(username: str = Depends(require_app_access)):
         # 3. Fetch all active videos with summary
         cursor.execute("""
             SELECT v.id, v.youtube_id, v.title, v.category, v.thumbnail_url,
-                   v.importance_rating, v.learning_goal_id, v.is_archived, v.is_paused,
+                   v.importance_rating, v.learning_goal_id, v.is_archived, v.is_paused, v.eaten_at,
                    v.status, v.status_error, v.is_watchlist, v.custom_notes,
                    v.last_position_seconds, v.duration_seconds, v.is_temporary, v.expires_at, v.summary,
                    g.title AS goal_title,
@@ -162,7 +166,7 @@ def get_dashboard_data(username: str = Depends(require_app_access)):
         # "Adjust Learning Focus".
         cursor.execute("""
             SELECT v.id, v.youtube_id, v.title, v.category, v.thumbnail_url, v.importance_rating,
-                   v.learning_goal_id, v.is_archived, v.is_paused, v.status, v.status_error,
+                   v.learning_goal_id, v.is_archived, v.is_paused, v.eaten_at, v.status, v.status_error,
                    v.is_watchlist, v.custom_notes, v.summary,
                    g.title AS goal_title,
                    EXISTS (
@@ -194,11 +198,30 @@ def get_dashboard_data(username: str = Depends(require_app_access)):
         intervals = get_srs_intervals(cursor, user_uuid=user_uuid)
         num_stages = len([x for x in intervals if x is not None]) or 5
         srs_caps_cfg = get_srs_caps_and_repetition(cursor, user_uuid=user_uuid)
+        clock_start = chompy.get_clock_start(create=False)
         for q in quizzes:
             q_importance = q.pop("importance_rating", None) or 3
             q_max_stages = compute_max_stages(srs_caps_cfg["cap_by_importance"], srs_caps_cfg["caps"], q_importance, num_stages)
             q["max_stages"] = q_max_stages
             q["mastered"] = (q.get("srs_stage") or 0) >= q_max_stages
+            # Due is a whole local day, decided here in the user's time zone so app.js does not
+            # compare timestamps: rows from before day-based scheduling hold arbitrary hours.
+            q["days_until_due"] = local_days.days_until_due(q.get("next_review_at"), user_tz)
+            q["is_due"] = q["days_until_due"] is not None and q["days_until_due"] <= 0
+            # 0 means Chompy eats it tonight. None while not due, or before Chompy has started.
+            q["days_until_eaten"] = (
+                chompy.days_until_eaten(q.get("next_review_at"), user_tz, clock_start)
+                if q["is_due"] and clock_start else None
+            )
+
+        # What Chompy ate since the user last acknowledged it (POST /api/chompy/seen), for the
+        # "while you were away" message.
+        seen = local_days.as_naive_utc(chompy_seen_at) if chompy_seen_at else None
+        eaten_unseen = [
+            {"id": v["id"], "title": v.get("title"), "importance_rating": v.get("importance_rating") or 3}
+            for v in videos
+            if v.get("eaten_at") and (seen is None or local_days.as_naive_utc(v["eaten_at"]) > seen)
+        ]
 
         conn.close()
     
@@ -211,8 +234,22 @@ def get_dashboard_data(username: str = Depends(require_app_access)):
             "archived_goals": archived_goals,
             "videos": videos,
             "archived": archived,
-            "quizzes": quizzes
+            "quizzes": quizzes,
+            "chompy": {"eaten_unseen": eaten_unseen},
         }
+    finally:
+        conn.close()
+
+
+@router.post("/chompy/seen")
+def acknowledge_chompy(username: str = Depends(require_app_access)):
+    """Marks the "Chompy ate N quizzes while you were away" message as seen."""
+    conn = database.get_db_connection(username)
+    try:
+        cursor = conn.cursor()
+        cursor.execute("UPDATE user_profile SET chompy_seen_at = NOW() WHERE user_uuid = %s;", (conn.user_uuid,))
+        conn.commit()
+        return {"status": "ok"}
     finally:
         conn.close()
 

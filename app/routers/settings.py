@@ -1,9 +1,7 @@
 import json
-import os
 import re
 import shutil
 import tempfile
-import uuid
 import zipfile
 import logging
 from datetime import datetime, timezone, timedelta
@@ -12,12 +10,12 @@ from typing import Optional
 from urllib.parse import quote as _urlquote
 
 import psycopg2.errors
-from fastapi import APIRouter, Form, File, UploadFile, HTTPException, Depends, Request
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi import APIRouter, Form, HTTPException, Depends, Request
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from jinja2 import Environment, FileSystemLoader
 from starlette.background import BackgroundTask
 
-from app import config, database, storage, ai, gamification, moderation
+from app import config, database, gamification, local_days, moderation
 from app.dependencies import (
     get_active_username,
     get_srs_intervals,
@@ -25,6 +23,7 @@ from app.dependencies import (
     hash_password,
     verify_password,
     require_dev_tools_enabled,
+    effective_reminder_hour,
 )
 
 router = APIRouter(prefix="/api", tags=["Settings & Backup"])
@@ -82,7 +81,7 @@ def get_app_settings(username: str = Depends(get_active_username)):
             # Read all dedicated settings columns from user_profile in one query
             cursor.execute(
                 """
-                SELECT preferred_hour, notification_channel, notifications_enabled,
+                SELECT preferred_hour, reminder_hour, timezone, notification_channel, notifications_enabled,
                        notify_telegram, notify_push, notify_email,
                        notify_cat_quizzes, notify_cat_streak, notify_cat_inactivity,
                        leaderboard_hidden, review_mode, voice_engine, voice_speed,
@@ -187,7 +186,12 @@ def get_app_settings(username: str = Depends(get_active_username)):
                 "count_5": _safe_int(srs_row.get("question_count_5"), config.DEFAULT_QUESTION_COUNTS[4]),
             },
             # Read directly from dedicated user_profile columns
-            "preferred_hour": _safe_int(settings_row.get("preferred_hour"), -1),
+            # Local hour of the daily reminder, with a legacy UTC preferred_hour converted.
+            "reminder_hour": effective_reminder_hour(
+                settings_row.get("reminder_hour"), settings_row.get("preferred_hour"),
+                local_days.resolve_timezone(settings_row.get("timezone")),
+            ),
+            "timezone": settings_row.get("timezone"),
             "notification_channel": settings_row.get("notification_channel") or "both",
             "notifications_enabled": _parse_bool(settings_row.get("notifications_enabled", 1)),
             "notify_telegram": _parse_bool(settings_row.get("notify_telegram", 0)),
@@ -261,7 +265,8 @@ def save_app_settings(
     question_count_3: Optional[str] = Form(None),
     question_count_4: Optional[str] = Form(None),
     question_count_5: Optional[str] = Form(None),
-    preferred_hour: Optional[str] = Form(None),
+    reminder_hour: Optional[str] = Form(None),
+    timezone_name: Optional[str] = Form(None, alias="timezone"),
     leaderboard_hidden: Optional[str] = Form(None),
     review_mode: Optional[str] = Form(None),
     voice_engine: Optional[str] = Form(None),
@@ -380,9 +385,17 @@ def save_app_settings(
             settings_updates = []
             settings_params = []
 
-            if preferred_hour is not None:
-                settings_updates.append("preferred_hour = %s")
-                settings_params.append(_safe_int(preferred_hour, -1))
+            if reminder_hour is not None:
+                hour = _safe_int(reminder_hour, -1)
+                if 0 <= hour <= 23:
+                    settings_updates.append("reminder_hour = %s")
+                    settings_params.append(hour)
+
+            # Unknown names are ignored rather than stored: everything downstream would read
+            # them as UTC anyway, and the settings page would keep showing the junk value.
+            if timezone_name and local_days.is_valid_timezone(timezone_name):
+                settings_updates.append("timezone = %s")
+                settings_params.append(timezone_name)
 
             if leaderboard_hidden is not None:
                 settings_updates.append("leaderboard_hidden = %s")
@@ -475,7 +488,7 @@ def get_leaderboard(username: str = Depends(get_active_username)):
         cursor.execute(
             """
             SELECT p.user_uuid, p.username, p.display_name, p.xp, p.level, p.streak,
-                   p.last_quiz_at,
+                   p.last_quiz_at, p.timezone,
                    COALESCE(p.leaderboard_hidden, 0) AS leaderboard_hidden,
                    COALESCE(w.weekly_xp, 0) AS weekly_xp
               FROM user_profile p
@@ -502,7 +515,10 @@ def get_leaderboard(username: str = Depends(get_active_username)):
 
             # Derived, never the raw column: a streak whose last quiz predates yesterday has
             # lapsed, and only grading writes the stored value. See app/gamification.py.
-            streak = gamification.effective_streak(p.get("streak"), p.get("last_quiz_at"), now=now_naive)
+            streak = gamification.effective_streak(
+                p.get("streak"), p.get("last_quiz_at"), now=now_naive,
+                tz=local_days.resolve_timezone(p.get("timezone")),
+            )
 
             level = max(stored_level, gamification.level_for_xp(total_xp))
 
@@ -603,52 +619,93 @@ def update_review_mode(
         conn.close()
 
 
-@router.get("/notifications/due")
-def get_due_notifications(username: str = Depends(get_active_username)):
-    """Returns due Active Recall quizzes for PWA / Web Push notifications."""
-    user_uuid = config.get_user_uuid_from_db(username)
-    if not user_uuid:
-        return {"due_count": 0, "items": []}
-        
+def _reminder_emails_off(email: str, token: str) -> bool:
+    """Turns reminder emails off for the account behind a valid tokenized link."""
+    from app.email_utils import REMINDER_EMAILS_PURPOSE, verify_unsubscribe_token
+    clean = (email or "").strip().lower()
+    # Some mail clients turn "+" in a query string into a space.
+    candidates = [clean] + ([clean.replace(" ", "+")] if " " in clean else [])
+    for candidate in candidates:
+        if verify_unsubscribe_token(candidate, token, REMINDER_EMAILS_PURPOSE):
+            conn = database.get_pooled_raw_connection()
+            try:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "UPDATE user_profile SET notify_email = FALSE WHERE LOWER(google_email) = %s;",
+                    (candidate,),
+                )
+                conn.commit()
+            finally:
+                database.release_pooled_connection(conn)
+            return True
+    return False
+
+
+@router.get("/notifications/email-off", response_class=HTMLResponse)
+def reminder_emails_off_page(email: str = "", token: str = ""):
+    """Footer link in reminder emails: turns them off without signing in."""
+    try:
+        ok = _reminder_emails_off(email, token)
+    except Exception as e:
+        logger.error(f"Turning off reminder emails failed: {e}")
+        ok = None
+    if ok:
+        title, message = "Reminder emails are off", "You will not get review reminders by email anymore. You can turn them back on, or switch to push or Telegram, in Settings under Notifications."
+    elif ok is None:
+        title, message = "Something went wrong", "Your settings could not be updated. Please try again, or turn reminder emails off in Settings under Notifications."
+    else:
+        title, message = "This link is not valid", "Please turn reminder emails off in Settings under Notifications instead."
+    return HTMLResponse(content=f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{title} | Studiamo</title>
+    <style>
+        body {{ font-family: system-ui, -apple-system, sans-serif; background-color: #f6f1e7; color: #1c1917; margin: 0; padding: 60px 20px; text-align: center; }}
+        .card {{ max-width: 480px; margin: 0 auto; background: #ffffff; border: 1px solid #e7dfd3; border-radius: 24px; padding: 40px 28px; }}
+        h1 {{ font-size: 24px; font-weight: 800; margin: 0 0 12px; }}
+        p {{ font-size: 15px; color: #57534e; line-height: 1.6; margin: 0 0 24px; }}
+        a {{ display: inline-block; background: #d97706; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 14px; padding: 12px 24px; border-radius: 12px; }}
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>{title}</h1>
+        <p>{message}</p>
+        <a href="/">Open Studiamo</a>
+    </div>
+</body>
+</html>""")
+
+
+@router.post("/notifications/email-off")
+def reminder_emails_off_one_click(email: str = "", token: str = ""):
+    """RFC 8058 one-click unsubscribe, posted by mail clients from the List-Unsubscribe header."""
+    if not _reminder_emails_off(email, token):
+        raise HTTPException(status_code=400, detail="Invalid link.")
+    return {"status": "ok"}
+
+
+@router.post("/user/timezone")
+def capture_timezone(timezone_name: str = Form(..., alias="timezone"), username: str = Depends(get_active_username)):
+    """Stores the browser's time zone the first time the app sees this account.
+
+    Only fills an empty value: a zone chosen in settings is never overwritten by whichever
+    device happens to load the app next.
+    """
+    if not local_days.is_valid_timezone(timezone_name):
+        raise HTTPException(status_code=400, detail="Unknown time zone.")
     conn = database.get_db_connection(username)
     try:
         cursor = conn.cursor()
-        cursor.execute("""
-            SELECT q.id, q.video_id, q.next_review_at, v.title AS video_title
-            FROM quizzes q
-            JOIN videos v ON q.video_id = v.id AND q.user_uuid = v.user_uuid
-            WHERE q.user_uuid = %s 
-              AND v.is_paused = 0 
-              AND v.is_archived = 0 
-              AND v.is_watchlist = 0
-              AND q.importance_level = v.importance_rating;
-        """, (user_uuid,))
-        rows = [dict(r) for r in cursor.fetchall()]
-        
-        now_utc = datetime.now(timezone.utc)
-        due_items = []
-        for r in rows:
-            next_rev = r.get("next_review_at")
-            if next_rev:
-                try:
-                    dt = next_rev if isinstance(next_rev, datetime) else datetime.fromisoformat(str(next_rev))
-                    if dt.tzinfo is None:
-                        dt = dt.replace(tzinfo=timezone.utc)
-                    if dt <= now_utc:
-                        due_items.append({
-                            "id": r["id"],
-                            "title": r.get("video_title") or "Lerneinheit"
-                        })
-                except Exception as e:
-                    logger.warning(f"Failed to parse next_review_at={next_rev!r} for quiz id={r.get('id')}: {e}")
-        return {
-            "due_count": len(due_items),
-            "items": due_items
-        }
-    except Exception as e:
-        import logging
-        logging.getLogger(__name__).error(f"Error checking due notifications for {username}: {e}")
-        return {"due_count": 0, "items": []}
+        cursor.execute(
+            "UPDATE user_profile SET timezone = %s WHERE user_uuid = %s AND timezone IS NULL;",
+            (timezone_name, conn.user_uuid),
+        )
+        stored = cursor.rowcount > 0
+        conn.commit()
+        return {"status": "ok", "stored": stored}
     finally:
         conn.close()
 
@@ -664,14 +721,27 @@ def get_onboarding_status(username: str = Depends(get_active_username)):
     user_uuid = conn.user_uuid
     try:
         cursor = conn.cursor()
-        cursor.execute("SELECT has_seen_onboarding, has_seen_updates FROM user_profile WHERE user_uuid = %s;", (user_uuid,))
+        cursor.execute(
+            """SELECT has_seen_onboarding, has_seen_updates, has_seen_reminder_setup,
+                      notify_push, notify_telegram, notify_email, google_email
+               FROM user_profile WHERE user_uuid = %s;""",
+            (user_uuid,),
+        )
         row = cursor.fetchone()
         if row:
             return {
                 "has_seen_onboarding": bool(row.get("has_seen_onboarding")),
-                "has_seen_updates": (row.get("has_seen_updates") or 0) >= config.CURRENT_UPDATE_VERSION
+                "has_seen_updates": (row.get("has_seen_updates") or 0) >= config.CURRENT_UPDATE_VERSION,
+                "has_seen_reminder_setup": bool(row.get("has_seen_reminder_setup")),
+                # Same test the reminder scheduler uses (app/notifications.py _has_channel).
+                "has_reminder_channel": bool(
+                    row.get("notify_push") or row.get("notify_telegram")
+                    or (row.get("notify_email") and row.get("google_email"))
+                ),
+                "reminder_email": row.get("google_email") or "",
             }
-        return {"has_seen_onboarding": False, "has_seen_updates": False}
+        return {"has_seen_onboarding": False, "has_seen_updates": False, "has_seen_reminder_setup": False,
+                "has_reminder_channel": False, "reminder_email": ""}
     finally:
         conn.close()
 
@@ -693,6 +763,29 @@ def update_onboarding_status(
         if has_seen_updates is not None:
             val = config.CURRENT_UPDATE_VERSION if _parse_bool(has_seen_updates) else 0
             cursor.execute("UPDATE user_profile SET has_seen_updates = %s WHERE user_uuid = %s;", (val, user_uuid))
+        conn.commit()
+        return {"status": "ok"}
+    finally:
+        conn.close()
+
+
+@router.post("/user/reminder_setup")
+def complete_reminder_setup(channel: str = Form(...), username: str = Depends(get_active_username)):
+    """Saves the choice made in the onboarding reminder step and marks the step as seen.
+
+    "push": push on, email off, so the same reminder does not arrive twice by default (both
+    can still be turned on in settings). "email": email on. "skip": only marks the step seen.
+    """
+    if channel not in ("push", "email", "skip"):
+        raise HTTPException(status_code=400, detail="Unknown reminder channel.")
+    conn = database.get_db_connection(username)
+    try:
+        cursor = conn.cursor()
+        if channel == "push":
+            cursor.execute("UPDATE user_profile SET notify_push = TRUE, notify_email = FALSE WHERE user_uuid = %s;", (conn.user_uuid,))
+        elif channel == "email":
+            cursor.execute("UPDATE user_profile SET notify_email = TRUE WHERE user_uuid = %s;", (conn.user_uuid,))
+        cursor.execute("UPDATE user_profile SET has_seen_reminder_setup = 1 WHERE user_uuid = %s;", (conn.user_uuid,))
         conn.commit()
         return {"status": "ok"}
     finally:

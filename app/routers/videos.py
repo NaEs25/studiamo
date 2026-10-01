@@ -1,4 +1,3 @@
-import os
 import json
 import logging
 from datetime import datetime, timezone, timedelta
@@ -8,18 +7,16 @@ from typing import Optional
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
 from fastapi.responses import FileResponse
 
-from app import config, database, storage, ai, youtube
+from app import config, database, storage, ai, youtube, local_days
 from app.import_manager import ImportQueueManager
 from app.ai import UsageLimitExceeded
 from app.dependencies import (
-    get_active_username,
     get_question_counts,
     get_srs_multipliers,
     get_srs_intervals,
     get_srs_caps_and_repetition,
     compute_max_stages,
-    get_preferred_hour,
-    adjust_next_review,
+    get_user_timezone,
     require_app_access,
     build_concept_pool,
     select_stage_questions,
@@ -276,7 +273,10 @@ async def retry_video_import_route(
     
         if task_row:
             task_id = task_row["id"]
-            success = ImportQueueManager.get_instance().retry_task(task_id, username)
+            # retry_task returns False when the task row vanished in between or could not be
+            # reset. Reporting "processing" then left the card spinning with nothing running.
+            if not ImportQueueManager.get_instance().retry_task(task_id, username):
+                raise HTTPException(status_code=409, detail="The import could not be restarted. Please try again.")
             return {"status": "processing", "video_id": video_id, "task_id": task_id}
         else:
             url = f"https://www.youtube.com/watch?v={video['youtube_id']}" if video.get("youtube_id") else None
@@ -403,7 +403,17 @@ def pause_video(id: int, username: str = Depends(require_app_access)):
             conn.close()
             raise HTTPException(status_code=404, detail="Video not found")
         new_state = 0 if row["is_paused"] else 1
-        cursor.execute("UPDATE videos SET is_paused = %s WHERE id = %s AND user_uuid = %s;", (new_state, id, user_uuid))
+        # eaten_at marks a pause made by Chompy; any toggle by hand ends that state.
+        cursor.execute("UPDATE videos SET is_paused = %s, eaten_at = NULL WHERE id = %s AND user_uuid = %s;", (new_state, id, user_uuid))
+        if new_state == 0:
+            # A review that went overdue while paused becomes due today instead: its old due
+            # date is days in the past, and Chompy would eat it again on his next pass.
+            tz = get_user_timezone(cursor, user_uuid)
+            today_start = local_days.local_midnight_utc(local_days.local_today(tz), tz)
+            cursor.execute(
+                "UPDATE quizzes SET next_review_at = %s WHERE video_id = %s AND user_uuid = %s AND next_review_at < %s;",
+                (today_start.isoformat(), id, user_uuid, today_start.isoformat()),
+            )
         conn.commit()
         conn.close()
         return {"status": "success", "is_paused": new_state}
@@ -602,9 +612,7 @@ def create_preview_video(
 ):
     """Imports a YouTube video in 24h temporary Preview mode (is_temporary=1) without generating quizzes yet."""
     import re
-    from datetime import datetime, timezone, timedelta
-    from app import youtube, storage
-    
+
     yt_id = None
     if "youtube.com" in url or "youtu.be" in url:
         match = re.search(r"(?:v=|\/)([0-9A-Za-z_-]{11})", url)
@@ -742,7 +750,6 @@ def generate_video_quiz_for_level(
         conn.close()
         raise HTTPException(status_code=404, detail="Material card not found.")
 
-    yt_id = row.get("youtube_id") or f"doc_{id}"
     title = row["title"]
     goal_id = row["learning_goal_id"]
 
@@ -772,9 +779,7 @@ def generate_video_quiz_for_level(
     multipliers = get_srs_multipliers(username)
     multiplier = multipliers.get(level, 1.5)
     review_delay_days = intervals[0] * multiplier
-    pref_hour = get_preferred_hour(cursor, user_uuid)
-    next_review_dt = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=review_delay_days)
-    next_review = adjust_next_review(next_review_dt, pref_hour).isoformat()
+    next_review = local_days.schedule_review(review_delay_days, get_user_timezone(cursor, user_uuid)).isoformat()
 
     try:
         cursor.execute("""
@@ -1149,6 +1154,7 @@ def get_video_stats(id: int, username: str = Depends(require_app_access)):
         srs_stage = q_row["srs_stage"] if (q_row and q_row.get("srs_stage") is not None) else 0
         raw_next = q_row.get("next_review_at") if q_row else None
         next_review_at = raw_next.isoformat() if hasattr(raw_next, "isoformat") else (str(raw_next) if raw_next else None)
+        is_due = local_days.is_due(raw_next, get_user_timezone(cursor, user_uuid)) if raw_next else True
 
         intervals = get_srs_intervals(cursor, user_uuid=user_uuid)
         num_stages = len([x for x in intervals if x is not None]) or 5
@@ -1182,6 +1188,7 @@ def get_video_stats(id: int, username: str = Depends(require_app_access)):
             "max_stages": max_stages,
             "mastered": srs_stage >= max_stages,
             "next_review_at": next_review_at,
+            "is_due": is_due,
             "attempts": attempts
         }
     finally:

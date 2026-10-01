@@ -8,6 +8,7 @@ account with 21 active days was sitting at streak 0.
 """
 import unittest
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 from app.gamification import (
     advance_streak,
@@ -141,6 +142,42 @@ class TestLevelForXp(unittest.TestCase):
     def test_never_below_one(self):
         self.assertEqual(level_for_xp(None), 1)
         self.assertEqual(level_for_xp(-10), 1)
+
+
+class TestLocalDayStreak(unittest.TestCase):
+    """Streak days follow the user's time zone, not UTC."""
+
+    BERLIN = ZoneInfo("Europe/Berlin")
+    NEW_YORK = ZoneInfo("America/New_York")
+
+    def test_late_evening_utc_is_already_the_next_day_in_berlin(self):
+        # 22:30 UTC on Monday is 00:30 Tuesday in Berlin (summer time): a new local day.
+        last = datetime(2026, 8, 17, 12, 0)   # Monday 14:00 Berlin
+        now = datetime(2026, 8, 17, 22, 30)   # Tuesday 00:30 Berlin
+        self.assertEqual(advance_streak(3, last, now=now), 3)
+        self.assertEqual(advance_streak(3, last, now=now, tz=self.BERLIN), 4)
+
+    def test_evening_in_new_york_is_still_the_same_day(self):
+        # 01:00 UTC Tuesday is 21:00 Monday in New York: same local day as a Monday quiz.
+        last = datetime(2026, 8, 17, 14, 0)   # Monday 10:00 New York
+        now = datetime(2026, 8, 18, 1, 0)     # Monday 21:00 New York
+        self.assertEqual(advance_streak(3, last, now=now), 4)
+        self.assertEqual(advance_streak(3, last, now=now, tz=self.NEW_YORK), 3)
+
+    def test_effective_streak_uses_the_local_day(self):
+        last = datetime(2026, 8, 17, 21, 0)   # Monday 23:00 Berlin
+        now = datetime(2026, 8, 19, 20, 0)    # Wednesday 22:00 Berlin
+        self.assertEqual(effective_streak(5, last, now=now, tz=self.BERLIN), 0)
+        now = datetime(2026, 8, 18, 21, 30)   # Tuesday 23:30 Berlin
+        self.assertEqual(effective_streak(5, last, now=now, tz=self.BERLIN), 5)
+
+    def test_deadline_is_local_midnight(self):
+        last = datetime(2026, 8, 17, 10, 0)   # Monday 12:00 Berlin
+        # Lapses at Wednesday 00:00 Berlin, which is Tuesday 22:00 UTC in summer.
+        self.assertEqual(streak_deadline(last, tz=self.BERLIN), datetime(2026, 8, 18, 22, 0))
+
+    def test_no_time_zone_keeps_the_utc_rule(self):
+        self.assertEqual(streak_deadline(MON_09), streak_deadline(MON_09, tz=timezone.utc))
 
 
 if __name__ == "__main__":

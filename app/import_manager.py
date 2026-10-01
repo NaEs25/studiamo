@@ -5,12 +5,12 @@ import json
 import asyncio
 import traceback
 from abc import ABC, abstractmethod
-from datetime import datetime, timezone, timedelta
-from typing import Dict, Any, Optional, List, Union
+from datetime import datetime
+from typing import Dict, Optional, List, Union
 from pathlib import Path
 
 
-from app import database, config, storage, ai, youtube
+from app import database, config, storage, ai, youtube, local_days
 
 
 # ==============================================================================
@@ -66,8 +66,7 @@ from app.dependencies import (
     get_question_counts,
     get_srs_multipliers,
     get_srs_intervals,
-    get_preferred_hour,
-    adjust_next_review,
+    get_user_timezone,
     build_concept_pool,
 )
 
@@ -156,7 +155,6 @@ class YouTubeTaskProcessor(IImportTaskProcessor):
         username: str,
         update_stage_fn
     ) -> dict:
-        t0 = time.time()
         url = payload.get("url")
         importance_rating = payload.get("importance_rating", 3)
         learning_goal_id = payload.get("learning_goal_id")
@@ -179,8 +177,6 @@ class YouTubeTaskProcessor(IImportTaskProcessor):
         finally:
             conn_title.close()
 
-        t_meta = time.time()
-        fetch_metadata_sec = round(t_meta - t0, 2)
 
         q_counts = get_question_counts(username)
         question_count = q_counts.get(5, 5)
@@ -216,8 +212,6 @@ class YouTubeTaskProcessor(IImportTaskProcessor):
             goal_description=goal_description
         )
 
-        t_ai = time.time()
-        gemini_ai_analysis_sec = round(t_ai - t_meta, 2)
 
         conn = database.get_db_connection(username)
         user_uuid = conn.user_uuid
@@ -228,7 +222,6 @@ class YouTubeTaskProcessor(IImportTaskProcessor):
             summary = analysis.get("summary", [])
             outline = analysis.get("outline", [])
             quiz_items = analysis.get("quiz", [])
-            quiz_stages = analysis.get("stages", {})
             fact_check_result = analysis.get("fact_check", {})
             duration_seconds_val = analysis.get("duration_seconds") or 0
 
@@ -253,9 +246,7 @@ class YouTubeTaskProcessor(IImportTaskProcessor):
             multipliers = get_srs_multipliers(username)
             multiplier = multipliers.get(importance_rating, 1.5)
             review_delay_days = intervals[0] * multiplier
-            pref_hour = get_preferred_hour(cursor, user_uuid)
-            next_review = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=review_delay_days)
-            next_review = adjust_next_review(next_review, pref_hour)
+            next_review = local_days.schedule_review(review_delay_days, get_user_timezone(cursor, user_uuid))
 
             if video_id:
                 cursor.execute("DELETE FROM quizzes WHERE video_id = %s AND user_uuid = %s AND quiz_type = 'video';", (video_id, user_uuid))
@@ -394,7 +385,6 @@ class DocumentTaskProcessor(IImportTaskProcessor):
             summary = _note_text_truncation(analysis, analysis.get("summary", []))
             outline = analysis.get("outline", [])
             quiz_items = analysis.get("quiz", [])
-            quiz_stages = analysis.get("stages", {})
             fact_check_result = analysis.get("fact_check", {})
 
             target_goal_id = learning_goal_id
@@ -409,9 +399,7 @@ class DocumentTaskProcessor(IImportTaskProcessor):
             multipliers = get_srs_multipliers(username)
             multiplier = multipliers.get(importance_rating, 1.5)
             review_delay_days = intervals[0] * multiplier
-            pref_hour = get_preferred_hour(cursor, user_uuid)
-            next_review = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=review_delay_days)
-            next_review = adjust_next_review(next_review, pref_hour)
+            next_review = local_days.schedule_review(review_delay_days, get_user_timezone(cursor, user_uuid))
 
             if video_id:
                 cursor.execute("DELETE FROM quizzes WHERE video_id = %s AND user_uuid = %s AND quiz_type = 'video';", (video_id, user_uuid))
@@ -494,7 +482,6 @@ class NotesTaskProcessor(IImportTaskProcessor):
             summary = _note_text_truncation(analysis, analysis.get("summary", []))
             outline = analysis.get("outline", [])
             quiz_items = analysis.get("quiz", [])
-            quiz_stages = analysis.get("stages", {})
             fact_check_result = analysis.get("fact_check", {})
 
             target_goal_id = learning_goal_id
@@ -509,9 +496,7 @@ class NotesTaskProcessor(IImportTaskProcessor):
             multipliers = get_srs_multipliers(username)
             multiplier = multipliers.get(importance_rating, 1.5)
             review_delay_days = intervals[0] * multiplier
-            pref_hour = get_preferred_hour(cursor, user_uuid)
-            next_review = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=review_delay_days)
-            next_review = adjust_next_review(next_review, pref_hour)
+            next_review = local_days.schedule_review(review_delay_days, get_user_timezone(cursor, user_uuid))
 
             if video_id:
                 cursor.execute("DELETE FROM quizzes WHERE video_id = %s AND user_uuid = %s AND quiz_type = 'video';", (video_id, user_uuid))
@@ -618,9 +603,7 @@ class GoalQuizProcessor(IImportTaskProcessor):
 
             quiz_items = analysis.get("quiz", [])
             intervals = get_srs_intervals(cursor, user_uuid=user_uuid)
-            pref_hour = get_preferred_hour(cursor, user_uuid)
-            next_review = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=intervals[0])
-            next_review = adjust_next_review(next_review, pref_hour)
+            next_review = local_days.schedule_review(intervals[0], get_user_timezone(cursor, user_uuid))
 
             q_list = [dict(q) for q in quiz_items]
             q_json = json.dumps(q_list)

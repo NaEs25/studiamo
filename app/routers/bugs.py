@@ -13,8 +13,7 @@ links and bookmarks stay valid, and the /api/dev/bugs endpoints keep their old p
 import os
 import uuid
 import json
-import hmac
-import hashlib
+import logging
 from pathlib import Path
 from datetime import datetime, timezone
 from typing import Optional
@@ -35,6 +34,8 @@ from app.dependencies import (
     ADMIN_COOKIE_NAME,
     ADMIN_PASSWORD_SETTING_KEY,
 )
+
+logger = logging.getLogger("studiamo")
 
 router = APIRouter(tags=["Bugs"])
 

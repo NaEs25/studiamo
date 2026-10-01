@@ -4,7 +4,6 @@ Provides unified connection pool & parameter wrapping for clean execution across
 """
 import json
 import os
-import sys
 import threading
 import time
 import logging
@@ -617,12 +616,17 @@ def init_db(username: str, status: str = "active", referral_code: str = None, re
             display_name = u_cfg.get("DISPLAY_NAME") or u_cfg.get("display_name", username)
             from app.config import CURRENT_UPDATE_VERSION
             try:
+                # Cloud accounts sign in with Google, so an address to remind them at exists from
+                # the first minute: email reminders start on, and onboarding offers push or
+                # Telegram instead. Without this, a new user who skips the notification settings
+                # never hears about a due review. Self-hosted has no guaranteed email delivery.
+                from app.config import IS_CLOUD
                 cursor.execute(
                     """INSERT INTO user_profile
-                       (user_uuid, username, display_name, xp, level, streak, badges, review_mode, status, referral_code, referred_by, has_seen_updates)
-                       VALUES (%s, %s, %s, 0, 1, 0, '[]', 'video', %s, %s, %s, %s)
+                       (user_uuid, username, display_name, xp, level, streak, badges, review_mode, status, referral_code, referred_by, has_seen_updates, notify_email)
+                       VALUES (%s, %s, %s, 0, 1, 0, '[]', 'video', %s, %s, %s, %s, %s)
                        ON CONFLICT (user_uuid) DO NOTHING;""",
-                    (user_uuid, username, display_name, status, referral_code, referred_by_uuid, CURRENT_UPDATE_VERSION)
+                    (user_uuid, username, display_name, status, referral_code, referred_by_uuid, CURRENT_UPDATE_VERSION, bool(IS_CLOUD))
                 )
             except psycopg2.IntegrityError:
                 # A concurrent signup already inserted this username and the
@@ -1643,6 +1647,7 @@ _USER_DATA_TABLES_DELETE_ORDER = [
     "goal_recommendations",
     "push_subscriptions",
     "tester_access",
+    "notification_log",
 ]
 
 

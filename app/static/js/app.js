@@ -32,16 +32,24 @@ async function loadDashboard() {
         
         currentUserStats = data.user || currentUserStats;
         updateHeaderStats();
+        if (data.user && typeof captureTimezoneIfMissing === 'function') {
+            captureTimezoneIfMissing(data.user.timezone);
+        }
         
         if (typeof renderGoalBoxes === 'function' && data.goals) {
             renderGoalBoxes(data.goals);
         }
+
+        if (data.chompy) maybeShowChompyAway(data.chompy.eaten_unseen || []);
 
         const emptyGoalsHero = document.getElementById('dashboard-empty-goals');
         const dueHero = document.getElementById('due-quizzes-hero');
         const duePanel = document.getElementById('due-quizzes-panel');
         const dailyRecsPanel = document.getElementById('daily-recommendations-panel');
         const upcomingPanel = document.getElementById('upcoming-quizzes-panel');
+
+        // Read by the onboarding tour to end on "Add your first goal" for new accounts.
+        window._hasGoals = !!(data.goals && data.goals.length > 0);
 
         if (!data.goals || data.goals.length === 0) {
             if (emptyGoalsHero) emptyGoalsHero.classList.remove('hidden');
@@ -55,7 +63,6 @@ async function loadDashboard() {
             if (dailyRecsPanel) dailyRecsPanel.classList.remove('hidden');
         }
         
-        const now = new Date();
         const seenVideos = {};
         const getActiveQuizInfo = (q) => {
             if (q.quiz_type === 'video') {
@@ -81,120 +88,42 @@ async function loadDashboard() {
             // sentinel, see grade_quiz), so it belongs in neither the due nor upcoming panel.
             .filter(info => info !== null && !info.quiz.mastered);
 
-        const dueQuizzes = activeQuizzes.filter(info => parseDate(info.quiz.next_review_at) <= now);
+        // is_due and days_until_due come from the server, computed in the user's time zone:
+        // a review is due for its whole local day, not from the hour stored with it.
+        // Closest to being eaten by Chompy first, so the list starts where it matters most.
+        const eatenOrder = q => (q.days_until_eaten === null || q.days_until_eaten === undefined) ? 99 : q.days_until_eaten;
+        const dueQuizzes = activeQuizzes
+            .filter(info => info.quiz.is_due === true)
+            .sort((a, b) => eatenOrder(a.quiz) - eatenOrder(b.quiz));
         const upcomingQuizzes = activeQuizzes
-            .filter(info => parseDate(info.quiz.next_review_at) > now)
+            .filter(info => info.quiz.is_due !== true)
             .sort((a, b) => parseDate(a.quiz.next_review_at) - parseDate(b.quiz.next_review_at));
             
-        const dueCountText = document.getElementById('due-quizzes-count');
-        const btnStartDue = document.getElementById('btn-start-due');
-        
-        if (dueHero && dueCountText && btnStartDue) {
-            if (dueQuizzes.length > 0) {
-                dueCountText.textContent = dueQuizzes.length;
-                dueHero.classList.remove('hidden');
-                
-                const firstQ = dueQuizzes[0] && dueQuizzes[0].quiz ? dueQuizzes[0].quiz : null;
-                const username = typeof activeUsername !== 'undefined' ? activeUsername : 'default';
-                const savedIdx = firstQ ? localStorage.getItem(`quiz-progress-${username}-${firstQ.id}`) : null;
-                const isHeroContinued = firstQ && ((firstQ.in_progress_index !== undefined && firstQ.in_progress_index !== null && firstQ.in_progress_index > 0) || (savedIdx && parseInt(savedIdx, 10) > 0));
-                
-                const heroSpan = btnStartDue.querySelector('span');
-                if (heroSpan) {
-                    heroSpan.textContent = isHeroContinued ? 'Continue Quiz' : 'Study Now';
-                }
-                
-                btnStartDue.onclick = (e) => {
-                    if (e) e.preventDefault();
-                    const targetId = firstQ ? firstQ.id : null;
-                    if (targetId && typeof startQuiz === 'function') {
-                        startQuiz(targetId);
-                    }
-                };
-            } else {
-                dueHero.classList.add('hidden');
-            }
-        }
+        renderChompyBelt(dueQuizzes, data.user ? data.user.day_progress : 0);
+
         const dueList = document.getElementById('due-quizzes-list');
         if (duePanel && dueList) {
             if (dueQuizzes.length > 0) {
-                dueList.innerHTML = dueQuizzes.map(item => {
-                    const q = item.quiz;
-                    const dateVal = parseDate(q.next_review_at);
-                    const diffMs = now - dateVal;
-                    const diffHrs = Math.round(diffMs / 3600000);
-                    const timeStr = diffHrs <= 0 ? 'Due now' : `Due ${diffHrs}h ago`;
-                    const goalName = item.goal_title || (item.video ? item.video.goal_title : null);
-                    const goalStr = goalName ? ` • ${goalName}` : '';
-
-                    let titleAction = 'javascript:void(0)';
-                    if (item.video && item.video.id) {
-                        titleAction = `javascript:navigateToVideoInGoals(${item.video.id})`;
-                    }
-
-                    const videoId = item.video ? item.video.id : 'null';
-                    const levelVal = item.video ? (item.video.importance_rating || 3) : 3;
-
-                    const username = typeof activeUsername !== 'undefined' ? activeUsername : 'default';
-                    const savedProgress = localStorage.getItem(`quiz-progress-${username}-${q.id}`);
-                    const isContinued = (q.in_progress_index !== undefined && q.in_progress_index !== null && q.in_progress_index > 0) || (savedProgress && parseInt(savedProgress, 10) > 0);
-                    const btnLabel = isContinued ? 'Continue Quiz' : 'Start Quiz';
-
-                    const thumbHTML = renderMediaThumbHTML(item.video, {
-                        sizeClasses: 'w-12 h-8',
-                        title: 'View Video in Goals'
-                    });
-
-                    return `
-                        <div class="bg-white rounded-xl p-3 flex flex-col justify-between space-y-2.5 border border-[#e7dfd3] hover:border-amber-500/40 transition shadow-sm">
-                            <div class="flex space-x-2.5 items-center min-w-0">
-                                <a href="${titleAction}" class="shrink-0">
-                                    ${thumbHTML}
-                                </a>
-                                <div class="min-w-0 flex-grow">
-                                    <a href="${titleAction}" class="font-bold text-xs text-stone-800 truncate hover:text-amber-700 block" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</a>
-                                    <p class="text-[10px] text-stone-500 mt-0.5">${q.mastered ? 'Mastered' : `Stage: ${q.srs_stage}`} • ${timeStr}${goalStr}</p>
-                                </div>
-                            </div>
-                            <div class="flex items-center space-x-2 pt-1">
-                                <button onclick="startQuiz(${q.id}, ${videoId}, ${levelVal})" class="btn-primary flex-grow py-1.5 font-extrabold rounded-lg text-xs transition flex items-center justify-center space-x-1 h-[32px]">
-                                    <i data-lucide="play" class="w-3 h-3 fill-amber-900"></i>
-                                    <span>${btnLabel}</span>
-                                </button>
-                                <button onclick="rescheduleQuiz(${q.id})" class="py-1.5 px-2.5 bg-[#f3ebd9] hover:bg-[#e7dfd3] border border-[#e7dfd3] text-stone-700 hover:text-stone-900 font-semibold rounded-lg text-xs transition flex items-center justify-center space-x-1 h-[32px]" title="Reschedule by 1 day" aria-label="Reschedule quiz by 1 day">
-                                    <i data-lucide="calendar" class="w-3.5 h-3.5 text-amber-700"></i>
-                                    <span>Reschedule</span>
-                                </button>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
+                dueList.innerHTML = dueQuizzes.map(renderDueCard).join('');
                 duePanel.classList.remove('hidden');
             } else {
                 duePanel.classList.add('hidden');
             }
         }
 
+        const upcomingCount = document.getElementById('upcoming-quizzes-count');
+        if (upcomingCount) {
+            upcomingCount.textContent = upcomingQuizzes.length;
+            upcomingCount.classList.toggle('hidden', upcomingQuizzes.length === 0);
+        }
         const upcomingList = document.getElementById('upcoming-quizzes-list');
         if (upcomingPanel && upcomingList) {
             if (upcomingQuizzes.length > 0) {
                 upcomingList.innerHTML = upcomingQuizzes.map(item => {
                     const q = item.quiz;
-                    const diffMs = parseDate(q.next_review_at) - now;
-                    const diffMins = Math.round(diffMs / 60000);
-                    let relativeStr = "";
-                    if (diffMins < 60) {
-                        relativeStr = `in ${diffMins} min`;
-                    } else {
-                        const diffHrs = Math.round(diffMins / 60);
-                        if (diffHrs < 24) {
-                            relativeStr = `in ${diffHrs} hr`;
-                        } else {
-                            const diffDays = Math.round(diffHrs / 24);
-                            relativeStr = `in ${diffDays} day${diffDays === 1 ? '' : 's'}`;
-                        }
-                    }
-                    const formattedDate = parseDate(q.next_review_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                    const daysAhead = q.days_until_due || 1;
+                    const relativeStr = daysAhead === 1 ? 'tomorrow' : `in ${daysAhead} days`;
+                    const formattedDate = parseDate(q.next_review_at).toLocaleDateString([], { month: 'short', day: 'numeric' });
                     const vidId = item.video ? item.video.id : null;
                     const clickAction = vidId ? `onclick="navigateToVideoInGoals(${vidId})"` : '';
                     const thumbHTML = renderMediaThumbHTML(item.video, {
@@ -676,8 +605,9 @@ function updateStreakTimer() {
         return;
     }
 
-    // The deadline is the server's (gamification.streak_deadline: midnight UTC ending the day
-    // after the last quiz, so a quiz on day D survives through the end of D+1). It is never
+    // The deadline is the server's (gamification.streak_deadline: midnight in the user's time
+    // zone ending the day after the last quiz, so a quiz on day D survives through the end of
+    // D+1). It is never
     // recomputed here. This used to be lastQuizAt + 24 rolling hours, the rule the backend had
     // already replaced for being wrong, and the two drifted for exactly as long as the number
     // lived in two places. With no deadline from the server, show nothing rather than a guess.
@@ -706,7 +636,7 @@ function updateStreakTimer() {
     }
 
     if (hoursLeft <= 5) {
-        // Warning mode: 5 hours or less remaining before 24h expiration
+        // Warning mode: 5 hours or less remaining before the streak lapses
         const totalSecs = Math.floor(msLeft / 1000);
         const h = Math.floor(totalSecs / 3600);
         const m = Math.floor((totalSecs % 3600) / 60);
@@ -785,6 +715,10 @@ window.addEventListener('DOMContentLoaded', () => {
     
     const savedTab = localStorage.getItem('active_studiamo_tab') || 'dashboard';
     switchTab(savedTab);
+    // Reminder emails link to /#notifications (app/email_utils.py send_notification_email).
+    if (window.location.hash === '#notifications' && typeof goToNotificationSettings === 'function') {
+        goToNotificationSettings();
+    }
     
     if (typeof checkOnboardingAndUpdates === 'function') {
         checkOnboardingAndUpdates();
@@ -857,3 +791,311 @@ window.importRecommendedVideo = importRecommendedVideo;
 window.dismissRecommendation = dismissRecommendation;
 window.updateHeaderStats = updateHeaderStats;
 window.navigateToVideoInGoals = navigateToVideoInGoals;
+
+
+// ---- Chompy: "while you were away" --------------------------------------------------------
+
+let _chompyAwayShown = false;
+let _chompyAwayTimers = [];
+
+function _chompyAwayShow(ids) {
+    ['chompy-away-roll', 'chompy-away-full', 'chompy-away-tickle', 'chompy-away-list', 'chompy-away-footer']
+        .forEach(id => document.getElementById(id).classList.toggle('hidden', !ids.includes(id)));
+}
+
+function _chompyAwayListHTML(eaten) {
+    return eaten.map(v => `
+        <div class="flex items-center justify-between gap-2 bg-red-50 border border-red-200 rounded-xl py-1.5 pl-3 pr-1.5">
+            <span class="text-sm font-bold text-stone-900 truncate">${escapeHtml(v.title || 'Untitled')}</span>
+            <button type="button" data-comeback-win="${v.id}" data-level="${v.importance_rating || 3}"
+                class="btn-primary px-3 min-h-[36px] font-extrabold text-xs rounded-lg shrink-0">Win it back</button>
+        </div>`).join('');
+}
+
+// Shown once per page load, and only when no other overlay (onboarding, paywall, what's new)
+// has the screen; retried shortly after rather than stacked on top of one.
+function maybeShowChompyAway(eaten, attempt = 0) {
+    if (_chompyAwayShown || !eaten.length) return;
+    const busy = Array.from(document.querySelectorAll('.app-overlay'))
+        .some(el => el.id !== 'overlay-chompy-away' && !el.classList.contains('hidden'));
+    if (busy) {
+        if (attempt < 20) setTimeout(() => maybeShowChompyAway(eaten, attempt + 1), 3000);
+        return;
+    }
+    _chompyAwayShown = true;
+
+    const count = eaten.length;
+    const title = document.getElementById('chompy-away-title');
+    document.getElementById('chompy-away-items').innerHTML = _chompyAwayListHTML(eaten);
+    document.getElementById('chompy-away-bubble').textContent = `${count}x`;
+    const done = () => {
+        title.textContent = `Chompy ate ${count === 1 ? '1 quiz' : `${count} quizzes`} while you were away`;
+    };
+    const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (count === 1) {
+        // One quiz: tickle him to get it back.
+        const v = eaten[0];
+        title.textContent = `Chompy ate '${v.title || 'a quiz'}'`;
+        const btn = document.getElementById('chompy-away-tickle-btn');
+        btn.dataset.videoId = v.id;
+        btn.dataset.level = v.importance_rating || 3;
+        document.getElementById('chompy-away-tickle-img').src = CHOMPY_IMG.full;
+        _chompyAwayShow(['chompy-away-tickle']);
+    } else if (count <= 4 && !reduceMotion) {
+        // Two to four: the notes roll into him, he sits there full, then the list.
+        title.textContent = 'While you were away...';
+        document.getElementById('chompy-away-roll-notes').innerHTML = beltStackHTML(count);
+        _chompyAwayShow(['chompy-away-roll', 'chompy-away-footer']);
+        _chompyAwayTimers.push(setTimeout(() => {
+            done();
+            _chompyAwayShow(['chompy-away-full', 'chompy-away-footer']);
+            document.getElementById('chompy-away-bubble').classList.add('chompy-pop-in');
+        }, 2200));
+        _chompyAwayTimers.push(setTimeout(() => _chompyAwayShow(['chompy-away-full', 'chompy-away-list', 'chompy-away-footer']), 3700));
+    } else {
+        // More than four: just the summary.
+        done();
+        _chompyAwayShow(['chompy-away-full', 'chompy-away-list', 'chompy-away-footer']);
+    }
+
+    openOverlay('overlay-chompy-away', closeChompyAway);
+    if (typeof renderIcons === 'function') renderIcons();
+}
+
+function closeChompyAway() {
+    _chompyAwayTimers.forEach(clearTimeout);
+    _chompyAwayTimers = [];
+    const el = document.getElementById('overlay-chompy-away');
+    if (el) {
+        el.classList.add('hidden');
+        closeOverlay('overlay-chompy-away');
+    }
+    fetchAPI('/api/chompy/seen', { method: 'POST' }).catch(e => console.warn('Chompy ack failed:', e));
+}
+
+// Starts the quiz of an eaten video; finishing it wins the video back (grade_quiz).
+function _winBackFromComeback(videoId, level) {
+    closeChompyAway();
+    if (typeof handleStudyButtonClick === 'function') handleStudyButtonClick(null, videoId, level);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('chompy-away-close')?.addEventListener('click', closeChompyAway);
+    document.getElementById('chompy-away-later')?.addEventListener('click', closeChompyAway);
+    document.getElementById('chompy-away-items')?.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-comeback-win]');
+        if (btn) _winBackFromComeback(Number(btn.dataset.comebackWin), Number(btn.dataset.level) || 3);
+    });
+    document.getElementById('chompy-away-tickle-btn')?.addEventListener('click', (e) => {
+        const btn = e.currentTarget;
+        const img = document.getElementById('chompy-away-tickle-img');
+        img.src = CHOMPY_IMG.tickled;
+        img.classList.add('chompy-giggle');
+        btn.disabled = true;
+        setTimeout(() => {
+            img.classList.remove('chompy-giggle');
+            btn.disabled = false;
+            _winBackFromComeback(Number(btn.dataset.videoId), Number(btn.dataset.level) || 3);
+        }, 1000);
+    });
+});
+
+
+// ---- Upcoming review schedule: collapsible, collapsed by default --------------------------
+
+const _UPCOMING_EXPANDED_KEY = 'studiamo_upcoming_expanded';
+
+function _setUpcomingExpanded(expanded) {
+    const list = document.getElementById('upcoming-quizzes-list');
+    const toggle = document.getElementById('upcoming-quizzes-toggle');
+    const chevron = document.getElementById('upcoming-quizzes-chevron');
+    if (list) list.classList.toggle('hidden', !expanded);
+    if (toggle) toggle.setAttribute('aria-expanded', String(expanded));
+    if (chevron) chevron.classList.toggle('rotate-180', expanded);
+}
+
+function initUpcomingToggle() {
+    let expanded = false;
+    try { expanded = localStorage.getItem(_UPCOMING_EXPANDED_KEY) === '1'; } catch (e) { /* storage unavailable */ }
+    _setUpcomingExpanded(expanded);
+    document.getElementById('upcoming-quizzes-toggle')?.addEventListener('click', () => {
+        const next = document.getElementById('upcoming-quizzes-list')?.classList.contains('hidden');
+        _setUpcomingExpanded(!!next);
+        try { localStorage.setItem(_UPCOMING_EXPANDED_KEY, next ? '1' : '0'); } catch (e) { /* storage unavailable */ }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', initUpcomingToggle);
+
+
+// ---- Chompy: conveyor belt and due cards ---------------------------------------------------
+
+const CHOMPY_IMG = {
+    full: '/static/images/chompy/chompy-full.png',
+    hungry: '/static/images/chompy/chompy-hungry.png',
+    chomping: '/static/images/chompy/chompy-chomping.png',
+    tickled: '/static/images/chompy/chompy-tickled.png',
+    icon: '/static/images/chompy/chompy-icon.png',
+};
+
+// Belt station from the server's days_until_eaten: 2 or more (or no Chompy clock yet) is
+// "due today", 1 is one day over, 0 is two days over and gets eaten at the coming midnight.
+function chompyStation(q) {
+    const d = q.days_until_eaten;
+    if (d === null || d === undefined || d >= 2) return 'today';
+    return d === 1 ? 'over1' : 'over2';
+}
+
+// Up to three quizzes show as single notes; more collapse into one note with a count. An empty
+// station leaves its stretch of belt bare.
+function beltStackHTML(count) {
+    if (count === 0) return '';
+    const note = '<div class="belt-doc"><span></span><span></span><span></span>';
+    if (count <= 3) return Array(count).fill(note + '</div>').join('');
+    return `${note}<b class="belt-doc-badge">${count}x</b></div>`;
+}
+
+// Hourly creep along the belt. The server says how far into the user's local day it is
+// (day_progress); the browser adds the time since then, so no further requests are needed.
+// Each station spans 24 notches. At local midnight the dashboard reloads once, because that
+// is when stations change and Chompy eats.
+const BELT_STATIONS = ['today', 'over1', 'over2'];
+let _beltClock = null;
+let _beltTimer = null;
+let _beltReloading = false;
+
+function _beltHour() {
+    if (!_beltClock) return 0;
+    const elapsedDays = (Date.now() - _beltClock.at) / 86400000;
+    return Math.floor((_beltClock.progress + elapsedDays) * 24);
+}
+
+function placeBeltGroups(instant = false) {
+    const hour = _beltHour();
+    if (hour >= 24) {
+        if (!_beltReloading && typeof loadDashboard === 'function') {
+            _beltReloading = true;
+            _chompyAwayShown = false;
+            loadDashboard();
+        }
+        return;
+    }
+    const frac = hour / 24;
+    document.querySelectorAll('.belt-group[data-belt-station]').forEach(group => {
+        const idx = BELT_STATIONS.indexOf(group.dataset.beltStation);
+        // Left edge at the start of its third at 00:00, right edge at its end at 23:00 and on.
+        if (instant) group.style.transition = 'none';
+        group.style.left = `${((idx + frac) / 3) * 100}%`;
+        group.style.transform = `translateX(-${frac * 100}%)`;
+        if (instant) {
+            void group.offsetWidth;
+            group.style.transition = '';
+        }
+    });
+}
+
+function renderChompyBelt(dueQuizzes, dayProgress) {
+    const belt = document.getElementById('due-quizzes-hero');
+    if (!belt) return;
+    belt.classList.remove('hidden');
+
+    const counts = { today: 0, over1: 0, over2: 0 };
+    dueQuizzes.forEach(info => { counts[chompyStation(info.quiz)]++; });
+    belt.querySelectorAll('[data-belt-station]').forEach(el => {
+        el.innerHTML = beltStackHTML(counts[el.dataset.beltStation]);
+    });
+
+    _beltClock = { progress: Number(dayProgress) || 0, at: Date.now() };
+    _beltReloading = false;
+    placeBeltGroups(true);
+    if (!_beltTimer) _beltTimer = setInterval(() => placeBeltGroups(false), 60000);
+
+    const total = dueQuizzes.length;
+    document.getElementById('belt-headline').textContent =
+        total === 0 ? 'All caught up' : `${total} ${total === 1 ? 'quiz' : 'quizzes'} to review`;
+
+    // Asleep while nothing is overdue; awake (and hungry) once something is.
+    const awake = counts.over1 + counts.over2 > 0;
+    const img = document.getElementById('belt-chompy-img');
+    img.src = awake ? CHOMPY_IMG.hungry : CHOMPY_IMG.full;
+    img.alt = awake ? 'Chompy, awake and hungry' : 'Chompy, asleep';
+    document.getElementById('belt-chompy-zz').classList.toggle('hidden', awake);
+    document.getElementById('belt-chompy-caption').textContent =
+        counts.over2 > 0 ? 'Dinner is at midnight' : (awake ? 'Wide awake' : 'Asleep');
+
+    // Plays the wake-up hop once, the first time this browser sees him awake again.
+    let before = null;
+    try { before = localStorage.getItem('studiamo_chompy_state'); } catch (e) { /* storage unavailable */ }
+    const now = awake ? 'awake' : 'asleep';
+    if (before === 'asleep' && now === 'awake') {
+        img.classList.remove('chompy-wake');
+        void img.offsetWidth;
+        img.classList.add('chompy-wake');
+    }
+    try { localStorage.setItem('studiamo_chompy_state', now); } catch (e) { /* storage unavailable */ }
+}
+
+// Due quiz card, option C: tinted by station, Chompy peeking in bigger each day. "+1 Day" only
+// while the quiz is due today; overdue quizzes can only be saved by doing them.
+function renderDueCard(item) {
+    const q = item.quiz;
+    const station = chompyStation(q);
+    const meta = {
+        today: 'Due today',
+        over1: '<span class="due-card-meta-over1">Chompy eats this tomorrow night</span>',
+        over2: '<span class="due-card-meta-over2">Chompy eats this tonight</span>',
+    }[station];
+    const peek = { today: CHOMPY_IMG.icon, over1: CHOMPY_IMG.hungry, over2: CHOMPY_IMG.chomping }[station];
+
+    const goalName = item.goal_title || (item.video ? item.video.goal_title : null);
+    const goalStr = goalName ? ` • ${escapeHtml(goalName)}` : '';
+    const titleAction = (item.video && item.video.id) ? `javascript:navigateToVideoInGoals(${item.video.id})` : 'javascript:void(0)';
+    const videoId = item.video ? item.video.id : '';
+    const level = item.video ? (item.video.importance_rating || 3) : 3;
+
+    const username = typeof activeUsername !== 'undefined' ? activeUsername : 'default';
+    const saved = localStorage.getItem(`quiz-progress-${username}-${q.id}`);
+    const continued = (q.in_progress_index > 0) || (saved && parseInt(saved, 10) > 0);
+    const startLabel = station === 'over2' ? 'Save it now' : (continued ? 'Continue Quiz' : 'Start Quiz');
+    const startClass = station === 'over2' ? 'btn-save-now' : 'btn-primary';
+
+    const thumbHTML = renderMediaThumbHTML(item.video, { sizeClasses: 'w-12 h-8', title: 'View Video in Goals' });
+
+    return `
+        <div class="due-card due-card-${station} rounded-xl p-3 flex flex-col justify-between space-y-2.5 shadow-sm">
+            <div class="flex space-x-2.5 items-center min-w-0">
+                <a href="${titleAction}" class="shrink-0">${thumbHTML}</a>
+                <div class="min-w-0 flex-grow">
+                    <a href="${titleAction}" class="font-bold text-xs text-stone-800 truncate hover:text-amber-700 block" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</a>
+                    <p class="text-[10px] text-stone-500 mt-0.5">${q.mastered ? 'Mastered' : `Stage ${q.srs_stage}`} • ${meta}${goalStr}</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2 pt-1">
+                <button type="button" data-start-quiz="${q.id}" data-video="${videoId}" data-level="${level}" class="${startClass} flex-grow py-1.5 font-extrabold rounded-lg text-xs transition flex items-center justify-center space-x-1 h-[32px]">
+                    <i data-lucide="play" class="w-3 h-3"></i>
+                    <span>${startLabel}</span>
+                </button>
+                ${station === 'today' ? `
+                <button type="button" data-plus-day="${q.id}" class="py-1.5 px-2.5 bg-[#f3ebd9] hover:bg-[#e7dfd3] border border-[#e7dfd3] text-stone-700 hover:text-stone-900 font-semibold rounded-lg text-xs transition flex items-center justify-center space-x-1 h-[32px]" title="Move to tomorrow" aria-label="Move this quiz to tomorrow">
+                    <i data-lucide="calendar-plus" class="w-3.5 h-3.5 text-amber-700"></i>
+                    <span>+1 Day</span>
+                </button>` : ''}
+            </div>
+            <img src="${peek}" alt="" class="due-card-peek">
+        </div>
+    `;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('due-quizzes-list')?.addEventListener('click', (e) => {
+        const start = e.target.closest('[data-start-quiz]');
+        if (start) {
+            const video = start.dataset.video ? Number(start.dataset.video) : null;
+            startQuiz(Number(start.dataset.startQuiz), video, Number(start.dataset.level) || 3);
+            return;
+        }
+        const plus = e.target.closest('[data-plus-day]');
+        if (plus && typeof rescheduleQuiz === 'function') rescheduleQuiz(Number(plus.dataset.plusDay));
+    });
+});

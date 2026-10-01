@@ -19,6 +19,7 @@ serve requests.
 Analytics requests to Umami are aborted for every page, so test runs do not show up as
 visits in the real analytics.
 """
+import json
 import re
 import socket
 import threading
@@ -104,4 +105,34 @@ def _block_analytics(request):
 @pytest.fixture
 def logged_in_page(page, e2e_session_cookies):
     page.context.add_cookies(e2e_session_cookies)
-    return page
+    # The app stores the browser's time zone on first load (settings.js
+    # captureTimezoneIfMissing). Answered here so test runs never write one to the account.
+    page.route("**/api/user/timezone", lambda route: route.fulfill(
+        status=200, content_type="application/json", body='{"status": "ok", "stored": false}'))
+    # The test account has no reminder channel and may have reviews Chompy ate, so the one-time
+    # reminder step and the "while you were away" overlay would cover the page in every test.
+    # Both are answered as already handled; nothing is written to the account.
+    page.route("**/api/user/onboarding_status", _override_json({"has_seen_reminder_setup": True}))
+    page.route("**/api/dashboard", _override_json({"chompy": {"eaten_unseen": []}}))
+    yield page
+    # Handlers that pass a request through (route.fetch) can still be in flight when the test
+    # ends, and their failure then surfaces in the next test's setup instead of this one.
+    page.unroute_all(behavior="ignoreErrors")
+
+
+def _override_json(fields):
+    """Route handler that passes GETs through to the server and overwrites top-level fields."""
+    def handle(route):
+        if route.request.method != "GET":
+            route.continue_()
+            return
+        response = route.fetch()
+        try:
+            body = response.json()
+        except Exception:
+            route.fulfill(response=response)
+            return
+        if isinstance(body, dict):
+            body.update(fields)
+        route.fulfill(response=response, body=json.dumps(body))
+    return handle

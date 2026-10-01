@@ -1,5 +1,4 @@
 import asyncio
-import os
 import re
 import logging
 from contextlib import asynccontextmanager
@@ -14,7 +13,7 @@ from fastapi.templating import Jinja2Templates
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
-from app import database, storage, config, schema
+from app import database, config, schema
 from app.dependencies import limiter, get_authenticated_username, clean_external_referrer
 from app.telegram_bot import telegram_long_polling, managed_telegram_long_polling, run_scheduler_daemon
 

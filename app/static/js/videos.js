@@ -1124,6 +1124,8 @@ function renderVideoCard(video, quizzes, goals) {
     const srsStage = activeQuiz ? activeQuiz.srs_stage : 0;
     const isMastered = activeQuiz ? !!activeQuiz.mastered : false;
     const isPaused = video.is_paused ? true : false;
+    // Paused by Chompy (app/chompy.py) rather than by hand: shown in red, won back with a quiz.
+    const isEaten = !!video.eaten_at;
 
     let starsHTML = '';
     for (let i = 1; i <= 5; i++) {
@@ -1158,6 +1160,14 @@ function renderVideoCard(video, quizzes, goals) {
                  <span>Retry</span>
             </button>
         `;
+    } else if (isEaten) {
+        const levelToUse = video.importance_rating || video.importance_level || 3;
+        actionControlsHTML = `
+            <button data-win-back="${video.id}" data-level="${levelToUse}" class="w-full px-3 py-2 bg-red-600 hover:bg-red-700 text-white font-extrabold rounded-xl text-xs transition flex items-center justify-center space-x-2 h-[38px]" title="Finish this quiz to put it back on your review schedule">
+                 <i data-lucide="swords" class="w-3.5 h-3.5"></i>
+                 <span>Win it back</span>
+            </button>
+        `;
     } else {
         isNormalState = true;
         const levelToUse = video.importance_rating || video.importance_level || 3;
@@ -1173,6 +1183,8 @@ function renderVideoCard(video, quizzes, goals) {
     
     const stageBadgeHTML = isTemporaryVideo(video)
         ? `<span class="text-[9px] bg-amber-500/15 border border-amber-500/30 text-amber-900 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider flex items-center space-x-1" title="Preview mode: expires in ~24h unless imported"><i data-lucide="clock" class="w-3 h-3 text-amber-700"></i><span>24h Preview</span></span>`
+        : isEaten
+        ? `<span class="text-[9px] bg-red-100 border border-red-200 text-red-800 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider flex items-center space-x-1"><img src="/static/images/chompy/chompy-icon.png" alt="" class="w-3.5 h-3.5"><span>Eaten by Chompy</span></span><button data-chompy-info class="text-red-700 hover:text-red-900 p-0.5" title="What does this mean?" aria-label="What does eaten by Chompy mean?"><i data-lucide="info" class="w-3.5 h-3.5"></i></button>`
         : (isPaused
             ? `<span class="text-[9px] bg-stone-100 border border-stone-200 text-stone-600 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider flex items-center space-x-1" title="SRS Review Intervals Paused"><i data-lucide="pause-circle" class="w-3 h-3 text-stone-500"></i><span>${isMastered ? 'Mastered' : `Stage ${srsStage}`} (Paused)</span></span>`
             : `<span class="text-[9px] bg-amber-100 border border-amber-200 text-amber-800 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">${isMastered ? 'Mastered' : `Stage ${srsStage}`}</span>`);
@@ -1286,7 +1298,7 @@ function renderVideoCard(video, quizzes, goals) {
     const actionRowMarginClass = hasDetails ? 'mt-2' : 'mt-3';
 
     return `
-        <div id="video-card-${video.id}" class="bg-white border border-[#e7dfd3] rounded-2xl p-4 flex flex-col justify-between shadow-sm relative">
+        <div id="video-card-${video.id}" class="${isEaten ? 'bg-red-50 border border-red-200' : 'bg-white border border-[#e7dfd3]'} rounded-2xl p-4 flex flex-col justify-between shadow-sm relative">
             <div class="flex space-x-3 items-start">
                 ${mediaPreviewHTML}
                 <div class="min-w-0 flex-grow">
@@ -1749,15 +1761,16 @@ async function openVideoStatsModal(id) {
         }
         
         if (reviewEl) {
+            // Reviews are due for a whole day in the user's time zone, so the server decides
+            // is_due and only the date is shown, never an hour.
             let isDue = false;
             if (!stats.next_review_at) {
                 reviewEl.textContent = "Not scheduled";
             } else {
-                const dtStr = typeof parseDate === 'function' ? parseDate(stats.next_review_at) : stats.next_review_at;
-                const dt = new Date(dtStr);
-                isDue = dt <= new Date();
-                reviewEl.textContent = isDue ? "Due now" : dt.toLocaleString(undefined, {
-                    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                isDue = stats.is_due === true;
+                const dt = typeof parseDate === 'function' ? parseDate(stats.next_review_at) : new Date(stats.next_review_at);
+                reviewEl.textContent = isDue ? "Due today" : dt.toLocaleDateString(undefined, {
+                    month: 'short', day: 'numeric'
                 });
             }
             // Toggles only the emphasis. Reassigning .className here restated the
@@ -2726,3 +2739,36 @@ window.confirmPreviewImport = confirmPreviewImport;
 
 
 
+
+
+// Explains the red "Eaten by Chompy" state: nothing is deleted, only the review schedule is
+// paused (app/chompy.py).
+function showChompyInfo(event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+    showConfirm({
+        title: "Your knowledge is not gone",
+        message: "Chompy ate this quiz because its review was left for more than three days. "
+            + "Nothing is deleted: the video, your notes and the quiz are all still here. Only the "
+            + "review schedule is paused. Finish the quiz to win it back and pick up where you left off, "
+            + "or resume it from the card menu.",
+        confirmText: "Got it",
+        icon: "info",
+        hideCancel: true,
+    });
+}
+
+// Delegated, since cards are re-rendered from template strings.
+document.addEventListener('click', (event) => {
+    const info = event.target.closest('[data-chompy-info]');
+    if (info) {
+        showChompyInfo(event);
+        return;
+    }
+    const winBack = event.target.closest('[data-win-back]');
+    if (winBack) {
+        handleStudyButtonClick(event, Number(winBack.dataset.winBack), Number(winBack.dataset.level) || 3);
+    }
+});

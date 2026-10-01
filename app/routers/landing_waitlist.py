@@ -12,7 +12,6 @@ unchanged, only the internal module names were renamed for clarity.
 """
 
 import re
-import uuid
 import logging
 import html
 from typing import Optional

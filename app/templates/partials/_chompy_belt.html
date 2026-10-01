@@ -1,0 +1,31 @@
+<!-- Today's reviews as a conveyor belt (replaces the old "due" banner). Filled by app.js
+     renderChompyBelt from /api/dashboard: each due review rides at the station its
+     days_until_eaten puts it in, and creeps forward one notch per local hour (24 per station),
+     so at midnight it reaches the next station, or Chompy. Only eating is animated, in the
+     comeback overlay; the hourly moves are quiet. -->
+<section id="due-quizzes-hero" class="hidden belt-card flex flex-col gap-2" aria-labelledby="belt-headline">
+    <div class="min-w-0">
+        <p class="text-[11px] font-bold tracking-wider uppercase text-stone-600">Today's reviews</p>
+        <h3 id="belt-headline" class="font-bold text-base text-stone-900 truncate"></h3>
+    </div>
+    <div class="belt-row">
+        <div class="belt-stations">
+            <div class="belt-lane">
+                <div class="belt-group" data-belt-station="today"></div>
+                <div class="belt-group" data-belt-station="over1"></div>
+                <div class="belt-group" data-belt-station="over2"></div>
+            </div>
+            <div class="belt-track" aria-hidden="true"></div>
+            <div class="belt-zones">
+                <p class="belt-station-label">Due today</p>
+                <p class="belt-station-label belt-label-over1">1 day over</p>
+                <p class="belt-station-label belt-label-over2">2 days over</p>
+            </div>
+        </div>
+        <div class="belt-chompy">
+            <span id="belt-chompy-zz" class="chompy-zz hidden" aria-hidden="true">z</span>
+            <img id="belt-chompy-img" src="/static/images/chompy/chompy-full.png" alt="Chompy" class="chompy-face-belt">
+            <p id="belt-chompy-caption" class="belt-chompy-caption"></p>
+        </div>
+    </div>
+</section>

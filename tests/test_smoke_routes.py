@@ -64,6 +64,7 @@ PUBLIC_MUTATING_SAFE = {
     ("POST", "/api/users/verify"): "username: str = Form(...) -> 422 on empty body",
     ("POST", "/api/users/logout"): "clears a cookie, no DB access",
     ("POST", "/api/waitlist"): "body is a required pydantic model -> 422 on empty/missing JSON body",
+    ("POST", "/api/notifications/email-off"): "empty email/token fail the HMAC check -> 400 before any DB access",
 }
 
 # Routes deliberately not exercised via HTTP tonight. Each still gets

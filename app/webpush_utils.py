@@ -4,11 +4,9 @@ Handles VAPID keypair generation/loading and Web Push notification dispatch.
 Push subscriptions are stored in the push_subscriptions PostgreSQL table,
 keyed by user_uuid. No config blob is used.
 """
-import os
 import json
 import base64
 import logging
-from pathlib import Path
 from cryptography.hazmat.primitives.asymmetric import ec
 
 from app.config import BASE_DIR, get_user_uuid_from_db
@@ -141,7 +139,7 @@ def send_web_push(subscription_info: dict, payload_data: dict) -> bool:
     vapid_claims = {"sub": keys.get("claims_email", "mailto:admin@studiamo.app")}
 
     try:
-        from pywebpush import webpush, WebPushException
+        from pywebpush import webpush
         webpush(
             subscription_info=subscription_info,
             data=json.dumps(payload_data),

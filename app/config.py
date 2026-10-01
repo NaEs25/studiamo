@@ -1,9 +1,4 @@
 import os
-import json
-import shutil
-import uuid
-import csv
-from datetime import datetime, timezone
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -49,19 +44,6 @@ except Exception:
 # cloud "Connect Telegram" flow is unavailable but nothing else breaks.
 TELEGRAM_MANAGED_BOT_TOKEN = os.getenv("TELEGRAM_MANAGED_BOT_TOKEN", "")
 TELEGRAM_MANAGED_BOT_USERNAME = os.getenv("TELEGRAM_MANAGED_BOT_USERNAME", "")
-
-# Operator alerts (signup notifications). A raw chat id, deliberately, NOT a username:
-# send_telegram_message resolves its destination from a user_profile row, so routing
-# operator alerts that way would make "who receives our signup data" depend on an account
-# record. A wrong username in a setting, or an account changing hands, would be enough to
-# deliver it to a registered user. This addresses a chat directly and consults no account.
-#
-# Empty by default and empty in source. The value is personal data, so it lives in .env
-# (gitignored) on the deployment that wants the alerts, and nowhere else.
-ADMIN_TELEGRAM_CHAT_ID = os.getenv("ADMIN_TELEGRAM_CHAT_ID", "")
-# Optional. Falls back to the managed bot, so a separate operator bot can be introduced
-# later by setting one variable rather than by changing code.
-ADMIN_TELEGRAM_BOT_TOKEN = os.getenv("ADMIN_TELEGRAM_BOT_TOKEN", "")
 
 # Umami analytics website ID. Defaults to the managed studiamo.cloud tracker in cloud mode
 # so the hosted site's behaviour doesn't change. Defaults to empty in self-hosted mode: a
@@ -116,6 +98,8 @@ DEFAULT_SRS_MULTIPLIERS = [4.0, 2.5, 1.5, 1.0, 0.7]
 DEFAULT_SRS_CAPS = [2, 3, 4, 5, 5]
 DEFAULT_ENABLE_STAGE_5_REPETITION = False
 DEFAULT_STAGE_5_REPEAT_INTERVAL = 30
+# Local hour of the daily review reminder for users who never chose one.
+DEFAULT_REMINDER_HOUR = 18
 
 # "What's New" popup versioning. user_profile.has_seen_updates stores the version
 # number a user has last dismissed (it's an INTEGER column, not a strict boolean).

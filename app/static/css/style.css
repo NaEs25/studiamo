@@ -965,3 +965,178 @@ button:active:not(:disabled) {
     background-color: #d1fae5; /* emerald-100 */
     user-select: all;
 }
+
+/* ── Chompy: conveyor belt, due cards, comeback ───────────────────────────────
+   Due reviews sit on a belt that moves one station toward Chompy at each local midnight
+   (partials/_chompy_belt.html, app.js renderChompyBelt). The station is the review's
+   days_until_eaten from /api/dashboard: 2 or more is "due today", 1 and 0 are overdue.
+   The same three tones color the due cards below the belt. */
+:root {
+    --chompy-warm-bg:     #fff7ed;
+    --chompy-warm-border: #fed7aa;
+    --chompy-warm-ink:    #9a3412;
+    --chompy-hot-bg:      #fef2f2;
+    --chompy-hot-border:  #fca5a5;
+    --chompy-hot-ink:     #991b1b;
+}
+
+/* No display here: the card is toggled with Tailwind's .hidden, which this file would
+   otherwise override. Its flex layout comes from utilities in the markup. */
+.belt-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 1.25rem;
+    padding: 0.875rem 1rem;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+.belt-row { display: flex; align-items: flex-end; gap: 0.5rem; }
+.belt-stations { position: relative; flex: 1 1 auto; min-width: 0; }
+/* The notes ride just above the belt, positioned by app.js placeBeltGroups; each station's
+   label sits under its third of the belt. */
+.belt-lane { position: relative; height: 2.25rem; }
+.belt-zones { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.5rem; margin-top: 0.25rem; }
+.belt-group {
+    position: absolute;
+    bottom: 0.3125rem;
+    left: 0;
+    display: flex;
+    gap: 0.25rem;
+    align-items: flex-end;
+    transition: left 1.6s ease-in-out, transform 1.6s ease-in-out;
+}
+.belt-station-label {
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: #57534e;
+    white-space: nowrap;
+}
+.belt-label-over1 { color: var(--chompy-warm-ink); }
+.belt-label-over2 { color: var(--chompy-hot-ink); }
+.belt-stack { margin-top: auto; margin-bottom: -2px; display: flex; flex-wrap: wrap; gap: 0.375rem; align-items: flex-end; min-height: 2.25rem; }
+
+/* A quiz as a paper note. Up to three show singly; more collapse into one with a count. */
+.belt-doc {
+    position: relative;
+    width: 1.375rem;
+    height: 1.75rem;
+    box-sizing: border-box;
+    padding: 0.35rem 0.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    background: #fffdf8;
+    border: 1px solid #d6cfc2;
+    border-radius: 0.3rem;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+.belt-doc > span { display: block; height: 2px; background: #d6cfc2; border-radius: 1px; }
+.belt-doc > span:nth-child(2) { width: 70%; }
+.belt-doc:nth-child(1) { transform: rotate(-4deg); }
+.belt-doc:nth-child(2) { transform: rotate(3deg); }
+.belt-doc:nth-child(3) { transform: rotate(-2deg); }
+.belt-doc-badge {
+    position: absolute;
+    right: -0.9rem;
+    top: -0.6rem;
+    padding: 0.05rem 0.4rem;
+    border-radius: 9999px;
+    background: var(--color-text);
+    color: #ffffff;
+    font-size: 0.6875rem;
+    font-weight: 800;
+}
+
+.belt-track {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 0.875rem;
+    border-radius: 9999px;
+    border: 2px solid #292524;
+    background-image: repeating-linear-gradient(90deg, #44403c 0 14px, #57534e 14px 28px);
+}
+/* On the home belt the track is in the flow, between the notes and the labels. The comeback
+   overlay keeps it absolutely placed (.comeback-stage .belt-track). */
+.belt-stations > .belt-track { position: relative; left: auto; right: auto; bottom: auto; }
+/* Station boundaries on the belt. */
+.belt-stations > .belt-track::before,
+.belt-stations > .belt-track::after {
+    content: "";
+    position: absolute;
+    top: -6px;
+    bottom: -6px;
+    width: 2px;
+    border-radius: 1px;
+    background: #a8a29e;
+}
+.belt-stations > .belt-track::before { left: 33.333%; }
+.belt-stations > .belt-track::after { left: 66.666%; }
+.belt-track-run { animation: beltRun 1.8s linear infinite; }
+@keyframes beltRun { from { background-position: 0 0; } to { background-position: 112px 0; } }
+
+.belt-chompy { position: relative; flex: 0 0 auto; width: 3.25rem; display: flex; flex-direction: column; align-items: center; gap: 0.125rem; }
+.belt-chompy img { width: 100%; height: auto; }
+.belt-chompy-caption { display: none; font-size: 0.6875rem; line-height: 1.2; font-weight: 700; color: #57534e; text-align: center; }
+@media (min-width: 768px) {
+    .belt-card { padding: 1rem 1.25rem; }
+    .belt-zones { gap: 0.75rem; }
+    .belt-station-label { font-size: 0.6875rem; letter-spacing: 0.04em; }
+    .belt-chompy { width: 5rem; }
+    .belt-chompy-caption { display: block; }
+}
+
+/* The poses look to their own right; Chompy sits right of the belt and faces left, at it. */
+.chompy-face-belt { transform: scaleX(-1); }
+.chompy-wake { animation: chompyWake 0.7s ease-out; }
+@keyframes chompyWake {
+    0%, 100% { transform: scaleX(-1) translateY(0); }
+    40% { transform: scaleX(-1) translateY(-10px); }
+}
+.chompy-chomp { animation: chompyChomp 0.3s ease-in-out infinite; }
+@keyframes chompyChomp {
+    0%, 100% { transform: scaleX(-1) scale(1); }
+    50% { transform: scaleX(-1) scale(1.07) rotate(3deg); }
+}
+.chompy-zz { position: absolute; left: 12%; top: 0; font-weight: 800; color: var(--color-text-muted); animation: chompyZz 2.4s ease-in-out infinite; }
+@keyframes chompyZz {
+    0% { opacity: 0; transform: translate(0, 0); }
+    30% { opacity: 1; }
+    100% { opacity: 0; transform: translate(12px, -18px); }
+}
+
+/* Due cards, option C: a light tint, and Chompy peeking in bigger each day. */
+.due-card { position: relative; overflow: hidden; background: var(--color-surface); border: 1px solid var(--color-border); }
+.due-card-today { padding-right: 2.75rem; }
+.due-card-over1 { padding-right: 3.75rem; background: var(--chompy-warm-bg); border-color: var(--chompy-warm-border); }
+.due-card-over2 { padding-right: 5.25rem; background: var(--chompy-hot-bg); border-color: var(--chompy-hot-border); }
+.due-card-meta-over1 { color: var(--chompy-warm-ink); font-weight: 600; }
+.due-card-meta-over2 { color: var(--chompy-hot-ink); font-weight: 700; }
+.due-card-peek { position: absolute; height: auto; pointer-events: none; transform: scaleX(-1); }
+.due-card-today .due-card-peek { right: -6px; bottom: -4px; width: 30px; opacity: 0.45; }
+.due-card-over1 .due-card-peek { right: -10px; bottom: -14px; width: 56px; }
+.due-card-over2 .due-card-peek { right: -8px; bottom: -10px; width: 84px; }
+.btn-save-now { background: #dc2626; border: 1px solid #b91c1c; color: #ffffff; }
+.btn-save-now:hover { background: #b91c1c; }
+
+/* Comeback overlay (partials/_chompy_away.html). */
+.comeback-stage { position: relative; height: 10rem; border-radius: 1rem; overflow: hidden; }
+.comeback-stage .belt-track { left: 0.75rem; right: 8rem; bottom: 1.5rem; }
+.comeback-roll { animation: comebackRoll 1.8s ease-in infinite; }
+@keyframes comebackRoll {
+    0% { transform: translateX(0); opacity: 0; }
+    15% { opacity: 1; }
+    75% { transform: translateX(11rem) rotate(15deg); opacity: 1; }
+    100% { transform: translateX(13rem) rotate(45deg) scale(0.3); opacity: 0; }
+}
+.chompy-pop-in { animation: chompyPopIn 0.45s ease-out; }
+@keyframes chompyPopIn { 0% { transform: scale(0.4); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+.chompy-giggle { animation: chompyGiggle 0.15s ease-in-out 6; }
+@keyframes chompyGiggle { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+    .belt-track-run, .chompy-wake, .chompy-chomp, .chompy-zz, .comeback-roll, .chompy-pop-in, .chompy-giggle { animation: none; }
+    .belt-group { transition: none; }
+}

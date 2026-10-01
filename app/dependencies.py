@@ -3,18 +3,18 @@ import hmac
 import logging
 import hashlib
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
 import bcrypt
-from fastapi import Request, HTTPException, Depends
+from fastapi import Request, HTTPException
 from itsdangerous import URLSafeSerializer, BadSignature
 
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-from app import config, database
+from app import config, database, local_days
 
 logger = logging.getLogger("studiamo")
 
@@ -395,22 +395,6 @@ def get_srs_multipliers(username: str) -> dict:
         4: val("srs_multiplier_4", DEFAULT_SRS_MULTIPLIERS[3]),
         5: val("srs_multiplier_5", DEFAULT_SRS_MULTIPLIERS[4]),
     }
-
-
-def adjust_next_review(next_review: datetime, pref_hour: int) -> datetime:
-    """Moves a naive-UTC next_review to the user's preferred review hour on the same day, or
-    the next day if that moment has already passed.
-
-    The preferred hour is a UTC hour, and the settings page says so. It is applied in UTC
-    explicitly rather than in the server's local time zone, so the promise holds whatever
-    time zone the host runs in."""
-    if pref_hour == -1:
-        return next_review
-    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
-    adjusted = next_review.replace(hour=pref_hour, minute=0, second=0, microsecond=0)
-    if adjusted <= now_utc:
-        adjusted += timedelta(days=1)
-    return adjusted
 
 
 def get_question_counts(username: str) -> dict:
@@ -844,40 +828,43 @@ def compute_max_stages(cap_by_importance: bool, caps: dict, importance: int, num
     return max(1, min(caps.get(imp, num_stages), num_stages))
 
 
-def get_preferred_hour(cursor, user_uuid: Optional[str] = None) -> int:
-    """Fetches the user's preferred review-reminder hour (0-23), or -1 if unset.
+def get_user_timezone(cursor, user_uuid: Optional[str] = None):
+    """Returns the tzinfo for the user's stored time zone, UTC when unset or invalid.
 
-    Was duplicated seven times across import_manager.py, routers/videos.py and
-    routers/goals.py, each copy silently swallowing lookup failures with a bare
-    `except: pass`, a broken lookup for one user was invisible everywhere it
-    happened. Consolidated here so a failure is logged exactly once, in one
-    place, no matter which caller triggered it.
-
-    Best-effort by design: any failure here should not block scheduling a
-    review, so it falls back to -1 (no preferred-hour adjustment) rather than
-    raising."""
+    Best-effort by design, like the preferred-hour lookup it replaced: a failed lookup must
+    not block scheduling a review, so it logs once and falls back to UTC rather than raising.
+    """
     if not user_uuid:
-        return -1
+        return local_days.resolve_timezone(None)
     try:
-        cursor.execute("SELECT preferred_hour FROM user_profile WHERE user_uuid = %s LIMIT 1;", (user_uuid,))
+        cursor.execute("SELECT timezone FROM user_profile WHERE user_uuid = %s LIMIT 1;", (user_uuid,))
         row = cursor.fetchone()
-        # Compared against None rather than tested for truth: 0 is a real choice (midnight).
-        hour = row.get("preferred_hour") if row else None
-        return int(hour) if hour is not None else -1
+        return local_days.resolve_timezone(row.get("timezone") if row else None)
     except Exception as e:
-        logger.warning(f"[get_preferred_hour] lookup failed for user_uuid={user_uuid}: {e}")
-        return -1
+        logger.warning(f"[get_user_timezone] lookup failed for user_uuid={user_uuid}: {e}")
+        return local_days.resolve_timezone(None)
 
 
-def parse_bool(val) -> bool:
-    """Safely converts various truthy representations into boolean."""
-    if isinstance(val, bool):
-        return val
-    if isinstance(val, (int, float)):
-        return val != 0
-    if isinstance(val, str):
-        return val.lower() in ("true", "1", "t", "yes", "on")
-    return False
+def effective_reminder_hour(reminder_hour, legacy_preferred_hour, tz) -> int:
+    """Returns the local hour (0-23) the daily reminder goes out at.
+
+    reminder_hour is the user's own choice in local time. Accounts that only ever set the
+    older preferred_hour have a UTC hour stored, which is converted to local time here instead
+    of being migrated, so the column can stay untouched. -1 meant "any time" there and falls
+    through to the default, since reminders now go out once a day at a set hour.
+    """
+    from app.config import DEFAULT_REMINDER_HOUR
+    for raw, is_utc in ((reminder_hour, False), (legacy_preferred_hour, True)):
+        try:
+            hour = int(raw)
+        except (TypeError, ValueError):
+            continue
+        if 0 <= hour <= 23:
+            if not is_utc:
+                return hour
+            today = datetime.now(timezone.utc).replace(hour=hour, minute=0, second=0, microsecond=0)
+            return today.astimezone(tz or timezone.utc).hour
+    return DEFAULT_REMINDER_HOUR
 
 
 

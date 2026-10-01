@@ -1,22 +1,20 @@
 import asyncio
 import json
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Form, HTTPException, Depends
 
-from app import database, ai, gamification
+from app import database, ai, gamification, local_days, notifications
 from app.ai import UsageLimitExceeded
 from app.dependencies import (
-    get_active_username,
     get_srs_intervals,
     get_srs_multipliers,
     get_srs_caps_and_repetition,
     compute_max_stages,
     get_question_counts,
-    get_preferred_hour,
-    adjust_next_review,
+    get_user_timezone,
     require_app_access,
     build_concept_pool,
     select_stage_questions,
@@ -35,7 +33,8 @@ def get_quiz(id: int, username: str = Depends(require_app_access)):
         cursor = conn.cursor()
         cursor.execute("""
             SELECT q.video_id, q.goal_id, q.importance_level, q.srs_stage, q.next_review_at, q.quiz_type, q.in_progress_index,
-                   v.title AS video_title, v.youtube_id, g.title AS goal_title
+                   v.title AS video_title, v.youtube_id, g.title AS goal_title,
+                   (SELECT p.timezone FROM user_profile p WHERE p.user_uuid::text = q.user_uuid::text LIMIT 1) AS user_timezone
             FROM quizzes q
             LEFT JOIN videos v ON q.video_id = v.id
             LEFT JOIN goals g ON g.id = COALESCE(q.goal_id, v.learning_goal_id)
@@ -205,6 +204,9 @@ def get_quiz(id: int, username: str = Depends(require_app_access)):
         if "next_review_at" in db_row.keys() and db_row["next_review_at"]:
             raw_nr = db_row["next_review_at"]
             response_payload["next_review_at"] = raw_nr.isoformat() if hasattr(raw_nr, "isoformat") else str(raw_nr)
+            # Decided here, in the user's time zone, so quiz.js does not compare timestamps
+            # itself: a review is due for its whole local day, not from a particular hour.
+            response_payload["is_due"] = local_days.is_due(raw_nr, local_days.resolve_timezone(db_row.get("user_timezone")))
     return response_payload
 
 
@@ -297,16 +299,14 @@ def grade_quiz(
         else:
             xp_gain = 3
         
-        pref_hour = get_preferred_hour(cursor, conn.user_uuid)
+        user_tz = get_user_timezone(cursor, conn.user_uuid)
         enable_stage_5_rep = srs_caps_cfg["enable_stage_5_repetition"]
         stage_5_repeat_interval = srs_caps_cfg["stage_5_repeat_interval"]
 
         if next_stage < max_stages or enable_stage_5_rep:
             if next_stage >= max_stages:
                 days = stage_5_repeat_interval * multiplier
-            next_review = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=days)
-            next_review = adjust_next_review(next_review, pref_hour)
-            next_review_iso = next_review.isoformat()
+            next_review_iso = local_days.schedule_review(days, user_tz).isoformat()
         else:
             # Graduated: final stage reached and stage-5 repetition is off (the default).
             # next_review_at is NOT NULL, so this can't be left as None, that used to throw
@@ -364,11 +364,11 @@ def grade_quiz(
         leveled_up = new_level > user["level"]
     
         now_utc = gamification.utc_now()
-        # A streak counts consecutive calendar days: quizzing today after a quiz yesterday
+        # A streak counts consecutive local calendar days: quizzing today after a quiz yesterday
         # extends it, a second quiz the same day does not, and a gap resets it to 1. This is the
         # only place user_profile.streak is written; read paths derive what to show with
         # gamification.effective_streak instead of correcting the column.
-        streak = gamification.advance_streak(user.get("streak"), user.get("last_quiz_at"), now=now_utc)
+        streak = gamification.advance_streak(user.get("streak"), user.get("last_quiz_at"), now=now_utc, tz=user_tz)
         
         badges = json.loads(user["badges"]) if user.get("badges") else []
         new_badges = []
@@ -417,8 +417,22 @@ def grade_quiz(
             # persisted only summary, outline and fact_check, so it rewrote those three to
             # themselves and changed nothing. Removed rather than translated.
                 
+        # Finishing the quiz of a video Chompy ate wins it back: the stage and next review were
+        # just written above, so only the pause has to go.
+        won_back = False
+        if progress_srs_bool and is_final_bool and row["video_id"]:
+            cursor.execute(
+                "UPDATE videos SET is_paused = 0, eaten_at = NULL WHERE id = %s AND user_uuid = %s AND eaten_at IS NOT NULL;",
+                (row["video_id"], user_uuid),
+            )
+            won_back = cursor.rowcount > 0
+
         conn.commit()
         conn.close()
+
+        # After the commit and on its own connection: reminder bookkeeping must never be able
+        # to roll back or fail a grade.
+        notifications.mark_converted(user_uuid, id, is_final_bool, user_tz)
     
         return {
             "status": "success",
@@ -430,7 +444,8 @@ def grade_quiz(
             "level": new_level,
             "streak": streak,
             "leveled_up": leveled_up,
-            "new_badges": new_badges
+            "new_badges": new_badges,
+            "won_back": won_back,
         }
     finally:
         conn.close()
@@ -438,20 +453,28 @@ def grade_quiz(
 
 @router.post("/quiz/{id}/reschedule")
 def reschedule_quiz(id: int, username: str = Depends(require_app_access)):
-    """Reschedules a quiz review by 1 day."""
+    """Moves a review that is due today to tomorrow ("+1 Day").
+
+    Only for reviews due today. An overdue review is already on Chompy's clock
+    (app/chompy.py), and pushing it back would let it dodge him indefinitely, so the
+    dashboard offers no button for it and this refuses it too.
+    """
     conn = database.get_db_connection(username)
     try:
         user_uuid = conn.user_uuid
         cursor = conn.cursor()
-        cursor.execute("SELECT id FROM quizzes WHERE id = %s AND user_uuid = %s;", (id, user_uuid))
+        cursor.execute("SELECT id, next_review_at FROM quizzes WHERE id = %s AND user_uuid = %s;", (id, user_uuid))
         row = cursor.fetchone()
         if not row:
             conn.close()
             raise HTTPException(status_code=404, detail="Quiz not found")
-        
-        pref_hour = get_preferred_hour(cursor, user_uuid)
-        next_review = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=1)
-        next_review = adjust_next_review(next_review, pref_hour)
+
+        tz = get_user_timezone(cursor, user_uuid)
+        days = local_days.days_until_due(row.get("next_review_at"), tz)
+        if days is not None and days < 0:
+            raise HTTPException(status_code=409, detail="Overdue reviews can't be moved. Finish the quiz to keep it from Chompy.")
+
+        next_review = local_days.schedule_review(1, tz)
 
         cursor.execute("UPDATE quizzes SET next_review_at = %s, notified = 0 WHERE id = %s AND user_uuid = %s;", (next_review.isoformat(), id, user_uuid))
         conn.commit()

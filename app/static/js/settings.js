@@ -197,23 +197,57 @@ async function loadStats() {
     }
 }
 
-// The review hour is stored and applied as a UTC hour. This shows what the selected hour is
-// in the browser's own time zone, and stays hidden when the two are the same.
-function updatePreferredHourLocalHint() {
-    const select = document.getElementById('settings-preferred-hour');
-    const hint = document.getElementById('settings-preferred-hour-local');
-    if (!select || !hint) return;
-
-    const hour = parseInt(select.value, 10);
-    const now = new Date();
-    if (isNaN(hour) || hour < 0 || now.getTimezoneOffset() === 0) {
-        hint.classList.add('hidden');
-        return;
+function browserTimeZone() {
+    try {
+        return Intl.DateTimeFormat().resolvedOptions().timeZone || null;
+    } catch (e) {
+        return null;
     }
-    const at = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), hour));
-    const local = at.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    hint.textContent = `That is ${local} in your time zone.`;
-    hint.classList.remove('hidden');
+}
+
+// Fills the time zone dropdown with every zone the browser knows, selecting the stored one.
+// Older browsers without Intl.supportedValuesOf get a short list: the stored zone, the
+// device's zone and UTC, which still covers every choice that matters.
+function populateTimezoneSelect(storedZone) {
+    const select = document.getElementById('settings-timezone');
+    const hint = document.getElementById('settings-timezone-hint');
+    if (!select) return;
+
+    const deviceZone = browserTimeZone();
+    let zones = [];
+    try {
+        if (typeof Intl.supportedValuesOf === 'function') zones = Intl.supportedValuesOf('timeZone');
+    } catch (e) {
+        zones = [];
+    }
+    const extras = [storedZone, deviceZone, 'UTC'].filter(z => z && !zones.includes(z));
+    zones = [...extras, ...zones];
+
+    select.innerHTML = zones.map(z => `<option value="${escapeHtml(z)}">${escapeHtml(z.replace(/_/g, ' '))}</option>`).join('');
+    select.value = storedZone || deviceZone || 'UTC';
+
+    if (hint) {
+        const differs = deviceZone && storedZone && deviceZone !== storedZone;
+        hint.textContent = differs ? `This device is set to ${deviceZone.replace(/_/g, ' ')}.` : '';
+        hint.classList.toggle('hidden', !differs);
+    }
+}
+
+// Records the browser's time zone once, for accounts that have none stored yet. The server
+// ignores it when a zone is already set, so a zone chosen in settings is never overwritten.
+let _timezoneCaptureSent = false;
+async function captureTimezoneIfMissing(storedZone) {
+    if (storedZone || _timezoneCaptureSent) return;
+    const zone = browserTimeZone();
+    if (!zone) return;
+    _timezoneCaptureSent = true;
+    try {
+        const fd = new FormData();
+        fd.append('timezone', zone);
+        await fetchAPI('/api/user/timezone', { method: 'POST', body: fd });
+    } catch (e) {
+        console.warn('Could not store time zone:', e);
+    }
 }
 
 async function loadSettings() {
@@ -313,15 +347,11 @@ async function loadSettings() {
             if (sc5) { sc5.placeholder = defaults.star_count_5 || '12'; sc5.value = configData.has_custom_question_counts ? configData.question_counts.count_5 : ''; }
         }
         
-        const prefHour = document.getElementById('settings-preferred-hour');
-        if (prefHour) {
-            prefHour.value = configData.preferred_hour !== undefined ? configData.preferred_hour : -1;
-            if (!prefHour.dataset.localHintBound) {
-                prefHour.addEventListener('change', updatePreferredHourLocalHint);
-                prefHour.dataset.localHintBound = '1';
-            }
-            updatePreferredHourLocalHint();
+        const reminderHour = document.getElementById('settings-reminder-hour');
+        if (reminderHour && configData.reminder_hour !== undefined) {
+            reminderHour.value = configData.reminder_hour;
         }
+        populateTimezoneSelect(configData.timezone || null);
 
         const rmSel = document.getElementById('settings-review-mode');
         if (rmSel && configData.review_mode) rmSel.value = configData.review_mode;
@@ -698,7 +728,10 @@ async function _submitSettings(silent = true) {
     if (sc4) formData.append('question_count_4', sc4);
     if (sc5) formData.append('question_count_5', sc5);
 
-    formData.append('preferred_hour', document.getElementById('settings-preferred-hour')?.value ?? -1);
+    const reminderHourVal = document.getElementById('settings-reminder-hour')?.value;
+    if (reminderHourVal) formData.append('reminder_hour', reminderHourVal);
+    const timezoneVal = document.getElementById('settings-timezone')?.value;
+    if (timezoneVal) formData.append('timezone', timezoneVal);
 
     formData.append('notify_telegram', document.getElementById('settings-notify-telegram')?.checked ?? false);
     formData.append('notify_push', document.getElementById('settings-notify-push')?.checked ?? false);
@@ -1241,6 +1274,9 @@ async function checkOnboardingAndUpdates() {
 
         if (!data.has_seen_onboarding) {
             openTabGuideModal();
+        } else if (!data.has_seen_reminder_setup && !data.has_reminder_channel) {
+            // Finished onboarding before the reminder step existed and never set up a channel.
+            openReminderSetupOnly();
         } else if (!data.has_seen_updates) {
             openUpdatesModal();
         }
@@ -1251,10 +1287,14 @@ async function checkOnboardingAndUpdates() {
 
 // Steps already running as an installed PWA have nothing to gain from the "Install as App"
 // step, so it's dropped from the sequence entirely rather than shown as a dead end.
+// In reminder-only mode the overlay shows just the "reminders" step (openReminderSetupOnly).
+let _onboardingReminderOnly = false;
+
 function _onboardingActiveSteps() {
     const isStandalone = document.documentElement.dataset.standalone === 'true';
     return Array.from(document.querySelectorAll('#onboarding-steps .onboarding-step'))
-        .filter(el => !(isStandalone && el.dataset.step === 'pwa'));
+        .filter(el => !(isStandalone && el.dataset.step === 'pwa'))
+        .filter(el => !_onboardingReminderOnly || el.dataset.step === 'reminders');
 }
 
 function renderOnboardingStep() {
@@ -1281,10 +1321,17 @@ function renderOnboardingStep() {
     const nextBtn = document.getElementById('onboarding-next-btn');
     if (nextBtn) {
         const isLastStep = _onboardingStepIndex === steps.length - 1;
+        // New accounts end the tour on their first goal rather than on an empty dashboard.
+        const lastLabel = (!_onboardingReminderOnly && window._hasGoals === false)
+            ? '<span>Add your first goal</span><i data-lucide="target" class="w-3.5 h-3.5"></i>'
+            : (_onboardingReminderOnly ? '<span>Done</span><i data-lucide="check" class="w-3.5 h-3.5"></i>'
+                : '<span>Got it! Start Learning</span><i data-lucide="check" class="w-3.5 h-3.5"></i>');
         nextBtn.innerHTML = isLastStep
-            ? '<span>Got it! Start Learning</span><i data-lucide="check" class="w-3.5 h-3.5"></i>'
+            ? lastLabel
             : '<span>Next</span><i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>';
     }
+
+    if (steps[_onboardingStepIndex].dataset.step === 'reminders') renderReminderStep();
 
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
@@ -1307,8 +1354,27 @@ function onboardingBack(e) {
     renderOnboardingStep();
 }
 
+function _setOnboardingHeader(title, subtitle) {
+    const t = document.getElementById('onboarding-title');
+    const st = document.getElementById('onboarding-subtitle');
+    if (t) t.textContent = title;
+    if (st) st.textContent = subtitle;
+}
+
+function openReminderSetupOnly() {
+    _onboardingReminderOnly = true;
+    _setOnboardingHeader('Stay on track', 'Set up your review reminders');
+    _openOnboardingOverlay();
+}
+
 function openTabGuideModal(e) {
     if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    _onboardingReminderOnly = false;
+    _setOnboardingHeader('Welcome to Studiamo', 'Quick tour of the app');
+    _openOnboardingOverlay();
+}
+
+function _openOnboardingOverlay() {
     const el = document.getElementById('overlay-tab-guide');
     if (el) {
         _onboardingStepIndex = 0;
@@ -1328,19 +1394,128 @@ function closeTabGuideModal(e) {
     }
 }
 
-async function dismissTabGuide(e) {
+async function dismissTabGuide(e, options = {}) {
+    const reminderOnly = _onboardingReminderOnly;
+    const goToFirstGoal = !reminderOnly && window._hasGoals === false && !options.skipFirstGoal;
     closeTabGuideModal(e);
     try {
-        const fd = new FormData();
-        fd.append('has_seen_onboarding', 'true');
-        await fetchAPI('/api/user/onboarding_status', { method: 'POST', body: fd });
-        
-        if (_onboardingStatusCache && !_onboardingStatusCache.has_seen_updates) {
+        await saveReminderChoice();
+        if (!reminderOnly) {
+            const fd = new FormData();
+            fd.append('has_seen_onboarding', 'true');
+            await fetchAPI('/api/user/onboarding_status', { method: 'POST', body: fd });
+        }
+
+        if (goToFirstGoal) {
+            if (typeof switchTab === 'function') switchTab('goals');
+            if (typeof openCreateGoalModal === 'function') openCreateGoalModal();
+        } else if (_onboardingStatusCache && !_onboardingStatusCache.has_seen_updates) {
             openUpdatesModal();
         }
     } catch (err) {
         console.error("Failed to dismiss tab guide:", err);
     }
+}
+
+// ---- Reminder step ------------------------------------------------------------------------
+
+let _reminderPushEnabled = false;
+
+// Push works in a normal browser tab on desktop and Android. iPhone and iPad only deliver it to
+// a home-screen install (iOS 16.4+), so a plain Safari tab there counts as "not possible".
+function _pushPossibleHere() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return false;
+    if (Notification.permission === 'denied') return false;
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const isStandalone = document.documentElement.dataset.standalone === 'true';
+    return !isIOS || isStandalone;
+}
+
+function _reminderEmailText() {
+    const email = (_onboardingStatusCache && _onboardingStatusCache.reminder_email) || '';
+    if (!email) return 'You can set up reminders by Telegram or push in Settings.';
+    return `We'll email your reminders to ${email}: when quizzes are due, when Chompy gets close, `
+        + 'and before your streak ends. You can turn this off or switch to Telegram in Settings.';
+}
+
+function renderReminderStep() {
+    const btn = document.getElementById('onboarding-reminder-push-btn');
+    const status = document.getElementById('onboarding-reminder-status');
+    if (!status) return;
+    if (_reminderPushEnabled) {
+        if (btn) btn.classList.add('hidden');
+        status.textContent = 'Push reminders are on. You can change this anytime in Settings.';
+        return;
+    }
+    const canPush = _pushPossibleHere();
+    if (btn) btn.classList.toggle('hidden', !canPush);
+    const st = _onboardingStatusCache;
+    if (st && st.has_seen_reminder_setup && st.has_reminder_channel) {
+        // Tour reopened later from the help button: reminders already exist.
+        status.textContent = 'Your reminders are set up. You can change how you get them in Settings.';
+        return;
+    }
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const iosHint = (!canPush && isIOS)
+        ? ' On iPhone, add Studiamo to your home screen to get push reminders instead.' : '';
+    status.textContent = (canPush ? 'Or skip push: ' : '') + _reminderEmailText() + iosHint;
+}
+
+async function enableOnboardingPush(e) {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    try {
+        // Must run inside this click: browsers ignore or penalize permission prompts that do
+        // not come from a user gesture.
+        const perm = await Notification.requestPermission();
+        if (perm === 'granted') {
+            await subscribeWebPush();
+            _reminderPushEnabled = true;
+            const fd = new FormData();
+            fd.append('channel', 'push');
+            await fetchAPI('/api/user/reminder_setup', { method: 'POST', body: fd });
+            if (_onboardingStatusCache) {
+                _onboardingStatusCache.has_seen_reminder_setup = true;
+                _onboardingStatusCache.has_reminder_channel = true;
+            }
+        }
+    } catch (err) {
+        console.warn('Enabling push reminders failed:', err);
+    }
+    renderReminderStep();
+}
+
+// Called when onboarding closes. Push already saved itself; otherwise email is the fallback,
+// which is what the step told the user would happen. Only ever runs once per account: someone
+// reopening the tour from the help button later must not get email switched back on, and a
+// channel that is already set up is left as it is.
+async function saveReminderChoice() {
+    const status = _onboardingStatusCache;
+    if (_reminderPushEnabled || !status || status.has_seen_reminder_setup) return;
+    const channel = (!status.has_reminder_channel && status.reminder_email) ? 'email' : 'skip';
+    const fd = new FormData();
+    fd.append('channel', channel);
+    try {
+        await fetchAPI('/api/user/reminder_setup', { method: 'POST', body: fd });
+        status.has_seen_reminder_setup = true;
+        if (channel === 'email') status.has_reminder_channel = true;
+    } catch (err) {
+        console.warn('Saving the reminder choice failed:', err);
+    }
+}
+
+async function openNotificationSettingsFromOnboarding(e) {
+    await dismissTabGuide(e, { skipFirstGoal: true });
+    goToNotificationSettings();
+}
+
+// Opens Settings scrolled to the notifications card. Also the target of the link in reminder
+// emails (#notifications, see app.js).
+function goToNotificationSettings() {
+    if (typeof switchTab === 'function') switchTab('settings');
+    setTimeout(() => {
+        const card = document.getElementById('notifications');
+        if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 300);
 }
 
 function openUpdatesModal(e) {
@@ -1377,6 +1552,12 @@ async function dismissUpdates(e) {
 window.loadStats = loadStats;
 window.checkOnboardingAndUpdates = checkOnboardingAndUpdates;
 window.openTabGuideModal = openTabGuideModal;
+window.goToNotificationSettings = goToNotificationSettings;
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('onboarding-reminder-push-btn')?.addEventListener('click', enableOnboardingPush);
+    document.getElementById('onboarding-reminder-settings-btn')?.addEventListener('click', openNotificationSettingsFromOnboarding);
+});
 window.closeTabGuideModal = closeTabGuideModal;
 window.dismissTabGuide = dismissTabGuide;
 window.onboardingNext = onboardingNext;
@@ -1649,106 +1830,6 @@ if ('serviceWorker' in navigator) {
     });
 }
 
-function getStoredNotifiedIds() {
-    try {
-        const stored = localStorage.getItem('studiamo_notified_quiz_ids');
-        return stored ? new Set(JSON.parse(stored)) : new Set();
-    } catch (e) {
-        return new Set();
-    }
-}
-
-function saveStoredNotifiedIds(setObj) {
-    try {
-        localStorage.setItem('studiamo_notified_quiz_ids', JSON.stringify(Array.from(setObj)));
-        localStorage.setItem('studiamo_last_notif_time', Date.now().toString());
-    } catch (e) {}
-}
-
-async function checkAppDueNotifications() {
-    if (!window._lastSettingsConfig || !window._lastSettingsConfig.notify_push) return;
-    if (!('Notification' in window) || Notification.permission !== 'granted') return;
-
-    const lastNotifTime = parseInt(localStorage.getItem('studiamo_last_notif_time') || '0');
-    const now = Date.now();
-    const storedSet = getStoredNotifiedIds();
-
-    try {
-        // --- Streak Warning Web Push Check ---
-        if (window.currentUserStats && currentUserStats.streak > 0 && currentUserStats.last_quiz_at) {
-            const lastDate = typeof parseDate === 'function' ? parseDate(currentUserStats.last_quiz_at) : new Date(currentUserStats.last_quiz_at);
-            if (lastDate && !isNaN(lastDate.getTime())) {
-                const expireTime = lastDate.getTime() + (24 * 60 * 60 * 1000);
-                const msLeft = expireTime - now;
-                const hoursLeft = msLeft / (1000 * 60 * 60);
-
-                const todayStr = new Date().toISOString().split('T')[0];
-                const lastStreakWarnDate = localStorage.getItem('studiamo_streak_warned_date');
-
-                if (hoursLeft > 0 && hoursLeft <= 5 && lastStreakWarnDate !== todayStr) {
-                    localStorage.setItem('studiamo_streak_warned_date', todayStr);
-                    const h = Math.ceil(hoursLeft);
-                    const streakTitle = `🔥 Streak at risk (${currentUserStats.streak} days)!`;
-                    const streakBody = `Your streak expires in ~${h} hour(s). Complete 1 quick review now!`;
-
-                    if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-                        navigator.serviceWorker.ready.then(reg => {
-                            reg.showNotification(streakTitle, {
-                                body: streakBody,
-                                icon: '/static/images/icon-192.png',
-                                badge: '/static/images/icon-192.png',
-                                data: { url: '/#review-section' }
-                            });
-                        });
-                    } else {
-                        new Notification(streakTitle, {
-                            body: streakBody,
-                            icon: '/static/images/icon-192.png'
-                        });
-                    }
-                }
-            }
-        }
-
-        const res = await fetchAPI('/api/notifications/due');
-        if (res && res.due_count > 0) {
-            const unnotifiedItems = res.items.filter(item => !storedSet.has(item.id));
-
-            // Only notify if there are new unnotified items OR 4+ hours have passed
-            if (unnotifiedItems.length > 0 || (now - lastNotifTime > 4 * 60 * 60 * 1000)) {
-                res.items.forEach(item => storedSet.add(item.id));
-                saveStoredNotifiedIds(storedSet);
-
-                const countToReport = unnotifiedItems.length > 0 ? unnotifiedItems.length : res.due_count;
-                const title = `🧠 ${countToReport} review(s) due!`;
-                const body = countToReport === 1 && unnotifiedItems.length === 1
-                    ? `Reminder: "${unnotifiedItems[0].title}" is ready now.`
-                    : `You have ${res.due_count} reviews due in Studiamo.`;
-
-                if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-                    navigator.serviceWorker.ready.then(reg => {
-                        reg.showNotification(title, {
-                            body: body,
-                            icon: '/static/images/icon-192.png',
-                            badge: '/static/images/icon-192.png',
-                            data: { url: '/#review-section' }
-                        });
-                    });
-                } else {
-                    new Notification(title, {
-                        body: body,
-                        icon: '/static/images/icon-192.png'
-                    });
-                }
-            }
-        } else {
-            localStorage.removeItem('studiamo_notified_quiz_ids');
-        }
-    } catch (e) {
-        console.warn('App notification check error:', e);
-    }
-}
-
 function toggleNotificationsMasterSwitch(enabled) {
     const label = document.getElementById('notifications-enabled-label');
     const panel = document.getElementById('notifications-panel-content');
@@ -1761,9 +1842,6 @@ function toggleNotificationsMasterSwitch(enabled) {
     }
 }
 
-setInterval(checkAppDueNotifications, 5 * 60 * 1000);
-setTimeout(checkAppDueNotifications, 5000);
-
 if ('Notification' in window && Notification.permission === 'granted') {
     setTimeout(subscribeWebPush, 2000);
 }
@@ -1772,6 +1850,7 @@ window.requestBrowserNotificationPermission = requestBrowserNotificationPermissi
 window.triggerPWAInstall = triggerPWAInstall;
 window.toggleNotificationsMasterSwitch = toggleNotificationsMasterSwitch;
 window.subscribeWebPush = subscribeWebPush;
+window.captureTimezoneIfMissing = captureTimezoneIfMissing;
 window.toggleStage5RepeatPanel = toggleStage5RepeatPanel;
 window.toggleSrsConfigPanel = toggleSrsConfigPanel;
 
