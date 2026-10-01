@@ -53,6 +53,41 @@ def test_reminder_step_falls_back_to_email(logged_in_page):
     assert saved and "email" in saved[-1]
 
 
+def _open_full_tour(page):
+    _override(page, "**/api/user/onboarding_status", {
+        "has_seen_onboarding": False,
+        "has_seen_reminder_setup": False,
+        "has_reminder_channel": False,
+        "reminder_email": "learner@example.com",
+    })
+    saved = []
+    _capture_posts(page, "**/api/user/reminder_setup", saved)
+    page.goto("/app")
+    overlay = page.locator("#overlay-tab-guide")
+    overlay.wait_for(state="visible", timeout=15000)
+    return overlay, saved
+
+
+def test_tour_starts_with_the_reminder_step(logged_in_page):
+    page = logged_in_page
+    overlay, saved = _open_full_tour(page)
+    assert page.locator('[data-step="reminders"]').is_visible()
+    assert page.locator('[data-step="home"]').is_hidden()
+    page.click("#onboarding-next-btn")
+    page.locator('[data-step="home"]').wait_for(state="visible", timeout=5000)
+    assert _wait_for(saved) and "email" in saved[-1]
+
+
+def test_closing_the_tour_on_the_first_screen_still_saves_the_reminder_choice(logged_in_page):
+    page = logged_in_page
+    overlay, saved = _open_full_tour(page)
+    page.click("#overlay-tab-guide button[onclick^='closeTabGuideModal']")
+    overlay.wait_for(state="hidden", timeout=5000)
+    assert _wait_for(saved) and "email" in saved[-1]
+    page.wait_for_timeout(500)
+    assert len(saved) == 1
+
+
 def _eaten(n):
     return [{"id": 1000 + i, "title": f"Eaten quiz {i + 1}", "importance_rating": 3} for i in range(n)]
 
@@ -80,30 +115,74 @@ def test_one_eaten_quiz_offers_the_tickle(logged_in_page):
     overlay, acks = _open_with_eaten(page, 1)
     assert page.inner_text("#chompy-away-title") == "Chompy ate 'Eaten quiz 1'"
     assert page.locator("#chompy-away-tickle-btn").is_visible()
-    assert page.locator("#chompy-away-list").is_hidden()
+    assert page.locator("#chompy-away-full").is_hidden()
     page.click("#chompy-away-later")
     overlay.wait_for(state="hidden", timeout=5000)
     assert _wait_for(acks)
 
 
-def test_two_to_four_play_the_belt_then_list(logged_in_page):
+def test_tickling_waits_for_the_user_to_start_the_quiz(logged_in_page):
+    page = logged_in_page
+    overlay, acks = _open_with_eaten(page, 1)
+    assert page.locator("#chompy-away-tickle-speech").is_hidden()
+    page.click("#chompy-away-tickle-btn")
+    page.locator("#chompy-away-start-btn").wait_for(state="visible", timeout=5000)
+    assert page.inner_text("#chompy-away-title") == "He spat it back out"
+    assert page.inner_text("#chompy-away-tickle-speech") == "Hehe, that tickles!"
+    assert page.locator("#chompy-away-tickle-btn").is_hidden()
+    assert "chompy-tickled" in page.locator("#chompy-away-tickle-img").get_attribute("src")
+    page.wait_for_timeout(1500)
+    assert overlay.is_visible()
+    page.click("#chompy-away-later")
+    overlay.wait_for(state="hidden", timeout=5000)
+    assert _wait_for(acks)
+
+
+def test_the_nothing_is_lost_note_opens_on_click(logged_in_page):
+    page = logged_in_page
+    overlay, acks = _open_with_eaten(page, 6)
+    assert page.locator("#chompy-away-info-text").is_hidden()
+    page.click("#chompy-away-info-btn")
+    assert "Nothing is lost" in page.inner_text("#chompy-away-info-text")
+    page.click("#chompy-away-info-btn")
+    assert page.locator("#chompy-away-info-text").is_hidden()
+    page.click("#chompy-away-close")
+    overlay.wait_for(state="hidden", timeout=5000)
+
+
+def test_two_to_four_play_the_belt_then_show_the_count(logged_in_page):
     page = logged_in_page
     overlay, acks = _open_with_eaten(page, 3)
     assert page.locator("#chompy-away-roll").is_visible()
-    page.locator("#chompy-away-list").wait_for(state="visible", timeout=8000)
+    page.locator("#chompy-away-full").wait_for(state="visible", timeout=8000)
     assert page.inner_text("#chompy-away-title") == "Chompy ate 3 quizzes while you were away"
     assert page.inner_text("#chompy-away-bubble") == "3x"
-    assert page.locator("[data-comeback-win]").count() == 3
+    assert "Eaten quiz" not in overlay.inner_text()
     page.click("#chompy-away-close")
     overlay.wait_for(state="hidden", timeout=5000)
     assert _wait_for(acks)
 
 
-def test_more_than_four_show_the_summary_only(logged_in_page):
+def test_the_belt_scene_is_a_gif_that_loads_even_with_reduced_motion(logged_in_page):
+    page = logged_in_page
+    page.emulate_media(reduced_motion="reduce")
+    overlay, acks = _open_with_eaten(page, 3)
+    assert page.locator("#chompy-away-roll").is_visible()
+    assert page.inner_text("#chompy-away-title") == "While you were away..."
+    gif = page.locator("#chompy-away-roll img")
+    assert gif.get_attribute("src").endswith(".gif")
+    assert gif.evaluate("img => img.complete && img.naturalWidth > 0")
+    page.locator("#chompy-away-full").wait_for(state="visible", timeout=8000)
+    page.click("#chompy-away-close")
+    overlay.wait_for(state="hidden", timeout=5000)
+
+
+def test_more_than_four_show_the_count_only(logged_in_page):
     page = logged_in_page
     overlay, acks = _open_with_eaten(page, 6)
     assert page.locator("#chompy-away-roll").is_hidden()
-    assert page.locator("#chompy-away-list").is_visible()
+    assert page.locator("#chompy-away-full").is_visible()
+    assert page.inner_text("#chompy-away-bubble") == "6x"
     assert page.inner_text("#chompy-away-title") == "Chompy ate 6 quizzes while you were away"
     page.click("#chompy-away-close")
     overlay.wait_for(state="hidden", timeout=5000)
@@ -139,13 +218,13 @@ def _open_with_due(page, eaten_in_days, day_progress=0.0):
         status=200, content_type="application/json", body='{"recommendations": []}'))
     page.goto("/app")
     page.locator("#due-quizzes-hero").wait_for(state="visible", timeout=15000)
-    page.wait_for_function("document.getElementById('belt-chompy-caption').textContent.length > 0", timeout=10000)
+    page.wait_for_function("document.getElementById('belt-chompy-img').dataset.state", timeout=10000)
 
 
 def test_belt_sleeps_with_nothing_overdue(logged_in_page):
     page = logged_in_page
     _open_with_due(page, [2])
-    assert page.inner_text("#belt-chompy-caption") == "Asleep"
+    assert page.locator("#belt-chompy-speech").is_hidden()
     assert page.locator("#belt-chompy-zz").is_visible()
     assert page.locator('[data-belt-station="today"] .belt-doc').count() == 1
     assert page.locator('[data-belt-station="over2"] .belt-doc').count() == 0
@@ -154,7 +233,7 @@ def test_belt_sleeps_with_nothing_overdue(logged_in_page):
 def test_belt_and_cards_heat_up_toward_chompy(logged_in_page):
     page = logged_in_page
     _open_with_due(page, [0, 2, 2, 2, 2])
-    assert page.inner_text("#belt-chompy-caption") == "Dinner is at midnight"
+    assert page.inner_text("#belt-chompy-speech") == "Dinner is at midnight!"
     # Four due today collapse into one note with a count.
     assert page.inner_text('[data-belt-station="today"] .belt-doc-badge') == "4x"
     assert page.locator('[data-belt-station="over2"] .belt-doc').count() == 1

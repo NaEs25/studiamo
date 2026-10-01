@@ -109,10 +109,12 @@ def logged_in_page(page, e2e_session_cookies):
     # captureTimezoneIfMissing). Answered here so test runs never write one to the account.
     page.route("**/api/user/timezone", lambda route: route.fulfill(
         status=200, content_type="application/json", body='{"status": "ok", "stored": false}'))
-    # The test account has no reminder channel and may have reviews Chompy ate, so the one-time
-    # reminder step and the "while you were away" overlay would cover the page in every test.
-    # Both are answered as already handled; nothing is written to the account.
-    page.route("**/api/user/onboarding_status", _override_json({"has_seen_reminder_setup": True}))
+    # The test account has no reminder channel and may have reviews Chompy ate, and it falls
+    # behind whenever the What's New content is bumped, so the one-time reminder step, the
+    # "while you were away" overlay and What's New would cover the page in every test. All
+    # are answered as already handled; nothing is written to the account.
+    page.route("**/api/user/onboarding_status", _override_json({"has_seen_reminder_setup": True,
+                                                                "has_seen_updates": True}))
     page.route("**/api/dashboard", _override_json({"chompy": {"eaten_unseen": []}}))
     yield page
     # Handlers that pass a request through (route.fetch) can still be in flight when the test

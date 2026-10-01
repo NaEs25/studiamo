@@ -144,6 +144,16 @@
                 </div>
             </div>
 
+            <!-- Holds the space of the belt and the first due card until /api/dashboard answers
+                 (app.js loadDashboard hides it), so the sections below do not jump down. -->
+            <div id="home-due-skeleton" class="space-y-6" aria-hidden="true">
+                <div class="belt-card home-skeleton-belt animate-pulse"></div>
+                <div class="space-y-3 mb-6">
+                    <div class="h-5 flex items-center"><div class="h-3.5 w-48 bg-stone-200 rounded animate-pulse"></div></div>
+                    <div class="home-skeleton-due-card bg-white border border-stone-200 rounded-2xl animate-pulse"></div>
+                </div>
+            </div>
+
             {% include 'partials/_chompy_belt.html' %}
 
             <!-- Quizzes Due Right Now Panel -->
@@ -2574,6 +2584,33 @@
             </div>
 
             <div id="onboarding-steps">
+                <!-- Reminders: first, because it is the step that matters most and a tour that is
+                     closed early must not skip it. Makes sure every account leaves onboarding
+                     with a reminder channel: push when this device can receive it, email
+                     otherwise (settings.js renderReminderStep). Also shown alone, once, to
+                     accounts that finished onboarding before this step existed and have no
+                     channel. -->
+                <div class="onboarding-step space-y-3 py-2" data-step="reminders">
+                    <div class="flex items-center space-x-3">
+                        <img src="/static/images/chompy/chompy-hungry.png" alt="Chompy, a small red brain monster"
+                            class="w-16 h-auto shrink-0" loading="lazy">
+                        <div>
+                            <h4 class="font-bold text-sm text-stone-900">Keep Chompy away</h4>
+                            <p class="text-xs text-stone-500 leading-snug">Chompy eats knowledge you don't review.
+                                Spaced repetition only works if you review on the right day, so Studiamo reminds you
+                                when something is due.</p>
+                        </div>
+                    </div>
+                    <button type="button" id="onboarding-reminder-push-btn"
+                        class="hidden btn-primary w-full py-2.5 font-bold text-xs rounded-xl transition flex items-center justify-center space-x-2">
+                        <i data-lucide="bell-ring" class="w-4 h-4"></i>
+                        <span>Turn on push reminders</span>
+                    </button>
+                    <p id="onboarding-reminder-status"
+                        class="text-xs text-stone-700 bg-[#fbf8f2] p-3 rounded-xl border border-[#e7dfd3] leading-snug"></p>
+                    <button type="button" id="onboarding-reminder-settings-btn"
+                        class="text-xs font-bold text-amber-700 hover:text-amber-800 underline">Notification settings</button>
+                </div>
                 <!-- Home -->
                 <div class="onboarding-step flex items-center space-x-3 py-2" data-step="home">
                     <div class="p-3 bg-amber-500/10 text-amber-600 rounded-lg shrink-0">
@@ -2664,31 +2701,6 @@
                         </ol>
                     </div>
                 </div>
-                <!-- Reminders: makes sure every account leaves onboarding with a reminder channel.
-                     Push when this device can receive it, email otherwise (settings.js
-                     renderReminderStep). Also shown alone, once, to accounts that finished
-                     onboarding before this step existed and have no channel. -->
-                <div class="onboarding-step space-y-3 py-2" data-step="reminders">
-                    <div class="flex items-center space-x-3">
-                        <img src="/static/images/chompy/chompy-hungry.png" alt="Chompy, a small red brain monster"
-                            class="w-16 h-auto shrink-0" loading="lazy">
-                        <div>
-                            <h4 class="font-bold text-sm text-stone-900">Keep Chompy away</h4>
-                            <p class="text-xs text-stone-500 leading-snug">Chompy eats knowledge you don't review.
-                                Spaced repetition only works if you review on the right day, so Studiamo reminds you
-                                when something is due.</p>
-                        </div>
-                    </div>
-                    <button type="button" id="onboarding-reminder-push-btn"
-                        class="hidden btn-primary w-full py-2.5 font-bold text-xs rounded-xl transition flex items-center justify-center space-x-2">
-                        <i data-lucide="bell-ring" class="w-4 h-4"></i>
-                        <span>Turn on push reminders</span>
-                    </button>
-                    <p id="onboarding-reminder-status"
-                        class="text-xs text-stone-700 bg-[#fbf8f2] p-3 rounded-xl border border-[#e7dfd3] leading-snug"></p>
-                    <button type="button" id="onboarding-reminder-settings-btn"
-                        class="text-xs font-bold text-amber-700 hover:text-amber-800 underline">Notification settings</button>
-                </div>
             </div>
 
             <div class="flex items-center justify-between pt-1">
@@ -2755,12 +2767,12 @@
                 </div>
 
                 <div class="p-2.5 sm:p-3 bg-stone-50 border border-stone-200 rounded-xl space-y-0.5">
-                    <h4 class="font-bold text-xs text-emerald-600 flex items-center space-x-1.5">
-                        <i data-lucide="bell" class="w-3.5 h-3.5"></i>
-                        <span>Multi-Channel Notifications</span>
+                    <h4 class="font-bold text-xs text-red-700 flex items-center space-x-1.5">
+                        <img src="/static/images/chompy/chompy-icon.png" alt="" class="w-3.5 h-3.5">
+                        <span>Meet Chompy</span>
                     </h4>
-                    <p class="text-[11px] text-stone-500 leading-snug">Get reminders by email, Telegram, or app
-                        notification, your choice.</p>
+                    <p class="text-[11px] text-stone-500 leading-snug">Leave a review undone for three days and
+                        Chompy eats it. Nothing is deleted: finish its quiz to win it back.</p>
                 </div>
             </div>
 

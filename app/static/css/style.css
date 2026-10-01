@@ -980,6 +980,14 @@ button:active:not(:disabled) {
     --chompy-hot-ink:     #991b1b;
 }
 
+/* Placeholders for the belt and the first due card while the dashboard loads. Heights match
+   the real ones (a card due today, at the same breakpoints), so the content below stays put. */
+.home-skeleton-belt { height: 148px; }
+.home-skeleton-due-card { height: 105px; }
+@media (min-width: 768px) {
+    .home-skeleton-belt { height: 178px; }
+}
+
 /* No display here: the card is toggled with Tailwind's .hidden, which this file would
    otherwise override. Its flex layout comes from utilities in the markup. */
 .belt-card {
@@ -1015,7 +1023,6 @@ button:active:not(:disabled) {
 }
 .belt-label-over1 { color: var(--chompy-warm-ink); }
 .belt-label-over2 { color: var(--chompy-hot-ink); }
-.belt-stack { margin-top: auto; margin-bottom: -2px; display: flex; flex-wrap: wrap; gap: 0.375rem; align-items: flex-end; min-height: 2.25rem; }
 
 /* A quiz as a paper note. Up to three show singly; more collapse into one with a count. */
 .belt-doc {
@@ -1059,8 +1066,7 @@ button:active:not(:disabled) {
     border: 2px solid #292524;
     background-image: repeating-linear-gradient(90deg, #44403c 0 14px, #57534e 14px 28px);
 }
-/* On the home belt the track is in the flow, between the notes and the labels. The comeback
-   overlay keeps it absolutely placed (.comeback-stage .belt-track). */
+/* On the belt the track is in the flow, between the notes and the labels. */
 .belt-stations > .belt-track { position: relative; left: auto; right: auto; bottom: auto; }
 /* Station boundaries on the belt. */
 .belt-stations > .belt-track::before,
@@ -1075,18 +1081,46 @@ button:active:not(:disabled) {
 }
 .belt-stations > .belt-track::before { left: 33.333%; }
 .belt-stations > .belt-track::after { left: 66.666%; }
-.belt-track-run { animation: beltRun 1.8s linear infinite; }
-@keyframes beltRun { from { background-position: 0 0; } to { background-position: 112px 0; } }
 
 .belt-chompy { position: relative; flex: 0 0 auto; width: 3.25rem; display: flex; flex-direction: column; align-items: center; gap: 0.125rem; }
 .belt-chompy img { width: 100%; height: auto; }
-.belt-chompy-caption { display: none; font-size: 0.6875rem; line-height: 1.2; font-weight: 700; color: #57534e; text-align: center; }
+/* Chompy talking: a bubble whose tail points down at him. Each use places it (and its tail).
+   No display here: bubbles are shown and hidden with Tailwind's .hidden. */
+.chompy-speech {
+    position: absolute;
+    z-index: 1;
+    background: #ffffff;
+    border: 2px solid #292524;
+    border-radius: 0.875rem;
+    padding: 0.2rem 0.55rem;
+    font-size: 0.6875rem;
+    line-height: 1.25;
+    font-weight: 800;
+    color: #292524;
+    white-space: nowrap;
+}
+.chompy-speech::after {
+    content: "";
+    position: absolute;
+    bottom: -6px;
+    width: 10px;
+    height: 10px;
+    background: #ffffff;
+    border-right: 2px solid #292524;
+    border-bottom: 2px solid #292524;
+    transform: rotate(45deg);
+}
+/* Above his head on the belt, reaching left over the empty end of the header. */
+.belt-chompy-speech { right: 0; bottom: calc(100% + 0.375rem); }
+.belt-chompy-speech::after { right: 1.1rem; }
+.tickle-speech { right: 62%; top: -0.75rem; }
+.tickle-speech::after { right: 0.75rem; }
 @media (min-width: 768px) {
     .belt-card { padding: 1rem 1.25rem; }
     .belt-zones { gap: 0.75rem; }
     .belt-station-label { font-size: 0.6875rem; letter-spacing: 0.04em; }
     .belt-chompy { width: 5rem; }
-    .belt-chompy-caption { display: block; }
+    .belt-chompy-speech::after { right: 2rem; }
 }
 
 /* The poses look to their own right; Chompy sits right of the belt and faces left, at it. */
@@ -1095,11 +1129,6 @@ button:active:not(:disabled) {
 @keyframes chompyWake {
     0%, 100% { transform: scaleX(-1) translateY(0); }
     40% { transform: scaleX(-1) translateY(-10px); }
-}
-.chompy-chomp { animation: chompyChomp 0.3s ease-in-out infinite; }
-@keyframes chompyChomp {
-    0%, 100% { transform: scaleX(-1) scale(1); }
-    50% { transform: scaleX(-1) scale(1.07) rotate(3deg); }
 }
 .chompy-zz { position: absolute; left: 12%; top: 0; font-weight: 800; color: var(--color-text-muted); animation: chompyZz 2.4s ease-in-out infinite; }
 @keyframes chompyZz {
@@ -1115,6 +1144,16 @@ button:active:not(:disabled) {
 .due-card-over2 { padding-right: 5.25rem; background: var(--chompy-hot-bg); border-color: var(--chompy-hot-border); }
 .due-card-meta-over1 { color: var(--chompy-warm-ink); font-weight: 600; }
 .due-card-meta-over2 { color: var(--chompy-hot-ink); font-weight: 700; }
+
+/* Eaten videos in the goals library (videos.js): the calm warm tone, not the red of a review
+   about to be eaten, since winning one back is never urgent. */
+.eaten-card { background: var(--chompy-warm-bg); border: 1px solid var(--chompy-warm-border); }
+.eaten-badge { background: #ffffff; border: 1px solid var(--chompy-warm-border); color: var(--chompy-warm-ink); }
+.eaten-info { color: var(--chompy-warm-ink); opacity: 0.8; }
+.eaten-info:hover { opacity: 1; }
+/* A softer red than .btn-save-now: it is the main action on an eaten card, not an alarm. */
+.btn-win-back { background: #b95550; border: 1px solid #a64a46; color: #ffffff; }
+.btn-win-back:hover { background: #a64a46; }
 .due-card-peek { position: absolute; height: auto; pointer-events: none; transform: scaleX(-1); }
 .due-card-today .due-card-peek { right: -6px; bottom: -4px; width: 30px; opacity: 0.45; }
 .due-card-over1 .due-card-peek { right: -10px; bottom: -14px; width: 56px; }
@@ -1124,20 +1163,12 @@ button:active:not(:disabled) {
 
 /* Comeback overlay (partials/_chompy_away.html). */
 .comeback-stage { position: relative; height: 10rem; border-radius: 1rem; overflow: hidden; }
-.comeback-stage .belt-track { left: 0.75rem; right: 8rem; bottom: 1.5rem; }
-.comeback-roll { animation: comebackRoll 1.8s ease-in infinite; }
-@keyframes comebackRoll {
-    0% { transform: translateX(0); opacity: 0; }
-    15% { opacity: 1; }
-    75% { transform: translateX(11rem) rotate(15deg); opacity: 1; }
-    100% { transform: translateX(13rem) rotate(45deg) scale(0.3); opacity: 0; }
-}
 .chompy-pop-in { animation: chompyPopIn 0.45s ease-out; }
 @keyframes chompyPopIn { 0% { transform: scale(0.4); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
 .chompy-giggle { animation: chompyGiggle 0.15s ease-in-out 6; }
 @keyframes chompyGiggle { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
 
 @media (prefers-reduced-motion: reduce) {
-    .belt-track-run, .chompy-wake, .chompy-chomp, .chompy-zz, .comeback-roll, .chompy-pop-in, .chompy-giggle { animation: none; }
+    .chompy-wake, .chompy-zz, .chompy-pop-in, .chompy-giggle { animation: none; }
     .belt-group { transition: none; }
 }

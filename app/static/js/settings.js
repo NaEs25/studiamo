@@ -1343,6 +1343,9 @@ function onboardingNext(e) {
         dismissTabGuide(e);
         return;
     }
+    // Leaving the reminders step is when its choice counts, not the end of a tour that may never
+    // be finished.
+    if (steps[_onboardingStepIndex].dataset.step === 'reminders') saveReminderChoice();
     _onboardingStepIndex++;
     renderOnboardingStep();
 }
@@ -1392,6 +1395,8 @@ function closeTabGuideModal(e) {
         el.classList.add('hidden');
         closeOverlay('overlay-tab-guide');
     }
+    // The reminders step comes first, so even a tour closed on its first screen has shown it.
+    saveReminderChoice();
 }
 
 async function dismissTabGuide(e, options = {}) {
@@ -1484,13 +1489,16 @@ async function enableOnboardingPush(e) {
     renderReminderStep();
 }
 
-// Called when onboarding closes. Push already saved itself; otherwise email is the fallback,
-// which is what the step told the user would happen. Only ever runs once per account: someone
-// reopening the tour from the help button later must not get email switched back on, and a
-// channel that is already set up is left as it is.
+// Called when the reminders step is left or onboarding closes. Push already saved itself;
+// otherwise email is the fallback, which is what the step told the user would happen. Only
+// ever runs once per account: someone reopening the tour from the help button later must not
+// get email switched back on, and a channel that is already set up is left as it is.
+let _reminderSaving = false;
+
 async function saveReminderChoice() {
     const status = _onboardingStatusCache;
-    if (_reminderPushEnabled || !status || status.has_seen_reminder_setup) return;
+    if (_reminderSaving || _reminderPushEnabled || !status || status.has_seen_reminder_setup) return;
+    _reminderSaving = true;
     const channel = (!status.has_reminder_channel && status.reminder_email) ? 'email' : 'skip';
     const fd = new FormData();
     fd.append('channel', channel);
@@ -1500,6 +1508,8 @@ async function saveReminderChoice() {
         if (channel === 'email') status.has_reminder_channel = true;
     } catch (err) {
         console.warn('Saving the reminder choice failed:', err);
+    } finally {
+        _reminderSaving = false;
     }
 }
 

@@ -1139,6 +1139,7 @@ function renderVideoCard(video, quizzes, goals) {
     
     let actionControlsHTML = '';
     let isNormalState = false;
+    let isEatenState = false;
     if (isTemporaryVideo(video)) {
         actionControlsHTML = `
             <button onclick="confirmPreviewImport(${video.id}, this)" class="btn-primary w-full py-2 font-extrabold rounded-xl text-xs transition flex items-center justify-center space-x-1.5 h-[38px]">
@@ -1161,11 +1162,12 @@ function renderVideoCard(video, quizzes, goals) {
             </button>
         `;
     } else if (isEaten) {
+        isEatenState = true;
         const levelToUse = video.importance_rating || video.importance_level || 3;
         actionControlsHTML = `
-            <button data-win-back="${video.id}" data-level="${levelToUse}" class="w-full px-3 py-2 bg-red-600 hover:bg-red-700 text-white font-extrabold rounded-xl text-xs transition flex items-center justify-center space-x-2 h-[38px]" title="Finish this quiz to put it back on your review schedule">
-                 <i data-lucide="swords" class="w-3.5 h-3.5"></i>
-                 <span>Win it back</span>
+            <button data-win-back="${video.id}" data-level="${levelToUse}" class="btn-win-back w-full px-3 py-2 font-extrabold rounded-xl text-xs transition flex items-center justify-center gap-2 h-[38px]" title="Finish this quiz to put it back on your review schedule">
+                 <i data-lucide="swords" class="hidden sm:block w-3.5 h-3.5 shrink-0"></i>
+                 <span class="whitespace-nowrap">Win it back</span>
             </button>
         `;
     } else {
@@ -1184,7 +1186,7 @@ function renderVideoCard(video, quizzes, goals) {
     const stageBadgeHTML = isTemporaryVideo(video)
         ? `<span class="text-[9px] bg-amber-500/15 border border-amber-500/30 text-amber-900 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider flex items-center space-x-1" title="Preview mode: expires in ~24h unless imported"><i data-lucide="clock" class="w-3 h-3 text-amber-700"></i><span>24h Preview</span></span>`
         : isEaten
-        ? `<span class="text-[9px] bg-red-100 border border-red-200 text-red-800 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider flex items-center space-x-1"><img src="/static/images/chompy/chompy-icon.png" alt="" class="w-3.5 h-3.5"><span>Eaten by Chompy</span></span><button data-chompy-info class="text-red-700 hover:text-red-900 p-0.5" title="What does this mean?" aria-label="What does eaten by Chompy mean?"><i data-lucide="info" class="w-3.5 h-3.5"></i></button>`
+        ? `<span class="eaten-badge text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider flex items-center space-x-1"><img src="/static/images/chompy/chompy-icon.png" alt="" class="w-3.5 h-3.5"><span>Eaten by Chompy</span></span><button data-chompy-info class="eaten-info p-0.5" title="What does this mean?" aria-label="What does eaten by Chompy mean?"><i data-lucide="info" class="w-3.5 h-3.5"></i></button>`
         : (isPaused
             ? `<span class="text-[9px] bg-stone-100 border border-stone-200 text-stone-600 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider flex items-center space-x-1" title="SRS Review Intervals Paused"><i data-lucide="pause-circle" class="w-3 h-3 text-stone-500"></i><span>${isMastered ? 'Mastered' : `Stage ${srsStage}`} (Paused)</span></span>`
             : `<span class="text-[9px] bg-amber-100 border border-amber-200 text-amber-800 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">${isMastered ? 'Mastered' : `Stage ${srsStage}`}</span>`);
@@ -1245,10 +1247,18 @@ function renderVideoCard(video, quizzes, goals) {
         title: 'Open Study Studio Workspace'
     });
 
+    // Eaten videos keep the normal two-button row, with "Win it back" as the primary half.
+    const isTwoButtonRow = isNormalState || isEatenState;
+
     const watchNotesButtonHTML = isNormalState ? `
         <button onclick="event.stopPropagation(); openStudyStudio(${video.id})" class="btn-primary w-full py-2 font-extrabold rounded-xl text-xs transition flex items-center justify-center space-x-2 min-h-[38px]" title="Watch the video and take notes side by side">
             <i data-lucide="book-open" class="w-3.5 h-3.5 shrink-0"></i>
             <span class="leading-tight">Watch &amp; Notes</span>
+        </button>
+    ` : isEatenState ? `
+        <button onclick="event.stopPropagation(); openStudyStudio(${video.id})" class="w-full px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900 font-extrabold rounded-xl border border-stone-200 text-xs transition flex items-center justify-center gap-2 min-h-[38px]" title="Open Study Studio: watch the video and take notes side by side">
+            <i data-lucide="book-open" class="hidden sm:block w-3.5 h-3.5 shrink-0"></i>
+            <span class="leading-tight whitespace-nowrap">Watch &amp; Notes</span>
         </button>
     ` : `
         <button onclick="event.stopPropagation(); openStudyStudio(${video.id})" class="px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900 font-extrabold rounded-xl border border-stone-200 text-xs transition flex items-center justify-center space-x-2 min-h-[38px] shrink-0" title="Open Study Studio: watch the video and take notes side by side">
@@ -1273,7 +1283,7 @@ function renderVideoCard(video, quizzes, goals) {
         </button>
     `;
 
-    const actionRowHTML = isNormalState ? `
+    const actionRowHTML = isTwoButtonRow ? `
         <div class="flex-grow">
             ${watchNotesButtonHTML}
         </div>
@@ -1298,7 +1308,7 @@ function renderVideoCard(video, quizzes, goals) {
     const actionRowMarginClass = hasDetails ? 'mt-2' : 'mt-3';
 
     return `
-        <div id="video-card-${video.id}" class="${isEaten ? 'bg-red-50 border border-red-200' : 'bg-white border border-[#e7dfd3]'} rounded-2xl p-4 flex flex-col justify-between shadow-sm relative">
+        <div id="video-card-${video.id}" class="${isEaten ? 'eaten-card' : 'bg-white border border-[#e7dfd3]'} rounded-2xl p-4 flex flex-col justify-between shadow-sm relative">
             <div class="flex space-x-3 items-start">
                 ${mediaPreviewHTML}
                 <div class="min-w-0 flex-grow">

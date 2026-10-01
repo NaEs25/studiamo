@@ -109,7 +109,7 @@ DEFAULT_REMINDER_HOUR = 18
 # (see database.init_db), so they never see an announcement for changes that
 # predate their account. Started at 2 because the column's old boolean-era
 # values only ever reached 1.
-CURRENT_UPDATE_VERSION = 2
+CURRENT_UPDATE_VERSION = 3
 
 _username_uuid_cache = {}
 _uuid_username_cache = {}

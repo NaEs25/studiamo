@@ -1,23 +1,31 @@
 <!-- Overlay: what Chompy ate since the user last looked (dashboard chompy.eaten_unseen),
      acknowledged with POST /api/chompy/seen. app.js maybeShowChompyAway picks one of three
      variants by how much he ate:
-       1      tickle: tickle him and he spits it out, then the quiz opens
-       2 to 4 the notes roll into him on a little belt, then he sits there full, then the list
-       5+     the full-belly summary and the list, no animation
-     Every list entry wins its quiz back by finishing it (routers/quizzes.py grade_quiz). -->
+       1      tickle: tickle him and he spits it out, then "Start the quiz" opens it
+       2 to 4 the notes roll into him on a little belt (a GIF), then he sits there full with the count
+       5+     the full-belly count, no animation
+     Only the single-quiz variant offers a way in to the quiz; the others just say how many. Finishing
+     a quiz wins its video back (routers/quizzes.py grade_quiz). -->
 <div id="overlay-chompy-away"
     class="app-overlay hidden fixed inset-0 bg-stone-950/85 backdrop-blur z-50 flex items-center justify-center p-4 overflow-y-auto">
-    <div class="max-w-md w-full bg-white border border-red-200 rounded-2xl p-5 shadow-2xl space-y-3">
-        <h3 id="chompy-away-title" class="text-lg font-extrabold text-stone-900 tracking-tight text-center"></h3>
+    <div class="relative max-w-md w-full bg-white border border-red-200 rounded-2xl p-5 shadow-2xl space-y-3">
+        <!-- Collapsed to the "i" until it is clicked (app.js toggles #chompy-away-info-text). -->
+        <button type="button" id="chompy-away-info-btn" aria-expanded="false" aria-controls="chompy-away-info-text"
+            aria-label="Is anything lost?"
+            class="absolute top-3 right-3 p-1.5 rounded-lg text-amber-700 hover:bg-amber-50 transition">
+            <i data-lucide="info" class="w-4 h-4"></i>
+        </button>
+        <h3 id="chompy-away-title" class="px-7 text-lg font-extrabold text-stone-900 tracking-tight text-center text-balance"></h3>
+        <p id="chompy-away-info-text"
+            class="hidden text-xs leading-snug text-stone-700 bg-[#fbf8f2] p-3 rounded-xl border border-[#e7dfd3]">
+            Nothing is lost. Your videos, notes and quizzes are all still there, only their reviews are paused
+            until you win them back from their cards on the Goals tab.</p>
 
-        <!-- 2 to 4: notes rolling into Chompy -->
+        <!-- 2 to 4: notes rolling into Chompy. A recorded GIF rather than a CSS animation, so it
+             plays the same everywhere, whatever the device's motion settings. -->
         <div id="chompy-away-roll" class="comeback-stage bg-[#fcfaf6] border border-[#e7dfd3] hidden">
-            <div class="comeback-roll absolute left-5 bottom-12">
-                <div id="chompy-away-roll-notes" class="belt-stack"></div>
-            </div>
-            <div class="belt-track belt-track-run" aria-hidden="true"></div>
-            <img src="/static/images/chompy/chompy-chomping.png" alt="Chompy eating"
-                class="chompy-chomp absolute right-2 bottom-1 w-32 h-auto">
+            <img src="/static/images/chompy/chompy-eats-notes.gif" alt="Chompy eating the notes"
+                class="w-full h-full object-contain">
         </div>
 
         <!-- Full belly with the count -->
@@ -29,31 +37,25 @@
 
         <!-- 1: tickle him -->
         <div id="chompy-away-tickle" class="hidden space-y-3 text-center">
-            <img id="chompy-away-tickle-img" src="/static/images/chompy/chompy-full.png" alt="Chompy"
-                class="w-36 h-auto mx-auto">
-            <p class="text-sm text-stone-700 leading-snug">Tickle him and he spits it back out. Finish the quiz and
-                it's yours again.</p>
+            <div class="relative w-36 mx-auto">
+                <img id="chompy-away-tickle-img" src="/static/images/chompy/chompy-full.png" alt="Chompy"
+                    class="w-36 h-auto">
+                <p id="chompy-away-tickle-speech" class="chompy-speech tickle-speech hidden">Hehe, that tickles!</p>
+            </div>
+            <p id="chompy-away-tickle-text" class="text-sm text-stone-700 leading-snug"></p>
             <div class="flex items-center justify-center gap-2">
                 <button type="button" id="chompy-away-later"
                     class="px-4 py-2.5 min-h-[44px] font-bold text-xs rounded-xl transition text-stone-600 hover:bg-stone-100">Later</button>
                 <button type="button" id="chompy-away-tickle-btn"
-                    class="btn-primary px-5 py-2.5 min-h-[44px] font-extrabold text-xs rounded-xl transition">Tickle Chompy</button>
+                    class="btn-primary flex-1 px-5 py-2.5 min-h-[44px] font-extrabold text-xs rounded-xl transition">Tickle Chompy</button>
+                <button type="button" id="chompy-away-start-btn"
+                    class="hidden btn-primary flex-1 px-5 py-2.5 min-h-[44px] font-extrabold text-xs rounded-xl transition">Start the quiz</button>
             </div>
         </div>
 
-        <!-- 2+: what he ate, each won back by finishing its quiz -->
-        <div id="chompy-away-list" class="hidden space-y-3">
-            <div id="chompy-away-items" class="space-y-2 max-h-64 overflow-y-auto"></div>
-        </div>
-
-        <div id="chompy-away-info" class="flex items-start space-x-2 text-left text-xs text-stone-700 bg-[#fbf8f2] p-3 rounded-xl border border-[#e7dfd3]">
-            <i data-lucide="info" class="w-4 h-4 text-amber-700 shrink-0 mt-0.5"></i>
-            <p class="leading-snug">Nothing is lost. Your videos, notes and quizzes are all still there, only their
-                reviews are paused until you win them back.</p>
-        </div>
-        <div id="chompy-away-footer" class="flex items-center justify-end">
+        <div id="chompy-away-footer">
             <button type="button" id="chompy-away-close"
-                class="px-4 py-2.5 min-h-[44px] font-bold text-xs rounded-xl transition text-stone-600 hover:bg-stone-100">Done</button>
+                class="btn-primary w-full px-5 py-2.5 min-h-[44px] font-extrabold text-xs rounded-xl transition">Done</button>
         </div>
     </div>
 </div>

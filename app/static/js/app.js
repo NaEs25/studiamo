@@ -160,6 +160,8 @@ async function loadDashboard() {
         if (typeof loadDailyRecommendations === 'function') loadDailyRecommendations();
     } catch (e) {
         console.error("Dashboard loading failed:", e);
+    } finally {
+        document.getElementById('home-due-skeleton')?.classList.add('hidden');
     }
 }
 
@@ -799,17 +801,8 @@ let _chompyAwayShown = false;
 let _chompyAwayTimers = [];
 
 function _chompyAwayShow(ids) {
-    ['chompy-away-roll', 'chompy-away-full', 'chompy-away-tickle', 'chompy-away-list', 'chompy-away-footer']
+    ['chompy-away-roll', 'chompy-away-full', 'chompy-away-tickle', 'chompy-away-footer']
         .forEach(id => document.getElementById(id).classList.toggle('hidden', !ids.includes(id)));
-}
-
-function _chompyAwayListHTML(eaten) {
-    return eaten.map(v => `
-        <div class="flex items-center justify-between gap-2 bg-red-50 border border-red-200 rounded-xl py-1.5 pl-3 pr-1.5">
-            <span class="text-sm font-bold text-stone-900 truncate">${escapeHtml(v.title || 'Untitled')}</span>
-            <button type="button" data-comeback-win="${v.id}" data-level="${v.importance_rating || 3}"
-                class="btn-primary px-3 min-h-[36px] font-extrabold text-xs rounded-lg shrink-0">Win it back</button>
-        </div>`).join('');
 }
 
 // Shown once per page load, and only when no other overlay (onboarding, paywall, what's new)
@@ -823,44 +816,55 @@ function maybeShowChompyAway(eaten, attempt = 0) {
         return;
     }
     _chompyAwayShown = true;
+    _setChompyInfoOpen(false);
 
     const count = eaten.length;
     const title = document.getElementById('chompy-away-title');
-    document.getElementById('chompy-away-items').innerHTML = _chompyAwayListHTML(eaten);
     document.getElementById('chompy-away-bubble').textContent = `${count}x`;
     const done = () => {
         title.textContent = `Chompy ate ${count === 1 ? '1 quiz' : `${count} quizzes`} while you were away`;
     };
-    const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     if (count === 1) {
         // One quiz: tickle him to get it back.
         const v = eaten[0];
         title.textContent = `Chompy ate '${v.title || 'a quiz'}'`;
+        document.getElementById('chompy-away-tickle-text').textContent =
+            "Tickle him and he spits it back out. Finish the quiz and it's yours again.";
+        const start = document.getElementById('chompy-away-start-btn');
+        start.dataset.videoId = v.id;
+        start.dataset.level = v.importance_rating || 3;
+        start.classList.add('hidden');
         const btn = document.getElementById('chompy-away-tickle-btn');
-        btn.dataset.videoId = v.id;
-        btn.dataset.level = v.importance_rating || 3;
+        btn.classList.remove('hidden');
+        btn.disabled = false;
         document.getElementById('chompy-away-tickle-img').src = CHOMPY_IMG.full;
+        document.getElementById('chompy-away-tickle-speech').classList.add('hidden');
+        // Loaded now, so the tickled pose is ready the moment the button is pressed.
+        new Image().src = CHOMPY_IMG.tickled;
         _chompyAwayShow(['chompy-away-tickle']);
-    } else if (count <= 4 && !reduceMotion) {
-        // Two to four: the notes roll into him, he sits there full, then the list.
+    } else if (count <= 4) {
+        // Two to four: the notes roll into him (a GIF), then he sits there full with the count.
         title.textContent = 'While you were away...';
-        document.getElementById('chompy-away-roll-notes').innerHTML = beltStackHTML(count);
         _chompyAwayShow(['chompy-away-roll', 'chompy-away-footer']);
         _chompyAwayTimers.push(setTimeout(() => {
             done();
             _chompyAwayShow(['chompy-away-full', 'chompy-away-footer']);
             document.getElementById('chompy-away-bubble').classList.add('chompy-pop-in');
         }, 2200));
-        _chompyAwayTimers.push(setTimeout(() => _chompyAwayShow(['chompy-away-full', 'chompy-away-list', 'chompy-away-footer']), 3700));
     } else {
-        // More than four: just the summary.
+        // More than four: just the count.
         done();
-        _chompyAwayShow(['chompy-away-full', 'chompy-away-list', 'chompy-away-footer']);
+        _chompyAwayShow(['chompy-away-full', 'chompy-away-footer']);
     }
 
     openOverlay('overlay-chompy-away', closeChompyAway);
     if (typeof renderIcons === 'function') renderIcons();
+}
+
+function _setChompyInfoOpen(open) {
+    document.getElementById('chompy-away-info-text').classList.toggle('hidden', !open);
+    document.getElementById('chompy-away-info-btn').setAttribute('aria-expanded', String(open));
 }
 
 function closeChompyAway() {
@@ -874,7 +878,7 @@ function closeChompyAway() {
     fetchAPI('/api/chompy/seen', { method: 'POST' }).catch(e => console.warn('Chompy ack failed:', e));
 }
 
-// Starts the quiz of an eaten video; finishing it wins the video back (grade_quiz).
+// Starts the quiz of the one eaten video; finishing it wins the video back (grade_quiz).
 function _winBackFromComeback(videoId, level) {
     closeChompyAway();
     if (typeof handleStudyButtonClick === 'function') handleStudyButtonClick(null, videoId, level);
@@ -882,22 +886,32 @@ function _winBackFromComeback(videoId, level) {
 
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('chompy-away-close')?.addEventListener('click', closeChompyAway);
-    document.getElementById('chompy-away-later')?.addEventListener('click', closeChompyAway);
-    document.getElementById('chompy-away-items')?.addEventListener('click', (e) => {
-        const btn = e.target.closest('[data-comeback-win]');
-        if (btn) _winBackFromComeback(Number(btn.dataset.comebackWin), Number(btn.dataset.level) || 3);
+    document.getElementById('chompy-away-info-btn')?.addEventListener('click', (e) => {
+        _setChompyInfoOpen(e.currentTarget.getAttribute('aria-expanded') !== 'true');
     });
+    document.getElementById('chompy-away-later')?.addEventListener('click', closeChompyAway);
+    // Tickling only plays his reaction; the quiz starts when the user asks for it.
     document.getElementById('chompy-away-tickle-btn')?.addEventListener('click', (e) => {
         const btn = e.currentTarget;
         const img = document.getElementById('chompy-away-tickle-img');
+        const start = document.getElementById('chompy-away-start-btn');
         img.src = CHOMPY_IMG.tickled;
         img.classList.add('chompy-giggle');
         btn.disabled = true;
-        setTimeout(() => {
+        document.getElementById('chompy-away-tickle-speech').classList.remove('hidden');
+        document.getElementById('chompy-away-title').textContent = 'He spat it back out';
+        document.getElementById('chompy-away-tickle-text').textContent =
+            'Finish its quiz to win it back for good. Until then it stays paused.';
+        _chompyAwayTimers.push(setTimeout(() => {
             img.classList.remove('chompy-giggle');
-            btn.disabled = false;
-            _winBackFromComeback(Number(btn.dataset.videoId), Number(btn.dataset.level) || 3);
-        }, 1000);
+            btn.classList.add('hidden');
+            start.classList.remove('hidden');
+            start.focus();
+        }, 900));
+    });
+    document.getElementById('chompy-away-start-btn')?.addEventListener('click', (e) => {
+        const btn = e.currentTarget;
+        _winBackFromComeback(Number(btn.dataset.videoId), Number(btn.dataset.level) || 3);
     });
 });
 
@@ -1021,8 +1035,10 @@ function renderChompyBelt(dueQuizzes, dayProgress) {
     img.src = awake ? CHOMPY_IMG.hungry : CHOMPY_IMG.full;
     img.alt = awake ? 'Chompy, awake and hungry' : 'Chompy, asleep';
     document.getElementById('belt-chompy-zz').classList.toggle('hidden', awake);
-    document.getElementById('belt-chompy-caption').textContent =
-        counts.over2 > 0 ? 'Dinner is at midnight' : (awake ? 'Wide awake' : 'Asleep');
+    img.dataset.state = awake ? 'awake' : 'asleep';
+    const speech = document.getElementById('belt-chompy-speech');
+    speech.textContent = counts.over2 > 0 ? 'Dinner is at midnight!' : (awake ? 'Dinner is tomorrow night' : '');
+    speech.classList.toggle('hidden', !awake);
 
     // Plays the wake-up hop once, the first time this browser sees him awake again.
     let before = null;
