@@ -1256,7 +1256,7 @@ function renderVideoCard(video, quizzes, goals) {
             <span class="leading-tight">Watch &amp; Notes</span>
         </button>
     ` : isEatenState ? `
-        <button onclick="event.stopPropagation(); openStudyStudio(${video.id})" class="w-full px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900 font-extrabold rounded-xl border border-stone-200 text-xs transition flex items-center justify-center gap-2 min-h-[38px]" title="Open Study Studio: watch the video and take notes side by side">
+        <button data-open-studio="${video.id}" class="w-full px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900 font-extrabold rounded-xl border border-stone-200 text-xs transition flex items-center justify-center gap-2 min-h-[38px]" title="Open Study Studio: watch the video and take notes side by side">
             <i data-lucide="book-open" class="hidden sm:block w-3.5 h-3.5 shrink-0"></i>
             <span class="leading-tight whitespace-nowrap">Watch &amp; Notes</span>
         </button>
@@ -2780,5 +2780,11 @@ document.addEventListener('click', (event) => {
     const winBack = event.target.closest('[data-win-back]');
     if (winBack) {
         handleStudyButtonClick(event, Number(winBack.dataset.winBack), Number(winBack.dataset.level) || 3);
+        return;
+    }
+    const studio = event.target.closest('[data-open-studio]');
+    if (studio) {
+        event.stopPropagation();
+        openStudyStudio(Number(studio.dataset.openStudio));
     }
 });

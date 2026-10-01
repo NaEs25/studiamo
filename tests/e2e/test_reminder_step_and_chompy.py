@@ -250,3 +250,31 @@ def test_groups_creep_along_the_belt_through_the_day(logged_in_page):
     _open_with_due(page, [1, 2], day_progress=0.5)   # noon: half way through each station
     assert page.locator('[data-belt-station="over1"]').evaluate("el => el.style.left") == "50%"
     assert page.locator('[data-belt-station="today"]').evaluate("el => el.style.transform") == "translateX(-50%)"
+
+
+def test_eaten_card_buttons_work_without_inline_handlers(logged_in_page):
+    page = logged_in_page
+    videos = [{"id": 990100, "title": "Eaten video", "importance_rating": 3, "is_archived": 0, "is_paused": 1,
+               "is_watchlist": 0, "youtube_id": None, "goal_title": "E2E goal", "learning_goal_id": 990000,
+               "summary": [], "status": "done", "eaten_at": "2026-10-01T08:00:00"}]
+
+    def handle(route):
+        response = route.fetch()
+        body = response.json()
+        body.update({"goals": [{"id": 990000, "title": "E2E goal", "description": "", "order_index": 0,
+                                "has_saved_recommendations": 0}],
+                     "videos": videos, "quizzes": [], "chompy": {"eaten_unseen": []}})
+        route.fulfill(response=response, body=json.dumps(body))
+
+    page.route("**/api/dashboard", handle)
+    page.route("**/api/daily-recommendations**", lambda route: route.fulfill(
+        status=200, content_type="application/json", body='{"recommendations": []}'))
+    page.goto("/app")
+    page.wait_for_function("window._videoCardCache && window._videoCardCache[990100]", timeout=15000)
+    page.evaluate("window.openStudyStudio = id => { window.__studio = id; }")
+    page.evaluate("document.body.insertAdjacentHTML('beforeend', '<div id=\"probe\">' + renderVideoCard(window._videoCardCache[990100]) + '</div>')")
+    card = page.locator("#probe #video-card-990100")
+    assert card.locator("[data-win-back]").count() == 1
+    assert card.locator("[onclick]").locator("text=Watch").count() == 0
+    card.locator("[data-open-studio]").dispatch_event("click")
+    assert page.evaluate("window.__studio") == 990100
