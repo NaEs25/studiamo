@@ -45,6 +45,8 @@ async function loadGoals() {
 
         window._goalsCache = {};
         goals.forEach(g => { window._goalsCache[g.id] = g; });
+        window._archivedGoalsCache = {};
+        archivedGoals.forEach(g => { window._archivedGoalsCache[g.id] = g; });
         if (typeof renderGoalBoxes === 'function') renderGoalBoxes(goals);
 
         // 2. Render Active Goals Grid
@@ -90,7 +92,7 @@ async function loadGoals() {
                     const recsBtnLabel = (isDrawerOpen || hasSavedRecs) ? 'View AI Recommendations' : 'Get AI Recommendations';
 
                     const cardHTML = `
-                        <div class="bg-white border border-stone-200 p-5 rounded-2xl space-y-4 shadow-sm relative group">
+                        <div data-goal-card="${g.id}" class="bg-white border border-stone-200 p-5 rounded-2xl space-y-4 shadow-sm relative group">
                             <div class="flex justify-between items-start">
                                 <div class="flex flex-col min-w-0">
                                     <div class="flex items-center space-x-3">
@@ -232,7 +234,7 @@ async function loadGoals() {
             } else {
                 archivedGoals.forEach(g => {
                     archivedList.innerHTML += `
-                        <div class="flex items-center justify-between p-3 bg-stone-50 border border-stone-200 rounded-xl">
+                        <div data-archived-goal="${g.id}" class="flex items-center justify-between p-3 bg-stone-50 border border-stone-200 rounded-xl">
                             <div class="min-w-0">
                                 <span class="block text-xs font-bold text-stone-900">${escapeHtml(g.title)}</span>
                                 ${g.description ? `<p class="text-[10px] text-stone-400 truncate max-w-xs md:max-w-md" title="${escapeHtml(g.description)}">${escapeHtml(g.description)}</p>` : ''}
@@ -265,6 +267,8 @@ async function loadGoals() {
             }
         }
 
+        // Re-renders replace every card, so an active search has to be applied again.
+        applyGoalsSearch();
         renderIcons();
     } catch (e) {
         console.error("Goals load error:", e);
@@ -866,6 +870,203 @@ function toggleGoalMenu(event, id) {
     </div>`;
 
     toggleContextMenuPortal('portal-goal-menu', id, btn, html, { extraClasses: 'w-52 border border-stone-200' });
+}
+
+// --- Goals tab search ---
+// Filters the cards loadGoals() already rendered, so it needs no API call. A goal whose title
+// or description matches stays with all of its materials; otherwise it stays only if one of
+// its materials matches, and then only those materials show. Material search covers titles. Sections a match sits in are
+// opened for the search and closed again when it is cleared, without touching the saved
+// accordion state in localStorage.
+
+function normalizeSearchText(text) {
+    return String(text || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+}
+
+function getGoalsSearchTerms() {
+    const input = document.getElementById('goals-search-input');
+    return normalizeSearchText(input ? input.value : '').split(/\s+/).filter(Boolean);
+}
+
+function matchesSearchTerms(text, terms) {
+    const haystack = normalizeSearchText(text);
+    return terms.every(term => haystack.includes(term));
+}
+
+function setSearchMiss(el, miss) {
+    if (el) el.classList.toggle('search-miss', miss);
+}
+
+// Opens a collapsed section for the search and marks it, so clearing the search can close it.
+function openSectionForSearch(contentEl, chevronEl) {
+    if (!contentEl || !contentEl.classList.contains('hidden')) return;
+    contentEl.classList.remove('hidden');
+    contentEl.dataset.searchOpened = '1';
+    if (chevronEl) chevronEl.classList.add('rotate-180');
+}
+
+function restoreSearchOpenedSections() {
+    document.querySelectorAll('#tab-goals [data-search-opened]').forEach(el => {
+        delete el.dataset.searchOpened;
+        el.classList.add('hidden');
+        const chevron = el.id === 'archived-goals-wrapper'
+            ? document.getElementById('archived-goals-chevron')
+            : document.getElementById(el.id.replace(/^content-/, 'chevron-').replace(/^goal-materials-content-/, 'goal-materials-chevron-'));
+        if (chevron) chevron.classList.remove('rotate-180');
+    });
+}
+
+// Hides the material cards in a container that do not match and returns how many do.
+function filterMaterialCards(containerEl, terms) {
+    if (!containerEl) return 0;
+    let matched = 0;
+    containerEl.querySelectorAll('[id^="video-card-"]').forEach(card => {
+        const video = (window._videoCardCache || {})[card.id.replace('video-card-', '')];
+        const isMatch = !!video && matchesSearchTerms(video.title, terms);
+        setSearchMiss(card, !isMatch);
+        if (isMatch) matched++;
+    });
+    return matched;
+}
+
+function applyGoalsSearch() {
+    const tab = document.getElementById('tab-goals');
+    if (!tab) return;
+    const terms = getGoalsSearchTerms();
+    const clearBtn = document.getElementById('btn-goals-search-clear');
+    const status = document.getElementById('goals-search-status');
+    const empty = document.getElementById('goals-search-empty');
+
+    restoreSearchOpenedSections();
+    if (clearBtn) clearBtn.classList.toggle('hidden', terms.length === 0);
+
+    if (terms.length === 0) {
+        tab.querySelectorAll('.search-miss').forEach(el => el.classList.remove('search-miss'));
+        if (status) status.textContent = '';
+        if (empty) empty.classList.add('hidden');
+        return;
+    }
+
+    let goalCount = 0;
+    let materialCount = 0;
+
+    // Active goals
+    const goalsContainer = document.getElementById('goals-container');
+    let visibleGoals = 0;
+    tab.querySelectorAll('[data-goal-card]').forEach(card => {
+        const goalId = card.dataset.goalCard;
+        const goal = (window._goalsCache || {})[goalId];
+        const materials = document.getElementById(`goal-materials-content-${goalId}`);
+        const goalMatches = !!goal && matchesSearchTerms(`${goal.title} ${goal.description || ''}`, terms);
+        const matchedMaterials = filterMaterialCards(materials, terms);
+        materialCount += matchedMaterials;
+        if (matchedMaterials > 0) {
+            openSectionForSearch(materials, document.getElementById(`goal-materials-chevron-${goalId}`));
+        }
+        if (goalMatches) {
+            goalCount++;
+            // A matching goal keeps all of its materials, matching or not.
+            if (materials) materials.querySelectorAll('.search-miss').forEach(el => el.classList.remove('search-miss'));
+        }
+        const visible = goalMatches || matchedMaterials > 0;
+        setSearchMiss(card, !visible);
+        if (visible) visibleGoals++;
+    });
+    setSearchMiss(goalsContainer, visibleGoals === 0);
+
+    // Watchlist and unassociated materials
+    ['watchlist', 'unassociated'].forEach(cat => {
+        const container = document.getElementById(`goals-${cat}-container`);
+        const content = document.getElementById(`content-${cat}`);
+        const matched = filterMaterialCards(content, terms);
+        materialCount += matched;
+        setSearchMiss(container, matched === 0);
+        if (matched > 0) openSectionForSearch(content, document.getElementById(`chevron-${cat}`));
+    });
+
+    // Archived goals and materials
+    const archivedList = document.getElementById('archived-goals-list');
+    let archivedGoalMatches = 0;
+    if (archivedList) {
+        archivedList.querySelectorAll('[data-archived-goal]').forEach(item => {
+            const goal = (window._archivedGoalsCache || {})[item.dataset.archivedGoal];
+            const isMatch = !!goal && matchesSearchTerms(`${goal.title} ${goal.description || ''}`, terms);
+            setSearchMiss(item, !isMatch);
+            if (isMatch) archivedGoalMatches++;
+        });
+        setSearchMiss(archivedList.parentElement, archivedGoalMatches === 0);
+    }
+    const archivedVidsList = document.getElementById('archived-videos-list');
+    const archivedVidMatches = filterMaterialCards(archivedVidsList, terms);
+    if (archivedVidsList) setSearchMiss(archivedVidsList.parentElement, archivedVidMatches === 0);
+    goalCount += archivedGoalMatches;
+    materialCount += archivedVidMatches;
+    const archivedTotal = archivedGoalMatches + archivedVidMatches;
+    setSearchMiss(document.getElementById('goals-archived-section'), archivedTotal === 0);
+    if (archivedTotal > 0) {
+        openSectionForSearch(document.getElementById('archived-goals-wrapper'), document.getElementById('archived-goals-chevron'));
+    }
+
+    const total = goalCount + materialCount;
+    if (empty) empty.classList.toggle('hidden', total > 0);
+    if (status) {
+        const parts = [];
+        if (goalCount) parts.push(`${goalCount} ${goalCount === 1 ? 'goal' : 'goals'}`);
+        if (materialCount) parts.push(`${materialCount} ${materialCount === 1 ? 'material' : 'materials'}`);
+        status.textContent = total ? `Showing ${parts.join(' and ')}` : '';
+    }
+}
+
+function setGoalsSearchOpen(open) {
+    const bar = document.getElementById('goals-search-bar');
+    const toggle = document.getElementById('btn-goals-search-toggle');
+    const input = document.getElementById('goals-search-input');
+    if (!bar || !input) return;
+    bar.classList.toggle('hidden', !open);
+    if (toggle) toggle.setAttribute('aria-expanded', String(open));
+    if (open) {
+        input.focus();
+    } else {
+        input.value = '';
+        applyGoalsSearch();
+    }
+}
+
+function initGoalsSearch() {
+    const toggle = document.getElementById('btn-goals-search-toggle');
+    const input = document.getElementById('goals-search-input');
+    const clearBtn = document.getElementById('btn-goals-search-clear');
+    if (!toggle || !input) return;
+
+    toggle.addEventListener('click', () => {
+        const bar = document.getElementById('goals-search-bar');
+        setGoalsSearchOpen(bar.classList.contains('hidden'));
+    });
+    input.addEventListener('input', applyGoalsSearch);
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            setGoalsSearchOpen(false);
+            toggle.focus();
+        }
+    });
+    if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+            input.value = '';
+            applyGoalsSearch();
+            input.focus();
+        });
+    }
+    // "/" opens the search while the goals tab is showing, unless the user is typing somewhere.
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return;
+        const tab = document.getElementById('tab-goals');
+        if (!tab || tab.classList.contains('hidden')) return;
+        const target = e.target;
+        if (target && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))) return;
+        e.preventDefault();
+        setGoalsSearchOpen(true);
+    });
 }
 
 // Window bindings for inline HTML attribute calls

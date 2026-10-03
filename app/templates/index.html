@@ -409,6 +409,14 @@
                         Highest Priority) and your associated videos, PDFs &amp; notes.</p>
                 </div>
                 <div class="flex items-center space-x-2 shrink-0">
+                    <div class="flex items-center bg-stone-100 border border-stone-200 rounded-xl p-1">
+                        <button type="button" id="btn-goals-search-toggle" aria-controls="goals-search-bar"
+                            aria-expanded="false"
+                            class="p-1.5 hover:bg-stone-100 rounded-lg text-stone-600 hover:text-stone-900 transition"
+                            title="Search Goals &amp; Materials">
+                            <i data-lucide="search" class="w-4 h-4"></i>
+                        </button>
+                    </div>
                     <!-- Collapse / Expand All Buttons -->
                     <div class="flex items-center bg-stone-100 border border-stone-200 rounded-xl p-1 space-x-1">
                         <button onclick="setAllAccordions(true)"
@@ -429,6 +437,29 @@
                         <span class="sm:hidden font-bold">Goal</span>
                     </button>
                 </div>
+            </div>
+
+            <!-- Search: filters the rendered goals and materials client-side (goals.js) -->
+            <div id="goals-search-bar" class="hidden" role="search">
+                <label for="goals-search-input" class="sr-only">Search goals and materials</label>
+                <div class="relative">
+                    <i data-lucide="search"
+                        class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400 pointer-events-none"></i>
+                    <input type="search" id="goals-search-input" placeholder="Search goals and materials"
+                        autocomplete="off" enterkeyhint="search" maxlength="100"
+                        class="goals-search-input w-full pl-10 pr-10 py-2.5 bg-[#fcfaf6] border border-[#e7dfd3] rounded-xl text-sm text-stone-900 focus:outline-none focus:border-amber-500 transition">
+                    <button type="button" id="btn-goals-search-clear" aria-label="Clear search"
+                        class="hidden absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                </div>
+                <p id="goals-search-status" class="text-xs text-stone-500 mt-2 pl-1" aria-live="polite"></p>
+            </div>
+
+            <div id="goals-search-empty" class="hidden text-center py-12 px-6 bg-white rounded-2xl border border-dashed border-stone-300">
+                <i data-lucide="search-x" class="w-8 h-8 text-stone-300 mx-auto"></i>
+                <p class="text-sm font-bold text-stone-700 mt-3">Nothing matches your search</p>
+                <p class="text-xs text-stone-500 mt-1">Search looks at goal names, descriptions, and material titles, archived ones included.</p>
             </div>
 
             <!-- Watchlist / Study Queue Container -->

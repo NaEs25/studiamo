@@ -1172,3 +1172,9 @@ button:active:not(:disabled) {
     .chompy-wake, .chompy-zz, .chompy-pop-in, .chompy-giggle { animation: none; }
     .belt-group { transition: none; }
 }
+
+/* Goals tab search (goals.js applyGoalsSearch). search-miss wins over any display utility on a card. */
+.search-miss { display: none !important; }
+/* The field has its own clear button, so drop the browser's built-in one. */
+.goals-search-input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
+#btn-goals-search-toggle[aria-expanded="true"] { background: var(--color-surface); color: var(--color-primary); }
