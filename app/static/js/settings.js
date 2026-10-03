@@ -1264,6 +1264,8 @@ async function testTelegramNotification() {
     }
 }
 
+// ---- Onboarding (#overlay-tab-guide) -------------------------------------------------------
+
 let _onboardingStatusCache = null;
 let _onboardingStepIndex = 0;
 
@@ -1273,7 +1275,7 @@ async function checkOnboardingAndUpdates() {
         _onboardingStatusCache = data;
 
         if (!data.has_seen_onboarding) {
-            openTabGuideModal();
+            openWelcomeFlow();
         } else if (!data.has_seen_reminder_setup && !data.has_reminder_channel) {
             // Finished onboarding before the reminder step existed and never set up a channel.
             openReminderSetupOnly();
@@ -1285,185 +1287,423 @@ async function checkOnboardingAndUpdates() {
     }
 }
 
-// Steps already running as an installed PWA have nothing to gain from the "Install as App"
-// step, so it's dropped from the sequence entirely rather than shown as a dead end.
-// In reminder-only mode the overlay shows just the "reminders" step (openReminderSetupOnly).
-let _onboardingReminderOnly = false;
+// Which steps each use of the overlay shows, in order (data-step in index.html).
+const ONBOARDING_FLOWS = {
+    // New accounts, once. No way out but forward: the goal step is required, and only the
+    // video step can be skipped.
+    welcome: ['chompy', 'how', 'goal', 'video', 'reminders'],
+    // Settings' "Welcome Guide" button.
+    tour: ['tour-home', 'tour-goals', 'tour-import', 'tour-stats', 'tour-settings'],
+    // Accounts that finished onboarding before the reminders step existed and have no channel.
+    reminders: ['reminders'],
+};
+
+// The primary button per welcome step: [label, Lucide icon].
+const WELCOME_NEXT_LABELS = {
+    chompy: ['How do I stop him?', 'arrow-right'],
+    how: ['Next', 'arrow-right'],
+    goal: ['Create goal', 'arrow-right'],
+    video: ['Make my quiz', 'sparkles'],
+    reminders: ['Start learning', 'check'],
+};
+
+let _onboardingFlow = 'welcome';
+let _onboardingBusy = false;
+// What the welcome flow has created so far. Going Back and forward again edits the goal rather
+// than creating a second one, and shows the started import rather than offering another.
+let _welcomeGoal = null;        // { id, title }
+let _welcomeImport = null;      // { videoId, title }
+let _welcomeImportTimer = null;
 
 function _onboardingActiveSteps() {
-    const isStandalone = document.documentElement.dataset.standalone === 'true';
-    return Array.from(document.querySelectorAll('#onboarding-steps .onboarding-step'))
-        .filter(el => !(isStandalone && el.dataset.step === 'pwa'))
-        .filter(el => !_onboardingReminderOnly || el.dataset.step === 'reminders');
+    return ONBOARDING_FLOWS[_onboardingFlow]
+        .map(name => document.querySelector(`#onboarding-steps [data-step="${name}"]`))
+        .filter(Boolean);
 }
 
 function renderOnboardingStep() {
     const steps = _onboardingActiveSteps();
     if (steps.length === 0) return;
     if (_onboardingStepIndex >= steps.length) _onboardingStepIndex = steps.length - 1;
+    const step = steps[_onboardingStepIndex];
+    const name = step.dataset.step;
+    const isWelcome = _onboardingFlow === 'welcome';
 
-    // Hide every step first, including ones filtered out of `steps` entirely (e.g. "pwa" when
-    // already standalone) - those never appear in the loop below, so without this they'd keep
-    // whatever visibility they had in the static markup.
     document.querySelectorAll('#onboarding-steps .onboarding-step').forEach(el => el.classList.add('hidden'));
-    steps[_onboardingStepIndex].classList.remove('hidden');
+    step.classList.remove('hidden');
+
+    const eyebrow = document.getElementById('onboarding-eyebrow');
+    if (eyebrow) eyebrow.textContent = step.dataset.eyebrow || '';
 
     const dotsEl = document.getElementById('onboarding-dots');
     if (dotsEl) {
-        dotsEl.innerHTML = steps
+        dotsEl.innerHTML = steps.length < 2 ? '' : steps
             .map((_, i) => `<span class="onboarding-dot${i === _onboardingStepIndex ? ' onboarding-dot-active' : ''}"></span>`)
             .join('');
     }
 
-    const backBtn = document.getElementById('onboarding-back-btn');
-    if (backBtn) backBtn.classList.toggle('hidden', _onboardingStepIndex === 0);
+    document.getElementById('onboarding-back-btn')?.classList.toggle('hidden', _onboardingStepIndex === 0);
+    document.getElementById('onboarding-close-btn')?.classList.toggle('hidden', isWelcome);
 
     const nextBtn = document.getElementById('onboarding-next-btn');
     if (nextBtn) {
-        const isLastStep = _onboardingStepIndex === steps.length - 1;
-        // New accounts end the tour on their first goal rather than on an empty dashboard.
-        const lastLabel = (!_onboardingReminderOnly && window._hasGoals === false)
-            ? '<span>Add your first goal</span><i data-lucide="target" class="w-3.5 h-3.5"></i>'
-            : (_onboardingReminderOnly ? '<span>Done</span><i data-lucide="check" class="w-3.5 h-3.5"></i>'
-                : '<span>Got it! Start Learning</span><i data-lucide="check" class="w-3.5 h-3.5"></i>');
-        nextBtn.innerHTML = isLastStep
-            ? lastLabel
-            : '<span>Next</span><i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>';
+        let label = _onboardingStepIndex === steps.length - 1 ? ['Got it', 'check'] : ['Next', 'arrow-right'];
+        if (isWelcome) label = (name === 'video' && _welcomeImport) ? ['Next', 'arrow-right'] : WELCOME_NEXT_LABELS[name];
+        else if (_onboardingFlow === 'reminders') label = ['Done', 'check'];
+        nextBtn.innerHTML = `<span>${label[0]}</span><i data-lucide="${label[1]}" class="w-4 h-4"></i>`;
+        const final = isWelcome && name === 'reminders';
+        nextBtn.classList.toggle('btn-primary', !final);
+        nextBtn.classList.toggle('onboarding-cta-final', final);
     }
 
-    if (steps[_onboardingStepIndex].dataset.step === 'reminders') renderReminderStep();
+    if (name === 'video') renderVideoStep();
+    if (name === 'reminders') {
+        renderReminderStep();
+        _watchWelcomeImport();
+    } else {
+        _stopWatchingWelcomeImport();
+    }
 
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-function onboardingNext(e) {
-    if (e && typeof e.preventDefault === 'function') e.preventDefault();
-    const steps = _onboardingActiveSteps();
-    if (_onboardingStepIndex >= steps.length - 1) {
-        dismissTabGuide(e);
-        return;
+// Runs a step's save with the footer buttons locked, so a double tap cannot send it twice.
+async function _withOnboardingBusy(fn) {
+    _onboardingBusy = true;
+    const nextBtn = document.getElementById('onboarding-next-btn');
+    if (nextBtn) nextBtn.disabled = true;
+    try {
+        return await fn();
+    } finally {
+        _onboardingBusy = false;
+        if (nextBtn) nextBtn.disabled = false;
     }
-    // Leaving the reminders step is when its choice counts, not the end of a tour that may never
-    // be finished.
-    if (steps[_onboardingStepIndex].dataset.step === 'reminders') saveReminderChoice();
+}
+
+function _advanceOnboarding() {
     _onboardingStepIndex++;
     renderOnboardingStep();
 }
 
+async function onboardingNext(e) {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    if (_onboardingBusy) return;
+    const steps = _onboardingActiveSteps();
+    const name = steps[_onboardingStepIndex] && steps[_onboardingStepIndex].dataset.step;
+    if (name === 'goal' && !(await _withOnboardingBusy(_saveWelcomeGoal))) return;
+    if (name === 'video' && !(await _withOnboardingBusy(_submitWelcomeVideoLink))) return;
+    if (_onboardingStepIndex >= steps.length - 1) {
+        finishOnboarding();
+        return;
+    }
+    _advanceOnboarding();
+}
+
 function onboardingBack(e) {
     if (e && typeof e.preventDefault === 'function') e.preventDefault();
-    if (_onboardingStepIndex === 0) return;
+    if (_onboardingBusy || _onboardingStepIndex === 0) return;
     _onboardingStepIndex--;
     renderOnboardingStep();
 }
 
-function _setOnboardingHeader(title, subtitle) {
-    const t = document.getElementById('onboarding-title');
-    const st = document.getElementById('onboarding-subtitle');
-    if (t) t.textContent = title;
-    if (st) st.textContent = subtitle;
+function openWelcomeFlow() {
+    _welcomeGoal = null;
+    _welcomeImport = null;
+    _openOnboardingOverlay('welcome');
+    // Reminders are the last step, so a tab closed anywhere before it must already have left the
+    // account with a channel: email from the start, which that step can still switch to push.
+    saveReminderChoice();
 }
 
 function openReminderSetupOnly() {
-    _onboardingReminderOnly = true;
-    _setOnboardingHeader('Stay on track', 'Set up your review reminders');
-    _openOnboardingOverlay();
+    _openOnboardingOverlay('reminders');
 }
 
 function openTabGuideModal(e) {
     if (e && typeof e.preventDefault === 'function') e.preventDefault();
-    _onboardingReminderOnly = false;
-    _setOnboardingHeader('Welcome to Studiamo', 'Quick tour of the app');
-    _openOnboardingOverlay();
+    _openOnboardingOverlay('tour');
 }
 
-function _openOnboardingOverlay() {
-    const el = document.getElementById('overlay-tab-guide');
-    if (el) {
-        _onboardingStepIndex = 0;
-        openOverlay('overlay-tab-guide', closeTabGuideModal);
-        renderOnboardingStep();
-        if (typeof renderIcons === 'function') renderIcons();
-        if (typeof lucide !== 'undefined') lucide.createIcons();
-    }
+function _openOnboardingOverlay(flow) {
+    if (!document.getElementById('overlay-tab-guide')) return;
+    _onboardingFlow = flow;
+    _onboardingStepIndex = 0;
+    // No close function for the welcome flow: Escape must not end it, and with it on top,
+    // Escape cannot reach anything underneath either (core.js).
+    openOverlay('overlay-tab-guide', flow === 'welcome' ? null : closeTabGuideModal);
+    renderOnboardingStep();
+    if (typeof renderIcons === 'function') renderIcons();
 }
 
-function closeTabGuideModal(e) {
-    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+function _hideOnboardingOverlay() {
     const el = document.getElementById('overlay-tab-guide');
     if (el) {
         el.classList.add('hidden');
         closeOverlay('overlay-tab-guide');
     }
-    // The reminders step comes first, so even a tour closed on its first screen has shown it.
-    saveReminderChoice();
+    _stopWatchingWelcomeImport();
 }
 
-async function dismissTabGuide(e, options = {}) {
-    const reminderOnly = _onboardingReminderOnly;
-    const goToFirstGoal = !reminderOnly && window._hasGoals === false && !options.skipFirstGoal;
-    closeTabGuideModal(e);
+// The close button and Escape, which only the tour and the reminders-only flow have.
+function closeTabGuideModal(e) {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    _hideOnboardingOverlay();
+    // Closing the reminders step counts as having seen it, the same as leaving it with Done.
+    if (_onboardingFlow === 'reminders') saveReminderChoice();
+}
+
+async function finishOnboarding() {
+    const flow = _onboardingFlow;
+    _hideOnboardingOverlay();
+    if (flow === 'tour') return;
     try {
         await saveReminderChoice();
-        if (!reminderOnly) {
-            const fd = new FormData();
-            fd.append('has_seen_onboarding', 'true');
-            await fetchAPI('/api/user/onboarding_status', { method: 'POST', body: fd });
-        }
-
-        if (goToFirstGoal) {
-            if (typeof switchTab === 'function') switchTab('goals');
-            if (typeof openCreateGoalModal === 'function') openCreateGoalModal();
+        if (flow === 'welcome') {
+            await _completeWelcomeFlow();
         } else if (_onboardingStatusCache && !_onboardingStatusCache.has_seen_updates) {
             openUpdatesModal();
         }
     } catch (err) {
-        console.error("Failed to dismiss tab guide:", err);
+        console.error("Failed to finish onboarding:", err);
+    }
+}
+
+// Marks the welcome flow done and lands where the first video left off:
+// its quiz when it is ready, Home with the import list open while it is still being made, or
+// the goals tab when the video step was skipped.
+async function _completeWelcomeFlow() {
+    const status = _onboardingStatusCache;
+    try {
+        const fd = new FormData();
+        fd.append('has_seen_onboarding', 'true');
+        await fetchAPI('/api/user/onboarding_status', { method: 'POST', body: fd });
+        if (status) status.has_seen_onboarding = true;
+    } catch (err) {
+        console.error("Saving the end of onboarding failed:", err);
+    }
+
+    if (!_welcomeImport) {
+        switchTab('goals');
+    } else if (_welcomeImportState() === 'completed') {
+        switchTab('dashboard');
+        startQuiz(null, _welcomeImport.videoId);
+    } else {
+        switchTab('dashboard');
+        if (window.globalImportBacklog) {
+            window.globalImportBacklog.toggleDrawer(true);
+            window.globalImportBacklog.poll();
+        }
+    }
+}
+
+// ---- Welcome flow: goal step --------------------------------------------------------------
+
+function _setOnboardingError(step, message) {
+    const el = document.getElementById(`onboarding-${step}-error`);
+    if (!el) return;
+    el.textContent = message;
+    el.classList.toggle('hidden', !message);
+}
+
+function _syncGoalChips() {
+    const value = (document.getElementById('onboarding-goal-input')?.value || '').trim();
+    document.querySelectorAll('#onboarding-steps [data-goal-chip]')
+        .forEach(chip => chip.classList.toggle('is-active', chip.dataset.goalChip === value));
+}
+
+function _pickGoalChip(chip) {
+    const input = document.getElementById('onboarding-goal-input');
+    if (!input) return;
+    input.value = chip.dataset.goalChip;
+    _syncGoalChips();
+    _setOnboardingError('goal', '');
+}
+
+async function _saveWelcomeGoal() {
+    const title = (document.getElementById('onboarding-goal-input')?.value || '').trim();
+    if (!title) {
+        _setOnboardingError('goal', 'Type what you want to learn, or pick a topic above.');
+        return false;
+    }
+    _setOnboardingError('goal', '');
+    if (_welcomeGoal && _welcomeGoal.title === title) return true;
+
+    const fd = new FormData();
+    fd.append('title', title);
+    try {
+        if (_welcomeGoal) {
+            await fetchAPI(`/api/goals/${_welcomeGoal.id}/edit`, { method: 'POST', body: fd });
+            _welcomeGoal.title = title;
+        } else {
+            const res = await fetchAPI('/api/goals', { method: 'POST', body: fd });
+            _welcomeGoal = { id: res.goal_id, title };
+        }
+        return true;
+    } catch (err) {
+        // The account already has a goal by this name, most likely from an earlier run of this
+        // flow that was left after this step: carry on with it rather than ask for another name.
+        const existing = (err.status === 409 && !_welcomeGoal) ? await _findActiveGoal(title) : null;
+        if (existing) {
+            _welcomeGoal = { id: existing.id, title: existing.title };
+            return true;
+        }
+        _setOnboardingError('goal', err.message || "Your goal couldn't be saved. Try again.");
+        return false;
+    }
+}
+
+async function _findActiveGoal(title) {
+    const wanted = title.trim().toLowerCase();
+    try {
+        const goals = await fetchAPI('/api/goals');
+        return (goals || []).find(g => (g.title || '').trim().toLowerCase() === wanted) || null;
+    } catch (err) {
+        return null;
+    }
+}
+
+// ---- Welcome flow: video step -------------------------------------------------------------
+
+function renderVideoStep() {
+    const started = !!_welcomeImport;
+    document.getElementById('onboarding-video-pick')?.classList.toggle('hidden', started);
+    document.getElementById('onboarding-video-started')?.classList.toggle('hidden', !started);
+    const startedText = document.getElementById('onboarding-video-started-text');
+    if (started && startedText) {
+        startedText.textContent = _welcomeImport.title
+            ? `Your first quiz is being made from "${_welcomeImport.title}".`
+            : 'Your first quiz is being made.';
+    }
+}
+
+async function _submitWelcomeVideoLink() {
+    if (_welcomeImport) return true;
+    const url = (document.getElementById('onboarding-video-url')?.value || '').trim();
+    if (!url) {
+        _setOnboardingError('video', 'Paste a YouTube link, or skip for now.');
+        return false;
+    }
+    return _startWelcomeImport(url, '');
+}
+
+async function _startWelcomeImport(url, title) {
+    _setOnboardingError('video', '');
+    const fd = new FormData();
+    fd.append('url', url);
+    fd.append('importance_rating', 3);
+    if (_welcomeGoal) fd.append('learning_goal_id', _welcomeGoal.id);
+    try {
+        const res = await fetchAPI('/api/videos', { method: 'POST', body: fd });
+        _welcomeImport = { videoId: res.video_id, title };
+    } catch (err) {
+        _setOnboardingError('video', err.message || "That video couldn't be imported. Try another link, or skip for now.");
+        return false;
+    }
+    // Only queued so far. The import list polls it from here on (core.js), and the reminders
+    // step reads its progress from there.
+    if (window.globalImportBacklog) window.globalImportBacklog.poll();
+    return true;
+}
+
+function skipWelcomeVideo() {
+    if (_onboardingBusy) return;
+    _setOnboardingError('video', '');
+    _advanceOnboarding();
+}
+
+// ---- Welcome flow: the first import's progress on the reminders step ----------------------
+
+function _welcomeImportState() {
+    if (!_welcomeImport) return null;
+    const tasks = (window.globalImportBacklog && window.globalImportBacklog.tasks) || [];
+    // Newest first, so a retried import reports its latest attempt.
+    const task = tasks.find(t => String(t.video_id) === String(_welcomeImport.videoId));
+    if (task && (task.status === 'completed' || task.status === 'failed')) return task.status;
+    return 'processing';
+}
+
+function _renderWelcomeImportStatus() {
+    const box = document.getElementById('onboarding-import-status');
+    if (!box) return;
+    const state = _onboardingFlow === 'welcome' ? _welcomeImportState() : null;
+    box.classList.toggle('hidden', !state);
+    if (!state) return;
+    box.classList.toggle('is-failed', state === 'failed');
+    document.getElementById('onboarding-import-spinner')?.classList.toggle('hidden', state !== 'processing');
+    document.getElementById('onboarding-import-done-icon')?.classList.toggle('hidden', state !== 'completed');
+    const text = document.getElementById('onboarding-import-status-text');
+    if (text) {
+        text.textContent = {
+            processing: 'Your first quiz is being made',
+            completed: 'Your first quiz is ready',
+            failed: "That video didn't import. Home shows what went wrong.",
+        }[state];
+    }
+}
+
+function _watchWelcomeImport() {
+    _renderWelcomeImportStatus();
+    if (_welcomeImport && !_welcomeImportTimer) {
+        _welcomeImportTimer = setInterval(_renderWelcomeImportStatus, 1000);
+    }
+}
+
+function _stopWatchingWelcomeImport() {
+    if (_welcomeImportTimer) {
+        clearInterval(_welcomeImportTimer);
+        _welcomeImportTimer = null;
     }
 }
 
 // ---- Reminder step ------------------------------------------------------------------------
 
 let _reminderPushEnabled = false;
+// Set once saveReminderChoice has turned email on as the fallback, so the step can tell that
+// channel apart from one the account set up itself.
+let _reminderEmailFallback = false;
+
+function _isIOSDevice() {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+}
 
 // Push works in a normal browser tab on desktop and Android. iPhone and iPad only deliver it to
 // a home-screen install (iOS 16.4+), so a plain Safari tab there counts as "not possible".
 function _pushPossibleHere() {
     if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return false;
     if (Notification.permission === 'denied') return false;
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
     const isStandalone = document.documentElement.dataset.standalone === 'true';
-    return !isIOS || isStandalone;
+    return !_isIOSDevice() || isStandalone;
 }
 
-function _reminderEmailText() {
-    const email = (_onboardingStatusCache && _onboardingStatusCache.reminder_email) || '';
-    if (!email) return 'You can set up reminders by Telegram or push in Settings.';
-    return `We'll email your reminders to ${email}: when quizzes are due, when Chompy gets close, `
-        + 'and before your streak ends. You can turn this off or switch to Telegram in Settings.';
+function _reminderStatusText() {
+    const st = _onboardingStatusCache || {};
+    if (_reminderPushEnabled) return 'Push reminders are on. You can change this anytime in Settings.';
+    if (st.has_reminder_channel && !_reminderEmailFallback) {
+        return 'Your reminders are already set up. You can change how you get them in Settings.';
+    }
+    if (st.reminder_email) return "If you don't set anything up now, we'll email your reminders.";
+    return 'You can set up reminders by push or Telegram in Settings.';
 }
 
 function renderReminderStep() {
-    const btn = document.getElementById('onboarding-reminder-push-btn');
     const status = document.getElementById('onboarding-reminder-status');
     if (!status) return;
-    if (_reminderPushEnabled) {
-        if (btn) btn.classList.add('hidden');
-        status.textContent = 'Push reminders are on. You can change this anytime in Settings.';
-        return;
-    }
-    const canPush = _pushPossibleHere();
-    if (btn) btn.classList.toggle('hidden', !canPush);
-    const st = _onboardingStatusCache;
-    if (st && st.has_seen_reminder_setup && st.has_reminder_channel) {
-        // Tour reopened later from the help button: reminders already exist.
-        status.textContent = 'Your reminders are set up. You can change how you get them in Settings.';
-        return;
-    }
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    const iosHint = (!canPush && isIOS)
-        ? ' On iPhone, add Studiamo to your home screen to get push reminders instead.' : '';
-    status.textContent = (canPush ? 'Or skip push: ' : '') + _reminderEmailText() + iosHint;
+    const canPush = !_reminderPushEnabled && _pushPossibleHere();
+    const isStandalone = document.documentElement.dataset.standalone === 'true';
+    document.getElementById('onboarding-reminder-push-btn')?.classList.toggle('hidden', !canPush);
+    document.getElementById('onboarding-ios-install')?.classList.toggle('hidden',
+        _reminderPushEnabled || canPush || !_isIOSDevice() || isStandalone);
+    // A way to Settings (for Telegram and the rest) outside the welcome flow, which only leads forward.
+    document.getElementById('onboarding-reminder-settings-btn')?.classList.toggle('hidden', _onboardingFlow !== 'reminders');
+    status.textContent = _reminderStatusText();
+}
+
+function toggleReminderInfo() {
+    const btn = document.getElementById('onboarding-reminder-info-btn');
+    const info = document.getElementById('onboarding-reminder-info');
+    if (!btn || !info) return;
+    const nowHidden = info.classList.toggle('hidden');
+    btn.setAttribute('aria-expanded', String(!nowHidden));
 }
 
 async function enableOnboardingPush(e) {
@@ -1489,10 +1729,10 @@ async function enableOnboardingPush(e) {
     renderReminderStep();
 }
 
-// Called when the reminders step is left or onboarding closes. Push already saved itself;
-// otherwise email is the fallback, which is what the step told the user would happen. Only
-// ever runs once per account: someone reopening the tour from the help button later must not
-// get email switched back on, and a channel that is already set up is left as it is.
+// Saves the email fallback: called as the welcome flow opens (and again as it ends, in case that
+// first save failed), and when the reminders-only flow is closed or done. Push saves itself
+// (enableOnboardingPush) and switches email back off. Only ever saves once per account
+// (has_seen_reminder_setup), and a channel that is already set up is left as it is.
 let _reminderSaving = false;
 
 async function saveReminderChoice() {
@@ -1505,7 +1745,10 @@ async function saveReminderChoice() {
     try {
         await fetchAPI('/api/user/reminder_setup', { method: 'POST', body: fd });
         status.has_seen_reminder_setup = true;
-        if (channel === 'email') status.has_reminder_channel = true;
+        if (channel === 'email') {
+            status.has_reminder_channel = true;
+            _reminderEmailFallback = true;
+        }
     } catch (err) {
         console.warn('Saving the reminder choice failed:', err);
     } finally {
@@ -1514,7 +1757,8 @@ async function saveReminderChoice() {
 }
 
 async function openNotificationSettingsFromOnboarding(e) {
-    await dismissTabGuide(e, { skipFirstGoal: true });
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    await finishOnboarding();
     goToNotificationSettings();
 }
 
@@ -1526,6 +1770,32 @@ function goToNotificationSettings() {
         const card = document.getElementById('notifications');
         if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 300);
+}
+
+function _onEnter(handler) {
+    return (e) => {
+        if (e.key === 'Enter' && !e.isComposing) handler(e);
+    };
+}
+
+function initOnboarding() {
+    document.getElementById('onboarding-next-btn')?.addEventListener('click', onboardingNext);
+    document.getElementById('onboarding-back-btn')?.addEventListener('click', onboardingBack);
+    document.getElementById('onboarding-close-btn')?.addEventListener('click', closeTabGuideModal);
+    document.getElementById('onboarding-reminder-push-btn')?.addEventListener('click', enableOnboardingPush);
+    document.getElementById('onboarding-reminder-settings-btn')?.addEventListener('click', openNotificationSettingsFromOnboarding);
+    document.getElementById('onboarding-reminder-info-btn')?.addEventListener('click', toggleReminderInfo);
+    document.getElementById('onboarding-skip-video-btn')?.addEventListener('click', skipWelcomeVideo);
+
+    const goalInput = document.getElementById('onboarding-goal-input');
+    goalInput?.addEventListener('input', _syncGoalChips);
+    goalInput?.addEventListener('keydown', _onEnter(onboardingNext));
+    document.getElementById('onboarding-video-url')?.addEventListener('keydown', _onEnter(onboardingNext));
+
+    document.getElementById('onboarding-steps')?.addEventListener('click', (e) => {
+        const chip = e.target.closest('[data-goal-chip]');
+        if (chip) _pickGoalChip(chip);
+    });
 }
 
 function openUpdatesModal(e) {
@@ -1564,14 +1834,7 @@ window.checkOnboardingAndUpdates = checkOnboardingAndUpdates;
 window.openTabGuideModal = openTabGuideModal;
 window.goToNotificationSettings = goToNotificationSettings;
 
-document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('onboarding-reminder-push-btn')?.addEventListener('click', enableOnboardingPush);
-    document.getElementById('onboarding-reminder-settings-btn')?.addEventListener('click', openNotificationSettingsFromOnboarding);
-});
-window.closeTabGuideModal = closeTabGuideModal;
-window.dismissTabGuide = dismissTabGuide;
-window.onboardingNext = onboardingNext;
-window.onboardingBack = onboardingBack;
+document.addEventListener('DOMContentLoaded', initOnboarding);
 window.openUpdatesModal = openUpdatesModal;
 window.closeUpdatesModal = closeUpdatesModal;
 window.dismissUpdates = dismissUpdates;
@@ -1810,10 +2073,7 @@ window.addEventListener('appinstalled', () => {
     deferredPWAInstallPrompt = null;
 });
 
-// instructionsId lets the onboarding wizard's install step point at its own iOS-instructions
-// box (#onboarding-pwa-ios-instructions) instead of the Settings card's (#pwa-ios-instructions),
-// since both can exist in the DOM at once.
-function triggerPWAInstall(instructionsId = 'pwa-ios-instructions') {
+function triggerPWAInstall() {
     if (deferredPWAInstallPrompt) {
         deferredPWAInstallPrompt.prompt();
         deferredPWAInstallPrompt.userChoice.then((choice) => {
@@ -1821,7 +2081,7 @@ function triggerPWAInstall(instructionsId = 'pwa-ios-instructions') {
         });
     } else {
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-        const iosBox = document.getElementById(instructionsId);
+        const iosBox = document.getElementById('pwa-ios-instructions');
         if (iosBox) iosBox.classList.toggle('hidden');
         if (!isIOS) {
             showToast('To install Studiamo as an app, use "Add to Home Screen" or "Install App" in your browser menu.', 'info', 7000);

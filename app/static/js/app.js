@@ -48,9 +48,6 @@ async function loadDashboard() {
         const dailyRecsPanel = document.getElementById('daily-recommendations-panel');
         const upcomingPanel = document.getElementById('upcoming-quizzes-panel');
 
-        // Read by the onboarding tour to end on "Add your first goal" for new accounts.
-        window._hasGoals = !!(data.goals && data.goals.length > 0);
-
         if (!data.goals || data.goals.length === 0) {
             if (emptyGoalsHero) emptyGoalsHero.classList.remove('hidden');
             if (dueHero) dueHero.classList.add('hidden');

@@ -109,17 +109,34 @@ def logged_in_page(page, e2e_session_cookies):
     # captureTimezoneIfMissing). Answered here so test runs never write one to the account.
     page.route("**/api/user/timezone", lambda route: route.fulfill(
         status=200, content_type="application/json", body='{"status": "ok", "stored": false}'))
-    # The test account has no reminder channel and may have reviews Chompy ate, and it falls
-    # behind whenever the What's New content is bumped, so the one-time reminder step, the
-    # "while you were away" overlay and What's New would cover the page in every test. All
-    # are answered as already handled; nothing is written to the account.
-    page.route("**/api/user/onboarding_status", _override_json({"has_seen_reminder_setup": True,
-                                                                "has_seen_updates": True}))
+    # The onboarding overlays, What's New and Chompy's "while you were away" overlay would
+    # otherwise cover the page whenever the test account's real state calls for them. The
+    # onboarding status is answered in full, as an account that has finished onboarding, and
+    # its writes are answered too; tests that need another state route over it. Nothing is
+    # written to the account.
+    page.route("**/api/user/onboarding_status", _answer_json(ONBOARDED_STATUS))
     page.route("**/api/dashboard", _override_json({"chompy": {"eaten_unseen": []}}))
     yield page
     # Handlers that pass a request through (route.fetch) can still be in flight when the test
     # ends, and their failure then surfaces in the next test's setup instead of this one.
     page.unroute_all(behavior="ignoreErrors")
+
+
+ONBOARDED_STATUS = {
+    "has_seen_onboarding": True,
+    "has_seen_updates": True,
+    "has_seen_reminder_setup": True,
+    "has_reminder_channel": True,
+    "reminder_email": "",
+}
+
+
+def _answer_json(get_body):
+    """Route handler that answers GETs with get_body and every other method with a plain ok."""
+    def handle(route):
+        body = get_body if route.request.method == "GET" else {"status": "ok"}
+        route.fulfill(status=200, content_type="application/json", body=json.dumps(body))
+    return handle
 
 
 def _override_json(fields):

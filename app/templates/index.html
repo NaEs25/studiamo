@@ -895,10 +895,7 @@
                             <span>Instructions for iPhone / iPad (Safari):</span>
                         </p>
                         <ol class="list-decimal list-inside space-y-0.5 text-[11px] text-stone-800">
-                            <li>Tap the <strong>Share icon</strong> at the bottom of Safari (square with upward arrow).
-                            </li>
-                            <li>Scroll down and select <strong>"Add to Home Screen"</strong>.</li>
-                            <li>Tap <strong>Add</strong> in the top-right corner.</li>
+                            {% include 'partials/_ios_install_steps.html' %}
                         </ol>
                     </div>
                 </div>
@@ -2588,163 +2585,231 @@
         </div>
     </div>
 
-    <!-- Overlay: Tab Overview / Onboarding Help Guide Modal.
-         One step visible at a time (see settings.js renderOnboardingStep) rather than all tabs
-         at once. The "pwa" step is filtered out at render time when data-standalone="true" is
-         already set on <html> (installed users have nothing to install) - see style.css's
-         Mobile Safe Area section for the other consumer of that attribute. -->
+    <!-- Overlay: onboarding. Three flows share it, one step visible at a time (settings.js
+         ONBOARDING_FLOWS and renderOnboardingStep): the welcome flow every new account goes
+         through once, the tab tour behind Settings' "Welcome Guide" button, and the reminders
+         step on its own for accounts that finished onboarding before that step existed. The
+         welcome flow has no close button and no Escape route; the other two have both. -->
     <div id="overlay-tab-guide"
         class="app-overlay hidden fixed inset-0 bg-stone-950/85 backdrop-blur z-50 flex items-center justify-center p-4 overflow-y-auto">
-        <div
-            class="max-w-lg w-full bg-white border border-amber-500/30 rounded-2xl p-4 sm:p-5 shadow-2xl space-y-3.5 max-h-[85vh] overflow-y-auto">
-            <div class="flex items-center justify-between border-b border-stone-200 pb-2.5">
-                <div class="flex items-center space-x-2.5">
-                    <div
-                        class="w-8 h-8 bg-amber-500/10 border border-amber-500/30 text-amber-600 rounded-lg flex items-center justify-center">
-                        <i data-lucide="compass" class="w-4 h-4"></i>
-                    </div>
-                    <div>
-                        <h3 id="onboarding-title" class="text-base font-extrabold text-stone-900 tracking-tight">Welcome to Studiamo</h3>
-                        <p id="onboarding-subtitle" class="text-[11px] text-stone-500">Quick tour of the app</p>
-                    </div>
-                </div>
-                <button type="button" onclick="closeTabGuideModal(event)"
-                    class="text-stone-400 hover:text-stone-900 p-1 transition">
-                    <i data-lucide="x" class="w-4 h-4"></i>
+        <div role="dialog" aria-modal="true" aria-labelledby="onboarding-eyebrow"
+            class="max-w-md w-full bg-white border border-amber-500/30 rounded-2xl p-5 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto">
+            <div class="flex items-center justify-between min-h-[24px]">
+                <span id="onboarding-eyebrow" class="onboarding-eyebrow">Welcome</span>
+                <button type="button" id="onboarding-close-btn" aria-label="Close"
+                    class="hidden flex w-11 h-11 -my-2.5 -mr-2.5 items-center justify-center rounded-xl text-stone-400 hover:text-stone-900 hover:bg-stone-100 transition">
+                    <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
 
             <div id="onboarding-steps">
-                <!-- Reminders: first, because it is the step that matters most and a tour that is
-                     closed early must not skip it. Makes sure every account leaves onboarding
-                     with a reminder channel: push when this device can receive it, email
-                     otherwise (settings.js renderReminderStep). Also shown alone, once, to
-                     accounts that finished onboarding before this step existed and have no
-                     channel. -->
-                <div class="onboarding-step space-y-3 py-2" data-step="reminders">
-                    <div class="flex items-center space-x-3">
-                        <img src="/static/images/chompy/chompy-hungry.png" alt="Chompy, a small red brain monster"
-                            class="w-16 h-auto shrink-0" loading="lazy">
-                        <div>
-                            <h4 class="font-bold text-sm text-stone-900">Keep Chompy away</h4>
-                            <p class="text-xs text-stone-500 leading-snug">Chompy eats knowledge you don't review.
-                                Spaced repetition only works if you review on the right day, so Studiamo reminds you
-                                when something is due.</p>
+                <!-- Welcome 1: the emotional hook. -->
+                <div class="onboarding-step hidden space-y-4" data-step="chompy" data-eyebrow="Welcome">
+                    <img src="/static/images/chompy/chompy-hungry.png" alt="Chompy, a small red brain monster"
+                        class="w-32 h-auto mx-auto">
+                    <div class="text-center space-y-2">
+                        <h3 class="onboarding-headline">This is Chompy</h3>
+                        <p class="onboarding-body">Chompy eats what you learn. Watch a tutorial today, and a few
+                            days later most of it is gone. That was Chompy.</p>
+                        <p class="onboarding-body onboarding-body-strong">But Chompy can't touch what you practice
+                            remembering.</p>
+                    </div>
+                </div>
+
+                <!-- Welcome 2: spaced repetition in one look. The gaps are the default stage
+                     intervals; the material's importance rating scales them, hence "roughly". -->
+                <div class="onboarding-step hidden space-y-4" data-step="how" data-eyebrow="How it works">
+                    <h3 class="onboarding-headline">Beat Chompy in three steps</h3>
+                    <ol class="space-y-3">
+                        <li class="flex gap-3 items-start">
+                            <span class="onboarding-item-icon bg-sky-500/10 text-sky-600"><i data-lucide="plus-circle" class="w-5 h-5"></i></span>
+                            <div>
+                                <p class="onboarding-item-title">Add what you learn from</p>
+                                <p class="onboarding-item-text">A YouTube video, a PDF, or your own notes.</p>
+                            </div>
+                        </li>
+                        <li class="flex gap-3 items-start">
+                            <span class="onboarding-item-icon bg-amber-500/10 text-amber-600"><i data-lucide="sparkles" class="w-5 h-5"></i></span>
+                            <div>
+                                <p class="onboarding-item-title">Get a short quiz</p>
+                                <p class="onboarding-item-text">Studiamo writes the questions for you.</p>
+                            </div>
+                        </li>
+                        <li class="flex gap-3 items-start">
+                            <span class="onboarding-item-icon bg-emerald-500/10 text-emerald-600"><i data-lucide="calendar-check" class="w-5 h-5"></i></span>
+                            <div>
+                                <p class="onboarding-item-title">Review on the right day</p>
+                                <p class="onboarding-item-text">Each review pushes the next one further out.</p>
+                            </div>
+                        </li>
+                    </ol>
+                    <div class="bg-[#fbf8f2] border border-[#e7dfd3] rounded-xl p-3 space-y-1.5">
+                        <p class="text-xs font-bold text-stone-500">Time between reviews</p>
+                        <div class="flex items-center justify-between gap-0.5 text-xs font-bold text-stone-700 whitespace-nowrap">
+                            <span>1 day</span><i data-lucide="chevron-right" class="w-3 h-3 text-stone-300 shrink-0"></i>
+                            <span>3 days</span><i data-lucide="chevron-right" class="w-3 h-3 text-stone-300 shrink-0"></i>
+                            <span>1 week</span><i data-lucide="chevron-right" class="w-3 h-3 text-stone-300 shrink-0"></i>
+                            <span>2 weeks</span><i data-lucide="chevron-right" class="w-3 h-3 text-stone-300 shrink-0"></i>
+                            <span class="text-amber-700">1 month</span>
+                        </div>
+                        <p class="onboarding-note">Roughly. Material you rate as more important comes back sooner.</p>
+                    </div>
+                </div>
+
+                <!-- Welcome 3: creates the first goal (POST /api/goals). Required. -->
+                <div class="onboarding-step hidden space-y-4" data-step="goal" data-eyebrow="Your first goal">
+                    <h3 id="onboarding-goal-heading" class="onboarding-headline">What do you want to learn?</h3>
+                    <input type="text" id="onboarding-goal-input" aria-labelledby="onboarding-goal-heading"
+                        placeholder="For example: Video editing in DaVinci Resolve" autocomplete="off"
+                        enterkeyhint="next" class="onboarding-input">
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" class="onboarding-chip" data-goal-chip="Programming">Programming</button>
+                        <button type="button" class="onboarding-chip" data-goal-chip="A new language">A language</button>
+                        <button type="button" class="onboarding-chip" data-goal-chip="Video editing">Video editing</button>
+                        <button type="button" class="onboarding-chip" data-goal-chip="Exam prep">Exam prep</button>
+                        <button type="button" class="onboarding-chip" data-goal-chip="Music">Music</button>
+                    </div>
+                    <p class="onboarding-note">This becomes your first goal. Goals keep videos and quizzes on the
+                        same topic together.</p>
+                    <p id="onboarding-goal-error" class="onboarding-error hidden" role="alert"></p>
+                </div>
+
+                <!-- Welcome 4: the first import into that goal, from a pasted link, or skipped. It
+                     runs in the background while the flow goes on. -->
+                <div class="onboarding-step hidden space-y-4" data-step="video" data-eyebrow="Your first quiz">
+                    <h3 class="onboarding-headline">Feed it a video</h3>
+                    <div id="onboarding-video-pick" class="space-y-4">
+                        <p class="onboarding-body">Pick something you watched recently and want to keep. Studiamo
+                            turns it into your first quiz.</p>
+                        <div class="relative">
+                            <i data-lucide="link" class="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-400 pointer-events-none"></i>
+                            <input type="url" id="onboarding-video-url" aria-label="YouTube link"
+                                placeholder="Paste a YouTube link" autocomplete="off" inputmode="url"
+                                enterkeyhint="go" class="onboarding-input onboarding-input-icon">
+                        </div>
+                        <p id="onboarding-video-error" class="onboarding-error hidden" role="alert"></p>
+                        <div class="text-center">
+                            <button type="button" id="onboarding-skip-video-btn" class="onboarding-text-btn">Skip for now</button>
+                            <p class="onboarding-note">You can always add a video later from Import at the bottom.</p>
+                        </div>
+                    </div>
+                    <!-- In place of the choices once an import has started, e.g. after Back from the
+                         next step, so the same video cannot be sent twice. -->
+                    <div id="onboarding-video-started"
+                        class="hidden flex items-start gap-3 bg-emerald-50 border border-emerald-200 rounded-xl p-3">
+                        <i data-lucide="check-circle" class="w-5 h-5 text-emerald-600 shrink-0 mt-0.5"></i>
+                        <p id="onboarding-video-started-text" class="text-[15px] leading-relaxed text-emerald-900">Your
+                            first quiz is being made.</p>
+                    </div>
+                </div>
+
+                <!-- Reminders: the last welcome step, and the only one in the reminders-only flow.
+                     Leaves every account with a reminder channel: push where this device can
+                     receive it, email otherwise (settings.js renderReminderStep and
+                     saveReminderChoice). iPhone and iPad only deliver push to a home-screen
+                     install, so a Safari tab there gets the install steps instead. -->
+                <div class="onboarding-step hidden space-y-4" data-step="reminders" data-eyebrow="Reminders">
+                    <div id="onboarding-import-status" role="status"
+                        class="onboarding-import-status hidden flex items-center gap-3">
+                        <span id="onboarding-import-spinner" class="onboarding-spinner animate-spin shrink-0"></span>
+                        <i id="onboarding-import-done-icon" data-lucide="check-circle" class="hidden w-4 h-4 text-emerald-600 shrink-0"></i>
+                        <p id="onboarding-import-status-text">Your first quiz is being made</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <img src="/static/images/chompy/chompy-idle.png" alt="Chompy, a small red brain monster"
+                            class="w-16 h-auto shrink-0">
+                        <div class="space-y-1">
+                            <h3 class="onboarding-headline onboarding-headline-sm">Set up your reminders here</h3>
+                            <p class="onboarding-body">We'll tell you when a review is due, before Chompy gets to it.</p>
                         </div>
                     </div>
                     <button type="button" id="onboarding-reminder-push-btn"
-                        class="hidden btn-primary w-full py-2.5 font-bold text-xs rounded-xl transition flex items-center justify-center space-x-2">
+                        class="hidden btn-primary w-full min-h-[48px] font-extrabold text-sm rounded-xl transition flex items-center justify-center gap-2">
                         <i data-lucide="bell-ring" class="w-4 h-4"></i>
                         <span>Turn on push reminders</span>
                     </button>
-                    <p id="onboarding-reminder-status"
-                        class="text-xs text-stone-700 bg-[#fbf8f2] p-3 rounded-xl border border-[#e7dfd3] leading-snug"></p>
+                    <div id="onboarding-ios-install"
+                        class="hidden text-stone-800 bg-[#f3ebd9] p-3 rounded-xl border border-[#dfd5c5] space-y-1.5">
+                        <p class="text-sm font-semibold text-amber-900">On iPhone, push reminders need Studiamo on
+                            your home screen:</p>
+                        <ol class="list-decimal list-inside space-y-1 text-sm">
+                            {% include 'partials/_ios_install_steps.html' %}
+                        </ol>
+                    </div>
+                    <div class="flex items-start gap-1">
+                        <p id="onboarding-reminder-status" class="onboarding-note flex-1 pt-0.5"></p>
+                        <button type="button" id="onboarding-reminder-info-btn" aria-expanded="false"
+                            aria-controls="onboarding-reminder-info" aria-label="About reminders"
+                            class="w-11 h-11 -my-2.5 -mr-2.5 flex items-center justify-center rounded-xl text-amber-700 hover:bg-amber-50 transition shrink-0">
+                            <i data-lucide="info" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                    <p id="onboarding-reminder-info" class="hidden onboarding-info-box">You can change this anytime
+                        in Settings: push, Telegram, or email. If you set up nothing, email is the default. Spaced
+                        repetition needs reminders to work: they bring each review back on the right day, which is
+                        what makes it stick.</p>
                     <button type="button" id="onboarding-reminder-settings-btn"
-                        class="text-xs font-bold text-amber-700 hover:text-amber-800 underline">Notification settings</button>
+                        class="hidden text-sm font-bold text-amber-700 hover:text-amber-800 underline min-h-[44px]">Notification
+                        settings</button>
                 </div>
-                <!-- Home -->
-                <div class="onboarding-step flex items-center space-x-3 py-2" data-step="home">
-                    <div class="p-3 bg-amber-500/10 text-amber-600 rounded-lg shrink-0">
+
+                <!-- Tab tour, from Settings' "Welcome Guide" button: one tab per step. -->
+                <div class="onboarding-step hidden flex items-center gap-3 py-1" data-step="tour-home" data-eyebrow="App tour">
+                    <div class="p-3 bg-amber-500/10 text-amber-600 rounded-xl shrink-0">
                         <i data-lucide="home" class="w-6 h-6"></i>
                     </div>
                     <div>
-                        <h4 class="font-bold text-sm text-stone-900">Home</h4>
-                        <p class="text-xs text-stone-500 leading-snug">Due quizzes, review schedule &amp; daily
-                            video recommendations.</p>
+                        <h4 class="onboarding-item-title">Home</h4>
+                        <p class="onboarding-item-text">Due quizzes, review schedule &amp; daily video recommendations.</p>
                     </div>
                 </div>
-
-                <!-- Goals -->
-                <div class="onboarding-step flex items-center space-x-3 py-2" data-step="goals">
-                    <div class="p-3 bg-violet-500/10 text-violet-600 rounded-lg shrink-0">
+                <div class="onboarding-step hidden flex items-center gap-3 py-1" data-step="tour-goals" data-eyebrow="App tour">
+                    <div class="p-3 bg-violet-500/10 text-violet-600 rounded-xl shrink-0">
                         <i data-lucide="target" class="w-6 h-6"></i>
                     </div>
                     <div>
-                        <h4 class="font-bold text-sm text-stone-900">Goals</h4>
-                        <p class="text-xs text-stone-500 leading-snug">Group materials into structured learning
-                            roadmaps.</p>
+                        <h4 class="onboarding-item-title">Goals</h4>
+                        <p class="onboarding-item-text">Group materials into structured learning roadmaps.</p>
                     </div>
                 </div>
-
-                <!-- Import -->
-                <div class="onboarding-step flex items-center space-x-3 py-2" data-step="import">
-                    <div class="p-3 bg-sky-500/10 text-sky-600 rounded-lg shrink-0">
+                <div class="onboarding-step hidden flex items-center gap-3 py-1" data-step="tour-import" data-eyebrow="App tour">
+                    <div class="p-3 bg-sky-500/10 text-sky-600 rounded-xl shrink-0">
                         <i data-lucide="plus-circle" class="w-6 h-6"></i>
                     </div>
                     <div>
-                        <h4 class="font-bold text-sm text-stone-900">Import</h4>
-                        <p class="text-xs text-stone-500 leading-snug">Add YouTube videos or documents, AI turns them
-                            into quizzes.</p>
+                        <h4 class="onboarding-item-title">Import</h4>
+                        <p class="onboarding-item-text">Add YouTube videos or documents, AI turns them into quizzes.</p>
                     </div>
                 </div>
-
-                <!-- Stats -->
-                <div class="onboarding-step flex items-center space-x-3 py-2" data-step="stats">
-                    <div class="p-3 bg-emerald-500/10 text-emerald-600 rounded-lg shrink-0">
+                <div class="onboarding-step hidden flex items-center gap-3 py-1" data-step="tour-stats" data-eyebrow="App tour">
+                    <div class="p-3 bg-emerald-500/10 text-emerald-600 rounded-xl shrink-0">
                         <i data-lucide="trophy" class="w-6 h-6"></i>
                     </div>
                     <div>
-                        <h4 class="font-bold text-sm text-stone-900">Stats</h4>
-                        <p class="text-xs text-stone-500 leading-snug">Levels, XP, streaks &amp; leaderboards.</p>
+                        <h4 class="onboarding-item-title">Stats</h4>
+                        <p class="onboarding-item-text">Levels, XP, streaks &amp; leaderboards.</p>
                     </div>
                 </div>
-
-                <!-- Settings -->
-                <div class="onboarding-step flex items-center space-x-3 py-2" data-step="settings">
-                    <div class="p-3 bg-stone-500/10 text-stone-600 rounded-lg shrink-0">
+                <div class="onboarding-step hidden flex items-center gap-3 py-1" data-step="tour-settings" data-eyebrow="App tour">
+                    <div class="p-3 bg-stone-500/10 text-stone-600 rounded-xl shrink-0">
                         <i data-lucide="settings" class="w-6 h-6"></i>
                     </div>
                     <div>
-                        <h4 class="font-bold text-sm text-stone-900">Settings</h4>
-                        <p class="text-xs text-stone-500 leading-snug">Profile, notifications &amp; review settings.</p>
-                    </div>
-                </div>
-
-                <!-- Install as App (PWA), skipped when already running standalone -->
-                <div class="onboarding-step space-y-3 py-2" data-step="pwa">
-                    <div class="flex items-center space-x-3">
-                        <div class="p-3 bg-amber-500/10 text-amber-600 rounded-lg shrink-0">
-                            <i data-lucide="smartphone" class="w-6 h-6"></i>
-                        </div>
-                        <div>
-                            <h4 class="font-bold text-sm text-stone-900">Install as App</h4>
-                            <p class="text-xs text-stone-500 leading-snug">Add Studiamo to your home screen for
-                                quick access and notifications, on mobile or desktop.</p>
-                        </div>
-                    </div>
-                    <button type="button" id="onboarding-pwa-install-btn"
-                        onclick="triggerPWAInstall('onboarding-pwa-ios-instructions')"
-                        class="btn-primary w-full py-2.5 font-bold text-xs rounded-xl transition flex items-center justify-center space-x-2">
-                        <i data-lucide="download" class="w-4 h-4"></i>
-                        <span>Install</span>
-                    </button>
-                    <div id="onboarding-pwa-ios-instructions"
-                        class="text-xs text-stone-700 bg-[#f3ebd9] p-3 rounded-xl border border-[#dfd5c5] hidden space-y-1">
-                        <p class="font-semibold text-amber-900 flex items-center space-x-1">
-                            <i data-lucide="apple" class="w-3.5 h-3.5 text-amber-700"></i>
-                            <span>Instructions for iPhone / iPad (Safari):</span>
-                        </p>
-                        <ol class="list-decimal list-inside space-y-0.5 text-[11px] text-stone-800">
-                            <li>Tap the <strong>Share icon</strong> at the bottom of Safari (square with upward
-                                arrow).</li>
-                            <li>Scroll down and select <strong>"Add to Home Screen"</strong>.</li>
-                            <li>Tap <strong>Add</strong> in the top-right corner.</li>
-                        </ol>
+                        <h4 class="onboarding-item-title">Settings</h4>
+                        <p class="onboarding-item-text">Profile, notifications &amp; review settings.</p>
                     </div>
                 </div>
             </div>
 
-            <div class="flex items-center justify-between pt-1">
-                <div id="onboarding-dots" class="flex items-center space-x-1.5"></div>
-                <div class="flex items-center space-x-2">
-                    <button type="button" id="onboarding-back-btn" onclick="onboardingBack(event)"
-                        class="hidden px-4 py-2.5 font-bold text-xs rounded-xl transition text-stone-600 hover:bg-stone-100">
-                        Back
-                    </button>
-                    <button type="button" id="onboarding-next-btn" onclick="onboardingNext(event)"
-                        class="btn-primary px-5 py-2.5 font-extrabold text-xs rounded-xl transition flex items-center justify-center space-x-1.5">
+            <!-- Wraps on the narrowest phones: the dots go above the buttons instead of pushing them
+                 past the card's edge. -->
+            <div class="flex flex-wrap items-center justify-between gap-x-2 gap-y-3 pt-1">
+                <div id="onboarding-dots" class="flex items-center gap-1 shrink-0"></div>
+                <div class="flex items-center gap-1 ml-auto">
+                    <button type="button" id="onboarding-back-btn" class="hidden onboarding-text-btn">Back</button>
+                    <button type="button" id="onboarding-next-btn" class="btn-primary onboarding-cta">
                         <span>Next</span>
-                        <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                        <i data-lucide="arrow-right" class="w-4 h-4"></i>
                     </button>
                 </div>
             </div>

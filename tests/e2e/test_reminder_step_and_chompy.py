@@ -1,10 +1,10 @@
 """
 The one-time reminder step for accounts without a reminder channel, and Chompy's "while you
 were away" overlay. Both read state the page fetches on load, which is overridden here, and
-every write they make is intercepted, so the account is never changed.
+every write they make is intercepted, so the account is never changed. The welcome flow that
+new accounts see is in test_welcome_flow.py.
 """
 import json
-import time
 
 
 def _override(page, pattern, fields):
@@ -26,40 +26,12 @@ def _capture_posts(page, pattern, sink):
     page.route(pattern, handle)
 
 
-def test_reminder_step_falls_back_to_email(logged_in_page):
-    page = logged_in_page
-    _override(page, "**/api/user/onboarding_status", {
-        "has_seen_onboarding": True,
-        "has_seen_reminder_setup": False,
-        "has_reminder_channel": False,
-        "reminder_email": "learner@example.com",
-    })
-    saved = []
-    _capture_posts(page, "**/api/user/reminder_setup", saved)
-
-    page.goto("/app")
-    overlay = page.locator("#overlay-tab-guide")
-    overlay.wait_for(state="visible", timeout=15000)
-    assert page.inner_text("#onboarding-title") == "Stay on track"
-    assert page.locator('[data-step="reminders"]').is_visible()
-    assert "learner@example.com" in page.inner_text("#onboarding-reminder-status")
-
-    page.click("#onboarding-next-btn")
-    overlay.wait_for(state="hidden", timeout=5000)
-    for _ in range(20):
-        if saved:
-            break
-        page.wait_for_timeout(250)
-    assert saved and "email" in saved[-1]
-
-
-def _open_full_tour(page):
-    _override(page, "**/api/user/onboarding_status", {
-        "has_seen_onboarding": False,
-        "has_seen_reminder_setup": False,
-        "has_reminder_channel": False,
-        "reminder_email": "learner@example.com",
-    })
+def _open_reminder_step(page):
+    status = {"has_seen_onboarding": True, "has_seen_updates": True, "has_seen_reminder_setup": False,
+              "has_reminder_channel": False, "reminder_email": "learner@example.com"}
+    page.route("**/api/user/onboarding_status", lambda route: route.fulfill(
+        status=200, content_type="application/json",
+        body=json.dumps(status if route.request.method == "GET" else {"status": "ok", "tab_tips": []})))
     saved = []
     _capture_posts(page, "**/api/user/reminder_setup", saved)
     page.goto("/app")
@@ -68,22 +40,29 @@ def _open_full_tour(page):
     return overlay, saved
 
 
-def test_tour_starts_with_the_reminder_step(logged_in_page):
+def test_reminder_step_falls_back_to_email(logged_in_page):
     page = logged_in_page
-    overlay, saved = _open_full_tour(page)
+    overlay, saved = _open_reminder_step(page)
+    assert page.inner_text("#onboarding-eyebrow").lower() == "reminders"
     assert page.locator('[data-step="reminders"]').is_visible()
-    assert page.locator('[data-step="home"]').is_hidden()
+    assert page.locator('[data-step="chompy"]').is_hidden()
+    assert "email your reminders" in page.inner_text("#onboarding-reminder-status")
+    # Only this flow offers a way to Settings, and a way to close it.
+    assert page.locator("#onboarding-reminder-settings-btn").is_visible()
+    assert page.inner_text("#onboarding-next-btn").strip() == "Done"
+    assert not saved
+
     page.click("#onboarding-next-btn")
-    page.locator('[data-step="home"]').wait_for(state="visible", timeout=5000)
-    assert _wait_for(saved) and "email" in saved[-1]
-
-
-def test_closing_the_tour_on_the_first_screen_still_saves_the_reminder_choice(logged_in_page):
-    page = logged_in_page
-    overlay, saved = _open_full_tour(page)
-    page.click("#overlay-tab-guide button[onclick^='closeTabGuideModal']")
     overlay.wait_for(state="hidden", timeout=5000)
-    assert _wait_for(saved) and "email" in saved[-1]
+    assert _wait_for(page, saved) and "email" in saved[-1]
+
+
+def test_closing_the_reminder_step_still_saves_the_reminder_choice(logged_in_page):
+    page = logged_in_page
+    overlay, saved = _open_reminder_step(page)
+    page.click("#onboarding-close-btn")
+    overlay.wait_for(state="hidden", timeout=5000)
+    assert _wait_for(page, saved) and "email" in saved[-1]
     page.wait_for_timeout(500)
     assert len(saved) == 1
 
@@ -102,11 +81,13 @@ def _open_with_eaten(page, n):
     return overlay, acks
 
 
-def _wait_for(sink):
+def _wait_for(page, sink):
+    # page.wait_for_timeout rather than time.sleep: route handlers only run while Playwright
+    # has control, so sleeping would hold back the very request being waited for.
     for _ in range(20):
         if sink:
             return True
-        time.sleep(0.25)
+        page.wait_for_timeout(250)
     return False
 
 
@@ -118,7 +99,7 @@ def test_one_eaten_quiz_offers_the_tickle(logged_in_page):
     assert page.locator("#chompy-away-full").is_hidden()
     page.click("#chompy-away-later")
     overlay.wait_for(state="hidden", timeout=5000)
-    assert _wait_for(acks)
+    assert _wait_for(page, acks)
 
 
 def test_tickling_waits_for_the_user_to_start_the_quiz(logged_in_page):
@@ -135,7 +116,7 @@ def test_tickling_waits_for_the_user_to_start_the_quiz(logged_in_page):
     assert overlay.is_visible()
     page.click("#chompy-away-later")
     overlay.wait_for(state="hidden", timeout=5000)
-    assert _wait_for(acks)
+    assert _wait_for(page, acks)
 
 
 def test_the_nothing_is_lost_note_opens_on_click(logged_in_page):
@@ -160,7 +141,7 @@ def test_two_to_four_play_the_belt_then_show_the_count(logged_in_page):
     assert "Eaten quiz" not in overlay.inner_text()
     page.click("#chompy-away-close")
     overlay.wait_for(state="hidden", timeout=5000)
-    assert _wait_for(acks)
+    assert _wait_for(page, acks)
 
 
 def test_the_belt_scene_is_a_gif_that_loads_even_with_reduced_motion(logged_in_page):
@@ -186,7 +167,7 @@ def test_more_than_four_show_the_count_only(logged_in_page):
     assert page.inner_text("#chompy-away-title") == "Chompy ate 6 quizzes while you were away"
     page.click("#chompy-away-close")
     overlay.wait_for(state="hidden", timeout=5000)
-    assert _wait_for(acks)
+    assert _wait_for(page, acks)
 
 
 def _open_with_due(page, eaten_in_days, day_progress=0.0):

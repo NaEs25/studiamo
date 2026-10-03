@@ -775,18 +775,212 @@ html[data-standalone="true"] .app-overlay {
     scroll-padding-bottom: var(--safe-bottom);
 }
 
-/* Step-progress dots for the onboarding wizard (#overlay-tab-guide, see settings.js
-   renderOnboardingStep). */
+/* ── Onboarding (#overlay-tab-guide, settings.js renderOnboardingStep) ── */
+/* Body text is 15px and every control at least 44px tall: the flow is read on phones first.
+   Inputs are 16px, the size below which iOS Safari zooms the page on focus. None of these set
+   `display`, because style.css loads after Tailwind and would beat its `.hidden`; elements
+   that toggle carry Tailwind's `flex` next to `hidden` instead. */
 .onboarding-dot {
     width: 6px;
     height: 6px;
     border-radius: 9999px;
-    background-color: #d6d3d1;
-    transition: background-color 0.15s ease;
+    background-color: #e7e5e4;
+    transition: width 0.2s ease, background-color 0.15s ease;
 }
 
 .onboarding-dot-active {
-    background-color: #f59e0b;
+    width: 18px;
+    background-color: var(--color-primary);
+}
+
+.onboarding-eyebrow {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--color-text-faint);
+}
+
+.onboarding-headline {
+    font-size: 1.5rem;
+    line-height: 1.2;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    color: var(--color-text);
+    text-wrap: balance;
+}
+
+.onboarding-headline-sm {
+    font-size: 1.25rem;
+}
+
+.onboarding-body {
+    font-size: 15px;
+    line-height: 1.6;
+    color: #57534e; /* stone-600 */
+}
+
+.onboarding-body-strong {
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.onboarding-note {
+    font-size: 0.875rem;
+    line-height: 1.4;
+    color: var(--color-text-muted);
+}
+
+.onboarding-error {
+    font-size: 0.875rem;
+    line-height: 1.4;
+    font-weight: 600;
+    color: #b91c1c; /* red-700 */
+}
+
+.onboarding-info-box {
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: #44403c; /* stone-700 */
+    background-color: var(--color-surface-2);
+    border: 1px solid var(--color-border);
+    border-radius: 0.75rem;
+    padding: 0.75rem;
+}
+
+.onboarding-item-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 0.75rem;
+    flex-shrink: 0;
+}
+
+.onboarding-item-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--color-text);
+}
+
+.onboarding-item-text {
+    font-size: 15px;
+    line-height: 1.4;
+    color: var(--color-text-muted);
+}
+
+.onboarding-input {
+    width: 100%;
+    min-height: 48px;
+    padding: 0.75rem 1rem;
+    background-color: #fcfaf6;
+    border: 2px solid var(--color-border);
+    border-radius: 0.75rem;
+    font-size: 16px;
+    color: var(--color-text);
+    transition: border-color 0.15s ease;
+}
+
+.onboarding-input:focus {
+    outline: none;
+    border-color: #fbbf24; /* amber-400 */
+}
+
+.onboarding-input-icon {
+    padding-left: 2.75rem;
+}
+
+.onboarding-chip {
+    min-height: 44px;
+    padding: 0 0.9rem;
+    border-radius: 9999px;
+    border: 1px solid var(--color-border);
+    background-color: var(--color-surface-2);
+    color: #44403c; /* stone-700 */
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.onboarding-chip:hover {
+    background-color: var(--color-surface-deep);
+}
+
+.onboarding-chip.is-active {
+    border-color: #f59e0b; /* amber-500 */
+    background-color: var(--color-primary-bg);
+    color: #78350f; /* amber-900 */
+}
+
+/* Back and "Skip for now": plain text, so the step's one primary button stays the only one. */
+.onboarding-text-btn {
+    min-height: 44px;
+    padding: 0 0.75rem;
+    border-radius: 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #57534e; /* stone-600 */
+    transition: background-color 0.15s ease;
+}
+
+.onboarding-text-btn:hover {
+    background-color: #f5f5f4; /* stone-100 */
+}
+
+.onboarding-cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    min-height: 44px;
+    padding: 0 1rem;
+    border-radius: 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 800;
+    white-space: nowrap;
+    transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.onboarding-cta:disabled {
+    opacity: 0.7;
+    cursor: wait;
+}
+
+/* The welcome flow's last button ("Start learning"), set apart from the push button above it. */
+.onboarding-cta-final {
+    background-color: var(--color-text);
+    border: 2px solid var(--color-text);
+    color: #fff;
+}
+
+.onboarding-cta-final:hover {
+    background-color: #292524; /* stone-800 */
+}
+
+.onboarding-spinner {
+    width: 1rem;
+    height: 1rem;
+    border-radius: 9999px;
+    border: 2px solid #059669; /* emerald-600 */
+    border-top-color: transparent;
+}
+
+/* The first import's progress on the welcome flow's reminders step. */
+.onboarding-import-status {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #064e3b; /* emerald-900 */
+    background-color: #ecfdf5; /* emerald-50 */
+    border: 1px solid #a7f3d0; /* emerald-200 */
+    border-radius: 0.75rem;
+    padding: 0.75rem;
+}
+
+.onboarding-import-status.is-failed {
+    color: #7f1d1d; /* red-900 */
+    background-color: #fef2f2; /* red-50 */
+    border-color: #fecaca; /* red-200 */
 }
 
 /* The quiz overlay pins its header at the true top of the modal (see index.html) instead of
