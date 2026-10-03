@@ -15,7 +15,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from jinja2 import Environment, FileSystemLoader
 from starlette.background import BackgroundTask
 
-from app import config, database, gamification, local_days, moderation
+from app import config, database, gamification, local_days, moderation, youtube
 from app.dependencies import (
     get_active_username,
     get_srs_intervals,
@@ -717,6 +717,9 @@ def get_onboarding_status(username: str = Depends(get_active_username)):
     has_seen_updates in the DB is an integer version, not a boolean (see
     config.CURRENT_UPDATE_VERSION): a user has seen the current What's New
     content only if their stored value has caught up to it."""
+    # Lets the welcome flow leave out goal-based video suggestions where they cannot return
+    # anything, instead of spending an AI call to find that out.
+    suggestions_available = youtube.is_configured()
     conn = database.get_db_connection(username)
     user_uuid = conn.user_uuid
     try:
@@ -739,9 +742,11 @@ def get_onboarding_status(username: str = Depends(get_active_username)):
                     or (row.get("notify_email") and row.get("google_email"))
                 ),
                 "reminder_email": row.get("google_email") or "",
+                "suggestions_available": suggestions_available,
             }
         return {"has_seen_onboarding": False, "has_seen_updates": False, "has_seen_reminder_setup": False,
-                "has_reminder_channel": False, "reminder_email": ""}
+                "has_reminder_channel": False, "reminder_email": "",
+                "suggestions_available": suggestions_available}
     finally:
         conn.close()
 

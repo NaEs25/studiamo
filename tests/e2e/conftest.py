@@ -128,6 +128,7 @@ ONBOARDED_STATUS = {
     "has_seen_reminder_setup": True,
     "has_reminder_channel": True,
     "reminder_email": "",
+    "suggestions_available": False,
 }
 
 

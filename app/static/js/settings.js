@@ -1313,6 +1313,7 @@ let _onboardingBusy = false;
 // than creating a second one, and shows the started import rather than offering another.
 let _welcomeGoal = null;        // { id, title }
 let _welcomeImport = null;      // { videoId, title }
+let _welcomeSuggestions = [];
 let _welcomeImportTimer = null;
 
 function _onboardingActiveSteps() {
@@ -1409,6 +1410,7 @@ function onboardingBack(e) {
 function openWelcomeFlow() {
     _welcomeGoal = null;
     _welcomeImport = null;
+    _welcomeSuggestions = [];
     _openOnboardingOverlay('welcome');
     // Reminders are the last step, so a tab closed anywhere before it must already have left the
     // account with a channel: email from the start, which that step can still switch to push.
@@ -1574,13 +1576,18 @@ function renderVideoStep() {
             ? `Your first quiz is being made from "${_welcomeImport.title}".`
             : 'Your first quiz is being made.';
     }
+    // Left out where the server has no YouTube key: the call would spend AI budget on search
+    // queries and then find no videos to show.
+    const available = !!(_onboardingStatusCache && _onboardingStatusCache.suggestions_available);
+    document.getElementById('onboarding-suggest-btn')
+        ?.classList.toggle('hidden', !available || _welcomeSuggestions.length > 0);
 }
 
 async function _submitWelcomeVideoLink() {
     if (_welcomeImport) return true;
     const url = (document.getElementById('onboarding-video-url')?.value || '').trim();
     if (!url) {
-        _setOnboardingError('video', 'Paste a YouTube link, or skip for now.');
+        _setOnboardingError('video', 'Paste a YouTube link, pick a suggestion, or skip for now.');
         return false;
     }
     return _startWelcomeImport(url, '');
@@ -1603,6 +1610,82 @@ async function _startWelcomeImport(url, title) {
     // step reads its progress from there.
     if (window.globalImportBacklog) window.globalImportBacklog.poll();
     return true;
+}
+
+function _setSuggestionsMessage(message) {
+    const list = document.getElementById('onboarding-suggestions');
+    if (!list) return;
+    list.innerHTML = `<p class="onboarding-note">${escapeHtml(message)}</p>`;
+    list.classList.remove('hidden');
+}
+
+// The same suggestions the goal's card offers on the goals tab, and cached with them there.
+async function loadWelcomeSuggestions() {
+    if (!_welcomeGoal) return;
+    const btn = document.getElementById('onboarding-suggest-btn');
+    const label = btn?.querySelector('span');
+    _setOnboardingError('video', '');
+    if (btn) btn.disabled = true;
+    if (label) label.textContent = 'Finding videos...';
+
+    let videos = null;
+    try {
+        const data = await fetchAPI(`/api/goals/${_welcomeGoal.id}/recommendations`);
+        videos = (data && Array.isArray(data.videos)) ? data.videos : [];
+    } catch (err) {
+        console.warn('Loading goal suggestions failed:', err);
+    }
+    if (btn) btn.disabled = false;
+    if (label) label.textContent = 'Get suggestions for this goal';
+
+    if (videos === null) {
+        _setSuggestionsMessage("Suggestions aren't available right now. Paste a link instead, or skip for now.");
+        return;
+    }
+    if (videos.length === 0) {
+        btn?.classList.add('hidden');
+        _setSuggestionsMessage('No suggestions came up for this goal. Paste a link instead, or skip for now.');
+        return;
+    }
+    _welcomeSuggestions = videos.slice(0, 4);
+    btn?.classList.add('hidden');
+    const list = document.getElementById('onboarding-suggestions');
+    if (list) {
+        list.innerHTML = _welcomeSuggestions.map(_welcomeSuggestionCard).join('');
+        list.classList.remove('hidden');
+    }
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// Titles and channel names come from YouTube, so they are escaped; the card only carries its
+// index into _welcomeSuggestions.
+function _welcomeSuggestionCard(v, i) {
+    const meta = [v.channel, (v.duration && v.duration !== 'N/A') ? v.duration : '']
+        .filter(Boolean).join(' · ');
+    const thumb = v.thumbnail || `https://img.youtube.com/vi/${encodeURIComponent(v.youtube_id || '')}/mqdefault.jpg`;
+    return `
+        <button type="button" class="onboarding-suggestion" data-welcome-suggestion="${i}">
+            <img src="${escapeHtml(thumb)}" alt="" loading="lazy"
+                class="w-20 h-12 object-cover rounded-lg bg-[#f3ebd9] shrink-0">
+            <span class="min-w-0 flex-1">
+                <span class="block text-sm font-bold text-stone-900 leading-snug line-clamp-2">${escapeHtml(v.title || '')}</span>
+                ${meta ? `<span class="block text-xs text-stone-500 truncate mt-0.5">${escapeHtml(meta)}</span>` : ''}
+                <span class="flex items-center gap-1 text-sm font-bold text-amber-700 mt-1">
+                    <span>Try this one</span><i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                </span>
+            </span>
+        </button>`;
+}
+
+async function pickWelcomeSuggestion(index) {
+    const v = _welcomeSuggestions[index];
+    if (!v || !v.youtube_id || _onboardingBusy) return;
+    const cards = document.querySelectorAll('#onboarding-suggestions [data-welcome-suggestion]');
+    cards.forEach(card => { card.disabled = true; });
+    const url = `https://www.youtube.com/watch?v=${encodeURIComponent(v.youtube_id)}`;
+    const ok = await _withOnboardingBusy(() => _startWelcomeImport(url, v.title || ''));
+    cards.forEach(card => { card.disabled = false; });
+    if (ok) _advanceOnboarding();
 }
 
 function skipWelcomeVideo() {
@@ -1785,6 +1868,7 @@ function initOnboarding() {
     document.getElementById('onboarding-reminder-push-btn')?.addEventListener('click', enableOnboardingPush);
     document.getElementById('onboarding-reminder-settings-btn')?.addEventListener('click', openNotificationSettingsFromOnboarding);
     document.getElementById('onboarding-reminder-info-btn')?.addEventListener('click', toggleReminderInfo);
+    document.getElementById('onboarding-suggest-btn')?.addEventListener('click', loadWelcomeSuggestions);
     document.getElementById('onboarding-skip-video-btn')?.addEventListener('click', skipWelcomeVideo);
 
     const goalInput = document.getElementById('onboarding-goal-input');
@@ -1792,9 +1876,15 @@ function initOnboarding() {
     goalInput?.addEventListener('keydown', _onEnter(onboardingNext));
     document.getElementById('onboarding-video-url')?.addEventListener('keydown', _onEnter(onboardingNext));
 
+    // Goal chips, and suggestion cards that are rendered after load.
     document.getElementById('onboarding-steps')?.addEventListener('click', (e) => {
         const chip = e.target.closest('[data-goal-chip]');
-        if (chip) _pickGoalChip(chip);
+        if (chip) {
+            _pickGoalChip(chip);
+            return;
+        }
+        const suggestion = e.target.closest('[data-welcome-suggestion]');
+        if (suggestion) pickWelcomeSuggestion(Number(suggestion.dataset.welcomeSuggestion));
     });
 }
 

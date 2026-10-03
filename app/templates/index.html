@@ -2674,8 +2674,9 @@
                     <p id="onboarding-goal-error" class="onboarding-error hidden" role="alert"></p>
                 </div>
 
-                <!-- Welcome 4: the first import into that goal, from a pasted link, or skipped. It
-                     runs in the background while the flow goes on. -->
+                <!-- Welcome 4: the first import into that goal, from a pasted link or a goal-based
+                     suggestion (GET /api/goals/{id}/recommendations), or skipped. It runs in the
+                     background while the flow goes on. -->
                 <div class="onboarding-step hidden space-y-4" data-step="video" data-eyebrow="Your first quiz">
                     <h3 class="onboarding-headline">Feed it a video</h3>
                     <div id="onboarding-video-pick" class="space-y-4">
@@ -2687,6 +2688,12 @@
                                 placeholder="Paste a YouTube link" autocomplete="off" inputmode="url"
                                 enterkeyhint="go" class="onboarding-input onboarding-input-icon">
                         </div>
+                        <button type="button" id="onboarding-suggest-btn"
+                            class="onboarding-secondary-btn hidden flex items-center justify-center gap-2">
+                            <i data-lucide="compass" class="w-4 h-4 text-amber-600"></i>
+                            <span>Get suggestions for this goal</span>
+                        </button>
+                        <div id="onboarding-suggestions" class="hidden space-y-2" aria-live="polite"></div>
                         <p id="onboarding-video-error" class="onboarding-error hidden" role="alert"></p>
                         <div class="text-center">
                             <button type="button" id="onboarding-skip-video-btn" class="onboarding-text-btn">Skip for now</button>

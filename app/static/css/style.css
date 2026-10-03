@@ -928,6 +928,24 @@ html[data-standalone="true"] .app-overlay {
     background-color: #f5f5f4; /* stone-100 */
 }
 
+.onboarding-secondary-btn {
+    width: 100%;
+    min-height: 48px;
+    padding: 0 1rem;
+    border-radius: 0.75rem;
+    border: 1px solid var(--color-border-strong);
+    background-color: var(--color-surface-2);
+    color: var(--color-text);
+    font-size: 15px;
+    font-weight: 700;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.onboarding-secondary-btn:hover:not(:disabled) {
+    background-color: var(--color-surface-deep);
+    border-color: var(--color-primary-border);
+}
+
 .onboarding-cta {
     display: inline-flex;
     align-items: center;
@@ -956,6 +974,31 @@ html[data-standalone="true"] .app-overlay {
 
 .onboarding-cta-final:hover {
     background-color: #292524; /* stone-800 */
+}
+
+/* A goal-based video suggestion on the welcome flow's video step: the whole card is the button. */
+.onboarding-suggestion {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    min-height: 64px;
+    padding: 0.5rem;
+    border-radius: 0.75rem;
+    border: 1px solid var(--color-border);
+    background-color: #fcfaf6;
+    text-align: left;
+    transition: background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+}
+
+.onboarding-suggestion:hover:not(:disabled) {
+    background-color: var(--color-surface);
+    border-color: var(--color-primary-border);
+}
+
+.onboarding-suggestion:disabled {
+    opacity: 0.6;
+    cursor: wait;
 }
 
 .onboarding-spinner {

@@ -24,7 +24,16 @@ NEW_ACCOUNT = {
     "has_seen_reminder_setup": False,
     "has_reminder_channel": False,
     "reminder_email": "learner@example.com",
+    "suggestions_available": True,
 }
+
+SUGGESTIONS = [
+    {"youtube_id": "abcDEF12345", "title": "Resolve <basics> for \"beginners\"", "channel": "Edit School",
+     "duration": "12:04", "thumbnail": "", "url": "https://www.youtube.com/watch?v=abcDEF12345"},
+    {"youtube_id": "zyxWVU98765", "title": "Color grading basics", "channel": "Grade Lab",
+     "duration": "8:30", "thumbnail": "", "url": "https://www.youtube.com/watch?v=zyxWVU98765"},
+]
+
 
 def _form(request):
     """The fields of a multipart form body, which is what fetch sends for a FormData."""
@@ -53,6 +62,8 @@ class Backend:
         page.route("**/api/daily-recommendations**", lambda route: _json(route, {"recommendations": []}))
         page.route("**/api/goals", self._goals)
         page.route("**/api/goals/*/edit", self._edit_goal)
+        page.route(f"**/api/goals/{GOAL_ID}/recommendations",
+                   lambda route: _json(route, {"videos": SUGGESTIONS, "key_concepts": []}))
         page.route("**/api/videos", self._import)
         page.route("**/api/videos/import-tasks", lambda route: _json(route, self._tasks()))
         page.route(f"**/api/videos/{VIDEO_ID}/generate_quiz",
@@ -275,6 +286,38 @@ def test_skipping_the_video_lands_on_the_goals_tab(logged_in_page):
 
     page.locator("#tab-goals").wait_for(state="visible", timeout=5000)
     assert not backend.errors
+
+
+def test_a_suggestion_imports_into_the_new_goal(logged_in_page):
+    page = logged_in_page
+    backend = _open(page)
+    _to_video_step(page)
+    page.click("#onboarding-suggest-btn")
+    cards = page.locator("#onboarding-suggestions [data-welcome-suggestion]")
+    cards.first.wait_for(timeout=5000)
+    assert cards.count() == 2
+    # Titles come from YouTube and are shown as text, not markup.
+    assert SUGGESTIONS[0]["title"] in cards.first.inner_text()
+    assert page.locator("#onboarding-suggest-btn").is_hidden()
+
+    cards.nth(1).click()
+    _step(page, "reminders")
+    sent = backend.calls("import")[0]
+    assert sent["url"] == "https://www.youtube.com/watch?v=zyxWVU98765"
+    assert sent["learning_goal_id"] == str(GOAL_ID)
+
+    page.click("#onboarding-back-btn")
+    _step(page, "video")
+    assert "Color grading basics" in page.inner_text("#onboarding-video-started-text")
+    assert not backend.errors
+
+
+def test_no_suggestions_without_a_youtube_key(logged_in_page):
+    page = logged_in_page
+    _open(page, {**NEW_ACCOUNT, "suggestions_available": False})
+    _to_video_step(page)
+    assert page.locator("#onboarding-suggest-btn").is_hidden()
+    assert page.locator("#onboarding-skip-video-btn").is_visible()
 
 
 def test_there_is_no_way_out_but_forward(logged_in_page):
