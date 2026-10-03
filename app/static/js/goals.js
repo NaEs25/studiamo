@@ -22,7 +22,7 @@ async function loadGoals() {
                 const isWatchlistOpen = localStorage.getItem('accordion-open-watchlist') !== 'false';
                 watchlistContainer.innerHTML = `
                     <div class="bg-[#fbf8f2] border border-[#e7dfd3] rounded-2xl overflow-hidden mb-6 shadow-sm">
-                        <button onclick="toggleAccordion('watchlist')" class="w-full flex justify-between items-center px-5 py-4 bg-[#f7f2e8] hover:bg-[#f3ebd9] transition text-left">
+                        <button type="button" data-goal-action="toggle-accordion" data-cat="watchlist" class="w-full flex justify-between items-center px-5 py-4 bg-[#f7f2e8] hover:bg-[#f3ebd9] transition text-left">
                             <span class="flex items-center space-x-2.5 font-bold">
                                 <i data-lucide="bookmark" class="w-5 h-5 text-amber-600 fill-amber-500"></i>
                                 <span class="text-stone-800">Study Queue / Watchlist</span>
@@ -66,7 +66,7 @@ async function loadGoals() {
                             </p>
                         </div>
                         <div class="pt-3">
-                            <button type="button" onclick="openCreateGoalModal()" class="btn-primary px-8 py-4 font-extrabold text-sm rounded-2xl transition transform hover:-translate-y-0.5 inline-flex items-center space-x-2">
+                            <button type="button" data-goal-action="create-goal" class="btn-primary px-8 py-4 font-extrabold text-sm rounded-2xl transition transform hover:-translate-y-0.5 inline-flex items-center space-x-2">
                                 <i data-lucide="plus-circle" class="w-5 h-5"></i>
                                 <span>+ Create First Goal</span>
                             </button>
@@ -105,14 +105,14 @@ async function loadGoals() {
                                 </div>
                                 
                                 <div class="flex items-center space-x-1 shrink-0 bg-stone-100 border border-stone-200 rounded-xl p-1">
-                                    <button onclick="reorderGoal(${g.id}, 'up')" ${index === 0 ? 'disabled class="p-1 text-stone-300 cursor-not-allowed"' : 'class="p-1 text-stone-600 hover:text-amber-600 transition"'} title="Move Priority Up (Rank #${rankNumber - 1})">
+                                    <button type="button" data-goal-action="reorder" data-goal-id="${g.id}" data-direction="up" ${index === 0 ? 'disabled class="p-1 text-stone-300 cursor-not-allowed"' : 'class="p-1 text-stone-600 hover:text-amber-600 transition"'} title="Move Priority Up (Rank #${rankNumber - 1})">
                                         <i data-lucide="arrow-up" class="w-4 h-4"></i>
                                     </button>
-                                    <button onclick="reorderGoal(${g.id}, 'down')" ${index === goals.length - 1 ? 'disabled class="p-1 text-stone-300 cursor-not-allowed"' : 'class="p-1 text-stone-600 hover:text-amber-600 transition"'} title="Move Priority Down (Rank #${rankNumber + 1})">
+                                    <button type="button" data-goal-action="reorder" data-goal-id="${g.id}" data-direction="down" ${index === goals.length - 1 ? 'disabled class="p-1 text-stone-300 cursor-not-allowed"' : 'class="p-1 text-stone-600 hover:text-amber-600 transition"'} title="Move Priority Down (Rank #${rankNumber + 1})">
                                         <i data-lucide="arrow-down" class="w-4 h-4"></i>
                                     </button>
                                     <div class="w-px h-4 bg-stone-100 mx-0.5"></div>
-                                    <button onclick="toggleGoalMenu(event, ${g.id})" id="btn-goal-menu-${g.id}" class="p-1 text-stone-600 hover:text-stone-900 transition" title="Goal Options">
+                                    <button type="button" data-goal-action="menu" data-goal-id="${g.id}" id="btn-goal-menu-${g.id}" class="p-1 text-stone-600 hover:text-stone-900 transition" title="Goal Options">
                                         <i data-lucide="more-vertical" class="w-4 h-4"></i>
                                     </button>
                                 </div>
@@ -120,12 +120,12 @@ async function loadGoals() {
 
                             <div class="space-y-3 pt-1">
                                 <div class="flex justify-between items-center">
-                                    <button onclick="toggleGoalMaterials(${g.id})" class="flex items-center space-x-2 text-xs font-bold text-stone-700 hover:text-amber-600 transition">
+                                    <button type="button" data-goal-action="toggle-materials" data-goal-id="${g.id}" class="flex items-center space-x-2 text-xs font-bold text-stone-700 hover:text-amber-600 transition">
                                         <i data-lucide="folder" class="w-4 h-4 text-amber-600"></i>
                                         <span>Sources &amp; Materials</span>
                                         <span class="text-[10px] bg-amber-500/20 text-amber-700 px-2 py-0.5 rounded-full font-bold">${goalVideos.length}</span>
                                     </button>
-                                    <i data-lucide="chevron-down" id="goal-materials-chevron-${g.id}" onclick="toggleGoalMaterials(${g.id})" class="w-4 h-4 text-stone-400 cursor-pointer transition-transform ${isMaterialsOpen ? 'rotate-180' : ''}"></i>
+                                    <i data-lucide="chevron-down" id="goal-materials-chevron-${g.id}" data-goal-action="toggle-materials" data-goal-id="${g.id}" class="w-4 h-4 text-stone-400 cursor-pointer transition-transform ${isMaterialsOpen ? 'rotate-180' : ''}"></i>
                                 </div>
 
                                 <div id="goal-materials-content-${g.id}" class="space-y-3 ${isMaterialsOpen ? '' : 'hidden'}">
@@ -134,7 +134,7 @@ async function loadGoals() {
                             </div>
 
                             <div class="flex gap-2 pt-1">
-                                <button id="btn-recs-trigger-${g.id}" data-has-saved-recs="${g.has_saved_recommendations ? 1 : 0}" onclick="loadRecommendations(${g.id}, this)" class="flex-grow py-1.5 px-3 bg-[#fbf8f2] hover:bg-[#f3ebd9] text-stone-800 border border-[#e7dfd3] font-semibold rounded-lg text-xs transition flex items-center justify-center space-x-1.5 shadow-sm">
+                                <button id="btn-recs-trigger-${g.id}" data-has-saved-recs="${g.has_saved_recommendations ? 1 : 0}" data-goal-action="load-recs" data-goal-id="${g.id}" class="flex-grow py-1.5 px-3 bg-[#fbf8f2] hover:bg-[#f3ebd9] text-stone-800 border border-[#e7dfd3] font-semibold rounded-lg text-xs transition flex items-center justify-center space-x-1.5 shadow-sm">
                                     <i data-lucide="compass" class="w-3.5 h-3.5 text-stone-600"></i>
                                     <span class="recs-btn-text">${recsBtnLabel}</span>
                                 </button>
@@ -157,10 +157,10 @@ async function loadGoals() {
                                         <div id="concepts-${g.id}" class="hidden text-[11px] text-stone-600 leading-relaxed break-words"></div>
                                     </div>
                                     <div class="flex items-center space-x-1 shrink-0">
-                                        <button onclick="reloadGoalRecommendations(${g.id}, this)" class="p-1.5 bg-stone-100 hover:bg-stone-200/80 text-stone-600 hover:text-amber-800 rounded-lg transition border border-stone-200/80 shadow-sm" title="Reload Recommendations">
+                                        <button type="button" data-goal-action="reload-recs" data-goal-id="${g.id}" class="p-1.5 bg-stone-100 hover:bg-stone-200/80 text-stone-600 hover:text-amber-800 rounded-lg transition border border-stone-200/80 shadow-sm" title="Reload Recommendations">
                                             <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
                                         </button>
-                                        <button onclick="closeRecommendationsDrawer(${g.id})" class="p-1.5 hover:bg-stone-200/80 text-stone-400 hover:text-stone-700 rounded-lg transition ml-0.5" title="Collapse Panel">
+                                        <button type="button" data-goal-action="close-recs" data-goal-id="${g.id}" class="p-1.5 hover:bg-stone-200/80 text-stone-400 hover:text-stone-700 rounded-lg transition ml-0.5" title="Collapse Panel">
                                             <i data-lucide="x" class="w-4 h-4"></i>
                                         </button>
                                     </div>
@@ -189,7 +189,7 @@ async function loadGoals() {
                 const isUnassocOpen = localStorage.getItem('accordion-open-unassociated') === 'true';
                 unassociatedContainer.innerHTML = `
                     <div class="bg-white border border-stone-200 rounded-2xl overflow-hidden mt-6 mb-4 shadow-sm">
-                        <div class="w-full flex justify-between items-center px-5 py-4 bg-stone-100 hover:bg-stone-200 transition text-left cursor-pointer" onclick="toggleAccordion('unassociated')">
+                        <div class="w-full flex justify-between items-center px-5 py-4 bg-stone-100 hover:bg-stone-200 transition text-left cursor-pointer" data-goal-action="toggle-accordion" data-cat="unassociated">
                             <span class="flex items-center space-x-2.5 font-bold">
                                 <i data-lucide="help-circle" class="w-5 h-5 text-amber-400"></i>
                                 <span class="text-stone-900">Unassociated / Quick Review Material</span>
@@ -240,10 +240,10 @@ async function loadGoals() {
                                 ${g.description ? `<p class="text-[10px] text-stone-400 truncate max-w-xs md:max-w-md" title="${escapeHtml(g.description)}">${escapeHtml(g.description)}</p>` : ''}
                             </div>
                             <div class="flex items-center space-x-1 shrink-0 ml-4 bg-stone-100 border border-stone-200 rounded-xl p-0.5">
-                                <button onclick="archiveGoal(${g.id})" class="p-1 text-stone-400 hover:text-emerald-500 transition" title="Restore Goal to Active">
+                                <button type="button" data-goal-action="archive" data-goal-id="${g.id}" class="p-1 text-stone-400 hover:text-emerald-500 transition" title="Restore Goal to Active">
                                     <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
                                 </button>
-                                <button onclick="deleteGoal(${g.id})" class="p-1 text-stone-400 hover:text-red-400 transition" title="Delete Goal Permanently">
+                                <button type="button" data-goal-action="delete" data-goal-id="${g.id}" class="p-1 text-stone-400 hover:text-red-400 transition" title="Delete Goal Permanently">
                                     <i data-lucide="trash-2" class="w-4 h-4"></i>
                                 </button>
                             </div>
@@ -384,7 +384,8 @@ async function archiveGoal(id) {
 }
 
 function deleteGoal(id) {
-    const goal = window._goalsCache && window._goalsCache[id];
+    const goal = (window._goalsCache && window._goalsCache[id])
+        || (window._archivedGoalsCache && window._archivedGoalsCache[id]);
     const title = goal ? goal.title : `Goal #${id}`;
     
     const hiddenId = document.getElementById('delete-goal-modal-id');
@@ -511,7 +512,6 @@ function renderRecommendationCardHTML(v, goalId) {
     const encodedUrl = encodeURIComponent(videoUrl);
     const ytId = v.youtube_id || '';
     const durationStr = v.duration || 'N/A';
-    const safeTitle = (v.title || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
 
     return `
         <div id="rec-card-${goalId}-${ytId}" class="flex items-center space-x-2.5 bg-[#fcfaf6] p-2.5 pr-8 rounded-xl border border-[#e7dfd3] justify-between group transition hover:border-amber-500/40 hover:bg-white shadow-sm relative">
@@ -522,17 +522,17 @@ function renderRecommendationCardHTML(v, goalId) {
             <div class="min-w-0 flex-grow pr-1">
                 <h6 class="font-bold text-stone-900 text-xs line-clamp-1 leading-snug hover:text-amber-800 transition" title="${escapeHtml(v.title)}">${escapeHtml(v.title)}</h6>
                 <div class="flex items-center space-x-1.5 mt-1">
-                    <button onclick="previewRecommendedVideo('${encodedUrl}', ${goalId}, '${safeTitle}')" class="px-2 py-0.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-900 border border-amber-200 font-bold rounded-md text-[9.5px] transition flex items-center space-x-1">
+                    <button type="button" data-goal-action="preview-rec" data-goal-id="${goalId}" data-url="${encodedUrl}" data-title="${escapeHtml(v.title || '')}" class="px-2 py-0.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-900 border border-amber-200 font-bold rounded-md text-[9.5px] transition flex items-center space-x-1">
                         <i data-lucide="eye" class="w-3 h-3 text-amber-600"></i>
                         <span>Preview</span>
                     </button>
-                    <button onclick="importRecommendedVideo('${ytId}', '${safeTitle}', ${goalId})" class="px-2 py-0.5 bg-amber-500/15 hover:bg-amber-500/25 text-amber-950 border border-amber-500/30 font-bold rounded-md text-[9.5px] transition flex items-center space-x-1">
+                    <button type="button" data-goal-action="import-rec" data-goal-id="${goalId}" data-yt-id="${escapeHtml(ytId)}" data-title="${escapeHtml(v.title || '')}" class="px-2 py-0.5 bg-amber-500/15 hover:bg-amber-500/25 text-amber-950 border border-amber-500/30 font-bold rounded-md text-[9.5px] transition flex items-center space-x-1">
                         <i data-lucide="plus-circle" class="w-3 h-3 text-amber-700"></i>
                         <span>Import</span>
                     </button>
                 </div>
             </div>
-            <button onclick="dismissGoalRecommendation('${ytId}', ${goalId})" class="absolute top-2 right-2 p-1 hover:bg-stone-200/80 text-stone-400 hover:text-red-600 rounded-md transition shrink-0" title="Dismiss Video">
+            <button type="button" data-goal-action="dismiss-rec" data-goal-id="${goalId}" data-yt-id="${escapeHtml(ytId)}" class="absolute top-2 right-2 p-1 hover:bg-stone-200/80 text-stone-400 hover:text-red-600 rounded-md transition shrink-0" title="Dismiss Video">
                 <i data-lucide="x" class="w-3.5 h-3.5"></i>
             </button>
         </div>
@@ -604,7 +604,7 @@ function populateRecommendationDrawer(goalId, data) {
 
     const conceptsList = document.getElementById(`concepts-${goalId}`);
     if (conceptsList && data.key_concepts) {
-        conceptsList.innerHTML = data.key_concepts.map(c => `<span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/10 text-amber-950 border border-amber-500/20 shadow-sm">${c}</span>`).join('');
+        conceptsList.innerHTML = data.key_concepts.map(c => `<span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/10 text-amber-950 border border-amber-500/20 shadow-sm">${escapeHtml(c)}</span>`).join('');
         const countEl = document.getElementById(`concepts-count-${goalId}`);
         if (countEl) countEl.textContent = data.key_concepts.length;
     }
@@ -851,25 +851,67 @@ function closeGoalMenu() {
     closeContextMenuPortal('portal-goal-menu');
 }
 
-function toggleGoalMenu(event, id) {
+// anchorEl is the menu button; without one, the menu anchors to that goal's button by id.
+function toggleGoalMenu(event, id, anchorEl = null) {
     if (event) event.stopPropagation();
 
-    const btn = event ? event.currentTarget : document.getElementById(`btn-goal-menu-${id}`);
+    const btn = anchorEl || document.getElementById(`btn-goal-menu-${id}`);
 
     const html = `<div class="py-1">
-        <button onclick="closeGoalMenu(); openEditGoalModal(${id})" class="flex items-center space-x-2.5 w-full text-left px-4 py-2.5 text-xs text-stone-700 hover:bg-stone-50 hover:text-stone-900 transition">
+        <button type="button" data-goal-menu-action="edit" class="flex items-center space-x-2.5 w-full text-left px-4 py-2.5 text-xs text-stone-700 hover:bg-stone-50 hover:text-stone-900 transition">
             <i data-lucide="edit-3" class="w-4 h-4 text-amber-600"></i><span>Edit Title &amp; Description</span>
         </button>
-        <button onclick="closeGoalMenu(); archiveGoal(${id})" class="flex items-center space-x-2.5 w-full text-left px-4 py-2.5 text-xs text-stone-700 hover:bg-stone-50 hover:text-stone-900 transition">
+        <button type="button" data-goal-menu-action="archive" class="flex items-center space-x-2.5 w-full text-left px-4 py-2.5 text-xs text-stone-700 hover:bg-stone-50 hover:text-stone-900 transition">
             <i data-lucide="archive" class="w-4 h-4 text-amber-500"></i><span>Archive Goal</span>
         </button>
         <div class="border-t border-stone-200 my-1"></div>
-        <button onclick="closeGoalMenu(); deleteGoal(${id})" class="flex items-center space-x-2.5 w-full text-left px-4 py-2.5 text-xs text-red-400 hover:bg-red-950/20 hover:text-red-300 transition">
+        <button type="button" data-goal-menu-action="delete" class="flex items-center space-x-2.5 w-full text-left px-4 py-2.5 text-xs text-red-400 hover:bg-red-950/20 hover:text-red-300 transition">
             <i data-lucide="trash-2" class="w-4 h-4"></i><span>Permanently Delete</span>
         </button>
     </div>`;
 
-    toggleContextMenuPortal('portal-goal-menu', id, btn, html, { extraClasses: 'w-52 border border-stone-200' });
+    toggleContextMenuPortal('portal-goal-menu', id, btn, html, {
+        extraClasses: 'w-52 border border-stone-200',
+        onMount: (portal) => {
+            portal.addEventListener('click', (e) => {
+                const item = e.target.closest('[data-goal-menu-action]');
+                if (!item) return;
+                closeGoalMenu();
+                const action = item.dataset.goalMenuAction;
+                if (action === 'edit') openEditGoalModal(id);
+                else if (action === 'archive') archiveGoal(id);
+                else if (action === 'delete') deleteGoal(id);
+            });
+        },
+    });
+}
+
+// One delegated listener for every button the goals tab renders (goal cards, the study queue
+// and unassociated accordions, the archive, recommendation cards), keyed by data-goal-action.
+// Material cards from renderVideoCard (videos.js) handle their own clicks.
+function initGoalsActions() {
+    const tab = document.getElementById('tab-goals');
+    if (!tab) return;
+    tab.addEventListener('click', (e) => {
+        const el = e.target.closest('[data-goal-action]');
+        if (!el || !tab.contains(el)) return;
+        const goalId = Number(el.dataset.goalId);
+        switch (el.dataset.goalAction) {
+            case 'toggle-accordion': toggleAccordion(el.dataset.cat); break;
+            case 'create-goal': openCreateGoalModal(); break;
+            case 'reorder': reorderGoal(goalId, el.dataset.direction); break;
+            case 'menu': toggleGoalMenu(e, goalId, el); break;
+            case 'toggle-materials': toggleGoalMaterials(goalId); break;
+            case 'load-recs': loadRecommendations(goalId, el); break;
+            case 'reload-recs': reloadGoalRecommendations(goalId, el); break;
+            case 'close-recs': closeRecommendationsDrawer(goalId); break;
+            case 'archive': archiveGoal(goalId); break;
+            case 'delete': deleteGoal(goalId); break;
+            case 'preview-rec': previewRecommendedVideo(el.dataset.url, goalId, el.dataset.title); break;
+            case 'import-rec': importRecommendedVideo(el.dataset.ytId, el.dataset.title, goalId); break;
+            case 'dismiss-rec': dismissGoalRecommendation(el.dataset.ytId, goalId); break;
+        }
+    });
 }
 
 // --- Goals tab search ---

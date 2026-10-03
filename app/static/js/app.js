@@ -713,6 +713,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (typeof initQuizEvents === 'function') initQuizEvents();
     if (typeof initGoalsModal === 'function') initGoalsModal();
     if (typeof initGoalsSearch === 'function') initGoalsSearch();
+    if (typeof initGoalsActions === 'function') initGoalsActions();
     if (typeof initEditVideoEvents === 'function') initEditVideoEvents();
     if (typeof initFocusModalEvents === 'function') initFocusModalEvents();
     
