@@ -1,11 +1,10 @@
 """
 The goals tab's buttons are bound through one delegated listener (goals.js initGoalsActions)
-instead of inline handlers. Uses the fixed dashboard from test_goals_search.py, and every write
-the buttons trigger is answered by a mocked route, so nothing reaches the database.
+instead of inline handlers. Runs on the goals_page fixture's fixed dashboard
+(tests/e2e/conftest.py), and every write the buttons trigger is answered by a mocked route, so
+nothing reaches the database.
 """
 import json
-
-from tests.e2e.test_goals_search import goals_page  # noqa: F401  (fixture)
 
 
 def _record_posts(page, pattern, calls):

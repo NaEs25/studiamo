@@ -6,8 +6,8 @@ suite, which drives the ASGI app in-process via starlette's TestClient), and the
 against the same shared staging Supabase database as everything else in tests/, under
 the same constraint: never create/modify/delete real user data.
 
-To keep that promise, all authenticated flows here run as one dedicated, clearly-named
-account (`E2E_TEST_USERNAME` below), not a real customer, and tests that create data
+To keep that promise, all authenticated flows here run as the dedicated test account
+(test_username in tests/conftest.py), not a real customer, and tests that create data
 through the UI (e.g. a learning goal) delete it again before finishing.
 
 The local server is started with lifespan="off", like the client fixture in
@@ -29,8 +29,6 @@ import urllib.error
 
 import pytest
 import uvicorn
-
-E2E_TEST_USERNAME = "e2e_test_bot"
 
 
 def _free_port() -> int:
@@ -73,23 +71,13 @@ def base_url(live_server):
 
 
 @pytest.fixture
-def e2e_session_cookies(live_server):
-    """The yb_session/username cookie pair for E2E_TEST_USERNAME, matching exactly what
-    app/routers/auth.py sets on a real login (see its set_cookie calls), minted directly
-    via app.dependencies._make_session_token instead of driving a real Google OAuth
-    consent screen, which isn't something a headless browser can do against Google."""
-    from app.config import get_user_uuid_from_db
-    from app.dependencies import _make_session_token
-
-    user_uuid = get_user_uuid_from_db(E2E_TEST_USERNAME)
-    assert user_uuid, (
-        f"Test account '{E2E_TEST_USERNAME}' not found in the database. "
-        "See tests/e2e/conftest.py docstring for how it's provisioned."
-    )
-    token = _make_session_token(user_uuid)
+def e2e_session_cookies(live_server, test_username, session_token):
+    """The yb_session/username cookie pair for the test account, matching exactly what
+    app/routers/auth.py sets on a real login (see its set_cookie calls)."""
     return [
-        {"name": "yb_session", "value": token, "url": live_server, "httpOnly": True, "sameSite": "Lax"},
-        {"name": "username", "value": E2E_TEST_USERNAME, "url": live_server, "httpOnly": False, "sameSite": "Lax"},
+        {"name": "yb_session", "value": session_token(test_username), "url": live_server,
+         "httpOnly": True, "sameSite": "Lax"},
+        {"name": "username", "value": test_username, "url": live_server, "httpOnly": False, "sameSite": "Lax"},
     ]
 
 
@@ -157,3 +145,47 @@ def _override_json(fields):
             body.update(fields)
         route.fulfill(response=response, body=json.dumps(body))
     return handle
+
+
+# A fixed goals tab for the browser tests that work on it: two goals with materials, a study
+# queue entry, a loose material, an archived goal and an archived material. Answers the dashboard
+# request in full, so nothing is read from the test account's real data.
+GOALS_DASHBOARD = {
+    "goals": [
+        {"id": 9001, "title": "Kubernetes Basics", "description": "Pods and deployments"},
+        {"id": 9002, "title": "Spanish", "description": "Everyday conversation"},
+    ],
+    "archived_goals": [
+        {"id": 9003, "title": "Old Photography Course", "description": ""},
+    ],
+    "videos": [
+        {"id": 8001, "title": "Helm charts explained", "learning_goal_id": 9001},
+        {"id": 8002, "title": "Pod networking deep dive", "learning_goal_id": 9001},
+        {"id": 8003, "title": "Subjuntivo para principiantes", "learning_goal_id": 9002},
+        {"id": 8004, "title": "Café vocabulary", "learning_goal_id": 9002},
+        {"id": 8005, "title": "Docker cheat sheet", "learning_goal_id": None, "is_watchlist": 1},
+        {"id": 8006, "title": "Loose notes on Git", "learning_goal_id": None},
+    ],
+    "archived": [
+        {"id": 8007, "title": "Exposure triangle", "learning_goal_id": None},
+    ],
+    "quizzes": [],
+    "chompy": {"eaten_unseen": []},
+}
+
+for _v in GOALS_DASHBOARD["videos"] + GOALS_DASHBOARD["archived"]:
+    _v.setdefault("is_watchlist", 0)
+    _v.update({"status": "completed", "importance_rating": 3, "importance_level": 3,
+               "url": "", "summary": "", "custom_notes": ""})
+
+
+@pytest.fixture
+def goals_page(logged_in_page):
+    """The app on the goals tab, showing GOALS_DASHBOARD."""
+    page = logged_in_page
+    page.route("**/api/dashboard", lambda route: route.fulfill(
+        status=200, content_type="application/json", body=json.dumps(GOALS_DASHBOARD)))
+    page.goto("/app")
+    page.click("#nav-goals")
+    page.wait_for_selector("[data-goal-card='9001']", state="attached", timeout=15000)
+    return page

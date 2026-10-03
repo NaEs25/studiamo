@@ -3,7 +3,7 @@ Text from outside the app (YouTube titles, the user's own goal text) must reach 
 text and reach the click handlers unchanged, whatever characters it holds.
 
 The recommendation test serves its data through page.route, so no request reaches the
-backend and nothing is written. The goal test writes one goal as E2E_TEST_USERNAME and
+backend and nothing is written. The goal test writes one goal as the test account and
 deletes it again, like test_goals_flow.py.
 """
 import json

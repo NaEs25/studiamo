@@ -1,9 +1,8 @@
 """
 The one-time tab tips' stored state (user_profile.tab_tips_seen, routers/settings.py). Reading it
 is a pure function, and the route rejects an unknown tab before it opens a database connection,
-so nothing here touches the database.
+so nothing here writes to the database.
 """
-from app.dependencies import get_active_username
 from app.routers.settings import TAB_TIP_TABS, pending_tab_tips
 
 
@@ -20,12 +19,6 @@ def test_seen_tabs_drop_out_and_the_rest_keep_their_order():
     assert pending_tab_tips(",".join(TAB_TIP_TABS)) == []
 
 
-def test_an_unknown_tab_is_rejected(client):
-    from app.main import app
-
-    app.dependency_overrides[get_active_username] = lambda: "e2e_test_bot"
-    try:
-        response = client.post("/api/user/onboarding_status", data={"tab_tip_seen": "dashboard"})
-    finally:
-        app.dependency_overrides.pop(get_active_username, None)
+def test_an_unknown_tab_is_rejected(client_as, test_username):
+    response = client_as(test_username).post("/api/user/onboarding_status", data={"tab_tip_seen": "dashboard"})
     assert response.status_code == 400

@@ -9,9 +9,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from fastapi.testclient import TestClient
 from app.dependencies import clean_external_referrer, _decode_oauth_state
-from app.main import app
 
 
 def test_clean_external_referrer_filters_internal():
@@ -65,8 +63,8 @@ def test_clean_external_referrer_caps_length():
     assert len(clean_external_referrer("utm:" + "x" * 600)) == 500
 
 
-def test_first_touch_middleware_sets_orig_ref_cookie():
-    client = TestClient(app, base_url="http://localhost:5005")
+def test_first_touch_middleware_sets_orig_ref_cookie(make_client):
+    client = make_client()
 
     # 1. Arrival from external site sets orig_ref cookie
     res = client.get("/login", headers={"Referer": "https://www.reddit.com/r/learnitalian"})
@@ -86,9 +84,9 @@ def test_first_touch_middleware_sets_orig_ref_cookie():
     assert "orig_ref" not in res_internal.cookies
 
 
-def test_oauth_login_carries_orig_ref_cookie_into_state():
+def test_oauth_login_carries_orig_ref_cookie_into_state(make_client):
     from urllib.parse import urlparse, parse_qs
-    client = TestClient(app, base_url="http://localhost:5005")
+    client = make_client()
     client.cookies.set("orig_ref", "https://www.reddit.com/r/learnitalian")
 
     # Click continue with Google on /login (browser sends internal referer header)

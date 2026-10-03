@@ -14,7 +14,6 @@ import json
 
 import pytest
 from fastapi import FastAPI
-from starlette.testclient import TestClient
 
 from app.routers import billing
 
@@ -106,12 +105,12 @@ def test_subscription_payload_writes_its_own_status_and_id(executed):
 
 
 @pytest.fixture
-def webhook_client(monkeypatch):
+def webhook_client(monkeypatch, make_client):
     monkeypatch.setattr(billing.config, "IS_CLOUD", True)
     monkeypatch.setattr(billing.config, "get_lemonsqueezy_config", lambda: {"webhook_secret": SECRET})
     app = FastAPI()
     app.include_router(billing.router)
-    return TestClient(app)
+    return make_client(app)
 
 
 def _post_signed(client, payload: dict):

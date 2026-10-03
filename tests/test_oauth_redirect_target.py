@@ -13,7 +13,6 @@ from urllib.parse import parse_qs, urlparse
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import pytest
-from fastapi.testclient import TestClient
 
 from app.dependencies import safe_local_path, _sign_oauth_state, _decode_oauth_state
 
@@ -62,10 +61,9 @@ def test_signed_state_keeps_a_normal_target():
 
 
 @pytest.mark.parametrize("redirect,expected", [("//example.com", "/"), ("/\\example.com", "/"), ("/bugs", "/bugs")])
-def test_google_login_endpoint_sanitizes_redirect_param(monkeypatch, redirect, expected):
-    from app.main import app
+def test_google_login_endpoint_sanitizes_redirect_param(monkeypatch, make_client, redirect, expected):
     monkeypatch.setenv("GOOGLE_CLIENT_ID", "test-client-id")
-    client = TestClient(app, follow_redirects=False)
+    client = make_client(follow_redirects=False)
     resp = client.get("/api/auth/google", params={"redirect": redirect})
     assert resp.status_code in (302, 307)
     state = parse_qs(urlparse(resp.headers["location"]).query)["state"][0]

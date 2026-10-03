@@ -14,7 +14,6 @@ staging database.
 """
 import pytest
 from fastapi import FastAPI
-from starlette.testclient import TestClient
 
 from app import config, database, email_utils, landing_waitlist_db
 from app.dependencies import _sign_oauth_state, limiter
@@ -65,7 +64,7 @@ class _WaitlistConn:
 
 
 @pytest.fixture
-def waitlist(monkeypatch):
+def waitlist(monkeypatch, make_client):
     inserted = []
     monkeypatch.setattr(landing_waitlist, "get_waitlist_db", lambda: _WaitlistConn(inserted))
     monkeypatch.setattr(landing_waitlist, "send_waitlist_confirmation_email", lambda email: False)
@@ -73,7 +72,7 @@ def waitlist(monkeypatch):
     app = FastAPI()
     app.state.limiter = limiter
     app.include_router(landing_waitlist.router)
-    client = TestClient(app, base_url="http://localhost:5005")
+    client = make_client(app)
     return client, inserted
 
 
@@ -172,7 +171,7 @@ class _NoRowsConn:
 
 
 @pytest.fixture
-def callback(monkeypatch):
+def callback(monkeypatch, make_client):
     recorded = []
     monkeypatch.setenv("GOOGLE_CLIENT_ID", "client-id")
     monkeypatch.setenv("GOOGLE_CLIENT_SECRET", "client-secret")
@@ -191,7 +190,7 @@ def callback(monkeypatch):
                         lambda email, user_uuid, referrer, *a, **k: recorded.append(referrer))
     app = FastAPI()
     app.include_router(auth.router)
-    client = TestClient(app, base_url="http://localhost:5005", follow_redirects=False)
+    client = make_client(app, follow_redirects=False)
     return client, recorded
 
 

@@ -1,50 +1,8 @@
 """
-Goals tab search (goals.js applyGoalsSearch). The dashboard response is replaced with a fixed
-set of goals and materials, so the test reads nothing from the test account's real data and
-writes nothing.
+Goals tab search (goals.js applyGoalsSearch). Runs on the goals_page fixture (tests/e2e/conftest.py),
+whose dashboard is a fixed set of goals and materials, so the test reads nothing from the test
+account's real data and writes nothing.
 """
-import json
-
-import pytest
-
-DASHBOARD = {
-    "goals": [
-        {"id": 9001, "title": "Kubernetes Basics", "description": "Pods and deployments"},
-        {"id": 9002, "title": "Spanish", "description": "Everyday conversation"},
-    ],
-    "archived_goals": [
-        {"id": 9003, "title": "Old Photography Course", "description": ""},
-    ],
-    "videos": [
-        {"id": 8001, "title": "Helm charts explained", "learning_goal_id": 9001},
-        {"id": 8002, "title": "Pod networking deep dive", "learning_goal_id": 9001},
-        {"id": 8003, "title": "Subjuntivo para principiantes", "learning_goal_id": 9002},
-        {"id": 8004, "title": "Café vocabulary", "learning_goal_id": 9002},
-        {"id": 8005, "title": "Docker cheat sheet", "learning_goal_id": None, "is_watchlist": 1},
-        {"id": 8006, "title": "Loose notes on Git", "learning_goal_id": None},
-    ],
-    "archived": [
-        {"id": 8007, "title": "Exposure triangle", "learning_goal_id": None},
-    ],
-    "quizzes": [],
-    "chompy": {"eaten_unseen": []},
-}
-
-for _v in DASHBOARD["videos"] + DASHBOARD["archived"]:
-    _v.setdefault("is_watchlist", 0)
-    _v.update({"status": "completed", "importance_rating": 3, "importance_level": 3,
-               "url": "", "summary": "", "custom_notes": ""})
-
-
-@pytest.fixture
-def goals_page(logged_in_page):
-    page = logged_in_page
-    page.route("**/api/dashboard", lambda route: route.fulfill(
-        status=200, content_type="application/json", body=json.dumps(DASHBOARD)))
-    page.goto("/app")
-    page.click("#nav-goals")
-    page.wait_for_selector("[data-goal-card='9001']", state="attached", timeout=15000)
-    return page
 
 
 def _visible(page, selector):

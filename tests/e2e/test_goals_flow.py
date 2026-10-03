@@ -1,7 +1,7 @@
 """
 End-to-end coverage for creating and deleting a Learning Goal through the real UI, the
-one flow in this file that actually writes data. Runs only against E2E_TEST_USERNAME
-(see conftest.py) and deletes what it creates in the same test, so it leaves no residue
+one flow in this file that actually writes data. Runs only as the test account
+(test_username in tests/conftest.py) and deletes what it creates in the same test, so it leaves no residue
 in the shared staging database.
 """
 import uuid
