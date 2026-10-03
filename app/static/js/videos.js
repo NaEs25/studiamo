@@ -1131,7 +1131,7 @@ function renderVideoCard(video, quizzes, goals) {
     for (let i = 1; i <= 5; i++) {
         const starClass = i <= video.importance_rating ? 'fill-amber-500 text-amber-500' : 'text-stone-300';
         starsHTML += `
-            <button onclick="changeVideoRating(event, ${video.id}, ${i})" class="focus:outline-none transition hover:scale-120 px-0.5" title="Set quiz to Level ${i}">
+            <button data-video-action="rate" data-video-id="${video.id}" data-level="${i}" class="focus:outline-none transition hover:scale-120 px-0.5" title="Set quiz to Level ${i}">
                 <i data-lucide="star" class="w-4 h-4 ${starClass}"></i>
             </button>
         `;
@@ -1142,7 +1142,7 @@ function renderVideoCard(video, quizzes, goals) {
     let isEatenState = false;
     if (isTemporaryVideo(video)) {
         actionControlsHTML = `
-            <button onclick="confirmPreviewImport(${video.id}, this)" class="btn-primary w-full py-2 font-extrabold rounded-xl text-xs transition flex items-center justify-center space-x-1.5 h-[38px]">
+            <button data-video-action="import-preview" data-video-id="${video.id}" class="btn-primary w-full py-2 font-extrabold rounded-xl text-xs transition flex items-center justify-center space-x-1.5 h-[38px]">
                  <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
                  <span>Import to Goal</span>
             </button>
@@ -1156,7 +1156,7 @@ function renderVideoCard(video, quizzes, goals) {
         `;
     } else if (video.status === 'failed') {
         actionControlsHTML = `
-            <button onclick="retryVideoImport(${video.id})" class="w-full py-2 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 font-bold rounded-xl text-xs transition flex items-center justify-center space-x-1.5 h-[38px]" title="Retry Video Import: ${escapeHtml(video.status_error) || 'Import Failed'}">
+            <button data-video-action="retry" data-video-id="${video.id}" class="w-full py-2 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 font-bold rounded-xl text-xs transition flex items-center justify-center space-x-1.5 h-[38px]" title="Retry Video Import: ${escapeHtml(video.status_error) || 'Import Failed'}">
                  <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
                  <span>Retry</span>
             </button>
@@ -1174,14 +1174,14 @@ function renderVideoCard(video, quizzes, goals) {
         isNormalState = true;
         const levelToUse = video.importance_rating || video.importance_level || 3;
         actionControlsHTML = `
-            <button onclick="handleStudyButtonClick(event, ${video.id}, ${levelToUse})" class="w-full px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900 font-extrabold rounded-xl border border-stone-200 text-xs transition flex items-center justify-center space-x-2 h-[38px]">
+            <button data-video-action="study" data-video-id="${video.id}" data-level="${levelToUse}" class="w-full px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900 font-extrabold rounded-xl border border-stone-200 text-xs transition flex items-center justify-center space-x-2 h-[38px]">
                  <i data-lucide="brain" class="w-3.5 h-3.5"></i>
                  <span>Quiz</span>
             </button>
         `;
     }
 
-    const titleHTML = `<a href="javascript:void(0)" onclick="openStudyStudio(${video.id})" class="block font-bold text-sm text-stone-900 truncate hover:text-amber-700 transition" title="Open in Study Studio: ${escapeHtml(video.title)}">${escapeHtml(video.title)}</a>`;
+    const titleHTML = `<a href="javascript:void(0)" data-video-action="open-studio" data-video-id="${video.id}" class="block font-bold text-sm text-stone-900 truncate hover:text-amber-700 transition" title="Open in Study Studio: ${escapeHtml(video.title)}">${escapeHtml(video.title)}</a>`;
     
     const stageBadgeHTML = isTemporaryVideo(video)
         ? `<span class="text-[9px] bg-amber-500/15 border border-amber-500/30 text-amber-900 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider flex items-center space-x-1" title="Preview mode: expires in ~24h unless imported"><i data-lucide="clock" class="w-3 h-3 text-amber-700"></i><span>24h Preview</span></span>`
@@ -1213,7 +1213,7 @@ function renderVideoCard(video, quizzes, goals) {
     
     const detailsSectionHTML = hasDetails ? `
         <div class="mt-2 space-y-1">
-            <button onclick="toggleVideoDetails(event, ${video.id})" class="flex items-center space-x-1.5 text-xs font-bold text-stone-500 hover:text-stone-700 transition">
+            <button data-video-action="toggle-details" data-video-id="${video.id}" class="flex items-center space-x-1.5 text-xs font-bold text-stone-500 hover:text-stone-700 transition">
                 <i data-lucide="align-left" class="w-3.5 h-3.5 text-amber-600"></i>
                 <span>${hasTakeaways && hasNotes ? 'AI Takeaways & Personal Notes' : (hasTakeaways ? 'AI Takeaways' : 'Personal Notes')}</span>
                 <i data-lucide="chevron-down" id="details-chevron-${video.id}" class="w-3.5 h-3.5 text-stone-400 transition-transform"></i>
@@ -1243,7 +1243,7 @@ function renderVideoCard(video, quizzes, goals) {
 
     const mediaPreviewHTML = renderMediaThumbHTML(video, {
         sizeClasses: 'w-16 h-10',
-        onClick: `openStudyStudio(${video.id})`,
+        attrs: `data-video-action="open-studio" data-video-id="${video.id}"`,
         title: 'Open Study Studio Workspace'
     });
 
@@ -1251,7 +1251,7 @@ function renderVideoCard(video, quizzes, goals) {
     const isTwoButtonRow = isNormalState || isEatenState;
 
     const watchNotesButtonHTML = isNormalState ? `
-        <button onclick="event.stopPropagation(); openStudyStudio(${video.id})" class="btn-primary w-full py-2 font-extrabold rounded-xl text-xs transition flex items-center justify-center space-x-2 min-h-[38px]" title="Watch the video and take notes side by side">
+        <button data-video-action="watch-notes" data-video-id="${video.id}" class="btn-primary w-full py-2 font-extrabold rounded-xl text-xs transition flex items-center justify-center space-x-2 min-h-[38px]" title="Watch the video and take notes side by side">
             <i data-lucide="book-open" class="w-3.5 h-3.5 shrink-0"></i>
             <span class="leading-tight">Watch &amp; Notes</span>
         </button>
@@ -1261,24 +1261,24 @@ function renderVideoCard(video, quizzes, goals) {
             <span class="leading-tight whitespace-nowrap">Watch &amp; Notes</span>
         </button>
     ` : `
-        <button onclick="event.stopPropagation(); openStudyStudio(${video.id})" class="px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900 font-extrabold rounded-xl border border-stone-200 text-xs transition flex items-center justify-center space-x-2 min-h-[38px] shrink-0" title="Open Study Studio: watch the video and take notes side by side">
+        <button data-video-action="watch-notes" data-video-id="${video.id}" class="px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900 font-extrabold rounded-xl border border-stone-200 text-xs transition flex items-center justify-center space-x-2 min-h-[38px] shrink-0" title="Open Study Studio: watch the video and take notes side by side">
             <i data-lucide="book-open" class="w-3.5 h-3.5 shrink-0"></i>
             <span class="leading-tight">Watch &amp; Notes</span>
         </button>
     `;
 
     const bookmarkButtonHTML = isWatchlist ? `
-        <button onclick="event.stopPropagation(); toggleWatchlist(${video.id})" class="p-2 bg-amber-50 hover:bg-amber-100 text-amber-600 hover:text-amber-700 rounded-xl border border-amber-200 transition flex items-center justify-center h-[38px] w-[38px] shrink-0" title="Remove from Study Queue">
+        <button data-video-action="toggle-watchlist" data-video-id="${video.id}" class="p-2 bg-amber-50 hover:bg-amber-100 text-amber-600 hover:text-amber-700 rounded-xl border border-amber-200 transition flex items-center justify-center h-[38px] w-[38px] shrink-0" title="Remove from Study Queue">
             <i data-lucide="bookmark" class="w-4 h-4 fill-amber-500 text-amber-500"></i>
         </button>
     ` : '';
 
     const trailingButtonHTML = isTemp ? `
-        <button onclick="event.stopPropagation(); discardPreviewVideo(${video.id})" class="p-2 bg-stone-100 hover:bg-red-100 text-stone-500 hover:text-red-700 rounded-xl border border-stone-200 transition flex items-center justify-center h-[38px] w-[38px] shrink-0" title="Discard Preview">
+        <button data-video-action="discard-preview" data-video-id="${video.id}" class="p-2 bg-stone-100 hover:bg-red-100 text-stone-500 hover:text-red-700 rounded-xl border border-stone-200 transition flex items-center justify-center h-[38px] w-[38px] shrink-0" title="Discard Preview">
             <i data-lucide="x" class="w-4 h-4"></i>
         </button>
     ` : `
-        <button onclick="toggleVideoMenu(event, ${video.id})" data-menuid="${video.id}" class="p-2 bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900 rounded-xl border border-stone-200 transition flex items-center justify-center h-[38px] w-[38px] shrink-0" title="Material Options">
+        <button data-video-action="menu" data-video-id="${video.id}" data-menuid="${video.id}" class="p-2 bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900 rounded-xl border border-stone-200 transition flex items-center justify-center h-[38px] w-[38px] shrink-0" title="Material Options">
             <i data-lucide="more-vertical" class="w-4 h-4"></i>
         </button>
     `;
@@ -1348,10 +1348,10 @@ function closeVideoMenu() {
     closeContextMenuPortal('video-context-menu-portal');
 }
 
-function toggleVideoMenu(event, id) {
+function toggleVideoMenu(event, id, anchorEl = null) {
     if (event) event.stopPropagation();
 
-    const btn = event ? event.currentTarget : document.querySelector(`[data-menuid="${id}"]`);
+    const btn = anchorEl || document.querySelector(`[data-menuid="${id}"]`);
 
     const cardData = window._videoCardCache && window._videoCardCache[id];
     const isPaused = cardData ? cardData.is_paused : false;
@@ -1364,34 +1364,34 @@ function toggleVideoMenu(event, id) {
 
     const html = `<div class="py-1">
         ${isImported && hasConceptPool ? `
-        <button data-focus-video="${id}" class="flex items-center space-x-2.5 w-full text-left px-4 py-2.5 text-xs text-stone-700 hover:bg-stone-50 hover:text-stone-900 transition">
+        <button data-video-menu-action="focus" class="flex items-center space-x-2.5 w-full text-left px-4 py-2.5 text-xs text-stone-700 hover:bg-stone-50 hover:text-stone-900 transition">
             <i data-lucide="target" class="w-4 h-4 text-amber-600"></i><span>Adjust Learning Focus</span>
         </button>
         ` : ''}
         ${isImported ? `
-        <button onclick="closeVideoMenu(); showFactCheck(${id})" class="flex items-center space-x-2.5 w-full text-left px-4 py-2.5 text-xs text-stone-700 hover:bg-stone-50 hover:text-stone-900 transition">
+        <button data-video-menu-action="factcheck" class="flex items-center space-x-2.5 w-full text-left px-4 py-2.5 text-xs text-stone-700 hover:bg-stone-50 hover:text-stone-900 transition">
             <i data-lucide="shield-alert" class="w-4 h-4 text-amber-500"></i><span>Verify Accuracy</span>
         </button>
         ` : ''}
-        <button onclick="closeVideoMenu(); openVideoStatsModal(${id})" class="flex items-center space-x-2.5 w-full text-left px-4 py-2.5 text-xs text-stone-700 hover:bg-stone-50 hover:text-stone-900 transition">
+        <button data-video-menu-action="stats" class="flex items-center space-x-2.5 w-full text-left px-4 py-2.5 text-xs text-stone-700 hover:bg-stone-50 hover:text-stone-900 transition">
             <i data-lucide="bar-chart-2" class="w-4 h-4 text-amber-600"></i><span>View Material Analytics</span>
         </button>
-        <button onclick="closeVideoMenu(); pauseVideo(${id})" class="flex items-center space-x-2.5 w-full text-left px-4 py-2.5 text-xs text-stone-700 hover:bg-stone-50 hover:text-stone-900 transition">
+        <button data-video-menu-action="pause" class="flex items-center space-x-2.5 w-full text-left px-4 py-2.5 text-xs text-stone-700 hover:bg-stone-50 hover:text-stone-900 transition">
             <i data-lucide="${isPaused ? 'play' : 'pause'}" class="w-4 h-4 text-amber-600"></i><span>${isPaused ? 'Resume intervals' : 'Pause intervals'}</span>
         </button>
         ${!isWatchlist ? `
-        <button onclick="closeVideoMenu(); toggleWatchlist(${id})" class="flex items-center space-x-2.5 w-full text-left px-4 py-2.5 text-xs text-stone-700 hover:bg-stone-50 hover:text-stone-900 transition">
+        <button data-video-menu-action="watchlist" class="flex items-center space-x-2.5 w-full text-left px-4 py-2.5 text-xs text-stone-700 hover:bg-stone-50 hover:text-stone-900 transition">
             <i data-lucide="bookmark" class="w-4 h-4 text-stone-400"></i><span>Queue to Watchlist</span>
         </button>
         ` : ''}
-        <button onclick="closeVideoMenu(); openEditVideoModal(${id})" class="flex items-center space-x-2.5 w-full text-left px-4 py-2.5 text-xs text-stone-700 hover:bg-stone-50 hover:text-stone-900 transition">
+        <button data-video-menu-action="edit" class="flex items-center space-x-2.5 w-full text-left px-4 py-2.5 text-xs text-stone-700 hover:bg-stone-50 hover:text-stone-900 transition">
             <i data-lucide="repeat" class="w-4 h-4 text-amber-600"></i><span>Swap Goal / Edit Details</span>
         </button>
-        <button onclick="closeVideoMenu(); archiveVideo(${id})" class="flex items-center space-x-2.5 w-full text-left px-4 py-2.5 text-xs text-stone-700 hover:bg-stone-50 hover:text-stone-900 transition">
+        <button data-video-menu-action="archive" class="flex items-center space-x-2.5 w-full text-left px-4 py-2.5 text-xs text-stone-700 hover:bg-stone-50 hover:text-stone-900 transition">
             <i data-lucide="archive" class="w-4 h-4 text-amber-600"></i><span>${isArchived ? 'Send to Active' : 'Archive Video'}</span>
         </button>
         <div class="border-t border-[#e7dfd3] my-1"></div>
-        <button onclick="closeVideoMenu(); deleteVideo(${id})" class="flex items-center space-x-2.5 w-full text-left px-4 py-2.5 text-xs text-rose-600 hover:bg-rose-50 hover:text-rose-700 transition">
+        <button data-video-menu-action="delete" class="flex items-center space-x-2.5 w-full text-left px-4 py-2.5 text-xs text-rose-600 hover:bg-rose-50 hover:text-rose-700 transition">
             <i data-lucide="trash-2" class="w-4 h-4 text-rose-500"></i><span>Permanently Delete</span>
         </button>
     </div>`;
@@ -1399,16 +1399,64 @@ function toggleVideoMenu(event, id) {
     toggleContextMenuPortal('video-context-menu-portal', id, btn, html, {
         extraClasses: 'w-56 border border-[#e7dfd3]',
         onMount: (portal) => {
-            const focusBtn = portal.querySelector('[data-focus-video]');
-            if (focusBtn) {
-                focusBtn.addEventListener('click', () => {
-                    closeVideoMenu();
-                    openFocusModal(id);
-                });
-            }
+            portal.addEventListener('click', (e) => {
+                const item = e.target.closest('[data-video-menu-action]');
+                if (!item) return;
+                closeVideoMenu();
+                switch (item.dataset.videoMenuAction) {
+                    case 'focus': openFocusModal(id); break;
+                    case 'factcheck': showFactCheck(id); break;
+                    case 'stats': openVideoStatsModal(id); break;
+                    case 'pause': pauseVideo(id); break;
+                    case 'watchlist': toggleWatchlist(id); break;
+                    case 'edit': openEditVideoModal(id); break;
+                    case 'archive': archiveVideo(id); break;
+                    case 'delete': deleteVideo(id); break;
+                }
+            });
         }
     });
 }
+
+// One delegated listener for the buttons on material cards (renderVideoCard), which goals.js
+// renders into the goals tab, keyed by data-video-action. Bound to the tab rather than to
+// document so the actions that stop propagation keep a click away from document-level
+// listeners, such as an open context menu's outside-click dismissal, as their inline handlers
+// did. The eaten-card buttons (data-win-back, data-open-studio, data-chompy-info) have their own
+// listener on document, further down.
+function initVideoCardActions() {
+    const tab = document.getElementById('tab-goals');
+    if (tab) {
+        tab.addEventListener('click', (e) => {
+            const el = e.target.closest('[data-video-action]');
+            if (!el || !tab.contains(el)) return;
+            const id = Number(el.dataset.videoId);
+            const level = Number(el.dataset.level);
+            switch (el.dataset.videoAction) {
+                case 'rate': changeVideoRating(e, id, level); break;
+                case 'import-preview': confirmPreviewImport(id, el); break;
+                case 'retry': retryVideoImport(id); break;
+                case 'study': handleStudyButtonClick(e, id, level); break;
+                case 'open-studio': openStudyStudio(id); break;
+                case 'watch-notes': e.stopPropagation(); openStudyStudio(id); break;
+                case 'toggle-details': toggleVideoDetails(e, id); break;
+                case 'toggle-watchlist': e.stopPropagation(); toggleWatchlist(id); break;
+                case 'discard-preview': e.stopPropagation(); discardPreviewVideo(id); break;
+                case 'menu': toggleVideoMenu(e, id, el); break;
+            }
+        });
+    }
+
+    // Quiz sessions in the material analytics modal (renderVideoStatsAttempts).
+    const attempts = document.getElementById('stats-attempts-container');
+    if (attempts) {
+        attempts.addEventListener('click', (e) => {
+            const toggle = e.target.closest('[data-vstat-session]');
+            if (toggle) toggleVideoStatSession(Number(toggle.dataset.vstatSession));
+        });
+    }
+}
+document.addEventListener('DOMContentLoaded', initVideoCardActions);
 
 async function pauseVideo(id) {
     await fetchAPI(`/api/videos/${id}/pause`, { method: 'POST' });
@@ -1521,7 +1569,7 @@ async function changeVideoRating(event, id, rating) {
     // 1. Instant optimistic DOM update for star icons on video card
     const cardEl = document.getElementById(`video-card-${id}`);
     if (cardEl) {
-        const starBtns = cardEl.querySelectorAll('button[onclick*="changeVideoRating"]');
+        const starBtns = cardEl.querySelectorAll('[data-video-action="rate"]');
         starBtns.forEach((btn, index) => {
             const starNum = index + 1;
             const icon = btn.querySelector('[data-lucide="star"], svg, i');
@@ -1900,7 +1948,7 @@ function renderVideoStatsAttempts(container, attempts) {
         
         container.innerHTML += `
             <div class="bg-stone-50 border border-stone-200 rounded-xl overflow-hidden shadow-sm">
-                <button type="button" onclick="toggleVideoStatSession(${session.id})" class="w-full p-3 flex justify-between items-center text-left hover:bg-stone-100 transition focus:outline-none">
+                <button type="button" data-vstat-session="${session.id}" class="w-full p-3 flex justify-between items-center text-left hover:bg-stone-100 transition focus:outline-none">
                     <div class="min-w-0 flex-grow pr-2 space-y-1">
                         <div class="flex items-center space-x-2">
                             <span class="text-[9px] bg-amber-100 border border-amber-200 text-amber-800 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">${session.mastered ? 'Mastered' : `Stage ${session.srs_stage ?? 0}`}</span>

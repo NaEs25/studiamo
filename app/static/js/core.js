@@ -648,10 +648,12 @@ function closeContextMenuPortal(portalId) {
 
 // Shared thumbnail renderer for videos/PDFs/notes: real image for YouTube videos,
 // an icon badge for uploaded documents so PDFs/notes never fall back to a static SVG file.
+// opts.attrs is extra attribute markup for the element, such as the data-* hook a delegated
+// click listener looks for; it is inserted as is, so callers pass only values they control.
 function renderMediaThumbHTML(video, opts) {
     opts = opts || {};
     const sizeClasses = opts.sizeClasses || 'w-16 h-10';
-    const clickAttr = opts.onClick ? `onclick="${opts.onClick}"` : '';
+    const clickAttr = opts.attrs || '';
     const title = opts.title || '';
 
     if (video && video.youtube_id && video.thumbnail_url) {
