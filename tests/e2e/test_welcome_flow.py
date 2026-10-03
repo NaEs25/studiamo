@@ -1,6 +1,6 @@
 """
-The welcome flow new accounts go through once (settings.js ONBOARDING_FLOWS.welcome), and the tab
-tour behind Settings' "Welcome Guide" button. The onboarding status
+The welcome flow new accounts go through once (settings.js ONBOARDING_FLOWS.welcome), the tab
+tour behind Settings' "Welcome Guide" button, and the one-time tab tips. The onboarding status
 and the dashboard are answered with fixed data, and every write the flow makes (goal, import,
 reminder choice, onboarding status) is answered by a mocked route, so the test account is never
 changed.
@@ -17,6 +17,7 @@ QUIZ_ID = 990700
 TASK_ID = 990800
 IPHONE_UA = ("Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 "
              "(KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1")
+TAB_TIPS = ["goals", "import", "stats", "settings"]
 
 NEW_ACCOUNT = {
     "has_seen_onboarding": False,
@@ -24,6 +25,7 @@ NEW_ACCOUNT = {
     "has_seen_reminder_setup": False,
     "has_reminder_channel": False,
     "reminder_email": "learner@example.com",
+    "tab_tips": [],
     "suggestions_available": True,
 }
 
@@ -92,7 +94,12 @@ class Backend:
             _json(route, self.status)
             return
         self._note("onboarding_status", route)
-        _json(route, {"status": "ok"})
+        form = self.sent["onboarding_status"][-1]
+        if form.get("enable_tab_tips") == "true" and not self.status["tab_tips"]:
+            self.status["tab_tips"] = list(TAB_TIPS)
+        if form.get("tab_tip_seen") in self.status["tab_tips"]:
+            self.status["tab_tips"].remove(form["tab_tip_seen"])
+        _json(route, {"status": "ok", "tab_tips": self.status["tab_tips"]})
 
     def _dashboard(self):
         return {"goals": self.goals, "archived_goals": [], "videos": [], "archived": [], "quizzes": [],
@@ -245,7 +252,7 @@ def test_full_flow_with_a_link_starts_the_first_quiz(logged_in_page):
     page.locator("#overlay-quiz").wait_for(state="visible", timeout=10000)
     assert page.locator("#overlay-tab-guide").is_hidden()
     assert backend.calls("generate_quiz")
-    assert {"has_seen_onboarding": "true"} in backend.calls("onboarding_status")
+    assert {"has_seen_onboarding": "true", "enable_tab_tips": "true"} in backend.calls("onboarding_status")
     assert not backend.errors
 
 
@@ -273,7 +280,7 @@ def test_a_quiz_still_being_made_lands_on_home_with_the_import_list(logged_in_pa
     assert not backend.calls("generate_quiz")
 
 
-def test_skipping_the_video_lands_on_the_goals_tab(logged_in_page):
+def test_skipping_the_video_lands_on_the_goals_tab_with_its_tip(logged_in_page):
     page = logged_in_page
     backend = _open(page)
     _to_video_step(page)
@@ -285,6 +292,21 @@ def test_skipping_the_video_lands_on_the_goals_tab(logged_in_page):
     assert not backend.calls("import")
 
     page.locator("#tab-goals").wait_for(state="visible", timeout=5000)
+    tip = page.locator('[data-tab-tip="goals"]')
+    tip.wait_for(state="visible", timeout=5000)
+    assert "#1" in tip.inner_text()
+    assert _wait_until(page, lambda: {"tab_tip_seen": "goals"} in backend.calls("onboarding_status"))
+    tip.locator("[data-tab-tip-close]").click()
+    assert tip.is_hidden()
+
+    # Each tab's tip shows on the first visit to that tab, and only then.
+    page.click("#nav-import")
+    page.locator('[data-tab-tip="import"]').wait_for(state="visible", timeout=5000)
+    page.click("#nav-goals")
+    page.wait_for_timeout(300)
+    assert tip.is_hidden()
+    seen = [c["tab_tip_seen"] for c in backend.calls("onboarding_status") if "tab_tip_seen" in c]
+    assert seen == ["goals", "import"]
     assert not backend.errors
 
 
@@ -363,6 +385,9 @@ def test_accounts_that_finished_onboarding_do_not_see_it(logged_in_page):
         page.goto("/app")
     page.wait_for_timeout(1000)
     assert page.locator("#overlay-tab-guide").is_hidden()
+    page.click("#nav-goals")
+    page.wait_for_timeout(300)
+    assert page.locator('[data-tab-tip="goals"]').is_hidden()
     assert not backend.calls("reminder_setup")
     assert not backend.calls("onboarding_status")
 

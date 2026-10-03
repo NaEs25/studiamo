@@ -113,6 +113,7 @@
         <!-- SPA Tab Panels -->
 
         <!-- 1. Dashboard Tab (Home) -->
+        {% from 'partials/_tab_tip.html' import tab_tip %}
         <section id="tab-dashboard" class="tab-content space-y-6">
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
@@ -251,6 +252,8 @@
                 <p class="text-sm text-stone-400">Add YouTube links, copy-paste articles, or upload documents to
                     generate active recall quizzes.</p>
             </div>
+            {% call tab_tip('import') %}Paste a YouTube link, upload a PDF, or paste your notes, then pick the
+                goal it belongs to. Each one becomes a quiz.{% endcall %}
 
             <!-- Form Type Selector -->
             <div class="grid grid-cols-3 gap-2 p-1 bg-stone-100 border border-stone-200 rounded-xl">
@@ -438,6 +441,8 @@
                     </button>
                 </div>
             </div>
+            {% call tab_tip('goals') %}Goals are ranked by priority. Use the arrows to move the one that matters
+                most to <b>#1</b>.{% endcall %}
 
             <!-- Search: filters the rendered goals and materials client-side (goals.js) -->
             <div id="goals-search-bar" class="hidden" role="search">
@@ -516,6 +521,8 @@
                 <h2 class="text-2xl font-bold tracking-tight">Your Progress & Stats</h2>
                 <p class="text-sm text-stone-400">Track streaks, badges, points, and AI token usages.</p>
             </div>
+            {% call tab_tip('stats') %}Every review earns XP and keeps your streak going. Your level, badges, and
+                streak live here.{% endcall %}
 
             <!-- Main Stats Card -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -715,6 +722,8 @@
                 <h2 class="text-2xl font-bold tracking-tight">Application Settings</h2>
                 <p class="text-sm text-stone-600">Manage API keys, profile, notifications, and study options.</p>
             </div>
+            {% call tab_tip('settings') %}Change how and when your reminders arrive under Notifications: push,
+                Telegram, or email.{% endcall %}
 
             <!-- Help & Feature Guides Buttons -->
             <div class="flex items-center justify-center space-x-2">

@@ -1,0 +1,14 @@
+{#- A tab's one-time tip for new accounts, at the top of the tab. Hidden until settings.js
+    maybeShowTabTip shows it on the account's first visit to that tab. The tab name must be one
+    of TAB_TIP_TABS in app/routers/settings.py.
+    Usage: {% call tab_tip('goals') %}Tip text{% endcall %} -#}
+{% macro tab_tip(tab) %}
+<div class="tab-tip hidden flex items-start gap-3" data-tab-tip="{{ tab }}" role="note">
+    <i data-lucide="lightbulb" class="w-5 h-5 text-amber-700 shrink-0 mt-0.5"></i>
+    <p class="flex-1">{{ caller() }}</p>
+    <button type="button" data-tab-tip-close aria-label="Dismiss tip"
+        class="w-11 h-11 -my-2.5 -mr-2 flex items-center justify-center rounded-xl text-amber-700 hover:bg-amber-100 transition shrink-0">
+        <i data-lucide="x" class="w-4 h-4"></i>
+    </button>
+</div>
+{% endmacro %}
