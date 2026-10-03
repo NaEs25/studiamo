@@ -725,6 +725,8 @@ async def confirm_video_import(
             )
 
         return {"status": "processing", "video_id": id, "task_id": task_id}
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"Failed to confirm video import for video #{id}: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to confirm video import: {e}")
