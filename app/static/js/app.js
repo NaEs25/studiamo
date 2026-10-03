@@ -736,6 +736,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
 function navigateToVideoInGoals(videoId) {
     if (!videoId) return;
+    // An active search on the goals tab could hide the card this jumps to.
+    if (typeof clearGoalsSearch === 'function') clearGoalsSearch();
     if (typeof switchTab === 'function') {
         switchTab('goals');
     }

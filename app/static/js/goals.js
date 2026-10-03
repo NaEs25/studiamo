@@ -148,7 +148,7 @@ async function loadGoals() {
                             <div id="recs-${g.id}" class="${isDrawerOpen ? '' : 'hidden'} p-3.5 bg-[#fbf8f2] border border-[#e7dfd3] rounded-xl space-y-3 shadow-sm">
                                 <div class="flex items-start justify-between pb-2 border-b border-[#e7dfd3]/80 gap-2">
                                     <div class="min-w-0 flex-1 space-y-2">
-                                        <button type="button" class="concepts-toggle flex items-center space-x-1.5 text-xs font-bold text-stone-800 hover:text-amber-700 transition" data-goal-id="${g.id}" aria-expanded="false" aria-controls="concepts-${g.id}">
+                                        <button type="button" data-goal-action="toggle-concepts" class="concepts-toggle flex items-center space-x-1.5 text-xs font-bold text-stone-800 hover:text-amber-700 transition" data-goal-id="${g.id}" aria-expanded="false" aria-controls="concepts-${g.id}">
                                             <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-700 shrink-0"></i>
                                             <span>Concepts</span>
                                             <span id="concepts-count-${g.id}" class="text-[10px] bg-amber-500/20 text-amber-700 px-1.5 py-0.5 rounded-full font-bold"></span>
@@ -428,19 +428,22 @@ async function confirmDeleteGoal(deleteMaterials) {
     }
 }
 
+// Opens or closes a collapsible section and turns its chevron to match. With a storageKey the
+// choice is saved for the next render. A section the user opens or closes by hand is theirs
+// again, so the search no longer closes it when it is cleared.
+function setSectionOpen(contentEl, chevronEl, open, storageKey = null) {
+    if (!contentEl) return;
+    contentEl.classList.toggle('hidden', !open);
+    if (chevronEl) chevronEl.classList.toggle('rotate-180', open);
+    if (storageKey) localStorage.setItem(storageKey, open ? 'true' : 'false');
+    delete contentEl.dataset.searchOpened;
+}
+
 function toggleGoalMaterials(goalId) {
     const content = document.getElementById(`goal-materials-content-${goalId}`);
-    const chevron = document.getElementById(`goal-materials-chevron-${goalId}`);
     if (!content) return;
-    if (content.classList.contains('hidden')) {
-        content.classList.remove('hidden');
-        if (chevron) chevron.classList.add('rotate-180');
-        localStorage.setItem(`goal-materials-open-${goalId}`, "true");
-    } else {
-        content.classList.add('hidden');
-        if (chevron) chevron.classList.remove('rotate-180');
-        localStorage.setItem(`goal-materials-open-${goalId}`, "false");
-    }
+    setSectionOpen(content, document.getElementById(`goal-materials-chevron-${goalId}`),
+        content.classList.contains('hidden'), `goal-materials-open-${goalId}`);
 }
 
 window._openGoalRecommendations = window._openGoalRecommendations || {};
@@ -585,17 +588,14 @@ async function reloadGoalRecommendations(goalId, btnEl = null) {
 }
 window.reloadGoalRecommendations = reloadGoalRecommendations;
 
-// Concept chips stay collapsed until the header is clicked. Delegated because the goal cards are
-// re-rendered wholesale by loadGoals.
-document.addEventListener('click', (e) => {
-    const toggle = e.target.closest('.concepts-toggle');
-    if (!toggle) return;
+// Concept chips stay collapsed until the header is clicked (data-goal-action="toggle-concepts").
+function toggleConcepts(toggle) {
     const list = document.getElementById(toggle.getAttribute('aria-controls'));
     if (!list) return;
     const nowHidden = list.classList.toggle('hidden');
     toggle.setAttribute('aria-expanded', String(!nowHidden));
     toggle.querySelector('.concepts-chevron')?.classList.toggle('rotate-180', !nowHidden);
-});
+}
 
 function populateRecommendationDrawer(goalId, data) {
     if (!data) return;
@@ -779,72 +779,26 @@ async function generateGoalQuiz(goalId, btnEl = null) {
 
 function toggleAccordion(cat) {
     const el = document.getElementById(`content-${cat}`);
-    const chevron = document.getElementById(`chevron-${cat}`);
     if (!el) return;
-    if (el.classList.contains('hidden')) {
-        el.classList.remove('hidden');
-        if (chevron) chevron.classList.add('rotate-180');
-        localStorage.setItem(`accordion-open-${cat}`, "true");
-    } else {
-        el.classList.add('hidden');
-        if (chevron) chevron.classList.remove('rotate-180');
-        localStorage.setItem(`accordion-open-${cat}`, "false");
-    }
+    setSectionOpen(el, document.getElementById(`chevron-${cat}`), el.classList.contains('hidden'), `accordion-open-${cat}`);
 }
 
 function toggleArchivedGoals() {
     const wrapper = document.getElementById('archived-goals-wrapper');
-    const chevron = document.getElementById('archived-goals-chevron');
     if (!wrapper) return;
-    if (wrapper.classList.contains('hidden')) {
-        wrapper.classList.remove('hidden');
-        if (chevron) chevron.classList.add('rotate-180');
-    } else {
-        wrapper.classList.add('hidden');
-        if (chevron) chevron.classList.remove('rotate-180');
-    }
+    setSectionOpen(wrapper, document.getElementById('archived-goals-chevron'), wrapper.classList.contains('hidden'));
 }
 
 function setAllAccordions(expand) {
     document.querySelectorAll('[id^="content-"]').forEach(el => {
         const cat = el.id.replace('content-', '');
-        const chevron = document.getElementById(`chevron-${cat}`);
-        if (expand) {
-            el.classList.remove('hidden');
-            if (chevron) chevron.classList.add('rotate-180');
-            localStorage.setItem(`accordion-open-${cat}`, "true");
-        } else {
-            el.classList.add('hidden');
-            if (chevron) chevron.classList.remove('rotate-180');
-            localStorage.setItem(`accordion-open-${cat}`, "false");
-        }
+        setSectionOpen(el, document.getElementById(`chevron-${cat}`), expand, `accordion-open-${cat}`);
     });
-
     document.querySelectorAll('[id^="goal-materials-content-"]').forEach(el => {
         const goalId = el.id.replace('goal-materials-content-', '');
-        const chevron = document.getElementById(`goal-materials-chevron-${goalId}`);
-        if (expand) {
-            el.classList.remove('hidden');
-            if (chevron) chevron.classList.add('rotate-180');
-            localStorage.setItem(`goal-materials-open-${goalId}`, "true");
-        } else {
-            el.classList.add('hidden');
-            if (chevron) chevron.classList.remove('rotate-180');
-            localStorage.setItem(`goal-materials-open-${goalId}`, "false");
-        }
+        setSectionOpen(el, document.getElementById(`goal-materials-chevron-${goalId}`), expand, `goal-materials-open-${goalId}`);
     });
-
-    const archivedWrapper = document.getElementById('archived-goals-wrapper');
-    const archivedChevron = document.getElementById('archived-goals-chevron');
-    if (archivedWrapper) {
-        if (expand) {
-            archivedWrapper.classList.remove('hidden');
-            if (archivedChevron) archivedChevron.classList.add('rotate-180');
-        } else {
-            archivedWrapper.classList.add('hidden');
-            if (archivedChevron) archivedChevron.classList.remove('rotate-180');
-        }
-    }
+    setSectionOpen(document.getElementById('archived-goals-wrapper'), document.getElementById('archived-goals-chevron'), expand);
 }
 
 function closeGoalMenu() {
@@ -886,15 +840,17 @@ function toggleGoalMenu(event, id, anchorEl = null) {
     });
 }
 
-// One delegated listener for every button the goals tab renders (goal cards, the study queue
-// and unassociated accordions, the archive, recommendation cards), keyed by data-goal-action.
-// Material cards from renderVideoCard (videos.js) handle their own clicks.
+// One delegated listener for the buttons goals.js renders into the goals tab (goal cards, the
+// study queue and unassociated accordions, archived goals, recommendation cards and concepts),
+// keyed by data-goal-action. Not covered: material cards from renderVideoCard (videos.js), and
+// the static header and archive buttons in index.html, which still use inline handlers.
 function initGoalsActions() {
     const tab = document.getElementById('tab-goals');
     if (!tab) return;
     tab.addEventListener('click', (e) => {
         const el = e.target.closest('[data-goal-action]');
-        if (!el || !tab.contains(el)) return;
+        // Some browsers deliver clicks on the icon inside a disabled button.
+        if (!el || !tab.contains(el) || el.disabled) return;
         const goalId = Number(el.dataset.goalId);
         switch (el.dataset.goalAction) {
             case 'toggle-accordion': toggleAccordion(el.dataset.cat); break;
@@ -905,6 +861,7 @@ function initGoalsActions() {
             case 'load-recs': loadRecommendations(goalId, el); break;
             case 'reload-recs': reloadGoalRecommendations(goalId, el); break;
             case 'close-recs': closeRecommendationsDrawer(goalId); break;
+            case 'toggle-concepts': toggleConcepts(el); break;
             case 'archive': archiveGoal(goalId); break;
             case 'delete': deleteGoal(goalId); break;
             case 'preview-rec': previewRecommendedVideo(el.dataset.url, goalId, el.dataset.title); break;
@@ -922,7 +879,7 @@ function initGoalsActions() {
 // accordion state in localStorage.
 
 function normalizeSearchText(text) {
-    return String(text || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    return String(text || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 }
 
 function getGoalsSearchTerms() {
@@ -940,21 +897,26 @@ function setSearchMiss(el, miss) {
 }
 
 // Opens a collapsed section for the search and marks it, so clearing the search can close it.
-function openSectionForSearch(contentEl, chevronEl) {
+// The mark remembers the chevron and the section's saved-state key for that.
+function openSectionForSearch(contentEl, chevronEl, storageKey = '') {
     if (!contentEl || !contentEl.classList.contains('hidden')) return;
-    contentEl.classList.remove('hidden');
-    contentEl.dataset.searchOpened = '1';
-    if (chevronEl) chevronEl.classList.add('rotate-180');
+    setSectionOpen(contentEl, chevronEl, true);
+    contentEl.dataset.searchOpened = chevronEl ? chevronEl.id : '';
+    contentEl.dataset.searchStorageKey = storageKey;
 }
 
+// Closes what the search opened, except sections whose saved state says open by now (for
+// example after a jump to a material, which saves the section as open).
 function restoreSearchOpenedSections() {
     document.querySelectorAll('#tab-goals [data-search-opened]').forEach(el => {
-        delete el.dataset.searchOpened;
-        el.classList.add('hidden');
-        const chevron = el.id === 'archived-goals-wrapper'
-            ? document.getElementById('archived-goals-chevron')
-            : document.getElementById(el.id.replace(/^content-/, 'chevron-').replace(/^goal-materials-content-/, 'goal-materials-chevron-'));
-        if (chevron) chevron.classList.remove('rotate-180');
+        const key = el.dataset.searchStorageKey;
+        const chevron = el.dataset.searchOpened ? document.getElementById(el.dataset.searchOpened) : null;
+        delete el.dataset.searchStorageKey;
+        if (key && localStorage.getItem(key) === 'true') {
+            delete el.dataset.searchOpened;
+            return;
+        }
+        setSectionOpen(el, chevron, false);
     });
 }
 
@@ -1003,7 +965,7 @@ function applyGoalsSearch() {
         const matchedMaterials = filterMaterialCards(materials, terms);
         materialCount += matchedMaterials;
         if (matchedMaterials > 0) {
-            openSectionForSearch(materials, document.getElementById(`goal-materials-chevron-${goalId}`));
+            openSectionForSearch(materials, document.getElementById(`goal-materials-chevron-${goalId}`), `goal-materials-open-${goalId}`);
         }
         if (goalMatches) {
             goalCount++;
@@ -1023,7 +985,7 @@ function applyGoalsSearch() {
         const matched = filterMaterialCards(content, terms);
         materialCount += matched;
         setSearchMiss(container, matched === 0);
-        if (matched > 0) openSectionForSearch(content, document.getElementById(`chevron-${cat}`));
+        if (matched > 0) openSectionForSearch(content, document.getElementById(`chevron-${cat}`), `accordion-open-${cat}`);
     });
 
     // Archived goals and materials
@@ -1074,6 +1036,12 @@ function setGoalsSearchOpen(open) {
     }
 }
 
+// Called before jumping to a material card, which an active search could be hiding.
+function clearGoalsSearch() {
+    const input = document.getElementById('goals-search-input');
+    if (input && input.value) setGoalsSearchOpen(false);
+}
+
 function initGoalsSearch() {
     const toggle = document.getElementById('btn-goals-search-toggle');
     const input = document.getElementById('goals-search-input');
@@ -1084,10 +1052,17 @@ function initGoalsSearch() {
         const bar = document.getElementById('goals-search-bar');
         setGoalsSearchOpen(bar.classList.contains('hidden'));
     });
-    input.addEventListener('input', applyGoalsSearch);
+    // Short debounce: every run re-filters the whole tab.
+    let searchTimer = null;
+    input.addEventListener('input', () => {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(applyGoalsSearch, 100);
+    });
     input.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             e.preventDefault();
+            // Only the search closes, not an overlay that core.js's Escape handler would close.
+            e.stopPropagation();
             setGoalsSearchOpen(false);
             toggle.focus();
         }
@@ -1104,6 +1079,7 @@ function initGoalsSearch() {
         if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return;
         const tab = document.getElementById('tab-goals');
         if (!tab || tab.classList.contains('hidden')) return;
+        if (typeof _openOverlays !== 'undefined' && _openOverlays.size > 0) return;
         const target = e.target;
         if (target && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))) return;
         e.preventDefault();
@@ -1111,23 +1087,13 @@ function initGoalsSearch() {
     });
 }
 
-// Window bindings for inline HTML attribute calls
+// Functions other scripts or index.html's inline handlers call. Top-level function declarations
+// are global in these classic scripts anyway; listing them keeps the outside callers findable.
 window.loadGoals = loadGoals;
 window.initGoalsModal = initGoalsModal;
 window.openCreateGoalModal = openCreateGoalModal;
-window.closeCreateGoalModal = closeCreateGoalModal;
-window.openEditGoalModal = openEditGoalModal;
-window.reorderGoal = reorderGoal;
-window.archiveGoal = archiveGoal;
-window.deleteGoal = deleteGoal;
-window.toggleGoalMaterials = toggleGoalMaterials;
-window.loadRecommendations = loadRecommendations;
-window.generateGoalQuiz = generateGoalQuiz;
-window.toggleAccordion = toggleAccordion;
 window.toggleArchivedGoals = toggleArchivedGoals;
 window.setAllAccordions = setAllAccordions;
-window.toggleGoalMenu = toggleGoalMenu;
-window.closeGoalMenu = closeGoalMenu;
 window.closeDeleteGoalModal = closeDeleteGoalModal;
 window.confirmDeleteGoal = confirmDeleteGoal;
 
