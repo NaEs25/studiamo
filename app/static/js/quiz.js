@@ -519,10 +519,10 @@ async function gradeQuestion(grade) {
         // "session complete" toast below would replace this one immediately.
         if (res.leveled_up) {
             await showConfirm({
-                title: 'Level Up!',
-                message: `Congratulations! You have reached Level ${res.level}.`,
+                title: 'New crystal!',
+                message: `That knowledge is locked in, Chompy can't eat it. You now have ${res.level} crystals.`,
                 confirmText: 'Continue',
-                icon: 'trophy',
+                icon: 'gem',
                 hideCancel: true,
             });
         }

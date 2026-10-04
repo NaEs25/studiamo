@@ -268,7 +268,7 @@ option {
 }
 
 /* ── Header Stats (streak, level) ───────────────────────── */
-/* Bare icon plus number, no pill around it. */
+/* Bare icon plus number, no pill around it. Lucide icons and the crystal image share one size. */
 .header-stat {
     display: flex;
     align-items: center;
@@ -280,7 +280,8 @@ option {
     color: var(--color-text);
 }
 .header-stat svg,
-.header-stat i {
+.header-stat i,
+.header-stat img {
     width: 1.625rem;
     height: 1.625rem;
 }

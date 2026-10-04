@@ -57,7 +57,8 @@
     <header id="app-header"
         class="border-b border-stone-200 bg-[#fdfbf7] px-3 sm:px-4 py-2.5 sm:py-3 flex items-center justify-between shadow-sm">
         <div class="flex items-center space-x-3">
-            <img src="/static/images/logo-icon.png" class="w-9 h-9 rounded-xl shadow-md shadow-amber-500/20"
+            <!-- 44px, the same height as the Bugs button, which already sets the header's height. -->
+            <img src="/static/images/logo-icon.png" class="w-11 h-11 rounded-xl shadow-md shadow-amber-500/20"
                 alt="Studiamo Logo" />
             <span
                 class="inline-block sm:hidden beta-badge select-none">Beta</span>
@@ -73,7 +74,7 @@
             </div>
         </div>
 
-        <!-- Right side: Streak, Level, Bugs -->
+        <!-- Right side: Streak, Crystals, Bugs -->
         <div class="flex items-center space-x-2">
             <!-- Tester countdown. Rendered by renderTesterPill() in billing.js and hidden
                  for everyone else, including testers whose grant has no end date: a
@@ -91,10 +92,10 @@
                 <span id="header-streak-timer"
                     class="hidden text-[10px] text-red-700 font-mono font-bold bg-red-100 px-1.5 py-0.5 rounded border border-red-300 ml-1"></span>
             </div>
-            <!-- Level, shown as a crystal. Lucide's gem stands in until the crystal art exists. -->
-            <div id="top-level-badge" class="header-stat" title="Level">
-                <i data-lucide="gem" class="text-amber-500 fill-amber-300"></i>
-                <span class="sr-only">Level</span>
+            <!-- Crystals: the user-facing name for level (stored as level, earned through XP). -->
+            <div id="top-level-badge" class="header-stat" title="Crystals">
+                <img src="/static/images/crystal.png" alt="">
+                <span class="sr-only">Crystals</span>
                 <span id="header-level-val">1</span>
             </div>
             <!-- Bugs Pill -->
@@ -517,18 +518,18 @@
 
             <!-- Main Stats Card -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <!-- XP Level Card -->
+                <!-- Crystals Card (level in the data) -->
                 <div class="bg-[#fbf8f2] p-5 rounded-2xl border border-[#e7dfd3] space-y-3 shadow-sm">
-                    <span class="text-xs font-bold text-amber-700 uppercase tracking-wider">Mastery Level</span>
+                    <span class="text-xs font-bold text-amber-700 uppercase tracking-wider">Knowledge Crystals</span>
                     <div class="flex items-center space-x-2">
-                        <i data-lucide="gem" class="w-8 h-8 text-amber-500 fill-amber-300 shrink-0"></i>
+                        <img src="/static/images/crystal.png" alt="" class="w-9 h-9 shrink-0">
                         <span id="stats-level-val" class="text-4xl font-extrabold text-stone-900">1</span>
-                        <span class="text-sm text-stone-600 font-medium self-end pb-1">Level</span>
+                        <span id="stats-level-label" class="text-sm text-stone-600 font-medium self-end pb-1">Crystal</span>
                     </div>
                     <div>
                         <div class="flex justify-between text-xs text-stone-600 font-medium mb-1">
                             <span id="stats-xp-val">0 XP</span>
-                            <span id="stats-xp-next-val">50 XP for Next Level</span>
+                            <span id="stats-xp-next-val">50 XP to your next crystal</span>
                         </div>
                         <div class="w-full bg-[#f3ebd9] h-2 rounded-full overflow-hidden">
                             <div id="stats-xp-progress"
@@ -2777,7 +2778,7 @@
                     </div>
                     <div>
                         <h4 class="onboarding-item-title">Stats</h4>
-                        <p class="onboarding-item-text">Levels, XP, streaks &amp; leaderboards.</p>
+                        <p class="onboarding-item-text">Crystals, XP, streaks &amp; leaderboards.</p>
                     </div>
                 </div>
                 <div class="onboarding-step hidden flex items-center gap-3 py-1" data-step="tour-settings" data-eyebrow="App tour">

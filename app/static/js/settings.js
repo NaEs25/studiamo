@@ -74,7 +74,9 @@ async function loadStats() {
         
         if (lvlEl) lvlEl.textContent = level;
         if (xpEl) xpEl.textContent = `${xp} Total XP`;
-        if (xpNextEl) xpNextEl.textContent = `${Math.max(0, nextLevelXP - xp)} XP for Level ${level + 1}`;
+        if (xpNextEl) xpNextEl.textContent = `${Math.max(0, nextLevelXP - xp)} XP to your next crystal`;
+        const lvlLabelEl = document.getElementById('stats-level-label');
+        if (lvlLabelEl) lvlLabelEl.textContent = level === 1 ? 'Crystal' : 'Crystals';
         if (xpBar) xpBar.style.width = `${progressPct}%`;
         if (streakEl) streakEl.textContent = currentUserStats.streak || 0;
         
@@ -144,7 +146,7 @@ async function loadStats() {
                                     <p class="text-[10px] text-stone-500 flex items-center space-x-1 truncate">
                                         <span class="flex items-center space-x-1"><i data-lucide="flame" class="w-3 h-3 text-amber-500 shrink-0"></i><span>${entry.streak} day streak</span></span>
                                         <span>·</span>
-                                        <span class="flex items-center space-x-0.5 text-amber-800 font-medium" title="Level"><i data-lucide="gem" class="w-3 h-3 text-amber-500 fill-amber-300 shrink-0"></i><span class="sr-only">Level</span><span>${entry.level}</span></span>
+                                        <span class="flex items-center space-x-0.5 text-amber-800 font-medium" title="Crystals"><img src="/static/images/crystal.png" alt="" class="w-3.5 h-3.5 shrink-0"><span class="sr-only">Crystals</span><span>${entry.level}</span></span>
                                     </p>
                                 </div>
                             </div>
