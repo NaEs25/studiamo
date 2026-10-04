@@ -2593,8 +2593,8 @@
     <div id="overlay-tab-guide"
         class="app-overlay hidden fixed inset-0 bg-stone-950/85 backdrop-blur z-50 flex items-center justify-center p-4 overflow-y-auto">
         <div role="dialog" aria-modal="true" aria-labelledby="onboarding-eyebrow"
-            class="max-w-md w-full bg-white border border-amber-500/30 rounded-2xl p-5 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto">
-            <div class="flex items-center justify-between min-h-[24px]">
+            class="onboarding-card max-w-md w-full bg-white border border-amber-500/30 rounded-2xl p-5 shadow-2xl">
+            <div class="flex items-center justify-between min-h-[24px] shrink-0">
                 <span id="onboarding-eyebrow" class="onboarding-eyebrow">Welcome</span>
                 <button type="button" id="onboarding-close-btn" aria-label="Close"
                     class="hidden flex w-11 h-11 -my-2.5 -mr-2.5 items-center justify-center rounded-xl text-stone-400 hover:text-stone-900 hover:bg-stone-100 transition">
@@ -2602,7 +2602,7 @@
                 </button>
             </div>
 
-            <div id="onboarding-steps">
+            <div id="onboarding-steps" class="onboarding-scroll">
                 <!-- Welcome 1: the emotional hook. -->
                 <div class="onboarding-step hidden space-y-4" data-step="chompy" data-eyebrow="Welcome">
                     <img src="/static/images/chompy/chompy-hungry.png" alt="Chompy, a small red brain monster"
@@ -2801,9 +2801,10 @@
                 </div>
             </div>
 
-            <!-- Wraps on the narrowest phones: the dots go above the buttons instead of pushing them
-                 past the card's edge. -->
-            <div class="flex flex-wrap items-center justify-between gap-x-2 gap-y-3 pt-1">
+            <!-- Stays at the bottom of the card while the step above it scrolls on short screens. Wraps
+                 on the narrowest phones: the dots go above the buttons instead of pushing them past
+                 the card's edge. -->
+            <div class="flex flex-wrap items-center justify-between gap-x-2 gap-y-3 pt-1 shrink-0">
                 <div id="onboarding-dots" class="flex items-center gap-1 shrink-0"></div>
                 <div class="flex items-center gap-1 ml-auto">
                     <button type="button" id="onboarding-back-btn" class="hidden onboarding-text-btn">Back</button>

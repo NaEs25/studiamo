@@ -838,6 +838,22 @@ html[data-standalone="true"] .app-overlay {
     color: #b91c1c; /* red-700 */
 }
 
+/* The card never outgrows the screen: the step scrolls inside it and the eyebrow and the
+   Back/Next row stay in view. dvh, not vh, so iOS Safari's address bar is not counted. */
+.onboarding-card {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    max-height: calc(100dvh - 2rem);
+    overflow: hidden;
+}
+
+.onboarding-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+}
+
 .onboarding-info-box {
     font-size: 0.875rem;
     line-height: 1.5;
