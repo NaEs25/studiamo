@@ -1,5 +1,7 @@
-<!-- Overlay: iPhone/iPad push needs a Home Screen install. Opened by settings.js when the Browser
-     Push switch is turned on outside an installed app. Two variants, picked by settings.js:
+<!-- Overlay: iPhone/iPad Home Screen install walkthrough. settings.js opens it from the Install as
+     App button (data-purpose="install") and when the Browser Push switch is turned on outside an
+     installed app (data-purpose="push"), since iOS only delivers push to a Home Screen install.
+     Two variants, picked by settings.js:
      - Safari: a phone mockup loops through the install steps (modeled on iOS 26+ Safari, where
        Share sits behind the address bar's menu) while the caption under it shows the matching step
        (.ios-anim-* in style.css). Captions replace a full list so the dialog fits small iPhones.
@@ -7,11 +9,12 @@
 <div id="overlay-ios-push-install"
     class="app-overlay fixed inset-0 bg-stone-950/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 overflow-y-auto"
     role="dialog" aria-modal="true" aria-labelledby="ios-push-install-title">
-    <div class="bg-white border border-stone-200 rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-3 max-h-[95dvh] overflow-y-auto" data-variant="safari">
+    <div class="bg-white border border-stone-200 rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-3 max-h-[95dvh] overflow-y-auto" data-variant="safari" data-purpose="push">
         <div class="flex items-start justify-between gap-3">
             <h3 id="ios-push-install-title" class="font-extrabold text-stone-900 text-base flex items-center space-x-2">
                 <i data-lucide="smartphone" class="w-4 h-4 text-amber-600 shrink-0"></i>
-                <span class="ios-push-safari-only">Add to Home Screen first</span>
+                <span class="ios-push-safari-only ios-push-for-push">Add to Home Screen first</span>
+                <span class="ios-push-safari-only ios-push-for-install">Add to Home Screen</span>
                 <span class="ios-push-other-only">Open Studiamo in Safari</span>
             </h3>
             <button type="button" id="btn-close-ios-push-install"
@@ -20,16 +23,20 @@
             </button>
         </div>
 
-        <p class="ios-push-safari-only text-xs text-stone-600 leading-snug">On iPhone, push notifications only
-            work in the Home Screen app. Here's how to add it:</p>
+        <p class="ios-push-safari-only ios-push-for-push text-xs text-stone-600 leading-snug">On iPhone, push
+            notifications only work in the Home Screen app. Here's how to add it:</p>
+        <p class="ios-push-safari-only ios-push-for-install text-xs text-stone-600 leading-snug">Open Studiamo
+            like an app, full screen and with notifications. Here's how:</p>
 
         <div class="ios-push-other-only space-y-3">
-            <p class="text-xs text-stone-600 leading-snug">On iPhone, push notifications only work in the Home
-                Screen app, and adding it is only supported from <strong>Safari</strong>.</p>
+            <p class="text-xs text-stone-600 leading-snug"><span class="ios-push-for-push">On iPhone, push
+                notifications only work in the Home Screen app, and adding</span><span
+                class="ios-push-for-install">On iPhone, adding Studiamo to the Home Screen</span> is only
+                supported from <strong>Safari</strong>.</p>
             <ol class="list-decimal list-inside space-y-1 text-xs text-stone-800">
                 <li>Copy the link below and open it in <strong>Safari</strong>.</li>
                 <li>Add Studiamo to your Home Screen from there.</li>
-                <li>Open the new icon and turn on <strong>Browser Push</strong>.</li>
+                <li class="ios-push-for-push">Open the new icon and turn on <strong>Browser Push</strong>.</li>
             </ol>
             <button type="button" id="btn-ios-push-copy-link"
                 class="w-full py-2.5 flex items-center justify-center space-x-1.5 text-xs font-bold text-amber-900 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 rounded-xl transition">
@@ -146,8 +153,8 @@
                 <strong>Add to Home Screen</strong>.</p>
             <p><span class="ios-anim-step-no">3/4</span> Leave <strong>Open as Web App</strong> on and tap
                 <strong>Add</strong>.</p>
-            <p><span class="ios-anim-step-no">4/4</span> Open Studiamo from the new icon and turn on
-                <strong>Browser Push</strong>.</p>
+            <p><span class="ios-anim-step-no">4/4</span> Open Studiamo from the new icon<span
+                    class="ios-push-for-push"> and turn on <strong>Browser Push</strong></span>.</p>
         </div>
 
         <button type="button" id="btn-ios-push-install-done"

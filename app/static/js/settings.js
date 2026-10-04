@@ -1996,9 +1996,13 @@ function _isIOSNonSafari() {
     return !/Safari\//.test(ua);
 }
 
-function openIOSPushInstallModal() {
+// purpose: 'push' when opened from the Browser Push switch, 'install' from the Install button.
+function openIOSPushInstallModal(purpose = 'push') {
     const card = document.querySelector('#overlay-ios-push-install [data-variant]');
-    if (card) card.dataset.variant = _isIOSNonSafari() ? 'other' : 'safari';
+    if (card) {
+        card.dataset.variant = _isIOSNonSafari() ? 'other' : 'safari';
+        card.dataset.purpose = purpose;
+    }
     openOverlay('overlay-ios-push-install', closeIOSPushInstallModal);
     if (typeof renderIcons === 'function') renderIcons();
     document.getElementById('btn-ios-push-install-done')?.focus();
@@ -2017,7 +2021,8 @@ async function copyIOSPushInstallLink() {
 function closeIOSPushInstallModal() {
     document.getElementById('overlay-ios-push-install')?.classList.add('hidden');
     closeOverlay('overlay-ios-push-install');
-    document.getElementById('settings-notify-push')?.focus();
+    const purpose = document.querySelector('#overlay-ios-push-install [data-purpose]')?.dataset.purpose;
+    document.getElementById(purpose === 'install' ? 'pwa-install-btn' : 'settings-notify-push')?.focus();
 }
 
 function toggleEmailNotifyPanel(enabled) {
@@ -2220,10 +2225,9 @@ function triggerPWAInstall() {
             deferredPWAInstallPrompt = null;
         });
     } else {
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-        const iosBox = document.getElementById('pwa-ios-instructions');
-        if (iosBox) iosBox.classList.toggle('hidden');
-        if (!isIOS) {
+        if (_isIOSDevice()) {
+            openIOSPushInstallModal('install');
+        } else {
             showToast('To install Studiamo as an app, use "Add to Home Screen" or "Install App" in your browser menu.', 'info', 7000);
         }
     }

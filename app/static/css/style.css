@@ -1705,8 +1705,9 @@ button:active:not(:disabled) {
 @keyframes iosAnimPop { 0%, 76% { transform: scale(0); } 80% { transform: scale(1.15); } 82%, 100% { transform: scale(1); } }
 @keyframes iosAnimBadge { 0%, 86% { transform: scale(0); } 89%, 100% { transform: scale(1); } }
 
-/* The dialog's two variants (data-variant on its card, set by settings.js). */
+/* The dialog's variants and purposes (data-variant, data-purpose on its card, set by settings.js). */
 [data-variant="safari"] .ios-push-other-only, [data-variant="other"] .ios-push-safari-only { display: none; }
+[data-purpose="push"] .ios-push-for-install, [data-purpose="install"] .ios-push-for-push { display: none; }
 /* Captions share one grid cell, so the box is as tall as the longest and only the current one shows. */
 .ios-anim-captions { display: grid; }
 .ios-anim-captions p {
