@@ -11,6 +11,7 @@ from app import config, database, storage, ai, youtube, local_days
 from app.import_manager import ImportQueueManager
 from app.ai import UsageLimitExceeded
 from app.dependencies import (
+    assert_goal_owned,
     get_question_counts,
     get_srs_multipliers,
     get_srs_intervals,
@@ -140,6 +141,7 @@ async def add_content(
     conn = database.get_db_connection(username)
     try:
         cursor = conn.cursor()
+        assert_goal_owned(cursor, conn.user_uuid, learning_goal_id)
 
         if content_hash:
             # A failed import keeps its row, so it is excluded: uploading the same file again is
@@ -455,6 +457,7 @@ def assign_video_goal(
     try:
         user_uuid = conn.user_uuid
         cursor = conn.cursor()
+        assert_goal_owned(cursor, user_uuid, learning_goal_id)
         cursor.execute("UPDATE videos SET learning_goal_id = %s WHERE id = %s AND user_uuid = %s;", (learning_goal_id, id, user_uuid))
         if cursor.rowcount == 0:
             conn.close()
@@ -558,6 +561,7 @@ def edit_video(
         new_rating = importance_rating if importance_rating is not None else existing["importance_rating"]
     
         if learning_goal_id is not None:
+            assert_goal_owned(cursor, user_uuid, learning_goal_id)
             new_goal_id = None if learning_goal_id == 0 else learning_goal_id
         else:
             new_goal_id = existing["learning_goal_id"]
@@ -636,6 +640,7 @@ def create_preview_video(
     user_uuid = conn.user_uuid
     try:
         cursor = conn.cursor()
+        assert_goal_owned(cursor, user_uuid, goal_id)
         target_goal = None if not goal_id or goal_id == 0 else goal_id
 
         # Check if already exists for this user
@@ -673,6 +678,8 @@ def create_preview_video(
             "is_temporary": 1,
             "expires_at": expires_at
         }
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"Failed to create preview video for {yt_id}: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to create preview video: {e}")

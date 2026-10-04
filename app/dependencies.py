@@ -276,6 +276,18 @@ def get_active_username(request: Request) -> str:
     return username
 
 
+def assert_goal_owned(cursor, user_uuid: str, goal_id: Optional[int]) -> None:
+    """Raises 404 unless goal_id is one of this account's own goals. Goal ids are one global
+    sequence, so a goal id arriving as form data proves nothing about who owns it. None and 0
+    both mean "no goal" and pass. Answering 404 for a goal that exists but belongs to someone
+    else keeps the two cases indistinguishable."""
+    if not goal_id:
+        return
+    cursor.execute("SELECT 1 FROM goals WHERE id = %s AND user_uuid = %s;", (goal_id, user_uuid))
+    if cursor.fetchone() is None:
+        raise HTTPException(status_code=404, detail="Goal not found")
+
+
 def require_app_access(request: Request) -> str:
     """Dependency guard: the paid-access gate for cloud mode.
 

@@ -151,7 +151,7 @@ def get_dashboard_data(username: str = Depends(require_app_access)):
                           AND jsonb_array_length(COALESCE(q.concept_pool, '[]'::jsonb)) > 0
                    ) AS has_concept_pool
             FROM videos v
-            LEFT JOIN goals g ON v.learning_goal_id = g.id
+            LEFT JOIN goals g ON v.learning_goal_id = g.id AND g.user_uuid = v.user_uuid
             WHERE v.user_uuid = %s AND v.is_archived = 0
             ORDER BY v.id DESC;
         """, (user_uuid,))
@@ -175,7 +175,7 @@ def get_dashboard_data(username: str = Depends(require_app_access)):
                           AND jsonb_array_length(COALESCE(q.concept_pool, '[]'::jsonb)) > 0
                    ) AS has_concept_pool
             FROM videos v
-            LEFT JOIN goals g ON v.learning_goal_id = g.id
+            LEFT JOIN goals g ON v.learning_goal_id = g.id AND g.user_uuid = v.user_uuid
             WHERE v.user_uuid = %s AND v.is_archived = 1;
         """, (user_uuid,))
         archived = [dict(r) for r in cursor.fetchall()]
@@ -186,8 +186,8 @@ def get_dashboard_data(username: str = Depends(require_app_access)):
                    v.title AS video_title, v.importance_rating, COALESCE(g.title, g2.title) AS goal_title
             FROM quizzes q
             LEFT JOIN videos v ON q.video_id = v.id
-            LEFT JOIN goals g ON q.goal_id = g.id
-            LEFT JOIN goals g2 ON v.learning_goal_id = g2.id
+            LEFT JOIN goals g ON q.goal_id = g.id AND g.user_uuid = q.user_uuid
+            LEFT JOIN goals g2 ON v.learning_goal_id = g2.id AND g2.user_uuid = q.user_uuid
             WHERE q.user_uuid = %s;
         """, (user_uuid,))
         quizzes = [dict(r) for r in cursor.fetchall()]
@@ -337,7 +337,7 @@ def get_stats_history(username: str = Depends(require_app_access), include_attem
                    v.importance_rating
             FROM quiz_attempts a
             LEFT JOIN videos v ON a.video_id = v.id
-            LEFT JOIN goals g ON a.goal_id = g.id
+            LEFT JOIN goals g ON a.goal_id = g.id AND g.user_uuid = a.user_uuid
             LEFT JOIN quizzes q ON a.quiz_id = q.id
             WHERE a.user_uuid = %s
             ORDER BY a.id DESC

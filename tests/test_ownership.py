@@ -171,3 +171,53 @@ def test_lists_show_only_the_accounts_own_rows(as_tester, others):
 
     goals = as_tester.get("/api/goals").json() + as_tester.get("/api/goals?include_archived=true").json()
     assert others["goal"] not in {g["id"] for g in goals}
+
+
+@pytest.fixture
+def testers_video(test_username):
+    """A material that belongs to the test account, with no goal."""
+    conn = database.get_db_connection(test_username)
+    cursor = conn.cursor()
+    cursor.execute(
+        """INSERT INTO videos (user_uuid, title, category, importance_rating, status)
+           VALUES (%s, 'Own material', 'Test', 3, 'ready') RETURNING id;""",
+        (conn.user_uuid,),
+    )
+    video_id = cursor.fetchone()["id"]
+    try:
+        yield video_id, cursor, conn.user_uuid
+    finally:
+        cursor.execute("DELETE FROM videos WHERE user_uuid = %s AND title IN ('Own material', 'Preview material');",
+                       (conn.user_uuid,))
+        conn.close()
+
+
+def test_material_cannot_be_linked_to_another_accounts_goal(as_tester, others, testers_video):
+    video_id, cursor, tester_uuid = testers_video
+    before = others["snapshot"]()
+    tester_before = others["tester_counts"]()
+
+    attempts = [
+        ("/api/videos", {"url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ", "learning_goal_id": str(others["goal"])}),
+        (f"/api/videos/{video_id}/goal", {"learning_goal_id": str(others["goal"])}),
+        (f"/api/videos/{video_id}/edit", {"learning_goal_id": str(others["goal"])}),
+        ("/api/videos/preview", {"url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ", "title": "Preview material",
+                                 "goal_id": str(others["goal"])}),
+    ]
+    for path, data in attempts:
+        response = as_tester.post(path, data=data)
+        assert response.status_code == 404, f"POST {path} -> {response.status_code}: {response.text[:200]}"
+
+    cursor.execute("SELECT learning_goal_id FROM videos WHERE id = %s;", (video_id,))
+    assert cursor.fetchone()["learning_goal_id"] is None
+    assert others["snapshot"]() == before
+    assert others["tester_counts"]() == tester_before
+
+
+def test_a_stray_link_to_another_accounts_goal_shows_no_title(as_tester, others, testers_video):
+    video_id, cursor, tester_uuid = testers_video
+    cursor.execute("UPDATE videos SET learning_goal_id = %s WHERE id = %s;", (others["goal"], video_id))
+
+    dashboard = as_tester.get("/api/dashboard").json()
+    mine = next(v for v in dashboard["videos"] if v["id"] == video_id)
+    assert mine["goal_title"] is None

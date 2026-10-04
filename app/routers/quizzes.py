@@ -37,7 +37,7 @@ def get_quiz(id: int, username: str = Depends(require_app_access)):
                    (SELECT p.timezone FROM user_profile p WHERE p.user_uuid::text = q.user_uuid::text LIMIT 1) AS user_timezone
             FROM quizzes q
             LEFT JOIN videos v ON q.video_id = v.id
-            LEFT JOIN goals g ON g.id = COALESCE(q.goal_id, v.learning_goal_id)
+            LEFT JOIN goals g ON g.id = COALESCE(q.goal_id, v.learning_goal_id) AND g.user_uuid = q.user_uuid
             WHERE q.id = %s AND q.user_uuid = %s;
         """, (id, user_uuid))
         db_row = cursor.fetchone()
