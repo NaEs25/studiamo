@@ -893,28 +893,34 @@
                     </div>
 
                     <div id="notifications-panel-content" class="space-y-4 transition-all">
-                        <!-- Notification Types (categories, apply across all enabled channels) -->
-                        <div class="bg-[#fbf8f2] p-4 rounded-xl border border-[#e7dfd3] space-y-2">
-                            <label class="block text-sm font-semibold text-amber-900 flex items-center space-x-2 mb-1">
-                                <i data-lucide="list-checks" class="w-4 h-4 text-amber-600"></i>
-                                <span>Notification Types</span>
-                            </label>
-                            <label class="flex items-center justify-between py-1 cursor-pointer">
-                                <span class="text-sm text-stone-700">Daily reminder (quizzes due today)</span>
-                                <input type="checkbox" id="settings-notify-cat-quizzes" checked
-                                    class="w-4 h-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500">
-                            </label>
-                            <label class="flex items-center justify-between py-1 cursor-pointer">
-                                <span class="text-sm text-stone-700">Evening warning (streak or Chompy at stake)</span>
-                                <input type="checkbox" id="settings-notify-cat-streak" checked
-                                    class="w-4 h-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500">
-                            </label>
-                            <label class="flex items-center justify-between py-1 cursor-pointer">
-                                <span class="text-sm text-stone-700">Welcome back (after a few days away)</span>
-                                <input type="checkbox" id="settings-notify-cat-inactivity" checked
-                                    class="w-4 h-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500">
-                            </label>
-                        </div>
+                        <!-- Notification Types (categories, apply across all enabled channels). Collapsed
+                             by default; the checkboxes stay in the form either way. -->
+                        <details class="group bg-[#fbf8f2] p-4 rounded-xl border border-[#e7dfd3]">
+                            <summary class="flex items-center justify-between cursor-pointer select-none">
+                                <span class="text-sm font-semibold text-amber-900 flex items-center space-x-2">
+                                    <i data-lucide="list-checks" class="w-4 h-4 text-amber-600"></i>
+                                    <span>Notification Types</span>
+                                </span>
+                                <i data-lucide="chevron-down" class="w-4 h-4 text-stone-500 transition-transform duration-200 group-open:rotate-180"></i>
+                            </summary>
+                            <div class="space-y-2 pt-3">
+                                <label class="flex items-center justify-between py-1 cursor-pointer">
+                                    <span class="text-sm text-stone-700">Daily reminder (quizzes due today)</span>
+                                    <input type="checkbox" id="settings-notify-cat-quizzes" checked
+                                        class="w-4 h-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500">
+                                </label>
+                                <label class="flex items-center justify-between py-1 cursor-pointer">
+                                    <span class="text-sm text-stone-700">Evening warning (streak or Chompy at stake)</span>
+                                    <input type="checkbox" id="settings-notify-cat-streak" checked
+                                        class="w-4 h-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500">
+                                </label>
+                                <label class="flex items-center justify-between py-1 cursor-pointer">
+                                    <span class="text-sm text-stone-700">Welcome back (after a few days away)</span>
+                                    <input type="checkbox" id="settings-notify-cat-inactivity" checked
+                                        class="w-4 h-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500">
+                                </label>
+                            </div>
+                        </details>
 
                         <!-- Channel: Telegram -->
                         <div class="bg-[#fbf8f2] p-4 rounded-xl border border-[#e7dfd3] space-y-3">
