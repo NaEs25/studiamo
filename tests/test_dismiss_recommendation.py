@@ -1,5 +1,5 @@
 """
-Dismissing a recommended video also removes the temporary preview that playing or queueing it
+Previews expire after 24 hours, notes or not. Dismissing a recommended video also removes the temporary preview that playing or queueing it
 left among the account's materials, unless the preview holds notes (then it asks first). A
 video imported for real is never removed. Runs against the first test account's own rows,
 which are removed again afterwards.
@@ -68,4 +68,17 @@ def test_an_imported_video_stays(tester):
     _insert(cursor, user_uuid, temporary=0, notes="my notes")
     res = client.post("/api/daily-recommendations/dismiss", data={"youtube_id": YT}).json()
     assert res == {"status": "success", "preview_removed": False}
+    assert _exists(cursor, user_uuid)
+
+
+def test_a_preview_goes_when_its_24_hours_are_up_notes_or_not(tester):
+    _, cursor, user_uuid = tester
+    expired = _insert(cursor, user_uuid, temporary=1, notes="my notes")
+    cursor.execute("UPDATE videos SET expires_at = (NOW() - INTERVAL '1 minute')::text WHERE id = %s;", (expired,))
+    assert database.delete_expired_previews() >= 1
+    assert not _exists(cursor, user_uuid)
+
+    _insert(cursor, user_uuid, temporary=1, notes="my notes")
+    cursor.execute("UPDATE videos SET expires_at = (NOW() + INTERVAL '1 hour')::text WHERE youtube_id = %s;", (YT,))
+    database.delete_expired_previews()
     assert _exists(cursor, user_uuid)

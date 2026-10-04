@@ -53,16 +53,7 @@ async def lifespan(app: FastAPI):
         logger.error(f"[startup] Schema sync FAILED, the app may be running against a stale schema: {e}")
 
     try:
-        raw_conn = database.get_pooled_raw_connection()
-        try:
-            cursor = raw_conn.cursor()
-            cursor.execute("SET LOCAL statement_timeout = 3000;")
-            cursor.execute("DELETE FROM videos WHERE is_temporary = 1 AND expires_at IS NOT NULL AND expires_at != '' AND expires_at::timestamptz < NOW();")
-            if not getattr(raw_conn, "autocommit", False):
-                raw_conn.commit()
-            cursor.close()
-        finally:
-            database.release_pooled_connection(raw_conn)
+        database.delete_expired_previews()
     except Exception as e:
         print(f"[startup] DB cleanup note: {e}")
 

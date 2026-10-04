@@ -1163,6 +1163,29 @@ def _expire_tester_cache(user_uuid) -> None:
             release_pooled_connection(conn)
 
 
+def delete_expired_previews() -> int:
+    """Deletes every temporary preview whose 24 hours are up, for all accounts, notes included.
+    A preview is what playing or queueing a recommended video leaves among the materials; it
+    carries no quiz and no uploaded document, so removing the row removes all of it. Returns the
+    number of rows deleted."""
+    raw_conn = get_pooled_raw_connection()
+    try:
+        cursor = raw_conn.cursor()
+        cursor.execute("SET LOCAL statement_timeout = 3000;")
+        cursor.execute(
+            """DELETE FROM videos
+                WHERE is_temporary = 1 AND expires_at IS NOT NULL AND expires_at != ''
+                  AND expires_at::timestamptz < NOW();"""
+        )
+        deleted = cursor.rowcount
+        if not getattr(raw_conn, "autocommit", False):
+            raw_conn.commit()
+        cursor.close()
+        return deleted
+    finally:
+        release_pooled_connection(raw_conn)
+
+
 def check_and_expire_testers() -> int:
     """Bulk-flips user_profile.is_tester to FALSE for every account whose newest tester_access
     grant has expired, unrevoked, without the account making a request since (which would

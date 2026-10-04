@@ -261,6 +261,8 @@ async def managed_telegram_long_polling():
 
 _last_tester_sweep_at: float = 0.0
 _TESTER_SWEEP_INTERVAL_SECONDS = 3600
+_last_preview_sweep_at: float = 0.0
+_PREVIEW_SWEEP_INTERVAL_SECONDS = 300
 # Chompy eats right after local midnight; a few minutes' delay does not matter, and each pass
 # reads every user's due reviews, so it runs less often than the reminder check.
 _last_chompy_pass_at: float = 0.0
@@ -270,7 +272,7 @@ _CHOMPY_INTERVAL_SECONDS = 600
 async def run_scheduler_daemon():
     """Runs a background loop to perform review scheduling checks every 1 minute."""
     print("Scheduler daemon started in background...")
-    global _last_tester_sweep_at, _last_chompy_pass_at
+    global _last_tester_sweep_at, _last_chompy_pass_at, _last_preview_sweep_at
     while True:
         try:
             if time.time() - _last_chompy_pass_at >= _CHOMPY_INTERVAL_SECONDS:
@@ -290,6 +292,13 @@ async def run_scheduler_daemon():
                 ImportQueueManager.get_instance().recover_all_pending_tasks()
             except Exception as e_recovery:
                 print(f"Periodic task recovery error in scheduler: {e_recovery}")
+            # Temporary previews are deleted once their 24 hours are up, notes included.
+            if time.time() - _last_preview_sweep_at >= _PREVIEW_SWEEP_INTERVAL_SECONDS:
+                _last_preview_sweep_at = time.time()
+                try:
+                    await asyncio.to_thread(database.delete_expired_previews)
+                except Exception as e_previews:
+                    print(f"Preview expiry sweep error: {e_previews}")
             # Cosmetic admin-list hygiene only (see check_and_expire_testers' docstring),
             # so this runs at most hourly rather than on every 60-second tick.
             now = time.time()
