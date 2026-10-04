@@ -59,6 +59,13 @@
 }
 
 /* ── Global Reset & Base ────────────────────────────────── */
+/* Overlays are scroll containers of their own, so the html/body rule below does not stop them
+   bouncing past their edges. */
+.app-overlay,
+.onboarding-scroll {
+    overscroll-behavior: none;
+}
+
 html, body {
     background-color: var(--color-bg);
     color: var(--color-text);
@@ -854,6 +861,44 @@ html[data-standalone="true"] .app-overlay {
     overflow-y: auto;
 }
 
+/* Short screens (iPhone SE and similar, roughly 600px of visible height or less): the same
+   steps with tighter type and spacing, so they fit without scrolling. Input text stays 16px,
+   below which iOS Safari zooms the page on focus. */
+@media (max-height: 600px) {
+    .onboarding-card {
+        gap: 0.625rem;
+        padding: 1rem;
+    }
+
+    .onboarding-card .onboarding-step.space-y-4 > :not([hidden]) ~ :not([hidden]) {
+        margin-top: 0.625rem;
+    }
+
+    .onboarding-headline {
+        font-size: 1.3rem;
+    }
+
+    .onboarding-headline-sm {
+        font-size: 1.1rem;
+    }
+
+    .onboarding-body,
+    .onboarding-item-title,
+    .onboarding-item-text {
+        font-size: 14px;
+        line-height: 1.4;
+    }
+
+    .onboarding-card img {
+        width: 5rem;
+    }
+
+    .onboarding-input {
+        min-height: 44px;
+        padding-block: 0.5rem;
+    }
+}
+
 .onboarding-info-box {
     font-size: 0.875rem;
     line-height: 1.5;
@@ -954,9 +999,12 @@ html[data-standalone="true"] .app-overlay {
     transition: background-color 0.15s ease, opacity 0.15s ease;
 }
 
-.onboarding-cta:disabled {
-    opacity: 0.7;
-    cursor: wait;
+.onboarding-cta:disabled,
+.btn-primary.onboarding-cta:disabled {
+    background-color: #e7e5e4; /* stone-200 */
+    border-color: transparent;
+    color: #a8a29e; /* stone-400 */
+    cursor: not-allowed;
 }
 
 /* The welcome flow's last button ("Start learning"), set apart from the push button above it. */

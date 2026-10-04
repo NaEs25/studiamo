@@ -1356,6 +1356,7 @@ function renderOnboardingStep() {
         nextBtn.classList.toggle('btn-primary', !final);
         nextBtn.classList.toggle('onboarding-cta-final', final);
     }
+    _syncOnboardingNext();
 
     if (name === 'video') renderVideoStep();
     if (name === 'reminders') {
@@ -1368,6 +1369,16 @@ function renderOnboardingStep() {
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
+// The video step's Next stays grey until there is a link to send or an import already started.
+// Choosing a suggestion or Skip for now moves on by themselves, so they need no enabled button.
+function _syncOnboardingNext() {
+    const nextBtn = document.getElementById('onboarding-next-btn');
+    if (!nextBtn) return;
+    const name = _onboardingActiveSteps()[_onboardingStepIndex]?.dataset.step;
+    const hasLink = !!(document.getElementById('onboarding-video-url')?.value || '').trim();
+    nextBtn.disabled = _onboardingFlow === 'welcome' && name === 'video' && !_welcomeImport && !hasLink;
+}
+
 // Runs a step's save with the footer buttons locked, so a double tap cannot send it twice.
 async function _withOnboardingBusy(fn) {
     _onboardingBusy = true;
@@ -1377,7 +1388,7 @@ async function _withOnboardingBusy(fn) {
         return await fn();
     } finally {
         _onboardingBusy = false;
-        if (nextBtn) nextBtn.disabled = false;
+        _syncOnboardingNext();
     }
 }
 
@@ -1860,6 +1871,7 @@ function initOnboarding() {
     const goalInput = document.getElementById('onboarding-goal-input');
     goalInput?.addEventListener('keydown', _onEnter(onboardingNext));
     document.getElementById('onboarding-video-url')?.addEventListener('keydown', _onEnter(onboardingNext));
+    document.getElementById('onboarding-video-url')?.addEventListener('input', _syncOnboardingNext);
 
     // Suggestion cards are rendered after load.
     document.getElementById('onboarding-steps')?.addEventListener('click', (e) => {

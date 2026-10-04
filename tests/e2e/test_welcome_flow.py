@@ -208,11 +208,12 @@ def test_full_flow_with_a_link_starts_the_first_quiz(logged_in_page):
     _step(page, "video")
     assert backend.calls("create_goal") == [{"title": "Video editing"}]
 
-    _next(page)
-    assert page.locator("#onboarding-video-error").is_visible()
+    # Nothing to send yet: Next stays disabled until there is a link.
+    assert page.locator("#onboarding-next-btn").is_disabled()
     assert not backend.calls("import")
 
     page.fill("#onboarding-video-url", "https://www.youtube.com/watch?v=abcDEF12345")
+    assert page.locator("#onboarding-next-btn").is_enabled()
     _next(page)
     _step(page, "reminders")
     sent = backend.calls("import")[0]
