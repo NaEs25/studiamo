@@ -1538,115 +1538,187 @@ button:active:not(:disabled) {
     transform: rotate(180deg);
 }
 
-/* iPhone push install dialog (partials/_ios_push_install_modal.html). One 12s loop: Safari tab
-   (0-25%), share sheet (25-55%), Add confirm (55-75%), Home Screen icon (75-100%). The finger and
-   the step list run on the same clock, so the highlighted step always matches the scene. */
+/* iPhone push install dialog (partials/_ios_push_install_modal.html), modeled on iOS 26+ Safari.
+   One 14s loop: address bar menu (0-12%), Share (12-24%), View More (24-40%), Add to Home Screen
+   (40-56%), Add with Open as Web App on (56-74%), Home Screen icon (74-100%). The finger, the
+   tapped targets, and the step list all run on the same clock, so the highlighted step always
+   matches the scene. */
 .ios-anim-phone {
     position: relative; width: 10rem; height: 15rem; margin: 0 auto; overflow: hidden;
     border: 6px solid var(--color-text); border-radius: 1.75rem; background: var(--color-surface-2);
+    font-size: 0.5rem; line-height: 1.2;
 }
-.ios-anim-scene { position: absolute; inset: 0; opacity: 0; animation: 12s infinite; }
-.ios-anim-scene-1 { animation-name: iosAnimScene1; }
-.ios-anim-scene-2 { animation-name: iosAnimScene2; background: rgb(28 25 23 / 0.25); }
-.ios-anim-scene-3 { animation-name: iosAnimScene3; background: var(--color-surface); }
-.ios-anim-scene-4 { animation-name: iosAnimScene4; background: linear-gradient(160deg, #fbbf24, #d97706); }
-@keyframes iosAnimScene1 { 0%, 23% { opacity: 1; } 25%, 100% { opacity: 0; } }
-@keyframes iosAnimScene2 { 0%, 23% { opacity: 0; } 25%, 53% { opacity: 1; } 55%, 100% { opacity: 0; } }
-@keyframes iosAnimScene3 { 0%, 53% { opacity: 0; } 55%, 73% { opacity: 1; } 75%, 100% { opacity: 0; } }
-@keyframes iosAnimScene4 { 0%, 73% { opacity: 0; } 75%, 98% { opacity: 1; } 100% { opacity: 0; } }
+.ios-anim-scene { position: absolute; inset: 0; opacity: 0; animation: 14s infinite; }
+.ios-anim-scene-2 { background: rgb(28 25 23 / 0.3); }
+.ios-anim-scene-3 { background: rgb(28 25 23 / 0.3); }
+.ios-anim-scene-4, .ios-anim-scene-5 { background: #1c1c1e; color: #fff; }
+.ios-anim-scene-6 { background: linear-gradient(160deg, #fbbf24, #d97706); }
 
 .ios-anim-page { padding: 1.25rem 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; }
 .ios-anim-line { height: 0.375rem; border-radius: 9999px; background: var(--color-border-strong); }
-.ios-anim-toolbar {
-    position: absolute; left: 0; right: 0; bottom: 0; height: 2.25rem; display: flex;
-    align-items: center; justify-content: space-around; color: #2563eb;
-    background: var(--color-surface); border-top: 1px solid var(--color-border);
+.ios-anim-addressbar {
+    position: absolute; left: 0.375rem; right: 0.375rem; bottom: 0.5rem; display: flex;
+    align-items: center; gap: 0.25rem; color: var(--color-text);
+}
+.ios-anim-circle {
+    flex-shrink: 0; width: 1.375rem; height: 1.375rem; border-radius: 9999px; display: flex;
+    align-items: center; justify-content: center; background: rgb(120 113 108 / 0.3);
+}
+.ios-anim-pill {
+    flex: 1; height: 1.375rem; border-radius: 9999px; display: flex; align-items: center;
+    gap: 0.375rem; padding: 0 0.375rem; min-width: 0; background: rgb(120 113 108 / 0.3);
+}
+.ios-anim-tap-menu { padding: 0.125rem; border-radius: 0.375rem; }
+
+/* Dark translucent iOS menus and sheets */
+.ios-anim-menu {
+    position: absolute; left: 1rem; right: 1rem; bottom: 2.25rem; padding: 0.25rem;
+    border-radius: 0.75rem; background: #57534e; color: #fff; animation: iosAnimMenu 14s infinite;
+    transform-origin: 50% 100%;
+}
+.ios-anim-menu-row {
+    display: flex; align-items: center; gap: 0.375rem; padding: 0.375rem 0.5rem; border-radius: 0.5rem;
 }
 .ios-anim-sheet {
-    position: absolute; left: 0.25rem; right: 0.25rem; bottom: 0.25rem; padding: 0.375rem;
-    border-radius: 0.75rem; background: var(--color-surface-deep); animation: iosAnimSheet 12s infinite;
+    position: absolute; left: 0.25rem; right: 0.25rem; bottom: 0.25rem; padding: 0.5rem;
+    border-radius: 0.875rem; background: #3a3a3c; color: #fff; animation: iosAnimSheet 14s infinite;
 }
-@keyframes iosAnimSheet { 0%, 25% { transform: translateY(100%); } 31%, 100% { transform: translateY(0); } }
-.ios-anim-row {
-    display: flex; align-items: center; justify-content: space-between; padding: 0.375rem 0.5rem;
-    font-size: 0.5625rem; color: var(--color-text); background: var(--color-surface);
-    border-bottom: 1px solid var(--color-border);
+.ios-anim-sheet-full { top: 0.25rem; bottom: 0.25rem; animation: none; display: flex; flex-direction: column; }
+.ios-anim-sheet-full .ios-anim-list { margin-top: auto; }
+.ios-anim-sheet-head {
+    display: flex; align-items: center; gap: 0.375rem; padding-bottom: 0.375rem;
+    border-bottom: 1px solid rgb(255 255 255 / 0.15); color: #d6d3d1;
 }
-.ios-anim-row:first-child { border-radius: 0.5rem 0.5rem 0 0; }
-.ios-anim-row:last-child { border-radius: 0 0 0.5rem 0.5rem; border-bottom: 0; }
+.ios-anim-sheet-head img { width: 1.25rem; height: 1.25rem; border-radius: 0.3rem; }
+.ios-anim-actions { display: flex; justify-content: space-between; padding-top: 0.5rem; }
+.ios-anim-actions > span {
+    width: 1.5rem; height: 1.5rem; border-radius: 9999px; display: flex; align-items: center;
+    justify-content: center; background: rgb(255 255 255 / 0.15);
+}
+.ios-anim-actions-labels {
+    display: flex; justify-content: space-between; padding-top: 0.2rem; font-size: 0.375rem;
+    color: #d6d3d1;
+}
+.ios-anim-actions-labels span { width: 1.5rem; text-align: center; white-space: nowrap; display: flex; justify-content: center; }
+.ios-anim-list { margin-top: 0.5rem; padding: 0.125rem; border-radius: 0.625rem; background: #48484a; }
+
 .ios-anim-confirm-bar {
-    display: flex; justify-content: space-between; padding: 0.625rem 0.5rem 0.5rem; font-size: 0.5rem;
-    color: #2563eb; border-bottom: 1px solid var(--color-border);
+    display: flex; align-items: center; justify-content: space-between; padding: 0.5rem 0.375rem;
 }
-.ios-anim-add { font-weight: 700; padding: 0 0.125rem; border-radius: 0.25rem; }
+.ios-anim-confirm-title { font-weight: 600; }
+.ios-anim-tap-add {
+    padding: 0.2rem 0.5rem; border-radius: 9999px; font-weight: 700; background: #3b82f6;
+}
 .ios-anim-confirm-body {
-    display: flex; align-items: center; gap: 0.5rem; margin: 0.75rem 0.5rem; padding: 0.5rem;
-    font-size: 0.625rem; border-radius: 0.5rem; background: var(--color-surface-2);
+    display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; font-size: 0.625rem;
+    background: #2c2c2e; border-top: 1px solid #3a3a3c; border-bottom: 1px solid #3a3a3c;
 }
-.ios-anim-home {
-    display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.625rem; padding: 1.5rem 0.625rem;
+.ios-anim-confirm-body img { width: 2rem; height: 2rem; border-radius: 0.4rem; }
+.ios-anim-webapp {
+    display: flex; align-items: center; justify-content: space-between; margin-top: 0.625rem;
+    padding: 0.5rem; background: #2c2c2e;
 }
+.ios-anim-switch {
+    position: relative; width: 1.375rem; height: 0.8rem; border-radius: 9999px; background: #34c759;
+}
+.ios-anim-switch::after {
+    content: ""; position: absolute; top: 0.1rem; right: 0.1rem; width: 0.6rem; height: 0.6rem;
+    border-radius: 9999px; background: #fff;
+}
+
+.ios-anim-home { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.625rem; padding: 1.5rem 0.625rem; }
 .ios-anim-app { aspect-ratio: 1; border-radius: 0.5rem; background: rgb(255 255 255 / 0.45); }
-.ios-anim-new-icon { position: relative; aspect-ratio: 1; animation: iosAnimPop 12s infinite; }
+.ios-anim-new-icon { position: relative; aspect-ratio: 1; animation: iosAnimPop 14s infinite; }
 .ios-anim-new-icon img { width: 100%; height: 100%; border-radius: 0.5rem; box-shadow: 0 2px 6px rgb(0 0 0 / 0.25); }
 .ios-anim-badge {
     position: absolute; top: -0.3rem; right: -0.3rem; width: 0.875rem; height: 0.875rem;
     border-radius: 9999px; background: #ef4444; color: #fff; font-size: 0.5rem; font-weight: 700;
-    display: flex; align-items: center; justify-content: center; animation: iosAnimBadge 12s infinite;
+    display: flex; align-items: center; justify-content: center; animation: iosAnimBadge 14s infinite;
 }
-@keyframes iosAnimPop { 0%, 77% { transform: scale(0); } 81% { transform: scale(1.15); } 83%, 100% { transform: scale(1); } }
-@keyframes iosAnimBadge { 0%, 86% { transform: scale(0); } 89%, 100% { transform: scale(1); } }
-
-/* Each tappable target flashes when the finger lands on it. */
-.ios-anim-target { animation: 12s infinite; }
-.ios-anim-share { animation-name: iosAnimTapShare; padding: 0.125rem; border-radius: 0.375rem; }
-.ios-anim-a2hs { animation-name: iosAnimTapA2hs; }
-.ios-anim-add { animation-name: iosAnimTapAdd; }
-@keyframes iosAnimTapShare { 0%, 15%, 21%, 100% { background: transparent; } 17%, 20% { background: var(--color-primary-border); } }
-@keyframes iosAnimTapA2hs { 0%, 44%, 51%, 100% { background: var(--color-surface); } 46%, 50% { background: var(--color-primary-border); } }
-@keyframes iosAnimTapAdd { 0%, 65%, 71%, 100% { background: transparent; } 67%, 70% { background: var(--color-primary-border); } }
-
+.ios-anim-target { animation: 14s infinite; }
 .ios-anim-finger {
     position: absolute; width: 1.125rem; height: 1.125rem; margin: -0.5625rem 0 0 -0.5625rem;
     border-radius: 9999px; background: rgb(28 25 23 / 0.35); border: 2px solid rgb(255 255 255 / 0.9);
-    animation: iosAnimFinger 12s infinite; pointer-events: none;
+    opacity: 0; animation: iosAnimFinger 14s infinite; pointer-events: none;
 }
+.ios-anim-steps li { padding: 0.125rem 0.375rem; border-radius: 0.375rem; animation: 14s infinite; }
+
+.ios-anim-scene-1 { animation-name: iosAnimScene1; }
+@keyframes iosAnimScene1 { 0%, 11.5% { opacity: 1; } 12%, 100% { opacity: 0; } }
+.ios-anim-scene-2 { animation-name: iosAnimScene2; }
+@keyframes iosAnimScene2 { 0%, 11.5% { opacity: 0; } 12%, 23.5% { opacity: 1; } 24%, 100% { opacity: 0; } }
+.ios-anim-scene-3 { animation-name: iosAnimScene3; }
+@keyframes iosAnimScene3 { 0%, 23.5% { opacity: 0; } 24%, 39.5% { opacity: 1; } 40%, 100% { opacity: 0; } }
+.ios-anim-scene-4 { animation-name: iosAnimScene4; }
+@keyframes iosAnimScene4 { 0%, 39.5% { opacity: 0; } 40%, 55.5% { opacity: 1; } 56%, 100% { opacity: 0; } }
+.ios-anim-scene-5 { animation-name: iosAnimScene5; }
+@keyframes iosAnimScene5 { 0%, 55.5% { opacity: 0; } 56%, 73.5% { opacity: 1; } 74%, 100% { opacity: 0; } }
+.ios-anim-scene-6 { animation-name: iosAnimScene6; }
+@keyframes iosAnimScene6 { 0%, 73.5% { opacity: 0; } 74%, 98% { opacity: 1; } 100% { opacity: 0; } }
+.ios-anim-tap-menu { animation-name: iosAnimTap-menu; }
+@keyframes iosAnimTap-menu { 0%, 8.5%, 11.5%, 100% { background: transparent; } 9%, 11% { background: var(--color-primary); } }
+.ios-anim-tap-share { animation-name: iosAnimTap-share; }
+@keyframes iosAnimTap-share { 0%, 19.5%, 22.5%, 100% { background: transparent; } 20%, 22% { background: var(--color-primary); } }
+.ios-anim-tap-more { animation-name: iosAnimTap-more; }
+@keyframes iosAnimTap-more { 0%, 34.5%, 37.5%, 100% { background: transparent; } 35%, 37% { background: var(--color-primary); } }
+.ios-anim-tap-a2hs { animation-name: iosAnimTap-a2hs; }
+@keyframes iosAnimTap-a2hs { 0%, 50.5%, 53.5%, 100% { background: transparent; } 51%, 53% { background: var(--color-primary); } }
+.ios-anim-tap-add { animation-name: iosAnimTap-add; }
+@keyframes iosAnimTap-add { 0%, 69.5%, 72.5%, 100% { background: #3b82f6; } 70%, 72% { background: var(--color-primary); } }
+.ios-anim-webapp { animation-name: iosAnimWebApp; }
+@keyframes iosAnimWebApp { 0%, 59%, 66%, 100% { box-shadow: none; } 60%, 65% { box-shadow: inset 0 0 0 2px var(--color-primary); } }
 @keyframes iosAnimFinger {
-    0% { left: 70%; top: 55%; opacity: 0; transform: scale(1); }
-    6% { left: 70%; top: 55%; opacity: 1; }
-    15% { left: 37%; top: 92%; transform: scale(1); }
-    17% { left: 37%; top: 92%; transform: scale(0.75); }
-    20% { left: 37%; top: 92%; transform: scale(1); opacity: 1; }
-    24% { opacity: 0; }
-    32% { left: 60%; top: 60%; opacity: 0; }
-    36% { opacity: 1; }
-    44% { left: 45%; top: 82%; transform: scale(1); }
-    46% { left: 45%; top: 82%; transform: scale(0.75); }
-    50% { left: 45%; top: 82%; transform: scale(1); opacity: 1; }
-    54% { opacity: 0; }
-    57% { left: 55%; top: 40%; opacity: 0; }
-    60% { opacity: 1; }
-    65% { left: 88%; top: 6%; transform: scale(1); }
-    67% { left: 88%; top: 6%; transform: scale(0.75); }
-    70% { left: 88%; top: 6%; transform: scale(1); opacity: 1; }
-    74%, 100% { left: 88%; top: 6%; opacity: 0; }
+    0% { left: 70%; top: 50%; opacity: 0; transform: scale(1); }
+    3% { left: 46%; top: 77%; opacity: 0; transform: scale(1); }
+    5% { opacity: 1; }
+    8% { left: 31%; top: 92%; transform: scale(1); }
+    9% { left: 31%; top: 92%; transform: scale(0.75); }
+    10.5% { left: 31%; top: 92%; transform: scale(1); opacity: 1; }
+    12% { left: 31%; top: 92%; opacity: 0; }
+    14% { left: 47%; top: 57.6%; opacity: 0; transform: scale(1); }
+    16% { opacity: 1; }
+    19% { left: 32%; top: 45.6%; transform: scale(1); }
+    20% { left: 32%; top: 45.6%; transform: scale(0.75); }
+    21.5% { left: 32%; top: 45.6%; transform: scale(1); opacity: 1; }
+    23% { left: 32%; top: 45.6%; opacity: 0; }
+    29% { left: 90%; top: 70%; opacity: 0; transform: scale(1); }
+    31% { opacity: 1; }
+    34% { left: 84%; top: 85%; transform: scale(1); }
+    35% { left: 84%; top: 85%; transform: scale(0.75); }
+    36.5% { left: 84%; top: 85%; transform: scale(1); opacity: 1; }
+    38% { left: 84%; top: 85%; opacity: 0; }
+    45% { left: 55%; top: 73.6%; opacity: 0; transform: scale(1); }
+    47% { opacity: 1; }
+    50% { left: 40%; top: 88.6%; transform: scale(1); }
+    51% { left: 40%; top: 88.6%; transform: scale(0.75); }
+    52.5% { left: 40%; top: 88.6%; transform: scale(1); opacity: 1; }
+    54% { left: 40%; top: 88.6%; opacity: 0; }
+    64% { left: 90%; top: 20.3%; opacity: 0; transform: scale(1); }
+    66% { opacity: 1; }
+    69% { left: 86%; top: 8.3%; transform: scale(1); }
+    70% { left: 86%; top: 8.3%; transform: scale(0.75); }
+    71.5% { left: 86%; top: 8.3%; transform: scale(1); opacity: 1; }
+    73% { left: 86%; top: 8.3%; opacity: 0; }
+    100% { opacity: 0; }
 }
-
-.ios-anim-steps li { padding: 0.125rem 0.375rem; border-radius: 0.375rem; animation: 12s infinite; }
+@keyframes iosAnimMenu { 0%, 12% { transform: scale(0.85); } 14%, 100% { transform: scale(1); } }
+@keyframes iosAnimSheet { 0%, 24% { transform: translateY(100%); } 28%, 100% { transform: translateY(0); } }
+@keyframes iosAnimPop { 0%, 76% { transform: scale(0); } 80% { transform: scale(1.15); } 82%, 100% { transform: scale(1); } }
+@keyframes iosAnimBadge { 0%, 86% { transform: scale(0); } 89%, 100% { transform: scale(1); } }
 .ios-anim-steps li:nth-child(1) { animation-name: iosAnimStep1; }
+@keyframes iosAnimStep1 { 0%, 23.5% { background: var(--color-primary-bg); } 24%, 100% { background: transparent; } }
 .ios-anim-steps li:nth-child(2) { animation-name: iosAnimStep2; }
+@keyframes iosAnimStep2 { 0%, 23.5% { background: transparent; } 24%, 55.5% { background: var(--color-primary-bg); } 56%, 100% { background: transparent; } }
 .ios-anim-steps li:nth-child(3) { animation-name: iosAnimStep3; }
+@keyframes iosAnimStep3 { 0%, 55.5% { background: transparent; } 56%, 73.5% { background: var(--color-primary-bg); } 74%, 100% { background: transparent; } }
 .ios-anim-steps li:nth-child(4) { animation-name: iosAnimStep4; }
-@keyframes iosAnimStep1 { 0%, 24% { background: var(--color-primary-bg); } 25%, 100% { background: transparent; } }
-@keyframes iosAnimStep2 { 0%, 24% { background: transparent; } 25%, 54% { background: var(--color-primary-bg); } 55%, 100% { background: transparent; } }
-@keyframes iosAnimStep3 { 0%, 54% { background: transparent; } 55%, 74% { background: var(--color-primary-bg); } 75%, 100% { background: transparent; } }
-@keyframes iosAnimStep4 { 0%, 74% { background: transparent; } 75%, 100% { background: var(--color-primary-bg); } }
+@keyframes iosAnimStep4 { 0%, 73.5% { background: transparent; } 74%, 100% { background: var(--color-primary-bg); } }
 
-/* Reduced motion: hold on the share-sheet scene with its row highlighted, no finger. */
+/* Reduced motion: hold on the expanded share sheet with Add to Home Screen highlighted, no finger. */
 @media (prefers-reduced-motion: reduce) {
-    .ios-anim-scene, .ios-anim-sheet, .ios-anim-target, .ios-anim-finger,
+    .ios-anim-scene, .ios-anim-menu, .ios-anim-sheet, .ios-anim-target, .ios-anim-finger,
     .ios-anim-new-icon, .ios-anim-badge, .ios-anim-steps li { animation: none; }
-    .ios-anim-scene-2 { opacity: 1; }
-    .ios-anim-a2hs { background: var(--color-primary-border); }
+    .ios-anim-scene-4 { opacity: 1; }
+    .ios-anim-tap-a2hs { background: var(--color-primary); }
     .ios-anim-finger { display: none; }
 }
