@@ -24,7 +24,6 @@ function switchTab(tabId) {
         if (typeof loadSettings === 'function') loadSettings();
     }
 
-    if (typeof maybeShowTabTip === 'function') maybeShowTabTip(tabId);
 }
 
 

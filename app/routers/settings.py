@@ -710,20 +710,6 @@ def capture_timezone(timezone_name: str = Form(..., alias="timezone"), username:
         conn.close()
 
 
-# Tabs that greet a new account with a one-time tip on its first visit (index.html,
-# partials/_tab_tip.html). Stored per user in user_profile.tab_tips_seen.
-TAB_TIP_TABS = ("goals", "import", "stats", "settings")
-
-
-def pending_tab_tips(seen: Optional[str]) -> list:
-    """The tabs whose tip is still to be shown, given the stored tab_tips_seen value. None
-    means the tips are off for this account, so nothing is pending."""
-    if seen is None:
-        return []
-    done = set(seen.split(","))
-    return [tab for tab in TAB_TIP_TABS if tab not in done]
-
-
 @router.get("/user/onboarding_status")
 def get_onboarding_status(username: str = Depends(get_active_username)):
     """Returns onboarding status for current user.
@@ -740,7 +726,7 @@ def get_onboarding_status(username: str = Depends(get_active_username)):
         cursor = conn.cursor()
         cursor.execute(
             """SELECT has_seen_onboarding, has_seen_updates, has_seen_reminder_setup,
-                      notify_push, notify_telegram, notify_email, google_email, tab_tips_seen
+                      notify_push, notify_telegram, notify_email, google_email
                FROM user_profile WHERE user_uuid = %s;""",
             (user_uuid,),
         )
@@ -756,11 +742,10 @@ def get_onboarding_status(username: str = Depends(get_active_username)):
                     or (row.get("notify_email") and row.get("google_email"))
                 ),
                 "reminder_email": row.get("google_email") or "",
-                "tab_tips": pending_tab_tips(row.get("tab_tips_seen")),
                 "suggestions_available": suggestions_available,
             }
         return {"has_seen_onboarding": False, "has_seen_updates": False, "has_seen_reminder_setup": False,
-                "has_reminder_channel": False, "reminder_email": "", "tab_tips": [],
+                "has_reminder_channel": False, "reminder_email": "",
                 "suggestions_available": suggestions_available}
     finally:
         conn.close()
@@ -770,17 +755,9 @@ def get_onboarding_status(username: str = Depends(get_active_username)):
 def update_onboarding_status(
     has_seen_onboarding: Optional[str] = Form(None),
     has_seen_updates: Optional[str] = Form(None),
-    enable_tab_tips: Optional[str] = Form(None),
-    tab_tip_seen: Optional[str] = Form(None),
     username: str = Depends(get_active_username)
 ):
-    """Updates onboarding status for current user, and returns the tab tips still pending.
-
-    enable_tab_tips turns the one-time tab tips on, once: an account that already has them
-    keeps the ones it has seen. tab_tip_seen records one tab's tip as seen, and only for an
-    account that has the tips on."""
-    if tab_tip_seen is not None and tab_tip_seen not in TAB_TIP_TABS:
-        raise HTTPException(status_code=400, detail="Unknown tab.")
+    """Updates onboarding status for current user."""
     conn = database.get_db_connection(username)
     user_uuid = conn.user_uuid
     try:
@@ -791,22 +768,8 @@ def update_onboarding_status(
         if has_seen_updates is not None:
             val = config.CURRENT_UPDATE_VERSION if _parse_bool(has_seen_updates) else 0
             cursor.execute("UPDATE user_profile SET has_seen_updates = %s WHERE user_uuid = %s;", (val, user_uuid))
-        if enable_tab_tips is not None and _parse_bool(enable_tab_tips):
-            cursor.execute(
-                "UPDATE user_profile SET tab_tips_seen = '' WHERE user_uuid = %s AND tab_tips_seen IS NULL;",
-                (user_uuid,),
-            )
-        if tab_tip_seen is not None:
-            cursor.execute(
-                """UPDATE user_profile SET tab_tips_seen = concat_ws(',', NULLIF(tab_tips_seen, ''), %s)
-                    WHERE user_uuid = %s AND tab_tips_seen IS NOT NULL
-                      AND NOT (%s = ANY(string_to_array(tab_tips_seen, ',')));""",
-                (tab_tip_seen, user_uuid, tab_tip_seen),
-            )
         conn.commit()
-        cursor.execute("SELECT tab_tips_seen FROM user_profile WHERE user_uuid = %s;", (user_uuid,))
-        row = cursor.fetchone()
-        return {"status": "ok", "tab_tips": pending_tab_tips(row.get("tab_tips_seen") if row else None)}
+        return {"status": "ok"}
     finally:
         conn.close()
 

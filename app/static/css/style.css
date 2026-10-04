@@ -1004,18 +1004,6 @@ html[data-standalone="true"] .app-overlay {
     border-color: #fecaca; /* red-200 */
 }
 
-/* ── Tab Tips ───────────────────────────────────────────── */
-/* A tab's one-time tip for new accounts (partials/_tab_tip.html, settings.js maybeShowTabTip). */
-.tab-tip {
-    font-size: 15px;
-    line-height: 1.45;
-    color: #451a03; /* amber-950 */
-    background-color: var(--color-primary-bg);
-    border: 1px solid var(--color-primary-border);
-    border-radius: 0.75rem;
-    padding: 0.75rem;
-}
-
 /* The quiz overlay pins its header at the true top of the modal (see index.html) instead of
    centering the whole header+card block like every other .app-overlay, so unlike them it
    doesn't get free clearance from vertical centering - its first frame needs real padding,

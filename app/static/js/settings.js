@@ -1282,8 +1282,6 @@ async function checkOnboardingAndUpdates() {
         } else if (!data.has_seen_updates) {
             openUpdatesModal();
         }
-        // The tab opened on load before this status arrived.
-        maybeShowTabTip(localStorage.getItem('active_studiamo_tab') || 'dashboard');
     } catch (e) {
         console.warn("Failed to check onboarding/updates status:", e);
     }
@@ -1472,7 +1470,7 @@ async function finishOnboarding() {
     }
 }
 
-// Marks the welcome flow done, turns the tab tips on, and lands where the first video left off:
+// Marks the welcome flow done, and lands where the first video left off:
 // its quiz when it is ready, Home with the import list open while it is still being made, or
 // the goals tab when the video step was skipped.
 async function _completeWelcomeFlow() {
@@ -1480,12 +1478,8 @@ async function _completeWelcomeFlow() {
     try {
         const fd = new FormData();
         fd.append('has_seen_onboarding', 'true');
-        fd.append('enable_tab_tips', 'true');
-        const res = await fetchAPI('/api/user/onboarding_status', { method: 'POST', body: fd });
-        if (status) {
-            status.has_seen_onboarding = true;
-            status.tab_tips = (res && Array.isArray(res.tab_tips)) ? res.tab_tips : [];
-        }
+        await fetchAPI('/api/user/onboarding_status', { method: 'POST', body: fd });
+        if (status) status.has_seen_onboarding = true;
     } catch (err) {
         console.error("Saving the end of onboarding failed:", err);
     }
@@ -1847,23 +1841,6 @@ function goToNotificationSettings() {
     }, 300);
 }
 
-// ---- Tab tips -----------------------------------------------------------------------------
-
-// Shows a tab's one-time tip (partials/_tab_tip.html) if the account still has it pending.
-// It counts as seen the moment it appears; its close button only hides it for now.
-function maybeShowTabTip(tabId) {
-    const st = _onboardingStatusCache;
-    if (!st || !Array.isArray(st.tab_tips) || !st.tab_tips.includes(tabId)) return;
-    const tip = document.querySelector(`[data-tab-tip="${tabId}"]`);
-    if (!tip) return;
-    tip.classList.remove('hidden');
-    st.tab_tips = st.tab_tips.filter(t => t !== tabId);
-    const fd = new FormData();
-    fd.append('tab_tip_seen', tabId);
-    fetchAPI('/api/user/onboarding_status', { method: 'POST', body: fd })
-        .catch(err => console.warn('Saving a seen tab tip failed:', err));
-}
-
 function _onEnter(handler) {
     return (e) => {
         if (e.key === 'Enter' && !e.isComposing) handler(e);
@@ -1888,11 +1865,6 @@ function initOnboarding() {
     document.getElementById('onboarding-steps')?.addEventListener('click', (e) => {
         const suggestion = e.target.closest('[data-welcome-suggestion]');
         if (suggestion) pickWelcomeSuggestion(Number(suggestion.dataset.welcomeSuggestion));
-    });
-
-    document.addEventListener('click', (e) => {
-        const close = e.target.closest('[data-tab-tip-close]');
-        if (close) close.closest('[data-tab-tip]')?.classList.add('hidden');
     });
 }
 

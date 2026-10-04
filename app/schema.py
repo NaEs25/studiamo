@@ -94,10 +94,8 @@ TABLES_SQL = [
     -- once to accounts that finished onboarding before the step existed and have no reminder
     -- channel yet.
     ALTER TABLE user_profile ADD COLUMN IF NOT EXISTS has_seen_reminder_setup INTEGER DEFAULT 0;
-    -- Tabs whose one-time tip the user has already seen, comma-separated (routers/settings.py
-    -- TAB_TIP_TABS). NULL means the tips are off, which is what every account that finished
-    -- onboarding before the tips existed has. The welcome flow sets it to '' when it ends,
-    -- which turns the tips on for that account.
+    -- Unused. Held the tabs whose one-time tip an account had seen, before the tips were removed;
+    -- columns are never dropped here.
     ALTER TABLE user_profile ADD COLUMN IF NOT EXISTS tab_tips_seen TEXT;
     -- When the user last saw the "Chompy ate N quizzes while you were away" message; videos
     -- eaten after this are the ones it reports (routers/dashboard.py).

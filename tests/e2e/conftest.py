@@ -116,7 +116,6 @@ ONBOARDED_STATUS = {
     "has_seen_reminder_setup": True,
     "has_reminder_channel": True,
     "reminder_email": "",
-    "tab_tips": [],
     "suggestions_available": False,
 }
 
@@ -124,7 +123,7 @@ ONBOARDED_STATUS = {
 def _answer_json(get_body):
     """Route handler that answers GETs with get_body and every other method with a plain ok."""
     def handle(route):
-        body = get_body if route.request.method == "GET" else {"status": "ok", "tab_tips": []}
+        body = get_body if route.request.method == "GET" else {"status": "ok"}
         route.fulfill(status=200, content_type="application/json", body=json.dumps(body))
     return handle
 

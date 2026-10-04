@@ -31,7 +31,7 @@ def _open_reminder_step(page):
               "has_reminder_channel": False, "reminder_email": "learner@example.com"}
     page.route("**/api/user/onboarding_status", lambda route: route.fulfill(
         status=200, content_type="application/json",
-        body=json.dumps(status if route.request.method == "GET" else {"status": "ok", "tab_tips": []})))
+        body=json.dumps(status if route.request.method == "GET" else {"status": "ok"})))
     saved = []
     _capture_posts(page, "**/api/user/reminder_setup", saved)
     page.goto("/app")
