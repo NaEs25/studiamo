@@ -2015,13 +2015,22 @@ function openIOSPushInstallModal(purpose = 'push') {
         card.dataset.variant = _isIOSNonSafari() ? 'other' : 'safari';
         card.dataset.purpose = purpose;
     }
+    const safariLink = document.getElementById('btn-ios-push-open-safari');
+    if (safariLink) safariLink.href = 'x-safari-' + _iosInstallTargetUrl(purpose);
     openOverlay('overlay-ios-push-install', closeIOSPushInstallModal);
     if (typeof renderIcons === 'function') renderIcons();
-    document.getElementById('btn-ios-push-install-done')?.focus();
+    document.getElementById(card?.dataset.variant === 'other' ? 'btn-ios-push-open-safari' : 'btn-ios-push-install-done')?.focus();
+}
+
+// Push lands on the notification settings (the #notifications deep link app.js handles), so the
+// page Safari opens is the one the user was trying to change.
+function _iosInstallTargetUrl(purpose) {
+    return window.location.origin + '/' + (purpose === 'push' ? '#notifications' : '');
 }
 
 async function copyIOSPushInstallLink() {
-    const url = window.location.origin + '/';
+    const purpose = document.querySelector('#overlay-ios-push-install [data-purpose]')?.dataset.purpose;
+    const url = _iosInstallTargetUrl(purpose);
     try {
         await navigator.clipboard.writeText(url);
         showToast('Link copied. Paste it into Safari.', 'saved');
