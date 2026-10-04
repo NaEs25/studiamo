@@ -1541,7 +1541,7 @@ button:active:not(:disabled) {
 /* iPhone push install dialog (partials/_ios_push_install_modal.html), modeled on iOS 26+ Safari.
    One 14s loop: address bar menu (0-12%), Share (12-24%), View More (24-40%), Add to Home Screen
    (40-56%), Add with Open as Web App on (56-74%), Home Screen icon (74-100%). The finger, the
-   tapped targets, and the step list all run on the same clock, so the highlighted step always
+   tapped targets, and the step captions all run on the same clock, so the caption always
    matches the scene. */
 .ios-anim-phone {
     position: relative; width: 10rem; height: 15rem; margin: 0 auto; overflow: hidden;
@@ -1641,7 +1641,6 @@ button:active:not(:disabled) {
     border-radius: 9999px; background: rgb(28 25 23 / 0.35); border: 2px solid rgb(255 255 255 / 0.9);
     opacity: 0; animation: iosAnimFinger 14s infinite; pointer-events: none;
 }
-.ios-anim-steps li { padding: 0.125rem 0.375rem; border-radius: 0.375rem; animation: 14s infinite; }
 
 .ios-anim-scene-1 { animation-name: iosAnimScene1; }
 @keyframes iosAnimScene1 { 0%, 11.5% { opacity: 1; } 12%, 100% { opacity: 0; } }
@@ -1705,19 +1704,32 @@ button:active:not(:disabled) {
 @keyframes iosAnimSheet { 0%, 24% { transform: translateY(100%); } 28%, 100% { transform: translateY(0); } }
 @keyframes iosAnimPop { 0%, 76% { transform: scale(0); } 80% { transform: scale(1.15); } 82%, 100% { transform: scale(1); } }
 @keyframes iosAnimBadge { 0%, 86% { transform: scale(0); } 89%, 100% { transform: scale(1); } }
-.ios-anim-steps li:nth-child(1) { animation-name: iosAnimStep1; }
-@keyframes iosAnimStep1 { 0%, 23.5% { background: var(--color-primary-bg); } 24%, 100% { background: transparent; } }
-.ios-anim-steps li:nth-child(2) { animation-name: iosAnimStep2; }
-@keyframes iosAnimStep2 { 0%, 23.5% { background: transparent; } 24%, 55.5% { background: var(--color-primary-bg); } 56%, 100% { background: transparent; } }
-.ios-anim-steps li:nth-child(3) { animation-name: iosAnimStep3; }
-@keyframes iosAnimStep3 { 0%, 55.5% { background: transparent; } 56%, 73.5% { background: var(--color-primary-bg); } 74%, 100% { background: transparent; } }
-.ios-anim-steps li:nth-child(4) { animation-name: iosAnimStep4; }
-@keyframes iosAnimStep4 { 0%, 73.5% { background: transparent; } 74%, 100% { background: var(--color-primary-bg); } }
+
+/* The dialog's two variants (data-variant on its card, set by settings.js). */
+[data-variant="safari"] .ios-push-other-only, [data-variant="other"] .ios-push-safari-only { display: none; }
+/* Captions share one grid cell, so the box is as tall as the longest and only the current one shows. */
+.ios-anim-captions { display: grid; }
+.ios-anim-captions p {
+    grid-area: 1 / 1; padding: 0.375rem 0.5rem; border-radius: 0.5rem; opacity: 0;
+    background: var(--color-primary-bg); animation: 14s infinite;
+}
+.ios-anim-step-no { font-weight: 800; color: var(--color-primary-hover); margin-right: 0.25rem; }
+.ios-anim-captions p:nth-child(1) { animation-name: iosAnimCaption1; }
+@keyframes iosAnimCaption1 { 0%, 23.5% { opacity: 1; } 24%, 100% { opacity: 0; } }
+.ios-anim-captions p:nth-child(2) { animation-name: iosAnimCaption2; }
+@keyframes iosAnimCaption2 { 0%, 23.5% { opacity: 0; } 24%, 55.5% { opacity: 1; } 56%, 100% { opacity: 0; } }
+.ios-anim-captions p:nth-child(3) { animation-name: iosAnimCaption3; }
+@keyframes iosAnimCaption3 { 0%, 55.5% { opacity: 0; } 56%, 73.5% { opacity: 1; } 74%, 100% { opacity: 0; } }
+.ios-anim-captions p:nth-child(4) { animation-name: iosAnimCaption4; }
+@keyframes iosAnimCaption4 { 0%, 73.5% { opacity: 0; } 74%, 100% { opacity: 1; } }
 
 /* Reduced motion: hold on the expanded share sheet with Add to Home Screen highlighted, no finger. */
 @media (prefers-reduced-motion: reduce) {
     .ios-anim-scene, .ios-anim-menu, .ios-anim-sheet, .ios-anim-target, .ios-anim-finger,
-    .ios-anim-new-icon, .ios-anim-badge, .ios-anim-steps li { animation: none; }
+    .ios-anim-new-icon, .ios-anim-badge, .ios-anim-captions p { animation: none; }
+    /* No animation to sync with, so list every step instead of cycling captions. */
+    .ios-anim-captions { gap: 0.25rem; }
+    .ios-anim-captions p { grid-area: auto; opacity: 1; background: none; padding: 0; }
     .ios-anim-scene-4 { opacity: 1; }
     .ios-anim-tap-a2hs { background: var(--color-primary); }
     .ios-anim-finger { display: none; }

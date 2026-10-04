@@ -1,15 +1,18 @@
-<!-- Overlay: iPhone/iPad push needs a home-screen install. Opened by settings.js when the Browser
-     Push switch is turned on in a plain Safari tab, where iOS never delivers web push. The phone
-     mockup loops through the steps listed below it (modeled on iOS 26+ Safari, where Share sits
-     behind the address bar's menu), and the matching step highlights as the animation reaches it (.ios-anim-* in style.css). -->
+<!-- Overlay: iPhone/iPad push needs a Home Screen install. Opened by settings.js when the Browser
+     Push switch is turned on outside an installed app. Two variants, picked by settings.js:
+     - Safari: a phone mockup loops through the install steps (modeled on iOS 26+ Safari, where
+       Share sits behind the address bar's menu) while the caption under it shows the matching step
+       (.ios-anim-* in style.css). Captions replace a full list so the dialog fits small iPhones.
+     - Any other browser: points to Safari, the browser this walkthrough covers. -->
 <div id="overlay-ios-push-install"
     class="app-overlay fixed inset-0 bg-stone-950/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 overflow-y-auto"
     role="dialog" aria-modal="true" aria-labelledby="ios-push-install-title">
-    <div class="bg-white border border-stone-200 rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+    <div class="bg-white border border-stone-200 rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-3 max-h-[95dvh] overflow-y-auto" data-variant="safari">
         <div class="flex items-start justify-between gap-3">
             <h3 id="ios-push-install-title" class="font-extrabold text-stone-900 text-base flex items-center space-x-2">
-                <i data-lucide="smartphone" class="w-4 h-4 text-amber-600"></i>
-                <span>Add Studiamo to your Home Screen first</span>
+                <i data-lucide="smartphone" class="w-4 h-4 text-amber-600 shrink-0"></i>
+                <span class="ios-push-safari-only">Add to Home Screen first</span>
+                <span class="ios-push-other-only">Open Studiamo in Safari</span>
             </h3>
             <button type="button" id="btn-close-ios-push-install"
                 class="text-stone-500 hover:text-stone-900 transition p-1 -m-1" aria-label="Close">
@@ -17,10 +20,25 @@
             </button>
         </div>
 
-        <p class="text-xs text-stone-600 leading-snug">On iPhone and iPad, push notifications only work in
-            the Home Screen app. Add it, open Studiamo from the new icon, then turn on Browser Push there.</p>
+        <p class="ios-push-safari-only text-xs text-stone-600 leading-snug">On iPhone, push notifications only
+            work in the Home Screen app. Here's how to add it:</p>
 
-        <div class="ios-anim-phone" aria-hidden="true">
+        <div class="ios-push-other-only space-y-3">
+            <p class="text-xs text-stone-600 leading-snug">On iPhone, push notifications only work in the Home
+                Screen app, and adding it is only supported from <strong>Safari</strong>.</p>
+            <ol class="list-decimal list-inside space-y-1 text-xs text-stone-800">
+                <li>Copy the link below and open it in <strong>Safari</strong>.</li>
+                <li>Add Studiamo to your Home Screen from there.</li>
+                <li>Open the new icon and turn on <strong>Browser Push</strong>.</li>
+            </ol>
+            <button type="button" id="btn-ios-push-copy-link"
+                class="w-full py-2.5 flex items-center justify-center space-x-1.5 text-xs font-bold text-amber-900 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 rounded-xl transition">
+                <i data-lucide="link" class="w-3.5 h-3.5"></i>
+                <span>Copy link</span>
+            </button>
+        </div>
+
+        <div class="ios-push-safari-only ios-anim-phone" aria-hidden="true">
             <!-- Scene 1: Safari tab, tap the menu button in the address bar -->
             <div class="ios-anim-scene ios-anim-scene-1">
                 <div class="ios-anim-page">
@@ -121,10 +139,16 @@
             <span class="ios-anim-finger"></span>
         </div>
 
-        <ol class="ios-anim-steps list-decimal list-inside space-y-1 text-xs text-stone-800">
-            {% include 'partials/_ios_install_steps.html' %}
-            <li>Open Studiamo from the new icon and turn on <strong>Browser Push</strong>.</li>
-        </ol>
+        <div class="ios-push-safari-only ios-anim-captions text-xs text-stone-800 leading-snug">
+            <p><span class="ios-anim-step-no">1/4</span> Tap the <strong>menu button</strong> (three lines) in the
+                address bar, then <strong>Share</strong>. On older iOS, tap the <strong>Share icon</strong> at the bottom.</p>
+            <p><span class="ios-anim-step-no">2/4</span> Tap <strong>View More</strong>, then
+                <strong>Add to Home Screen</strong>.</p>
+            <p><span class="ios-anim-step-no">3/4</span> Leave <strong>Open as Web App</strong> on and tap
+                <strong>Add</strong>.</p>
+            <p><span class="ios-anim-step-no">4/4</span> Open Studiamo from the new icon and turn on
+                <strong>Browser Push</strong>.</p>
+        </div>
 
         <button type="button" id="btn-ios-push-install-done"
             class="btn-primary w-full py-2.5 font-bold text-xs rounded-xl transition">Got it</button>

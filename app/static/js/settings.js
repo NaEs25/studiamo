@@ -790,6 +790,7 @@ function initSettingsTab() {
     document.getElementById('settings-notify-push')?.addEventListener('change', onPushSwitchChange);
     document.getElementById('btn-close-ios-push-install')?.addEventListener('click', closeIOSPushInstallModal);
     document.getElementById('btn-ios-push-install-done')?.addEventListener('click', closeIOSPushInstallModal);
+    document.getElementById('btn-ios-push-copy-link')?.addEventListener('click', copyIOSPushInstallLink);
 
     const dnField = document.getElementById('profile-display-name');
     if (dnField) {
@@ -1970,12 +1971,14 @@ function togglePushNotifyPanel(enabled) {
     }
 }
 
-// iOS only delivers web push to a home-screen install, so in a plain browser tab there the switch
-// stays off and the install walkthrough opens instead.
+// iOS only delivers web push to a Home Screen install, so in a plain browser tab there the switch
+// stays off and the install walkthrough opens instead. stopPropagation keeps the blocked change
+// from reaching the settings form's autosave listener, so nothing is saved.
 function onPushSwitchChange(e) {
     const box = e.currentTarget;
     const isStandalone = document.documentElement.dataset.standalone === 'true';
     if (box.checked && _isIOSDevice() && !isStandalone) {
+        e.stopPropagation();
         box.checked = false;
         openIOSPushInstallModal();
         return;
@@ -1983,10 +1986,32 @@ function onPushSwitchChange(e) {
     togglePushNotifyPanel(box.checked);
 }
 
+// Other iOS browsers carry their own token in the user agent, and in-app browsers (Instagram,
+// Facebook, Google app) either do too or drop "Safari/" entirely. Brave sends Safari's exact user
+// agent, so it is told apart by the navigator.brave object it adds.
+function _isIOSNonSafari() {
+    const ua = navigator.userAgent;
+    if (navigator.brave) return true;
+    if (/CriOS|FxiOS|EdgiOS|OPiOS|OPT\/|YaBrowser|DuckDuckGo|Ddg\/|GSA\/|FBAN|FBAV|Instagram|Line\/|Snapchat|TikTok|musical_ly|LinkedInApp|Pinterest/.test(ua)) return true;
+    return !/Safari\//.test(ua);
+}
+
 function openIOSPushInstallModal() {
+    const card = document.querySelector('#overlay-ios-push-install [data-variant]');
+    if (card) card.dataset.variant = _isIOSNonSafari() ? 'other' : 'safari';
     openOverlay('overlay-ios-push-install', closeIOSPushInstallModal);
     if (typeof renderIcons === 'function') renderIcons();
     document.getElementById('btn-ios-push-install-done')?.focus();
+}
+
+async function copyIOSPushInstallLink() {
+    const url = window.location.origin + '/';
+    try {
+        await navigator.clipboard.writeText(url);
+        showToast('Link copied. Paste it into Safari.', 'saved');
+    } catch (err) {
+        showToast('Copy failed. Open ' + url + ' in Safari.', 'info', 7000);
+    }
 }
 
 function closeIOSPushInstallModal() {
