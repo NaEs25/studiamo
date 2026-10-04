@@ -1143,10 +1143,11 @@ function renderVideoCard(video, quizzes, goals) {
     let isPreviewState = false;
     if (isTemporaryVideo(video)) {
         isPreviewState = true;
-        // Icon only, so Watch & Notes keeps the room. The label is for screen readers and the tooltip.
+        // The primary action on a preview: it takes the room, and Watch & Notes shrinks to an icon.
         actionControlsHTML = `
-            <button data-video-action="import-preview" data-video-id="${video.id}" class="p-2 bg-stone-100 hover:bg-amber-100 text-amber-700 rounded-xl border border-stone-200 transition flex items-center justify-center h-[38px] w-[38px] shrink-0" title="Import to Goal" aria-label="Import to Goal">
-                 <i data-lucide="plus-circle" class="w-4 h-4"></i>
+            <button data-video-action="import-preview" data-video-id="${video.id}" class="btn-primary w-full py-2 font-extrabold rounded-xl text-xs transition flex items-center justify-center space-x-1.5 min-h-[38px]">
+                 <i data-lucide="plus-circle" class="w-3.5 h-3.5 shrink-0"></i>
+                 <span class="leading-tight">Import to Goal</span>
             </button>
         `;
     } else if (video.status === 'processing') {
@@ -1250,10 +1251,14 @@ function renderVideoCard(video, quizzes, goals) {
     });
 
     // Eaten videos keep the normal two-button row, with "Win it back" as the primary half. A
-    // preview has Watch & Notes first like every other card, then the import button.
+    // preview leads with the wide import button and keeps Watch & Notes as a gray icon beside it.
     const isTwoButtonRow = isNormalState || isEatenState || isPreviewState;
 
-    const watchNotesButtonHTML = (isNormalState || isPreviewState) ? `
+    const watchNotesButtonHTML = isPreviewState ? `
+        <button data-video-action="watch-notes" data-video-id="${video.id}" class="p-2 bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900 rounded-xl border border-stone-200 transition flex items-center justify-center h-[38px] w-[38px] shrink-0" title="Watch &amp; Notes: watch the video and take notes side by side" aria-label="Watch and take notes">
+            <i data-lucide="book-open" class="w-4 h-4"></i>
+        </button>
+    ` : isNormalState ? `
         <button data-video-action="watch-notes" data-video-id="${video.id}" class="btn-primary w-full py-2 font-extrabold rounded-xl text-xs transition flex items-center justify-center space-x-2 min-h-[38px]" title="Watch the video and take notes side by side">
             <i data-lucide="book-open" class="w-3.5 h-3.5 shrink-0"></i>
             <span class="leading-tight">Watch &amp; Notes</span>
@@ -1288,10 +1293,10 @@ function renderVideoCard(video, quizzes, goals) {
 
     const actionRowHTML = isPreviewState ? `
         <div class="flex-grow min-w-0">
-            ${watchNotesButtonHTML}
+            ${actionControlsHTML}
         </div>
         <div class="flex items-center space-x-2 shrink-0">
-            ${actionControlsHTML}
+            ${watchNotesButtonHTML}
             ${bookmarkButtonHTML}
             ${trailingButtonHTML}
         </div>
@@ -2778,7 +2783,7 @@ window.ensureYouTubeAPI = ensureYouTubeAPI;
 async function confirmPreviewImport(id, btnEl = null) {
     if (btnEl) {
         btnEl.disabled = true;
-        btnEl.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i>`;
+        btnEl.innerHTML = `<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i><span>Importing...</span>`;
         if (typeof renderIcons === 'function') renderIcons();
         else if (typeof lucide !== 'undefined') lucide.createIcons();
     }
@@ -2798,7 +2803,7 @@ async function confirmPreviewImport(id, btnEl = null) {
         if (typeof showToast === 'function') showToast('Failed to import material', 'failed', 3000);
         if (btnEl) {
             btnEl.disabled = false;
-            btnEl.innerHTML = `<i data-lucide="plus-circle" class="w-4 h-4"></i>`;
+            btnEl.innerHTML = `<i data-lucide="plus-circle" class="w-3.5 h-3.5"></i><span>Import to Goal</span>`;
             if (typeof renderIcons === 'function') renderIcons();
             else if (typeof lucide !== 'undefined') lucide.createIcons();
         }

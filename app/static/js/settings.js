@@ -175,7 +175,6 @@ async function loadStats() {
             const accEl = document.getElementById('analytics-accuracy');
 
             const ratioEl = document.getElementById('stats-ratio-val');
-            const accBadgeEl = document.getElementById('stats-accuracy-badge');
             const ratioSubEl = document.getElementById('stats-ratio-subtext');
 
             if (attEl) attEl.textContent = historyData.total_attempts;
@@ -183,8 +182,7 @@ async function loadStats() {
             if (forgEl) forgEl.textContent = historyData.forgot;
             if (accEl) accEl.textContent = `${historyData.accuracy_pct}%`;
 
-            if (ratioEl) ratioEl.textContent = `${historyData.remembered} / ${historyData.forgot}`;
-            if (accBadgeEl) accBadgeEl.textContent = `${historyData.accuracy_pct}%`;
+            if (ratioEl) ratioEl.textContent = `${historyData.accuracy_pct}%`;
             if (ratioSubEl) ratioSubEl.textContent = `${historyData.remembered} Right · ${historyData.forgot} Wrong`;
 
             window._analyticsAttemptsRaw = null;

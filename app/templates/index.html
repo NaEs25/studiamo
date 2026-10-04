@@ -104,9 +104,9 @@
             </div>
             <!-- Bugs Pill -->
             <a href="/bugs"
-                class="cloud-only flex items-center space-x-1.5 px-3 py-2 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-900 hover:text-amber-950 text-xs font-bold rounded-xl transition min-h-[44px] active:scale-[0.98]"
+                class="cloud-only flex items-center space-x-1.5 px-3 py-2 bg-red-50 hover:bg-red-100 border border-red-200 text-red-800 hover:text-red-900 text-xs font-bold rounded-xl transition min-h-[44px] active:scale-[0.98]"
                 title="Report a bug or request a feature" aria-label="Report a bug or request a feature">
-                <i data-lucide="bug" class="w-4 h-4 text-amber-700"></i>
+                <i data-lucide="bug" class="w-4 h-4 text-red-600"></i>
                 <span class="hidden sm:inline">Bugs</span>
             </a>
         </div>
@@ -517,7 +517,7 @@
         <section id="tab-stats" class="tab-content hidden space-y-6">
             <div>
                 <h2 class="text-2xl font-bold tracking-tight">Your Progress & Stats</h2>
-                <p class="text-sm text-stone-400">Track streaks, badges, points, and AI token usages.</p>
+                <p class="text-sm text-stone-400">Track streaks, badges, and points.</p>
             </div>
 
             <!-- Main Stats Card -->
@@ -545,39 +545,24 @@
                 </div>
 
                 <!-- Streak Card -->
-                <div
-                    class="bg-[#fbf8f2] p-5 rounded-2xl border border-[#e7dfd3] flex items-center justify-between shadow-sm">
-                    <div class="space-y-2">
-                        <span class="text-xs font-bold text-amber-700 uppercase tracking-wider block">Consistency
-                            Streak</span>
-                        <div class="flex items-baseline space-x-1.5">
-                            <span id="stats-streak-val" class="text-4xl font-extrabold text-stone-900">0</span>
-                            <span class="text-sm text-stone-600 font-medium">Days</span>
-                        </div>
-                        <p id="stats-streak-subtext" class="text-[11px] text-stone-500">Do 1 quiz daily to preserve</p>
+                <div class="bg-[#fbf8f2] p-5 rounded-2xl border border-[#e7dfd3] space-y-3 shadow-sm">
+                    <span class="text-xs font-bold text-amber-700 uppercase tracking-wider">Consistency Streak</span>
+                    <div class="flex items-center space-x-2">
+                        <img src="/static/images/streak-flame.png" alt="" class="w-9 h-9 shrink-0">
+                        <span id="stats-streak-val" class="text-4xl font-extrabold text-stone-900">0</span>
+                        <span class="text-sm text-stone-600 font-medium self-end pb-1">Days</span>
                     </div>
-                    <div id="streak-fire-icon"
-                        class="p-3 bg-amber-500/15 rounded-full border border-amber-500/30 text-amber-600">
-                        <img src="/static/images/streak-flame.png" alt="" class="w-8 h-8">
-                    </div>
+                    <p id="stats-streak-subtext" class="text-[11px] text-stone-500">Do 1 quiz daily to preserve</p>
                 </div>
 
                 <!-- Right / Wrong Ratio -->
-                <div
-                    class="bg-[#fbf8f2] p-5 rounded-2xl border border-[#e7dfd3] flex items-center justify-between shadow-sm">
-                    <div class="space-y-2">
-                        <span class="text-xs font-bold text-emerald-700 uppercase tracking-wider block">Right / Wrong
-                            Ratio</span>
-                        <div class="flex items-baseline space-x-2">
-                            <span id="stats-ratio-val" class="text-4xl font-extrabold text-stone-900">0 / 0</span>
-                            <span id="stats-accuracy-badge"
-                                class="text-xs font-bold text-emerald-800 bg-emerald-500/15 px-2 py-0.5 rounded-full border border-emerald-500/30">0%</span>
-                        </div>
-                        <p id="stats-ratio-subtext" class="text-[11px] text-stone-500">0 Right · 0 Wrong</p>
+                <div class="bg-[#fbf8f2] p-5 rounded-2xl border border-[#e7dfd3] space-y-3 shadow-sm">
+                    <span class="text-xs font-bold text-emerald-700 uppercase tracking-wider">Right / Wrong Ratio</span>
+                    <div class="flex items-center space-x-2">
+                        <i data-lucide="target" class="w-9 h-9 text-emerald-600 shrink-0"></i>
+                        <span id="stats-ratio-val" class="text-4xl font-extrabold text-stone-900">0%</span>
                     </div>
-                    <div class="p-3 bg-emerald-500/15 rounded-full border border-emerald-500/30 text-emerald-700">
-                        <i data-lucide="check-circle-2" class="w-8 h-8"></i>
-                    </div>
+                    <p id="stats-ratio-subtext" class="text-[11px] text-stone-500">0 Right · 0 Wrong</p>
                 </div>
             </div>
 

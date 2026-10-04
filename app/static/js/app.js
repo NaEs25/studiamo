@@ -625,7 +625,6 @@ function updateStreakTimer() {
 
     const headerTimer = document.getElementById('header-streak-timer');
     const subtextEl = document.getElementById('stats-streak-subtext');
-    const fireIcon = document.getElementById('streak-fire-icon');
 
     const now = new Date();
     
@@ -635,7 +634,6 @@ function updateStreakTimer() {
             subtextEl.className = 'text-[11px] text-stone-500';
         }
         if (headerTimer) headerTimer.classList.add('hidden');
-        if (fireIcon) fireIcon.className = 'p-3 bg-amber-500/10 rounded-full border border-amber-500/20 text-amber-500';
         return;
     }
 
@@ -665,7 +663,6 @@ function updateStreakTimer() {
             subtextEl.className = 'text-[11px] text-stone-500';
         }
         if (headerTimer) headerTimer.classList.add('hidden');
-        if (fireIcon) fireIcon.className = 'p-3 bg-amber-500/10 rounded-full border border-amber-500/20 text-amber-500';
         return;
     }
 
@@ -686,9 +683,6 @@ function updateStreakTimer() {
             headerTimer.textContent = shortTimeStr;
             headerTimer.classList.remove('hidden');
         }
-        if (fireIcon) {
-            fireIcon.className = 'p-3 bg-red-500/10 rounded-full border border-red-500/30 text-red-400';
-        }
     } else {
         // Safe mode (> 5 hours remaining)
         const totalSecs = Math.floor(msLeft / 1000);
@@ -700,9 +694,6 @@ function updateStreakTimer() {
         }
         if (headerTimer) {
             headerTimer.classList.add('hidden');
-        }
-        if (fireIcon) {
-            fireIcon.className = 'p-3 bg-emerald-500/10 rounded-full border border-emerald-500/20 text-emerald-400';
         }
     }
 }
