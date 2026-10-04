@@ -1,5 +1,6 @@
-// Bump this by hand when a precached asset changes and the new version must reach users.
-const CACHE_NAME = 'studiamo-pwa-v12';
+// Everything is served network-first (see the fetch handler), so a changed asset reaches users
+// without a bump. Bumping still clears out caches left by older versions of this worker.
+const CACHE_NAME = 'studiamo-pwa-v13';
 const ASSETS_TO_CACHE = [
   '/',
   '/static/css/style.css',
@@ -47,9 +48,11 @@ self.addEventListener('activate', (event) => {
 });
 
 // Fetch handler: bypass for API and external cross-origin requests (e.g. analytics).
-// Navigation requests (HTML) stay network-first since the response depends on auth state.
-// Static assets (CSS/JS/images/manifest) use stale-while-revalidate so a cold app launch
-// paints instantly from cache while the cache quietly refreshes from the network.
+// Everything else is network-first, falling back to the cache only when offline. Static assets
+// used to be stale-while-revalidate, which paired a freshly deployed page with the previous
+// deploy's CSS and JS for one load, so the page rendered unstyled or with handlers missing.
+// The server sends these files with no-cache and an ETag, so the network check is usually a
+// small 304.
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
@@ -57,46 +60,20 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          if (response && response.status === 200 && response.type === 'basic') {
-            const responseToCache = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
-          }
-          return response;
-        })
-        .catch(async () => {
-          const cached = await caches.match(event.request);
-          if (cached) return cached;
-          return new Response('Network error', { status: 503, statusText: 'Service Unavailable' });
-        })
-    );
-    return;
-  }
-
   event.respondWith(
-    caches.open(CACHE_NAME).then(async (cache) => {
-      const cached = await cache.match(event.request);
-      const networkFetch = fetch(event.request)
-        .then((response) => {
-          if (response && response.status === 200 && response.type === 'basic') {
-            cache.put(event.request, response.clone());
-          }
-          return response;
-        })
-        .catch(() => null);
-
-      if (cached) {
-        event.waitUntil(networkFetch);
-        return cached;
-      }
-
-      const networkResponse = await networkFetch;
-      if (networkResponse) return networkResponse;
-      return new Response('Network error', { status: 503, statusText: 'Service Unavailable' });
-    })
+    fetch(event.request)
+      .then((response) => {
+        if (response && response.status === 200 && response.type === 'basic') {
+          const responseToCache = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
+        }
+        return response;
+      })
+      .catch(async () => {
+        const cached = await caches.match(event.request);
+        if (cached) return cached;
+        return new Response('Network error', { status: 503, statusText: 'Service Unavailable' });
+      })
   );
 });
 
