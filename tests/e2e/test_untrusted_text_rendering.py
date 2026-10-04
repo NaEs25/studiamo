@@ -59,6 +59,7 @@ def test_recommendation_titles_stay_text_and_reach_handlers_unchanged(logged_in_
         assert card.locator("h4").inner_text().strip() == title
         assert card.get_attribute("data-rec-title") == title
         with page.expect_request("**/api/videos/preview"):
+            card.locator("[data-rec-action='toggle-actions']").click()
             card.locator("[data-rec-action='queue']").click()
 
     assert page.evaluate("window.__injected") is None

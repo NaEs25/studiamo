@@ -185,6 +185,13 @@ function handleRecommendationClick(event) {
             playRecommendedVideo(ytId, `media-wrapper-${ytId}`, title, goalId, lastPos);
             break;
         }
+        case 'toggle-actions': {
+            const open = actionEl.getAttribute('aria-expanded') !== 'true';
+            actionEl.setAttribute('aria-expanded', String(open));
+            actionEl.setAttribute('aria-label', open ? 'Hide actions for this video' : 'Show actions for this video');
+            document.getElementById(actionEl.getAttribute('aria-controls'))?.classList.toggle('hidden', !open);
+            break;
+        }
         case 'queue':
             queueRecommendationPreview(ytId, title, goalId);
             break;
@@ -419,12 +426,19 @@ async function loadDailyRecommendations() {
 
                     <!-- Details Body -->
                     <div class="p-3.5 flex flex-col gap-2.5 bg-white">
-                        <h4 data-rec-action="play" class="font-bold text-sm text-stone-900 leading-snug line-clamp-2 hover:text-amber-700 transition-colors cursor-pointer">
-                            ${escapeHtml(rec.title)}
+                        <!-- The title opens the action bar below, like a video description; playing
+                             stays on the thumbnail. -->
+                        <h4 class="font-bold text-sm text-stone-900 leading-snug">
+                            <button type="button" data-rec-action="toggle-actions" aria-expanded="false"
+                                    aria-controls="rec-actions-${escapeHtml(ytId)}" aria-label="Show actions for this video"
+                                    class="rec-title-toggle w-full flex items-start justify-between gap-2 text-left min-h-[44px] -my-1.5 py-1.5 hover:text-amber-700 transition-colors">
+                                <span class="line-clamp-2">${escapeHtml(rec.title)}</span>
+                                <i data-lucide="chevron-down" class="rec-chevron w-4 h-4 shrink-0 mt-0.5 text-stone-500"></i>
+                            </button>
                         </h4>
 
                         <!-- Action Bar -->
-                        <div class="flex items-center space-x-2">
+                        <div id="rec-actions-${escapeHtml(ytId)}" class="hidden flex items-center space-x-2">
                             ${isQueued ? `
                                 <button id="btn-queue-${escapeHtml(ytId)}" data-rec-action="view-queue" data-rec-video="${escapeHtml(draftVideoId)}" class="btn-primary flex-grow py-2 px-3 font-extrabold rounded-xl text-xs transition flex items-center justify-center space-x-1.5 active:scale-[0.98]">
                                     <i data-lucide="bookmark" class="w-3.5 h-3.5 fill-current"></i>

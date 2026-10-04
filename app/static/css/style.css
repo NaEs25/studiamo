@@ -1457,3 +1457,12 @@ button:active:not(:disabled) {
 /* The field has its own clear button, so drop the browser's built-in one. */
 .goals-search-input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
 #btn-goals-search-toggle[aria-expanded="true"] { background: var(--color-surface); color: var(--color-primary); }
+
+/* Daily recommendation cards: the title toggles the action bar, and its chevron flips with it. */
+.rec-chevron {
+    transition: transform 0.2s ease;
+}
+
+.rec-title-toggle[aria-expanded="true"] .rec-chevron {
+    transform: rotate(180deg);
+}
