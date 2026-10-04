@@ -268,16 +268,34 @@ option {
 }
 
 /* ── Header Stats (streak, level) ───────────────────────── */
-/* Bare icon plus number, no pill around it. Both icons are images (streak-flame.png, crystal.png). */
+/* Bare icon plus number, no pill around it. Both icons are images (streak-flame.png, crystal.png).
+   Each is a button that opens the Stats tab, so it keeps a 44px tap target and only shows a
+   background on hover and keyboard focus. No display here: the template sets `flex`, so
+   Tailwind's .hidden can still hide the streak at zero (this file loads later and would win). */
 .header-stat {
-    display: flex;
     align-items: center;
     gap: 0.25rem;
-    padding: 0 0.25rem;
+    min-height: 44px;
+    padding: 0 0.375rem;
+    border: 0;
+    border-radius: 0.75rem;
+    background: transparent;
     font-size: 1rem;
     font-weight: 800;
     line-height: 1;
     color: var(--color-text);
+    cursor: pointer;
+    transition: background-color 0.15s ease, transform 0.1s ease;
+}
+.header-stat:hover {
+    background: rgb(28 25 23 / 0.05);
+}
+.header-stat:focus-visible {
+    outline: 2px solid #f59e0b;
+    outline-offset: 2px;
+}
+.header-stat:active {
+    transform: scale(0.96);
 }
 .header-stat img {
     width: 1.625rem;

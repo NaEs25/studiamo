@@ -779,6 +779,9 @@ function closeCrystalEarned() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('[data-open-stats]').forEach((btn) => {
+        btn.addEventListener('click', () => switchTab('stats'));
+    });
     document.getElementById('btn-close-crystal-earned')?.addEventListener('click', closeCrystalEarned);
     document.getElementById('overlay-crystal-earned')?.addEventListener('click', (e) => {
         if (e.target === e.currentTarget) closeCrystalEarned();

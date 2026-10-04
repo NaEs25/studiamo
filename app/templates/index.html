@@ -86,22 +86,24 @@
                 <i data-lucide="flask-conical" class="w-4 h-4"></i>
                 <span id="tester-pill-label">Tester</span>
             </button>
-            <div id="top-streak-badge" class="hidden header-stat" title="Day streak">
+            <!-- Both stats open the Stats tab (data-open-stats, bound in app.js). -->
+            <button type="button" id="top-streak-badge" data-open-stats class="hidden flex header-stat" title="Day streak: open your stats">
                 <!-- app.js plays the flame's growth (.stat-grow) over the icon when the streak goes up. -->
                 <span class="header-stat-icon">
                     <img src="/static/images/streak-flame.png" alt="">
                     <span class="stat-grow stat-grow-flame" aria-hidden="true"></span>
                 </span>
+                <span class="sr-only">Day streak</span>
                 <span id="header-streak-count">0</span>
                 <span id="header-streak-timer"
                     class="hidden text-[10px] text-red-700 font-mono font-bold bg-red-100 px-1.5 py-0.5 rounded border border-red-300 ml-1"></span>
-            </div>
+            </button>
             <!-- Crystals: the user-facing name for level (stored as level, earned through XP). -->
-            <div id="top-level-badge" class="header-stat" title="Crystals">
+            <button type="button" id="top-level-badge" data-open-stats class="flex header-stat" title="Crystals: open your stats">
                 <img src="/static/images/crystal.png" alt="">
                 <span class="sr-only">Crystals</span>
                 <span id="header-level-val">1</span>
-            </div>
+            </button>
             <!-- Bugs Pill -->
             <a href="/bugs"
                 class="cloud-only flex items-center space-x-1.5 px-3 py-2 bg-red-50 hover:bg-red-100 border border-red-200 text-red-800 hover:text-red-900 text-xs font-bold rounded-xl transition min-h-[44px] active:scale-[0.98]"
