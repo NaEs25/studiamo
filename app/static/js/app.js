@@ -367,7 +367,7 @@ async function loadDailyRecommendations() {
             }
 
             return `
-                <div class="bg-white border border-stone-200/90 rounded-2xl overflow-hidden flex flex-col justify-between hover:border-amber-400 hover:shadow-md transition-all duration-200 relative group select-none"
+                <div class="bg-white border border-stone-200/90 rounded-2xl overflow-hidden flex flex-col hover:border-amber-400 hover:shadow-md transition-all duration-200 relative group select-none"
                      data-rec-yt="${escapeHtml(ytId)}" data-rec-title="${escapeHtml(rec.title || '')}"
                      data-rec-goal="${escapeHtml(rec.goal_id || '')}" data-rec-pos="${lastPos}">
                     <!-- Inline Playable Media Wrapper -->
