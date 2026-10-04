@@ -293,11 +293,6 @@ async function loadSettings() {
         if (s4) { s4.placeholder = defaults.srs_stage_4 || '14'; s4.value = configData.has_custom_srs ? (configData.srs_stage_4 !== undefined ? configData.srs_stage_4 : '') : ''; }
         if (s5) { s5.placeholder = defaults.srs_stage_5 || '30'; s5.value = configData.has_custom_srs ? (configData.srs_stage_5 !== undefined ? configData.srs_stage_5 : '') : ''; }
         
-        const notifEnabledSwitch = document.getElementById('settings-notifications-enabled');
-        const isNotifEnabled = configData.notifications_enabled !== undefined ? !!configData.notifications_enabled : true;
-        if (notifEnabledSwitch) notifEnabledSwitch.checked = isNotifEnabled;
-        toggleNotificationsMasterSwitch(isNotifEnabled);
-
         const capStages = document.getElementById('settings-cap-stages');
         if (capStages) capStages.checked = !!configData.cap_stages_by_importance;
         toggleCapStagesPanel();
@@ -691,8 +686,6 @@ async function _submitSettings(silent = true) {
     formData.append('enable_stage_5_repetition', repeatStage5);
     formData.append('stage_5_repeat_interval', stage5RepeatInterval);
 
-    const isNotifEnabled = document.getElementById('settings-notifications-enabled')?.checked ?? true;
-    formData.append('notifications_enabled', isNotifEnabled);
     const m1 = parseFloat(document.getElementById('srs-mult-1')?.value);
     const m2 = parseFloat(document.getElementById('srs-mult-2')?.value);
     const m3 = parseFloat(document.getElementById('srs-mult-3')?.value);
@@ -1858,7 +1851,9 @@ function goToNotificationSettings() {
     if (typeof switchTab === 'function') switchTab('settings');
     setTimeout(() => {
         const card = document.getElementById('notifications');
-        if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        if (!card) return;
+        card.open = true;
+        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 300);
 }
 
@@ -2263,25 +2258,12 @@ if ('serviceWorker' in navigator) {
     });
 }
 
-function toggleNotificationsMasterSwitch(enabled) {
-    const label = document.getElementById('notifications-enabled-label');
-    const panel = document.getElementById('notifications-panel-content');
-    if (label) {
-        label.textContent = enabled ? 'Enabled' : 'Disabled';
-        label.className = enabled ? 'ml-2 text-xs font-semibold text-emerald-600' : 'ml-2 text-xs font-semibold text-stone-500';
-    }
-    if (panel) {
-        panel.classList.toggle('hidden', !enabled);
-    }
-}
-
 if ('Notification' in window && Notification.permission === 'granted') {
     setTimeout(subscribeWebPush, 2000);
 }
 
 window.requestBrowserNotificationPermission = requestBrowserNotificationPermission;
 window.triggerPWAInstall = triggerPWAInstall;
-window.toggleNotificationsMasterSwitch = toggleNotificationsMasterSwitch;
 window.subscribeWebPush = subscribeWebPush;
 window.captureTimezoneIfMissing = captureTimezoneIfMissing;
 window.toggleStage5RepeatPanel = toggleStage5RepeatPanel;

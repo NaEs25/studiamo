@@ -856,23 +856,16 @@
                     </div>
                 </div>
 
-                <!-- 2. Notifications & Network Setup Card -->
-                <div id="notifications" class="bg-white p-6 rounded-2xl border border-stone-200 space-y-4 shadow-sm scroll-mt-4">
-                    <div class="flex items-center justify-between border-b border-stone-200 pb-3">
+                <!-- 2. Notifications Card. Open by default; collapsing it only hides the content, every
+                     field stays in the settings form. -->
+                <details id="notifications" open class="group/notif bg-white p-6 rounded-2xl border border-stone-200 space-y-4 shadow-sm scroll-mt-4">
+                    <summary class="flex items-center justify-between cursor-pointer select-none border-stone-200 group-open/notif:border-b group-open/notif:pb-3">
                         <h3 class="font-bold text-base flex items-center space-x-2">
                             <i data-lucide="bell" class="w-5 h-5 text-emerald-600"></i>
-                            <span>Notifications &amp; Network Setup</span>
+                            <span>Notifications</span>
                         </h3>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" id="settings-notifications-enabled" checked class="sr-only peer"
-                                onchange="toggleNotificationsMasterSwitch(this.checked)">
-                            <div
-                                class="w-11 h-6 bg-stone-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600">
-                            </div>
-                            <span class="ml-2 text-xs font-semibold text-stone-700"
-                                id="notifications-enabled-label">Enabled</span>
-                        </label>
-                    </div>
+                        <i data-lucide="chevron-down" class="w-5 h-5 text-stone-500 transition-transform duration-200 group-open/notif:rotate-180"></i>
+                    </summary>
 
                     <div class="flex items-start space-x-3 bg-[#fbf8f2] p-3 rounded-xl border border-[#e7dfd3]">
                         <img src="/static/images/chompy/chompy-icon.png" alt="" class="w-8 h-8 shrink-0" loading="lazy">
@@ -881,7 +874,7 @@
                             you left for too long. You can turn any of them off here.</p>
                     </div>
 
-                    <div id="notifications-panel-content" class="space-y-4 transition-all">
+                    <div id="notifications-panel-content" class="space-y-4">
                         <!-- Notification Types (categories, apply across all enabled channels). Collapsed
                              by default; the checkboxes stay in the form either way. -->
                         <details class="group bg-[#fbf8f2] p-4 rounded-xl border border-[#e7dfd3]">
@@ -1096,7 +1089,7 @@
                         </div>
                     </div>
 
-                </div>
+                </details>
 
                 <!-- 3. Voice Engine Card -->
                 <div class="bg-white p-4 rounded-2xl border border-stone-200 space-y-3 shadow-sm">
