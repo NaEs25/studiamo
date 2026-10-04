@@ -144,7 +144,7 @@ async function loadStats() {
                                     <p class="text-[10px] text-stone-500 flex items-center space-x-1 truncate">
                                         <span class="flex items-center space-x-1"><i data-lucide="flame" class="w-3 h-3 text-amber-500 shrink-0"></i><span>${entry.streak} day streak</span></span>
                                         <span>·</span>
-                                        <span class="text-amber-800 font-medium">Lvl ${entry.level}</span>
+                                        <span class="flex items-center space-x-0.5 text-amber-800 font-medium" title="Level"><i data-lucide="gem" class="w-3 h-3 text-amber-500 fill-amber-300 shrink-0"></i><span class="sr-only">Level</span><span>${entry.level}</span></span>
                                     </p>
                                 </div>
                             </div>

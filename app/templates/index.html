@@ -60,14 +60,14 @@
             <img src="/static/images/logo-icon.png" class="w-9 h-9 rounded-xl shadow-md shadow-amber-500/20"
                 alt="Studiamo Logo" />
             <span
-                class="inline-block sm:hidden beta-badge">Beta</span>
+                class="inline-block sm:hidden beta-badge select-none">Beta</span>
             <div class="hidden sm:block">
                 <div class="flex items-center space-x-2">
                     <h1
                         class="text-xl font-extrabold tracking-tight text-stone-900">
                         Studiamo</h1>
                     <span
-                        class="inline-block beta-badge">Beta</span>
+                        class="inline-block beta-badge select-none">Beta</span>
                 </div>
                 <p class="text-xs text-stone-500 font-medium">Spaced Repetition &amp; AI Studio</p>
             </div>
@@ -520,9 +520,10 @@
                 <!-- XP Level Card -->
                 <div class="bg-[#fbf8f2] p-5 rounded-2xl border border-[#e7dfd3] space-y-3 shadow-sm">
                     <span class="text-xs font-bold text-amber-700 uppercase tracking-wider">Mastery Level</span>
-                    <div class="flex items-baseline space-x-2">
+                    <div class="flex items-center space-x-2">
+                        <i data-lucide="gem" class="w-8 h-8 text-amber-500 fill-amber-300 shrink-0"></i>
                         <span id="stats-level-val" class="text-4xl font-extrabold text-stone-900">1</span>
-                        <span class="text-sm text-stone-600 font-medium">Level</span>
+                        <span class="text-sm text-stone-600 font-medium self-end pb-1">Level</span>
                     </div>
                     <div>
                         <div class="flex justify-between text-xs text-stone-600 font-medium mb-1">
@@ -2188,6 +2189,7 @@
     </div>
 
     {% include 'partials/_ios_push_install_modal.html' %}
+    {% include 'partials/_beta_easter_egg.html' %}
 
     <!-- Overlay: Change Password Modal (Self-Hosted) -->
     <div id="overlay-change-password-modal"

@@ -1,0 +1,18 @@
+<!-- Overlay: thank-you note behind the header's Beta badge. app.js opens it after five quick taps
+     on either .beta-badge. -->
+<div id="overlay-beta-egg"
+    class="app-overlay fixed inset-0 bg-stone-950/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4"
+    role="dialog" aria-modal="true" aria-labelledby="beta-egg-title">
+    <div class="bg-white border border-stone-200 rounded-2xl p-6 max-w-sm w-full shadow-2xl space-y-4 text-center">
+        <div class="beta-egg-icon mx-auto">
+            <i data-lucide="egg" class="w-8 h-8"></i>
+        </div>
+        <div class="space-y-2">
+            <h3 id="beta-egg-title" class="font-extrabold text-stone-900 text-lg">You found an Easter egg!</h3>
+            <p class="text-sm text-stone-600 leading-relaxed">Thank you for being an early tester. You are
+                invaluable to us.</p>
+        </div>
+        <button type="button" id="btn-close-beta-egg"
+            class="btn-primary w-full px-4 py-3 font-bold text-sm rounded-xl transition">Aww, thanks</button>
+    </div>
+</div>

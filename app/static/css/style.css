@@ -233,6 +233,22 @@ option {
     animation: betaBadgeShine 4s ease-in-out infinite;
     pointer-events: none;
 }
+.beta-badge {
+    /* Tapped repeatedly for the Easter egg (app.js); stop iOS reading that as double-tap zoom. */
+    touch-action: manipulation;
+}
+/* Egg icon in the Easter egg dialog (partials/_beta_easter_egg.html), in the badge's colors. */
+.beta-egg-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 4rem;
+    height: 4rem;
+    border-radius: 9999px;
+    color: #fff;
+    background: linear-gradient(135deg, #8b5cf6 0%, #c084fc 35%, #f0abfc 50%, #ec4899 75%, #a855f7 100%);
+    box-shadow: inset 0 2px 0 rgb(255 255 255 / 0.5), 0 4px 14px rgb(168 85 247 / 0.35);
+}
 @keyframes betaBadgeShift {
     0%, 100% { background-position: 0% 50%; }
     50% { background-position: 100% 50%; }

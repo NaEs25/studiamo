@@ -1151,3 +1151,39 @@ document.addEventListener('DOMContentLoaded', () => {
         if (plus && typeof rescheduleQuiz === 'function') rescheduleQuiz(Number(plus.dataset.plusDay));
     });
 });
+
+// Easter egg: five quick taps on the header's Beta badge open a thank-you note. A pause longer
+// than BETA_EGG_WINDOW_MS between taps starts the count over.
+const BETA_EGG_TAPS = 5;
+const BETA_EGG_WINDOW_MS = 1500;
+let _betaEggCount = 0;
+let _betaEggLastTap = 0;
+
+function openBetaEgg() {
+    openOverlay('overlay-beta-egg', closeBetaEgg);
+    document.getElementById('btn-close-beta-egg')?.focus();
+}
+
+function closeBetaEgg() {
+    document.getElementById('overlay-beta-egg')?.classList.add('hidden');
+    closeOverlay('overlay-beta-egg');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.beta-badge').forEach((badge) => {
+        badge.addEventListener('click', () => {
+            const now = Date.now();
+            _betaEggCount = now - _betaEggLastTap > BETA_EGG_WINDOW_MS ? 1 : _betaEggCount + 1;
+            _betaEggLastTap = now;
+            if (_betaEggCount >= BETA_EGG_TAPS) {
+                _betaEggCount = 0;
+                openBetaEgg();
+            }
+        });
+    });
+    document.getElementById('btn-close-beta-egg')?.addEventListener('click', closeBetaEgg);
+    // A tap on the dimmed backdrop closes it too, but not one inside the card.
+    document.getElementById('overlay-beta-egg')?.addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) closeBetaEgg();
+    });
+});
