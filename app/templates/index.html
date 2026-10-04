@@ -60,14 +60,14 @@
             <img src="/static/images/logo-icon.png" class="w-9 h-9 rounded-xl shadow-md shadow-amber-500/20"
                 alt="Studiamo Logo" />
             <span
-                class="sm:hidden text-[10px] font-bold px-2 py-0.5 bg-amber-500/15 text-amber-800 border border-amber-500/30 rounded-md">Beta</span>
+                class="inline-block sm:hidden beta-badge">Beta</span>
             <div class="hidden sm:block">
                 <div class="flex items-center space-x-2">
                     <h1
                         class="text-xl font-extrabold tracking-tight text-stone-900">
                         Studiamo</h1>
                     <span
-                        class="text-[10px] font-bold px-2 py-0.5 bg-amber-500/15 text-amber-800 border border-amber-500/30 rounded-md">Beta</span>
+                        class="inline-block beta-badge">Beta</span>
                 </div>
                 <p class="text-xs text-stone-500 font-medium">Spaced Repetition &amp; AI Studio</p>
             </div>
@@ -85,16 +85,16 @@
                 <i data-lucide="flask-conical" class="w-4 h-4"></i>
                 <span id="tester-pill-label">Tester</span>
             </button>
-            <div id="top-streak-badge"
-                class="hidden flex items-center space-x-1.5 px-3 py-1.5 bg-amber-500/10 border border-amber-500/30 text-amber-800 rounded-full text-xs font-semibold">
-                <i data-lucide="flame" class="w-4 h-4 text-amber-600 fill-amber-500"></i>
-                <span id="header-streak-count">0</span><span class="hidden sm:inline"> Day Streak</span>
+            <div id="top-streak-badge" class="hidden header-stat" title="Day streak">
+                <i data-lucide="flame" class="text-amber-600 fill-amber-500"></i>
+                <span id="header-streak-count">0</span>
                 <span id="header-streak-timer"
                     class="hidden text-[10px] text-red-700 font-mono font-bold bg-red-100 px-1.5 py-0.5 rounded border border-red-300 ml-1"></span>
             </div>
-            <div id="top-level-badge"
-                class="flex items-center space-x-1.5 px-3 py-1.5 bg-amber-500/10 border border-amber-500/30 text-amber-800 rounded-full text-xs font-semibold">
-                <span class="sm:hidden">L</span><span class="hidden sm:inline">LVL</span>
+            <!-- Level, shown as a crystal. Lucide's gem stands in until the crystal art exists. -->
+            <div id="top-level-badge" class="header-stat" title="Level">
+                <i data-lucide="gem" class="text-amber-500 fill-amber-300"></i>
+                <span class="sr-only">Level</span>
                 <span id="header-level-val">1</span>
             </div>
             <!-- Bugs Pill -->
