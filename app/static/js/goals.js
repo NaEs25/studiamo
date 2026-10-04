@@ -101,7 +101,7 @@ async function loadGoals() {
                                         </div>
                                         <h3 class="font-bold text-lg text-stone-900 leading-tight">${escapeHtml(g.title)}</h3>
                                     </div>
-                                    ${g.description ? `<p class="text-xs text-stone-500 mt-1 ml-11">${escapeHtml(g.description)}</p>` : ''}
+                                    ${g.description ? `<p class="hidden sm:block text-xs text-stone-500 mt-1 ml-11">${escapeHtml(g.description)}</p>` : ''}
                                 </div>
                                 
                                 <div class="flex items-center space-x-1 shrink-0 bg-stone-100 border border-stone-200 rounded-xl p-1">
