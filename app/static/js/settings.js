@@ -787,8 +787,9 @@ function initSettingsTab() {
         form.addEventListener('input', () => { if (!window._settingsLoading) _scheduleSettingsAutosave(); });
     }
 
-    // Registered on the switch itself, so it runs before the form's autosave listener above and
-    // a blocked switch-on is already reverted by the time the form is read.
+    // Registered on the switch itself, so they run before the form's autosave listeners above and
+    // can keep a blocked switch-on from reaching them.
+    document.getElementById('settings-notify-push')?.addEventListener('input', onPushSwitchInput);
     document.getElementById('settings-notify-push')?.addEventListener('change', onPushSwitchChange);
     document.getElementById('btn-close-ios-push-install')?.addEventListener('click', closeIOSPushInstallModal);
     document.getElementById('btn-ios-push-install-done')?.addEventListener('click', closeIOSPushInstallModal);
@@ -1974,12 +1975,21 @@ function togglePushNotifyPanel(enabled) {
 }
 
 // iOS only delivers web push to a Home Screen install, so in a plain browser tab there the switch
-// stays off and the install walkthrough opens instead. stopPropagation keeps the blocked change
-// from reaching the settings form's autosave listener, so nothing is saved.
+// stays off and the install walkthrough opens instead.
+function _pushSwitchBlocked(box) {
+    const isStandalone = document.documentElement.dataset.standalone === 'true';
+    return box.checked && _isIOSDevice() && !isStandalone;
+}
+
+// A checkbox fires input before change, and the settings form autosaves on both, so a blocked
+// switch-on is stopped at each one; otherwise the form saves (and toasts) a change that is reverted.
+function onPushSwitchInput(e) {
+    if (_pushSwitchBlocked(e.currentTarget)) e.stopPropagation();
+}
+
 function onPushSwitchChange(e) {
     const box = e.currentTarget;
-    const isStandalone = document.documentElement.dataset.standalone === 'true';
-    if (box.checked && _isIOSDevice() && !isStandalone) {
+    if (_pushSwitchBlocked(box)) {
         e.stopPropagation();
         box.checked = false;
         openIOSPushInstallModal();
