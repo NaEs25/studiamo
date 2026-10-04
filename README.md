@@ -5,7 +5,7 @@
 <h1 align="center">Studiamo</h1>
 
 <p align="center">
-  <strong>Learn once. Remember forever.</strong><br>
+  <strong>Learn for real. Keep for real.</strong><br>
   Turns your YouTube videos, PDFs, and lecture notes into AI-generated active-recall
   flashcards, scheduled with spaced repetition right before memory fades.
 </p>
