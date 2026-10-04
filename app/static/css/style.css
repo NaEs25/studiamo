@@ -284,6 +284,158 @@ option {
     height: 1.625rem;
 }
 
+/* Flame growth, played by app.js (playStatGrow) when the streak goes up. The 8 frames of
+   streak-flame-grow.webp run at a larger scale, then hand back to the static icon, which the
+   last frame lines up with. */
+.header-stat-icon {
+    position: relative;
+    display: block;
+    flex-shrink: 0;
+    width: 1.625rem;
+    height: 1.625rem;
+    transform-origin: 50% 100%;
+}
+.header-stat-icon img {
+    display: block;
+}
+.stat-grow {
+    position: absolute;
+    inset: 0;
+    display: none;
+    background-repeat: no-repeat;
+    background-size: 800% 100%;
+    pointer-events: none;
+}
+.stat-grow-flame {
+    background-image: url("/static/images/streak-flame-grow.webp");
+}
+.header-stat-icon.is-growing {
+    z-index: 1;
+    animation: statGrowPop 1.2s ease-out;
+}
+.header-stat-icon.is-growing .stat-grow {
+    display: block;
+    animation: spriteFrames 0.8s steps(8, jump-none) forwards, fadeOutQuick 0.2s ease-in 0.9s forwards;
+}
+.header-stat-icon.is-growing img {
+    animation: fadeInQuick 0.2s ease-in 0.9s backwards;
+}
+@keyframes spriteFrames {
+    from { background-position: 0% 0; }
+    to { background-position: 100% 0; }
+}
+@keyframes statGrowPop {
+    0%, 70% { transform: scale(1.7); }
+    88% { transform: scale(0.94); }
+    100% { transform: scale(1); }
+}
+@keyframes fadeInQuick {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+@keyframes fadeOutQuick {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+/* ── New Crystal Dialog (partials/_crystal_earned.html) ── */
+/* One timeline, restarted by app.js toggling .is-playing: the crystal grows through the 8 frames
+   of crystal-grow.webp (0 to 0.9s), hands off to crystal.png, which the last frame lines up with,
+   then a light sweep, a sparkle, and a burst of shards behind it. */
+.crystal-stage {
+    position: relative;
+    width: 7rem;
+    height: 7rem;
+}
+.crystal-stage > * {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+.crystal-stage-grow {
+    opacity: 0;
+    background: url("/static/images/crystal-grow.webp") no-repeat 0 0 / 800% 100%;
+}
+.crystal-stage-shards {
+    opacity: 0;
+    inset: -45%;
+    width: auto;
+    height: auto;
+    background: url("/static/images/crystal-shards.webp") no-repeat center / contain;
+}
+.crystal-stage-shine {
+    opacity: 0;
+    background: linear-gradient(105deg, transparent 38%, rgb(255 255 255 / 0.85) 50%, transparent 62%) no-repeat;
+    background-size: 300% 100%;
+    -webkit-mask: url("/static/images/crystal.png") center / contain no-repeat;
+    mask: url("/static/images/crystal.png") center / contain no-repeat;
+}
+.crystal-stage-sparkle {
+    inset: 4% 8% auto auto;
+    width: 26%;
+    height: 26%;
+    opacity: 0;
+    background: #fde68a;
+    clip-path: polygon(50% 0, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0 50%, 39% 39%);
+}
+.crystal-stage.is-playing .crystal-stage-grow {
+    animation: fadeInQuick 0.01s forwards, spriteFrames 0.9s steps(8, jump-none) forwards,
+        fadeOutQuick 0.2s ease-in 1s forwards;
+}
+.crystal-stage.is-playing .crystal-stage-final {
+    animation: fadeInQuick 0.2s ease-in 1s backwards, crystalSettle 0.5s ease-out 1s;
+}
+.crystal-stage.is-playing .crystal-stage-shards {
+    animation: crystalBurst 0.9s ease-out 1s forwards;
+}
+.crystal-stage.is-playing .crystal-stage-shine {
+    animation: crystalShine 0.7s ease-in-out 1.3s forwards;
+}
+.crystal-stage.is-playing .crystal-stage-sparkle {
+    animation: crystalSparkle 0.5s ease-out 1.5s forwards, crystalTwinkle 2.4s ease-in-out 2s infinite;
+}
+@keyframes crystalSettle {
+    0% { transform: scale(1.12); }
+    60% { transform: scale(0.96); }
+    100% { transform: scale(1); }
+}
+@keyframes crystalBurst {
+    0% { opacity: 0; transform: scale(0.3) rotate(-20deg); }
+    25% { opacity: 1; }
+    100% { opacity: 0; transform: scale(1.15) rotate(10deg); }
+}
+@keyframes crystalShine {
+    0% { opacity: 1; background-position: 100% 0; }
+    100% { opacity: 1; background-position: 0% 0; }
+}
+@keyframes crystalSparkle {
+    0% { opacity: 0; transform: scale(0) rotate(-45deg); }
+    70% { opacity: 1; transform: scale(1.2) rotate(0); }
+    100% { opacity: 1; transform: scale(1); }
+}
+@keyframes crystalTwinkle {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(0.75); opacity: 0.7; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .header-stat-icon.is-growing,
+    .header-stat-icon.is-growing img,
+    .crystal-stage.is-playing > * {
+        animation: none;
+    }
+    .header-stat-icon.is-growing .stat-grow,
+    .crystal-stage-grow,
+    .crystal-stage-shards,
+    .crystal-stage-shine {
+        display: none;
+    }
+    .crystal-stage-sparkle {
+        opacity: 1;
+    }
+}
+
 /* ── Star Importance Badges ─────────────────────────────── */
 .star-rating {
     display: inline-flex;

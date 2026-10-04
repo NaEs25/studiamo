@@ -87,7 +87,11 @@
                 <span id="tester-pill-label">Tester</span>
             </button>
             <div id="top-streak-badge" class="hidden header-stat" title="Day streak">
-                <img src="/static/images/streak-flame.png" alt="">
+                <!-- app.js plays the flame's growth (.stat-grow) over the icon when the streak goes up. -->
+                <span class="header-stat-icon">
+                    <img src="/static/images/streak-flame.png" alt="">
+                    <span class="stat-grow stat-grow-flame" aria-hidden="true"></span>
+                </span>
                 <span id="header-streak-count">0</span>
                 <span id="header-streak-timer"
                     class="hidden text-[10px] text-red-700 font-mono font-bold bg-red-100 px-1.5 py-0.5 rounded border border-red-300 ml-1"></span>
@@ -2197,6 +2201,7 @@
 
     {% include 'partials/_ios_push_install_modal.html' %}
     {% include 'partials/_beta_easter_egg.html' %}
+    {% include 'partials/_crystal_earned.html' %}
 
     <!-- Overlay: Change Password Modal (Self-Hosted) -->
     <div id="overlay-change-password-modal"

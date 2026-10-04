@@ -707,6 +707,10 @@ function updateStreakTimer() {
     }
 }
 
+// The streak the header last showed, null until the first server stats arrive, so the first
+// render sets a baseline instead of animating.
+let _headerStreakShown = null;
+
 function updateHeaderStats() {
     const lvlEl = document.getElementById('header-level-val');
     if (lvlEl) lvlEl.textContent = currentUserStats.level || 1;
@@ -715,18 +719,88 @@ function updateHeaderStats() {
     const streakCount = document.getElementById('header-streak-count');
     
     if (streakBadge && streakCount) {
-        if (currentUserStats.streak > 0) {
-            streakCount.textContent = currentUserStats.streak;
+        const streak = currentUserStats.streak || 0;
+        if (streak > 0) {
+            streakCount.textContent = streak;
             streakBadge.classList.remove('hidden');
         } else {
             streakBadge.classList.add('hidden');
         }
+        if (_headerStreakShown !== null && streak > _headerStreakShown) {
+            playStatGrow(streakBadge.querySelector('.header-stat-icon'));
+        }
+        _headerStreakShown = streak;
     }
 
     updateStreakTimer();
 }
 
 window.updateStreakTimer = updateStreakTimer;
+
+function prefersReducedMotion() {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+// Restarts a CSS animation driven by a class: removing and re-adding it in the same frame would
+// not replay it, so a forced reflow sits in between.
+function restartAnimationClass(el, cls) {
+    el.classList.remove(cls);
+    void el.offsetWidth;
+    el.classList.add(cls);
+}
+
+// Flame growth over the header streak icon (.header-stat-icon in style.css).
+function playStatGrow(iconEl) {
+    if (!iconEl || prefersReducedMotion()) return;
+    restartAnimationClass(iconEl, 'is-growing');
+    clearTimeout(iconEl._growTimer);
+    iconEl._growTimer = setTimeout(() => iconEl.classList.remove('is-growing'), 1300);
+}
+
+// "New crystal!" dialog (partials/_crystal_earned.html). Resolves once it is closed, so the
+// quiz flow can wait on it the way it waited on the confirm dialog before.
+let _crystalEarnedResolve = null;
+
+function showCrystalEarned(count) {
+    return new Promise((resolve) => {
+        const overlay = document.getElementById('overlay-crystal-earned');
+        if (!overlay) { resolve(); return; }
+        _crystalEarnedResolve = resolve;
+        const msg = document.getElementById('crystal-earned-message');
+        if (msg) msg.textContent = `That knowledge is locked in, Chompy can't eat it. You now have ${count} crystals.`;
+        openOverlay('overlay-crystal-earned', closeCrystalEarned);
+        const stage = overlay.querySelector('.crystal-stage');
+        if (stage) restartAnimationClass(stage, 'is-playing');
+        document.getElementById('btn-close-crystal-earned')?.focus();
+    });
+}
+
+function closeCrystalEarned() {
+    const overlay = document.getElementById('overlay-crystal-earned');
+    overlay?.classList.add('hidden');
+    overlay?.querySelector('.crystal-stage')?.classList.remove('is-playing');
+    closeOverlay('overlay-crystal-earned');
+    if (_crystalEarnedResolve) {
+        const resolve = _crystalEarnedResolve;
+        _crystalEarnedResolve = null;
+        resolve();
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('btn-close-crystal-earned')?.addEventListener('click', closeCrystalEarned);
+    document.getElementById('overlay-crystal-earned')?.addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) closeCrystalEarned();
+    });
+    // The animation frames are CSS backgrounds, fetched only once an animation starts. Warm the
+    // cache a little after load so the first play does not start on empty frames.
+    if (!prefersReducedMotion()) {
+        setTimeout(() => {
+            ['streak-flame-grow.webp', 'crystal-grow.webp', 'crystal-shards.webp']
+                .forEach((f) => { new Image().src = `/static/images/${f}`; });
+        }, 3000);
+    }
+});
 
 // Master initialization
 window.addEventListener('DOMContentLoaded', () => {

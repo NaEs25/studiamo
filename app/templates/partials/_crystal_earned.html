@@ -1,0 +1,22 @@
+<!-- Overlay: shown when a quiz answer earns a new crystal (a level, in the data). quiz.js opens it
+     through showCrystalEarned() in app.js, which restarts the animation on .crystal-stage. Under
+     reduced motion the stage shows only the finished crystal. -->
+<div id="overlay-crystal-earned"
+    class="app-overlay fixed inset-0 bg-stone-950/60 backdrop-blur-sm z-[110] hidden flex items-center justify-center p-4"
+    role="dialog" aria-modal="true" aria-labelledby="crystal-earned-title">
+    <div class="bg-white border border-stone-200 rounded-2xl p-6 max-w-sm w-full shadow-2xl space-y-4 text-center">
+        <div class="crystal-stage mx-auto" aria-hidden="true">
+            <span class="crystal-stage-shards"></span>
+            <span class="crystal-stage-grow"></span>
+            <img class="crystal-stage-final" src="/static/images/crystal.png" alt="">
+            <span class="crystal-stage-shine"></span>
+            <span class="crystal-stage-sparkle"></span>
+        </div>
+        <div class="space-y-2">
+            <h3 id="crystal-earned-title" class="font-extrabold text-stone-900 text-lg">New crystal!</h3>
+            <p id="crystal-earned-message" class="text-sm text-stone-600 leading-relaxed"></p>
+        </div>
+        <button type="button" id="btn-close-crystal-earned"
+            class="btn-primary w-full px-4 py-3 font-bold text-sm rounded-xl transition">Continue</button>
+    </div>
+</div>

@@ -518,13 +518,7 @@ async function gradeQuestion(grade) {
         // A dialog rather than a toast: toasts are single-slot, so on a final question the
         // "session complete" toast below would replace this one immediately.
         if (res.leveled_up) {
-            await showConfirm({
-                title: 'New crystal!',
-                message: `That knowledge is locked in, Chompy can't eat it. You now have ${res.level} crystals.`,
-                confirmText: 'Continue',
-                icon: 'gem',
-                hideCancel: true,
-            });
+            await showCrystalEarned(res.level);
         }
         
         // Finishing the quiz of a video Chompy ate put it back on the schedule (grade_quiz).
