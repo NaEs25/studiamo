@@ -572,7 +572,25 @@ async function dismissRecommendation(recId) {
     try {
         const formData = new FormData();
         formData.append('youtube_id', recId);
-        await fetchAPI('/api/daily-recommendations/dismiss', { method: 'POST', body: formData });
+        let res = await fetchAPI('/api/daily-recommendations/dismiss', { method: 'POST', body: formData });
+        if (res && res.status === 'confirm') {
+            // The preview of this video holds notes, and dismissing it removes them too.
+            const confirmed = await showConfirm({
+                title: 'Remove this video?',
+                message: 'You have notes on this video. Removing it deletes the notes too.',
+                confirmText: 'Remove',
+                confirmClass: 'bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-xs shadow-sm transition',
+                icon: 'trash-2'
+            });
+            if (!confirmed) return;
+            formData.append('delete_notes', 'true');
+            res = await fetchAPI('/api/daily-recommendations/dismiss', { method: 'POST', body: formData });
+        }
+        if (res && res.preview_removed) {
+            delete window._dailyRecsDrafts[recId];
+            if (typeof loadGoals === 'function') loadGoals();
+            if (typeof loadDashboard === 'function') loadDashboard();
+        }
         loadDailyRecommendations();
     } catch (e) {
         console.error("Dismiss failed:", e);

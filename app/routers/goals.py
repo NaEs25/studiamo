@@ -1,5 +1,6 @@
 import asyncio
 from datetime import datetime
+from typing import Optional
 
 from fastapi import APIRouter, Form, HTTPException, Depends, Query
 from fastapi.responses import JSONResponse
@@ -519,11 +520,40 @@ def get_daily_recommendations(username: str = Depends(require_app_access)):
 @router.post("/daily-recommendations/dismiss")
 def dismiss_daily_recommendation(
     youtube_id: str = Form(...),
+    delete_notes: Optional[str] = Form(None),
     username: str = Depends(require_app_access)
 ):
-    """Dismisses a recommended video so it won't show again today."""
+    """Dismisses a recommended video so it won't show again today.
+
+    Playing or queueing a recommendation leaves a temporary preview of it among the account's
+    materials. Dismissing the recommendation removes that preview too, unless it holds notes:
+    then nothing is changed and {"status": "confirm"} comes back, and the same request with
+    delete_notes=true removes the preview together with its notes. A video the account has
+    imported for real (not temporary) is never touched."""
+    conn = database.get_db_connection(username)
+    try:
+        user_uuid = conn.user_uuid
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT id, custom_notes FROM videos WHERE youtube_id = %s AND user_uuid = %s AND is_temporary = 1;",
+            (youtube_id, user_uuid),
+        )
+        preview = cursor.fetchone()
+        removed = False
+        if preview:
+            has_notes = bool((preview["custom_notes"] or "").strip())
+            if has_notes and str(delete_notes).lower() not in ("1", "true", "yes"):
+                return {"status": "confirm", "has_notes": True}
+            storage.delete_video_document(preview["id"], username=username)
+            cursor.execute("DELETE FROM quiz_attempts WHERE video_id = %s AND user_uuid = %s;", (preview["id"], user_uuid))
+            cursor.execute("DELETE FROM quizzes WHERE video_id = %s AND user_uuid = %s;", (preview["id"], user_uuid))
+            cursor.execute("DELETE FROM videos WHERE id = %s AND user_uuid = %s;", (preview["id"], user_uuid))
+            conn.commit()
+            removed = True
+    finally:
+        conn.close()
     storage.add_dismissed_recommendation(youtube_id, username=username)
-    return {"status": "success"}
+    return {"status": "success", "preview_removed": removed}
 
 
 @router.post("/daily-recommendations/refresh")
