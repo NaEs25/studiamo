@@ -165,6 +165,9 @@ async function loadDashboard() {
 
 window._dailyRecsDrafts = window._dailyRecsDrafts || {};
 
+// Whether each recommended video's card shows the goal it was suggested for.
+const SHOW_REC_GOAL_BADGE = false;
+
 // One delegated listener for every rec card action. The card carries its values in escaped
 // data- attributes, so a video title (which a third party chooses) is only ever read back
 // through dataset and never becomes part of a script string.
@@ -325,9 +328,6 @@ async function loadDailyRecommendations() {
         const data = await fetchAPI('/api/daily-recommendations');
         if (panel) panel.classList.remove('hidden');
 
-        const dateEl = document.getElementById('daily-recs-date');
-        if (dateEl) dateEl.textContent = data.date ? `For ${data.date}` : '';
-
         if (!data || !data.recommendations || data.recommendations.length === 0) {
             const message = data && data.youtube_api_key_missing
                 ? 'To enable recommendations, add a YouTube Data API v3 key (see the self-hosting setup guide for details).'
@@ -370,11 +370,13 @@ async function loadDailyRecommendations() {
                              draggable="false"
                              onerror="this.src='/static/images/notes-icon.svg'">
                         
-                        <!-- Goal Badge (Top-Left) -->
+                        <!-- Goal Badge (Top-Left), hidden for now; set SHOW_REC_GOAL_BADGE to bring it back. -->
+                        ${SHOW_REC_GOAL_BADGE ? `
                         <span class="absolute top-2 left-2 z-10 bg-amber-500/20 backdrop-blur-xs border border-amber-500/40 text-amber-900 text-[9px] font-extrabold px-2 py-0.5 rounded-md flex items-center space-x-1">
                             <i data-lucide="target" class="w-3 h-3 text-amber-900"></i>
                             <span class="truncate max-w-[120px]">${escapeHtml(rec.goal_title || 'AI Recommendation')}</span>
                         </span>
+                        ` : ''}
 
                         <!-- Draft Badge (Top-Right) -->
                         ${isDraft ? `
