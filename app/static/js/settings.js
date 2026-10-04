@@ -144,7 +144,7 @@ async function loadStats() {
                                 <div class="min-w-0">
                                     <span class="font-bold text-sm ${isMe ? 'text-amber-950 font-bold' : 'text-stone-800'} block truncate">${entry.display_name}${isMe ? ' (You)' : ''}</span>
                                     <p class="text-[10px] text-stone-500 flex items-center space-x-1 truncate">
-                                        <span class="flex items-center space-x-1"><i data-lucide="flame" class="w-3 h-3 text-amber-500 shrink-0"></i><span>${entry.streak} day streak</span></span>
+                                        <span class="flex items-center space-x-1"><img src="/static/images/streak-flame.png" alt="" class="w-3.5 h-3.5 shrink-0"><span>${entry.streak} day streak</span></span>
                                         <span>·</span>
                                         <span class="flex items-center space-x-0.5 text-amber-800 font-medium" title="Crystals"><img src="/static/images/crystal.png" alt="" class="w-3.5 h-3.5 shrink-0"><span class="sr-only">Crystals</span><span>${entry.level}</span></span>
                                     </p>
