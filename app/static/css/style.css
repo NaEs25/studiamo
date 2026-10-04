@@ -891,28 +891,6 @@ html[data-standalone="true"] .app-overlay {
     padding-left: 2.75rem;
 }
 
-.onboarding-chip {
-    min-height: 44px;
-    padding: 0 0.9rem;
-    border-radius: 9999px;
-    border: 1px solid var(--color-border);
-    background-color: var(--color-surface-2);
-    color: #44403c; /* stone-700 */
-    font-size: 0.875rem;
-    font-weight: 600;
-    transition: background-color 0.15s ease, border-color 0.15s ease;
-}
-
-.onboarding-chip:hover {
-    background-color: var(--color-surface-deep);
-}
-
-.onboarding-chip.is-active {
-    border-color: #f59e0b; /* amber-500 */
-    background-color: var(--color-primary-bg);
-    color: #78350f; /* amber-900 */
-}
-
 /* Back and "Skip for now": plain text, so the step's one primary button stays the only one. */
 .onboarding-text-btn {
     min-height: 44px;

@@ -1513,24 +1513,10 @@ function _setOnboardingError(step, message) {
     el.classList.toggle('hidden', !message);
 }
 
-function _syncGoalChips() {
-    const value = (document.getElementById('onboarding-goal-input')?.value || '').trim();
-    document.querySelectorAll('#onboarding-steps [data-goal-chip]')
-        .forEach(chip => chip.classList.toggle('is-active', chip.dataset.goalChip === value));
-}
-
-function _pickGoalChip(chip) {
-    const input = document.getElementById('onboarding-goal-input');
-    if (!input) return;
-    input.value = chip.dataset.goalChip;
-    _syncGoalChips();
-    _setOnboardingError('goal', '');
-}
-
 async function _saveWelcomeGoal() {
     const title = (document.getElementById('onboarding-goal-input')?.value || '').trim();
     if (!title) {
-        _setOnboardingError('goal', 'Type what you want to learn, or pick a topic above.');
+        _setOnboardingError('goal', 'Type what you want to learn.');
         return false;
     }
     _setOnboardingError('goal', '');
@@ -1895,17 +1881,11 @@ function initOnboarding() {
     document.getElementById('onboarding-skip-video-btn')?.addEventListener('click', skipWelcomeVideo);
 
     const goalInput = document.getElementById('onboarding-goal-input');
-    goalInput?.addEventListener('input', _syncGoalChips);
     goalInput?.addEventListener('keydown', _onEnter(onboardingNext));
     document.getElementById('onboarding-video-url')?.addEventListener('keydown', _onEnter(onboardingNext));
 
-    // Goal chips, and suggestion cards that are rendered after load.
+    // Suggestion cards are rendered after load.
     document.getElementById('onboarding-steps')?.addEventListener('click', (e) => {
-        const chip = e.target.closest('[data-goal-chip]');
-        if (chip) {
-            _pickGoalChip(chip);
-            return;
-        }
         const suggestion = e.target.closest('[data-welcome-suggestion]');
         if (suggestion) pickWelcomeSuggestion(Number(suggestion.dataset.welcomeSuggestion));
     });

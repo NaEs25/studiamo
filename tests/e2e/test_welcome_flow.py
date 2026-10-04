@@ -209,9 +209,7 @@ def test_full_flow_with_a_link_starts_the_first_quiz(logged_in_page):
     assert not backend.calls("create_goal")
     _step(page, "goal")
 
-    page.click('[data-goal-chip="Video editing"]')
-    assert page.input_value("#onboarding-goal-input") == "Video editing"
-    assert "is-active" in page.get_attribute('[data-goal-chip="Video editing"]', "class")
+    page.fill("#onboarding-goal-input", "Video editing")
     _next(page)
     _step(page, "video")
     assert backend.calls("create_goal") == [{"title": "Video editing"}]
