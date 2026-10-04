@@ -785,6 +785,12 @@ function initSettingsTab() {
         form.addEventListener('input', () => { if (!window._settingsLoading) _scheduleSettingsAutosave(); });
     }
 
+    // Registered on the switch itself, so it runs before the form's autosave listener above and
+    // a blocked switch-on is already reverted by the time the form is read.
+    document.getElementById('settings-notify-push')?.addEventListener('change', onPushSwitchChange);
+    document.getElementById('btn-close-ios-push-install')?.addEventListener('click', closeIOSPushInstallModal);
+    document.getElementById('btn-ios-push-install-done')?.addEventListener('click', closeIOSPushInstallModal);
+
     const dnField = document.getElementById('profile-display-name');
     if (dnField) {
         dnField.addEventListener('change', () => { if (!window._settingsLoading) _scheduleSettingsAutosave(); });
@@ -1743,7 +1749,9 @@ let _reminderPushEnabled = false;
 let _reminderEmailFallback = false;
 
 function _isIOSDevice() {
-    return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    if (/iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream) return true;
+    // iPadOS 13+ Safari reports itself as a Mac; a touch screen tells the two apart.
+    return navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
 }
 
 // Push works in a normal browser tab on desktop and Android. iPhone and iPad only deliver it to
@@ -1960,6 +1968,31 @@ function togglePushNotifyPanel(enabled) {
     if (enabled && 'Notification' in window && Notification.permission === 'default') {
         requestBrowserNotificationPermission();
     }
+}
+
+// iOS only delivers web push to a home-screen install, so in a plain browser tab there the switch
+// stays off and the install walkthrough opens instead.
+function onPushSwitchChange(e) {
+    const box = e.currentTarget;
+    const isStandalone = document.documentElement.dataset.standalone === 'true';
+    if (box.checked && _isIOSDevice() && !isStandalone) {
+        box.checked = false;
+        openIOSPushInstallModal();
+        return;
+    }
+    togglePushNotifyPanel(box.checked);
+}
+
+function openIOSPushInstallModal() {
+    openOverlay('overlay-ios-push-install', closeIOSPushInstallModal);
+    if (typeof renderIcons === 'function') renderIcons();
+    document.getElementById('btn-ios-push-install-done')?.focus();
+}
+
+function closeIOSPushInstallModal() {
+    document.getElementById('overlay-ios-push-install')?.classList.add('hidden');
+    closeOverlay('overlay-ios-push-install');
+    document.getElementById('settings-notify-push')?.focus();
 }
 
 function toggleEmailNotifyPanel(enabled) {

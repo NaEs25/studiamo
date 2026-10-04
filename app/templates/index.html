@@ -865,40 +865,7 @@
                     </div>
                 </div>
 
-                <!-- 2. App Installation (PWA / Home Screen) Card. Hidden entirely once already
-                     running installed/standalone (data-standalone on <html>, set before first
-                     paint) - see style.css's Mobile Safe Area section for the other consumer of
-                     that attribute. -->
-                <div id="pwa-install-card" class="bg-white p-6 rounded-2xl border border-stone-200 space-y-4 shadow-sm">
-                    <h3 class="font-bold text-base flex items-center space-x-2 border-b border-stone-200 pb-3">
-                        <i data-lucide="smartphone" class="w-5 h-5 text-amber-600"></i>
-                        <span>Install as App</span>
-                    </h3>
-
-                    <div
-                        class="bg-amber-500/10 p-4 rounded-xl border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                        <p class="text-xs text-stone-600">Add Studiamo to your home screen for quick access and
-                            notifications, on mobile or desktop.</p>
-                        <button type="button" id="pwa-install-btn" onclick="triggerPWAInstall()"
-                            class="btn-primary px-4 py-2.5 font-bold text-xs rounded-xl transition flex items-center space-x-2 shrink-0">
-                            <i data-lucide="download" class="w-4 h-4"></i>
-                            <span>Install</span>
-                        </button>
-                    </div>
-
-                    <div id="pwa-ios-instructions"
-                        class="text-xs text-stone-700 bg-[#f3ebd9] p-3 rounded-xl border border-[#dfd5c5] hidden space-y-1">
-                        <p class="font-semibold text-amber-900 flex items-center space-x-1">
-                            <i data-lucide="apple" class="w-3.5 h-3.5 text-amber-700"></i>
-                            <span>Instructions for iPhone / iPad (Safari):</span>
-                        </p>
-                        <ol class="list-decimal list-inside space-y-0.5 text-[11px] text-stone-800">
-                            {% include 'partials/_ios_install_steps.html' %}
-                        </ol>
-                    </div>
-                </div>
-
-                <!-- 3. Notifications & Network Setup Card -->
+                <!-- 2. Notifications & Network Setup Card -->
                 <div id="notifications" class="bg-white p-6 rounded-2xl border border-stone-200 space-y-4 shadow-sm scroll-mt-4">
                     <div class="flex items-center justify-between border-b border-stone-200 pb-3">
                         <h3 class="font-bold text-base flex items-center space-x-2">
@@ -1030,8 +997,7 @@
                                     <span>Browser Push</span>
                                 </label>
                                 <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" id="settings-notify-push" class="sr-only peer"
-                                        onchange="togglePushNotifyPanel(this.checked)">
+                                    <input type="checkbox" id="settings-notify-push" class="sr-only peer">
                                     <div
                                         class="w-11 h-6 bg-stone-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600">
                                     </div>
@@ -1135,7 +1101,7 @@
 
                 </div>
 
-                <!-- 4. Voice Engine Card -->
+                <!-- 3. Voice Engine Card -->
                 <div class="bg-white p-4 rounded-2xl border border-stone-200 space-y-3 shadow-sm">
                     <div class="flex items-center justify-between">
                         <h3 class="font-bold text-sm flex items-center space-x-2">
@@ -1177,6 +1143,39 @@
                         <i data-lucide="play-circle" class="w-3.5 h-3.5 text-amber-700"></i>
                         <span>Test Voice Sample</span>
                     </button>
+                </div>
+
+                <!-- 4. App Installation (PWA / Home Screen) Card. Hidden entirely once already
+                     running installed/standalone (data-standalone on <html>, set before first
+                     paint) - see style.css's Mobile Safe Area section for the other consumer of
+                     that attribute. -->
+                <div id="pwa-install-card" class="bg-white p-6 rounded-2xl border border-stone-200 space-y-4 shadow-sm">
+                    <h3 class="font-bold text-base flex items-center space-x-2 border-b border-stone-200 pb-3">
+                        <i data-lucide="smartphone" class="w-5 h-5 text-amber-600"></i>
+                        <span>Install as App</span>
+                    </h3>
+
+                    <div
+                        class="bg-amber-500/10 p-4 rounded-xl border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <p class="text-xs text-stone-600">Add Studiamo to your home screen for quick access and
+                            notifications, on mobile or desktop.</p>
+                        <button type="button" id="pwa-install-btn" onclick="triggerPWAInstall()"
+                            class="btn-primary px-4 py-2.5 font-bold text-xs rounded-xl transition flex items-center space-x-2 shrink-0">
+                            <i data-lucide="download" class="w-4 h-4"></i>
+                            <span>Install</span>
+                        </button>
+                    </div>
+
+                    <div id="pwa-ios-instructions"
+                        class="text-xs text-stone-700 bg-[#f3ebd9] p-3 rounded-xl border border-[#dfd5c5] hidden space-y-1">
+                        <p class="font-semibold text-amber-900 flex items-center space-x-1">
+                            <i data-lucide="apple" class="w-3.5 h-3.5 text-amber-700"></i>
+                            <span>Instructions for iPhone / iPad (Safari):</span>
+                        </p>
+                        <ol class="list-decimal list-inside space-y-0.5 text-[11px] text-stone-800">
+                            {% include 'partials/_ios_install_steps.html' %}
+                        </ol>
+                    </div>
                 </div>
 
                 <!-- 5. Spaced Repetition (SRS) & Study Configuration Card -->
@@ -2198,6 +2197,8 @@
             </form>
         </div>
     </div>
+
+    {% include 'partials/_ios_push_install_modal.html' %}
 
     <!-- Overlay: Change Password Modal (Self-Hosted) -->
     <div id="overlay-change-password-modal"

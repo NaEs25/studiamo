@@ -1,0 +1,88 @@
+<!-- Overlay: iPhone/iPad push needs a home-screen install. Opened by settings.js when the Browser
+     Push switch is turned on in a plain Safari tab, where iOS never delivers web push. The phone
+     mockup loops through the same three steps as the list below it; the matching step highlights
+     as the animation reaches it (.ios-anim-* in style.css). -->
+<div id="overlay-ios-push-install"
+    class="app-overlay fixed inset-0 bg-stone-950/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 overflow-y-auto"
+    role="dialog" aria-modal="true" aria-labelledby="ios-push-install-title">
+    <div class="bg-white border border-stone-200 rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-start justify-between gap-3">
+            <h3 id="ios-push-install-title" class="font-extrabold text-stone-900 text-base flex items-center space-x-2">
+                <i data-lucide="smartphone" class="w-4 h-4 text-amber-600"></i>
+                <span>Add Studiamo to your Home Screen first</span>
+            </h3>
+            <button type="button" id="btn-close-ios-push-install"
+                class="text-stone-500 hover:text-stone-900 transition p-1 -m-1" aria-label="Close">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+
+        <p class="text-xs text-stone-600 leading-snug">On iPhone and iPad, push notifications only work in
+            the Home Screen app. Add it, open Studiamo from the new icon, then turn on Browser Push there.</p>
+
+        <div class="ios-anim-phone" aria-hidden="true">
+            <!-- Scene 1: Safari tab, tap Share -->
+            <div class="ios-anim-scene ios-anim-scene-1">
+                <div class="ios-anim-page">
+                    <img src="/static/images/logo-icon.png" alt="" class="w-8 h-8 rounded-lg">
+                    <div class="ios-anim-line w-3/4"></div>
+                    <div class="ios-anim-line w-1/2"></div>
+                    <div class="ios-anim-line w-2/3"></div>
+                </div>
+                <div class="ios-anim-toolbar">
+                    <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+                    <span class="ios-anim-target ios-anim-share"><i data-lucide="share" class="w-3.5 h-3.5"></i></span>
+                    <i data-lucide="book-open" class="w-3.5 h-3.5"></i>
+                    <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                </div>
+            </div>
+
+            <!-- Scene 2: share sheet, tap Add to Home Screen -->
+            <div class="ios-anim-scene ios-anim-scene-2">
+                <div class="ios-anim-sheet">
+                    <div class="ios-anim-row"><span>Copy</span><i data-lucide="copy" class="w-3 h-3"></i></div>
+                    <div class="ios-anim-row"><span>Add Bookmark</span><i data-lucide="book-open" class="w-3 h-3"></i></div>
+                    <div class="ios-anim-row ios-anim-target ios-anim-a2hs"><span>Add to Home Screen</span><i data-lucide="square-plus" class="w-3 h-3"></i></div>
+                    <div class="ios-anim-row"><span>Find on Page</span><i data-lucide="search" class="w-3 h-3"></i></div>
+                </div>
+            </div>
+
+            <!-- Scene 3: confirm with Add -->
+            <div class="ios-anim-scene ios-anim-scene-3">
+                <div class="ios-anim-confirm-bar">
+                    <span>Cancel</span>
+                    <span class="font-semibold text-stone-800">Add to Home Screen</span>
+                    <span class="ios-anim-target ios-anim-add">Add</span>
+                </div>
+                <div class="ios-anim-confirm-body">
+                    <img src="/static/images/apple-touch-icon.png" alt="" class="w-9 h-9 rounded-lg">
+                    <span class="font-semibold">Studiamo</span>
+                </div>
+            </div>
+
+            <!-- Scene 4: the new icon on the Home Screen -->
+            <div class="ios-anim-scene ios-anim-scene-4">
+                <div class="ios-anim-home">
+                    <span class="ios-anim-app"></span><span class="ios-anim-app"></span>
+                    <span class="ios-anim-app"></span><span class="ios-anim-app"></span>
+                    <span class="ios-anim-app"></span><span class="ios-anim-app"></span>
+                    <span class="ios-anim-app"></span>
+                    <span class="ios-anim-new-icon">
+                        <img src="/static/images/apple-touch-icon.png" alt="">
+                        <span class="ios-anim-badge">1</span>
+                    </span>
+                </div>
+            </div>
+
+            <span class="ios-anim-finger"></span>
+        </div>
+
+        <ol class="ios-anim-steps list-decimal list-inside space-y-1 text-xs text-stone-800">
+            {% include 'partials/_ios_install_steps.html' %}
+            <li>Open Studiamo from the new icon and turn on <strong>Browser Push</strong>.</li>
+        </ol>
+
+        <button type="button" id="btn-ios-push-install-done"
+            class="btn-primary w-full py-2.5 font-bold text-xs rounded-xl transition">Got it</button>
+    </div>
+</div>
