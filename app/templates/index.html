@@ -176,16 +176,16 @@
 
             <!-- Daily 6 Recommended Videos Section -->
             <div id="daily-recommendations-panel" class="space-y-4 my-6">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4">
+                <div class="flex flex-row items-center justify-between gap-2.5 sm:gap-4">
                     <div class="flex items-center space-x-2 min-w-0">
                         <i data-lucide="sparkles" class="w-5 h-5 text-amber-600 shrink-0"></i>
-                        <h3 class="text-sm sm:text-base font-bold text-stone-900 whitespace-nowrap">Daily Video Recommendations</h3>
+                        <h3 class="text-sm sm:text-base font-bold text-stone-900 truncate">Daily Video Recommendations</h3>
                     </div>
                     <button id="btn-refresh-daily-recs" onclick="refreshDailyRecommendations()" aria-label="Refresh 6 daily recommended videos"
-                        class="px-3.5 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-900 border border-amber-500/30 font-bold rounded-xl text-xs transition flex items-center justify-center space-x-1.5 shadow-sm whitespace-nowrap min-h-[44px] shrink-0 active:scale-[0.98]">
+                        class="px-3 sm:px-3.5 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-900 border border-amber-500/30 font-bold rounded-xl text-xs transition flex items-center justify-center sm:space-x-1.5 shadow-sm whitespace-nowrap min-h-[44px] min-w-[44px] shrink-0 active:scale-[0.98]">
                         <i data-lucide="refresh-cw" id="icon-refresh-daily-recs"
                             class="w-3.5 h-3.5 text-amber-600 shrink-0"></i>
-                        <span>Refresh 6 Videos</span>
+                        <span class="hidden sm:inline">Refresh 6 Videos</span>
                     </button>
                 </div>
 
@@ -2595,6 +2595,10 @@
                             days later most of it is gone. That was Chompy.</p>
                         <p class="onboarding-body onboarding-body-strong">But Chompy can't touch what you practice
                             remembering.</p>
+                        <div class="flex items-center justify-center gap-2 pt-1">
+                            <img src="/static/images/crystal.png" alt="" width="26" height="26" class="shrink-0">
+                            <p class="onboarding-body text-left">Knowledge you lock in becomes a crystal. Chompy can't eat those.</p>
+                        </div>
                     </div>
                 </div>
 
