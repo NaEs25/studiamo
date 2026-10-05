@@ -304,9 +304,29 @@ function effectiveQuizMode(question) {
     return mode;
 }
 
+// The model's correct_index clusters on one or two letters despite being told to vary it, and
+// questions already stored have the same skew. Shuffling at render time fixes both. It happens
+// once per question object (correct_index is remapped with it), so re-rendering the same card
+// never moves the options under the learner.
+const shuffledQuestions = new WeakSet();
+
+function shuffleQuestionOptions(question) {
+    if (shuffledQuestions.has(question) || !questionSupportsChoice(question)) return;
+    shuffledQuestions.add(question);
+    const order = question.options.map((_, i) => i);
+    for (let i = order.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [order[i], order[j]] = [order[j], order[i]];
+    }
+    const original = question.options;
+    question.options = order.map(i => original[i]);
+    question.correct_index = order.indexOf(question.correct_index);
+}
+
 function renderQuizOptions(question) {
     const wrap = document.getElementById('quiz-options');
     if (!wrap) return;
+    shuffleQuestionOptions(question);
 
     wrap.innerHTML = question.options.map((opt, i) => `
         <button type="button" class="quiz-option" data-option-index="${i}">
