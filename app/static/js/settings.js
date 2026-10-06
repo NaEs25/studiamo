@@ -1809,6 +1809,9 @@ function toggleReminderInfo() {
     if (!btn || !info) return;
     const nowHidden = info.classList.toggle('hidden');
     btn.setAttribute('aria-expanded', String(!nowHidden));
+    // Short screens drop the install guide's phone while this is open (style.css), so the longer
+    // text does not push the step past the card.
+    info.closest('.onboarding-step')?.classList.toggle('onboarding-info-open', !nowHidden);
 }
 
 async function enableOnboardingPush(e) {

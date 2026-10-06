@@ -1157,7 +1157,7 @@ html[data-standalone="true"] .app-overlay {
 
 /* The reminders step with the iPhone install guide is the tallest one. On short screens the
    guide's phone shrinks and Chompy's header row steps aside, so the step fits the card without
-   scrolling inside it. */
+   scrolling inside it. Opening the reminders info text hides the phone altogether. */
 @media (max-height: 700px) {
     .onboarding-ios-active .onboarding-reminder-chompy {
         display: none;
@@ -1165,6 +1165,10 @@ html[data-standalone="true"] .app-overlay {
 
     .onboarding-ios-active .ios-anim-phone {
         zoom: 0.8;
+    }
+
+    .onboarding-ios-active.onboarding-info-open .ios-anim-phone {
+        display: none;
     }
 }
 
