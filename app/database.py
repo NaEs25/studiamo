@@ -1669,6 +1669,7 @@ _USER_DATA_TABLES_DELETE_ORDER = [
     "push_subscriptions",
     "tester_access",
     "notification_log",
+    "user_activity_days",
 ]
 
 

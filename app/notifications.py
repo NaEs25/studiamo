@@ -24,7 +24,7 @@ import time
 from dataclasses import dataclass, field
 from datetime import timezone
 
-from app import chompy, database, gamification, local_days
+from app import activity, chompy, database, gamification, local_days
 from app import notification_templates as templates
 from app.dependencies import effective_reminder_hour
 
@@ -191,7 +191,7 @@ def _build_state(cursor, profile, tz, now, clock_start):
 # Delivery
 # ---------------------------------------------------------------------------------------------
 
-async def _deliver(username, profile, title, body) -> list[str]:
+async def _deliver(username, profile, title, body, log_id=None) -> list[str]:
     """Sends on every enabled channel and returns the ones that went through."""
     from app.telegram_bot import notification_app_link, send_telegram_message
     from app.webpush_utils import send_user_web_push
@@ -202,7 +202,8 @@ async def _deliver(username, profile, title, body) -> list[str]:
 
     if profile.get("notify_push"):
         try:
-            if await asyncio.to_thread(send_user_web_push, username, {"title": title, "body": body, "url": "/#review-section"}):
+            if await asyncio.to_thread(send_user_web_push, username,
+                                       {"title": title, "body": body, "url": "/#review-section", "log_id": log_id}):
                 delivered.append("push")
         except Exception as e:
             logger.warning(f"Reminder push failed for {username}: {e}")
@@ -272,7 +273,7 @@ async def _process_user(username, now, clock_start):
         log_id = _record_send(cursor, user_uuid, decision, template.id, local_days.local_today(tz, now))
         conn.commit()
 
-        channels = await _deliver(username, profile, title, body)
+        channels = await _deliver(username, profile, title, body, log_id)
         if channels:
             cursor.execute("UPDATE notification_log SET channels = %s WHERE id = %s;", (",".join(channels), log_id))
             cursor.execute(
@@ -320,6 +321,42 @@ async def run_tick(now=None):
             await asyncio.to_thread(_prune_log)
         except Exception as e:
             logger.warning(f"Pruning notification_log failed: {e}")
+        await asyncio.to_thread(activity.prune_activity_days)
+
+
+# ---------------------------------------------------------------------------------------------
+# Clicks (push only)
+# ---------------------------------------------------------------------------------------------
+
+def mark_clicked(user_uuid, log_id: int) -> bool:
+    """Stamps a push notification as clicked, once, and counts it per template.
+
+    Only the account the reminder was sent to can click it (user_uuid is part of the match),
+    so a guessed id changes nothing. Returns whether a row was stamped."""
+    conn = None
+    try:
+        conn = database.get_pooled_raw_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            """UPDATE notification_log SET clicked_at = NOW()
+               WHERE id = %s AND user_uuid = %s AND clicked_at IS NULL AND channels LIKE '%%push%%'
+               RETURNING template_id;""",
+            (int(log_id), str(user_uuid)),
+        )
+        row = cursor.fetchone()
+        if row:
+            cursor.execute(
+                "UPDATE notification_template_stats SET clicked = clicked + 1 WHERE template_id = %s;",
+                (row[0],),
+            )
+        conn.commit()
+        return row is not None
+    except Exception as e:
+        logger.warning(f"Marking notification {log_id} clicked failed: {e}")
+        return False
+    finally:
+        if conn is not None:
+            database.release_pooled_connection(conn)
 
 
 # ---------------------------------------------------------------------------------------------

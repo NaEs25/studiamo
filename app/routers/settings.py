@@ -15,7 +15,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from jinja2 import Environment, FileSystemLoader
 from starlette.background import BackgroundTask
 
-from app import config, database, gamification, local_days, moderation, youtube
+from app import config, database, gamification, local_days, moderation, notifications, youtube
 from app.dependencies import (
     get_active_username,
     get_srs_intervals,
@@ -793,6 +793,16 @@ def mark_queue_hint_seen(username: str = Depends(get_active_username)):
         return {"status": "ok"}
     finally:
         conn.close()
+
+
+@router.post("/notifications/clicked")
+def notification_clicked(log_id: int = Form(...), username: str = Depends(get_active_username)):
+    """Called by the service worker when a push reminder is tapped (push only, see
+    notifications.mark_clicked). Answers the same whether or not a row matched, so ids cannot
+    be probed."""
+    from app.config import ensure_user_uuid
+    notifications.mark_clicked(ensure_user_uuid(username), log_id)
+    return {"status": "ok"}
 
 
 @router.post("/user/reminder_setup")

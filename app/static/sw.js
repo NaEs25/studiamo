@@ -94,7 +94,8 @@ self.addEventListener('push', (event) => {
     badge: '/static/images/icon-192.png',
     vibrate: [100, 50, 100],
     data: {
-      url: data.url || '/'
+      url: data.url || '/',
+      log_id: data.log_id || null
     }
   };
 
@@ -107,7 +108,15 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const targetUrl = event.notification.data && event.notification.data.url ? event.notification.data.url : '/';
-  
+  const logId = event.notification.data && event.notification.data.log_id;
+
+  // Counts the tap against the reminder's template. Best effort: a signed-out or offline
+  // device just does not count, and it must never delay opening the app.
+  if (logId) {
+    const body = new URLSearchParams({ log_id: String(logId) });
+    event.waitUntil(fetch('/api/notifications/clicked', { method: 'POST', body, credentials: 'same-origin' }).catch(() => {}));
+  }
+
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {

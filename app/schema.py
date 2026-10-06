@@ -103,6 +103,11 @@ TABLES_SQL = [
     -- How many times the Study Queue hint (queued videos get no reviews until removed) has been
     -- shown. The goals tab stops showing it after two.
     ALTER TABLE user_profile ADD COLUMN IF NOT EXISTS queue_hint_count INTEGER DEFAULT 0;
+    -- Last time the account changed something (any signed-in write request), and which route
+    -- it was. Written at most every few minutes per account (app/activity.py), so it is a
+    -- coarse "last active", not an event log.
+    ALTER TABLE user_profile ADD COLUMN IF NOT EXISTS last_active_at TIMESTAMPTZ;
+    ALTER TABLE user_profile ADD COLUMN IF NOT EXISTS last_action TEXT;
 
     -- Referral system (see routers/auth.py's signup path and database.py's code generation).
     ALTER TABLE user_profile ADD COLUMN IF NOT EXISTS referral_code VARCHAR;
@@ -608,6 +613,20 @@ TABLES_SQL = [
         sent        INTEGER NOT NULL DEFAULT 0,
         converted   INTEGER NOT NULL DEFAULT 0
     );
+
+    -- Push notification clicks, counted when the service worker reports one. Push only: email
+    -- opens and Telegram reads are not observable without tracking pixels, which are not used.
+    ALTER TABLE notification_log ADD COLUMN IF NOT EXISTS clicked_at TIMESTAMPTZ;
+    ALTER TABLE notification_template_stats ADD COLUMN IF NOT EXISTS clicked INTEGER NOT NULL DEFAULT 0;
+
+    -- One row per account per UTC day on which the account changed something (see
+    -- app/activity.py). No per-action rows. Rows older than ACTIVITY_RETENTION_DAYS are pruned
+    -- by the notification scheduler, and the table is part of the account export and deletion.
+    CREATE TABLE IF NOT EXISTS user_activity_days (
+        user_uuid UUID NOT NULL,
+        day       DATE NOT NULL,
+        PRIMARY KEY (user_uuid, day)
+    );
     """,
     """
     ALTER TABLE user_profile ENABLE ROW LEVEL SECURITY;
@@ -631,6 +650,7 @@ TABLES_SQL = [
     ALTER TABLE tester_feedback ENABLE ROW LEVEL SECURITY;
     ALTER TABLE xp_events ENABLE ROW LEVEL SECURITY;
     ALTER TABLE notification_log ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE user_activity_days ENABLE ROW LEVEL SECURITY;
     ALTER TABLE notification_template_stats ENABLE ROW LEVEL SECURITY;
     """,
 ]

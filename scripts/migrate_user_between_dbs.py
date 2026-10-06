@@ -43,6 +43,7 @@ USER_DATA_TABLES = [
     "import_tasks",
     "push_subscriptions",
     "bugs",
+    "user_activity_days",
 ]
 
 

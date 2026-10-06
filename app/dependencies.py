@@ -14,7 +14,7 @@ from itsdangerous import URLSafeSerializer, BadSignature
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-from app import config, database, local_days
+from app import activity, config, database, local_days
 
 logger = logging.getLogger("studiamo")
 
@@ -273,6 +273,7 @@ def get_active_username(request: Request) -> str:
         raise HTTPException(status_code=401, detail="Authentication required. Please log in.")
 
     database.ensure_user_initialized(username)
+    activity.note_activity(request, username)
     return username
 
 
