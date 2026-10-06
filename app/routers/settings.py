@@ -726,13 +726,18 @@ def get_onboarding_status(username: str = Depends(get_active_username)):
         cursor = conn.cursor()
         cursor.execute(
             """SELECT has_seen_onboarding, has_seen_updates, has_seen_reminder_setup,
-                      notify_push, notify_telegram, notify_email, google_email, queue_hint_count
+                      notify_push, notify_telegram, notify_email, google_email, queue_hint_count,
+                      onboarding_step, onboarding_goal_id, onboarding_video_id
                FROM user_profile WHERE user_uuid = %s;""",
             (user_uuid,),
         )
         row = cursor.fetchone()
         if row:
+            progress = None
+            if not row.get("has_seen_onboarding"):
+                progress = _read_onboarding_progress(cursor, user_uuid, row)
             return {
+                "onboarding_progress": progress,
                 "queue_hint_count": row.get("queue_hint_count") or 0,
                 "has_seen_onboarding": bool(row.get("has_seen_onboarding")),
                 "has_seen_updates": (row.get("has_seen_updates") or 0) >= config.CURRENT_UPDATE_VERSION,
@@ -752,6 +757,71 @@ def get_onboarding_status(username: str = Depends(get_active_username)):
         conn.close()
 
 
+# The welcome flow's steps, in order (settings.js ONBOARDING_FLOWS.welcome).
+ONBOARDING_STEPS = ("chompy", "how", "goal", "video", "reminders")
+
+
+def _read_onboarding_progress(cursor, user_uuid, row):
+    """The saved welcome-flow position, or None. The goal and video count only while they still
+    belong to this account, so a deleted or foreign id cannot resurrect or leak anything."""
+    step = row.get("onboarding_step")
+    if step not in ONBOARDING_STEPS:
+        return None
+    goal = video = None
+    if row.get("onboarding_goal_id"):
+        cursor.execute(
+            "SELECT id, title FROM goals WHERE id = %s AND user_uuid = %s AND is_archived = 0;",
+            (row["onboarding_goal_id"], user_uuid),
+        )
+        found = cursor.fetchone()
+        if found:
+            goal = {"id": found["id"], "title": found["title"]}
+    if row.get("onboarding_video_id"):
+        cursor.execute(
+            "SELECT id, title FROM videos WHERE id = %s AND user_uuid = %s;",
+            (row["onboarding_video_id"], user_uuid),
+        )
+        found = cursor.fetchone()
+        if found:
+            video = {"id": found["id"], "title": found["title"]}
+    return {"step": step, "goal": goal, "video": video}
+
+
+@router.post("/user/onboarding_progress")
+def save_onboarding_progress(
+    step: str = Form(...),
+    goal_id: Optional[int] = Form(None),
+    video_id: Optional[int] = Form(None),
+    username: str = Depends(get_active_username),
+):
+    """Saves where the welcome flow stands. Ignored once the flow is finished, so a late save
+    cannot bring it back. A goal or video that is not this account's is stored as none."""
+    if step not in ONBOARDING_STEPS:
+        raise HTTPException(status_code=400, detail="Unknown onboarding step.")
+    conn = database.get_db_connection(username)
+    user_uuid = conn.user_uuid
+    try:
+        cursor = conn.cursor()
+        if goal_id is not None:
+            cursor.execute("SELECT 1 FROM goals WHERE id = %s AND user_uuid = %s;", (goal_id, user_uuid))
+            if not cursor.fetchone():
+                goal_id = None
+        if video_id is not None:
+            cursor.execute("SELECT 1 FROM videos WHERE id = %s AND user_uuid = %s;", (video_id, user_uuid))
+            if not cursor.fetchone():
+                video_id = None
+        cursor.execute(
+            """UPDATE user_profile
+               SET onboarding_step = %s, onboarding_goal_id = %s, onboarding_video_id = %s
+               WHERE user_uuid = %s AND COALESCE(has_seen_onboarding, 0) = 0;""",
+            (step, goal_id, video_id, user_uuid),
+        )
+        conn.commit()
+        return {"status": "ok"}
+    finally:
+        conn.close()
+
+
 @router.post("/user/onboarding_status")
 def update_onboarding_status(
     has_seen_onboarding: Optional[str] = Form(None),
@@ -766,6 +836,11 @@ def update_onboarding_status(
         if has_seen_onboarding is not None:
             val = 1 if _parse_bool(has_seen_onboarding) else 0
             cursor.execute("UPDATE user_profile SET has_seen_onboarding = %s WHERE user_uuid = %s;", (val, user_uuid))
+            # A finished flow keeps no position; an explicit reset starts from the first step.
+            cursor.execute(
+                "UPDATE user_profile SET onboarding_step = NULL, onboarding_goal_id = NULL, onboarding_video_id = NULL WHERE user_uuid = %s;",
+                (user_uuid,),
+            )
         if has_seen_updates is not None:
             val = config.CURRENT_UPDATE_VERSION if _parse_bool(has_seen_updates) else 0
             cursor.execute("UPDATE user_profile SET has_seen_updates = %s WHERE user_uuid = %s;", (val, user_uuid))

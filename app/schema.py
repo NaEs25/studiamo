@@ -103,6 +103,13 @@ TABLES_SQL = [
     -- How many times the Study Queue hint (queued videos get no reviews until removed) has been
     -- shown. The goals tab stops showing it after two.
     ALTER TABLE user_profile ADD COLUMN IF NOT EXISTS queue_hint_count INTEGER DEFAULT 0;
+    -- Where an unfinished welcome flow stands, so it resumes after a closed tab or on another
+    -- device: the step reached, and the goal and first video it created. Cleared when the flow
+    -- finishes. The ids are looked up with the account's user_uuid on read (routers/settings.py),
+    -- so a stale or foreign id resolves to nothing.
+    ALTER TABLE user_profile ADD COLUMN IF NOT EXISTS onboarding_step TEXT;
+    ALTER TABLE user_profile ADD COLUMN IF NOT EXISTS onboarding_goal_id INTEGER;
+    ALTER TABLE user_profile ADD COLUMN IF NOT EXISTS onboarding_video_id INTEGER;
     -- Last time the account changed something (any signed-in write request), and which route
     -- it was. Written at most every few minutes per account (app/activity.py), so it is a
     -- coarse "last active", not an event log.

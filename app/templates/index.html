@@ -2714,13 +2714,13 @@
                         <i data-lucide="bell-ring" class="w-4 h-4"></i>
                         <span>Turn on push reminders</span>
                     </button>
-                    <div id="onboarding-ios-install"
-                        class="hidden text-stone-800 bg-[#f3ebd9] p-3 rounded-xl border border-[#dfd5c5] space-y-1.5">
-                        <p class="text-sm font-semibold text-amber-900">On iPhone, push reminders need Studiamo on
-                            your home screen:</p>
-                        <ol class="list-decimal list-inside space-y-1 text-sm">
-                            {% include 'partials/_ios_install_steps.html' %}
-                        </ol>
+                    <!-- The same guide as Settings' install dialog (partials/_ios_install_guide.html).
+                         The "install" purpose keeps the Browser Push wording out of it and points
+                         Safari at the home page, where this flow resumes. -->
+                    <div id="onboarding-ios-install" class="hidden space-y-3" data-variant="safari" data-purpose="install">
+                        <p class="ios-push-safari-only text-sm font-semibold text-amber-900">On iPhone, push reminders
+                            need Studiamo on your home screen:</p>
+                        {% include 'partials/_ios_install_guide.html' %}
                     </div>
                     <div class="flex items-start gap-1">
                         <p id="onboarding-reminder-status" class="onboarding-note flex-1 pt-0.5"></p>

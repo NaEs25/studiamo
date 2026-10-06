@@ -784,7 +784,6 @@ function initSettingsTab() {
     document.getElementById('settings-notify-push')?.addEventListener('change', onPushSwitchChange);
     document.getElementById('btn-close-ios-push-install')?.addEventListener('click', closeIOSPushInstallModal);
     document.getElementById('btn-ios-push-install-done')?.addEventListener('click', closeIOSPushInstallModal);
-    document.getElementById('btn-ios-push-copy-link')?.addEventListener('click', copyIOSPushInstallLink);
 
     const dnField = document.getElementById('profile-display-name');
     if (dnField) {
@@ -1276,7 +1275,7 @@ async function checkOnboardingAndUpdates() {
         _onboardingStatusCache = data;
 
         if (!data.has_seen_onboarding) {
-            openWelcomeFlow();
+            openWelcomeFlow(data.onboarding_progress);
         } else if (!data.has_seen_reminder_setup && !data.has_reminder_channel) {
             // Finished onboarding before the reminder step existed and never set up a channel.
             openReminderSetupOnly();
@@ -1358,6 +1357,7 @@ function renderOnboardingStep() {
         nextBtn.classList.toggle('onboarding-cta-final', final);
     }
     _syncOnboardingNext();
+    if (isWelcome) _saveOnboardingProgress(name);
 
     if (name === 'video') renderVideoStep();
     if (name === 'reminders') {
@@ -1368,6 +1368,17 @@ function renderOnboardingStep() {
     }
 
     if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// Remembers the welcome flow's position server-side, so a closed tab, a browser switch or the
+// Open in Safari link resumes here instead of at the start. Best effort: a failed save only
+// means a later resume starts one step earlier.
+function _saveOnboardingProgress(step) {
+    const fd = new FormData();
+    fd.append('step', step);
+    if (_welcomeGoal) fd.append('goal_id', _welcomeGoal.id);
+    if (_welcomeImport) fd.append('video_id', _welcomeImport.videoId);
+    fetchAPI('/api/user/onboarding_progress', { method: 'POST', body: fd }).catch(() => {});
 }
 
 // The video step's Next stays grey until there is a link to send or an import already started.
@@ -1419,11 +1430,16 @@ function onboardingBack(e) {
     renderOnboardingStep();
 }
 
-function openWelcomeFlow() {
-    _welcomeGoal = null;
-    _welcomeImport = null;
+// progress: the position the server saved for an unfinished run (onboarding_status), or null
+// for a fresh start. Resuming keeps the goal and first video the run already created, so it
+// edits that goal instead of asking for another.
+function openWelcomeFlow(progress = null) {
+    _welcomeGoal = progress?.goal ? { id: progress.goal.id, title: progress.goal.title } : null;
+    _welcomeImport = progress?.video ? { videoId: progress.video.id, title: progress.video.title } : null;
     _welcomeSuggestions = [];
-    _openOnboardingOverlay('welcome');
+    const goalInput = document.getElementById('onboarding-goal-input');
+    if (goalInput) goalInput.value = _welcomeGoal ? _welcomeGoal.title : '';
+    _openOnboardingOverlay('welcome', Math.max(0, ONBOARDING_FLOWS.welcome.indexOf(progress?.step)));
     // Reminders are the last step, so a tab closed anywhere before it must already have left the
     // account with a channel: email from the start, which that step can still switch to push.
     saveReminderChoice();
@@ -1438,10 +1454,10 @@ function openTabGuideModal(e) {
     _openOnboardingOverlay('tour');
 }
 
-function _openOnboardingOverlay(flow) {
+function _openOnboardingOverlay(flow, startIndex = 0) {
     if (!document.getElementById('overlay-tab-guide')) return;
     _onboardingFlow = flow;
-    _onboardingStepIndex = 0;
+    _onboardingStepIndex = startIndex;
     // No close function for the welcome flow: Escape must not end it, and with it on top,
     // Escape cannot reach anything underneath either (core.js).
     openOverlay('overlay-tab-guide', flow === 'welcome' ? null : closeTabGuideModal);
@@ -1774,8 +1790,12 @@ function renderReminderStep() {
     const canPush = !_reminderPushEnabled && _pushPossibleHere();
     const isStandalone = document.documentElement.dataset.standalone === 'true';
     document.getElementById('onboarding-reminder-push-btn')?.classList.toggle('hidden', !canPush);
-    document.getElementById('onboarding-ios-install')?.classList.toggle('hidden',
-        _reminderPushEnabled || canPush || !_isIOSDevice() || isStandalone);
+    const iosGuide = document.getElementById('onboarding-ios-install');
+    if (iosGuide) {
+        const showGuide = !(_reminderPushEnabled || canPush || !_isIOSDevice() || isStandalone);
+        if (showGuide) configureIOSInstallGuide(iosGuide, 'install');
+        iosGuide.classList.toggle('hidden', !showGuide);
+    }
     // A way to Settings (for Telegram and the rest) outside the welcome flow, which only leads forward.
     document.getElementById('onboarding-reminder-settings-btn')?.classList.toggle('hidden', _onboardingFlow !== 'reminders');
     status.textContent = _reminderStatusText();
@@ -1864,6 +1884,13 @@ function _onEnter(handler) {
 }
 
 function initOnboarding() {
+    // The install guide appears in the Settings dialog and the onboarding step, so its copy-link
+    // button is handled by delegation. It is bound here, not in initSettingsTab, which does not
+    // run until the Settings tab is opened.
+    document.addEventListener('click', (e) => {
+        const copyBtn = e.target.closest('[data-ios-copy-link]');
+        if (copyBtn) copyIOSInstallLink(copyBtn.closest('[data-purpose]'));
+    });
     document.getElementById('onboarding-next-btn')?.addEventListener('click', onboardingNext);
     document.getElementById('onboarding-back-btn')?.addEventListener('click', onboardingBack);
     document.getElementById('onboarding-close-btn')?.addEventListener('click', closeTabGuideModal);
@@ -2001,33 +2028,63 @@ function _isIOSNonSafari() {
     return !/Safari\//.test(ua);
 }
 
+// Sets up one copy of the shared install guide (partials/_ios_install_guide.html): Safari
+// walkthrough or "open this in Safari" page by browser, and which URL Safari is sent to.
+// purpose: 'push' (Browser Push switch) lands on the notification settings, the #notifications deep
+// link app.js handles; 'install' (Install button, onboarding) lands on the home page.
+function configureIOSInstallGuide(container, purpose) {
+    if (!container) return;
+    container.dataset.variant = _isIOSNonSafari() ? 'other' : 'safari';
+    container.dataset.purpose = purpose;
+    const safariLink = container.querySelector('[data-ios-open-safari]');
+    if (safariLink) safariLink.href = 'x-safari-' + _iosInstallTargetUrl(purpose);
+}
+
 // purpose: 'push' when opened from the Browser Push switch, 'install' from the Install button.
 function openIOSPushInstallModal(purpose = 'push') {
     const card = document.querySelector('#overlay-ios-push-install [data-variant]');
-    if (card) {
-        card.dataset.variant = _isIOSNonSafari() ? 'other' : 'safari';
-        card.dataset.purpose = purpose;
-    }
-    const safariLink = document.getElementById('btn-ios-push-open-safari');
-    if (safariLink) safariLink.href = 'x-safari-' + _iosInstallTargetUrl(purpose);
+    configureIOSInstallGuide(card, purpose);
     openOverlay('overlay-ios-push-install', closeIOSPushInstallModal);
     if (typeof renderIcons === 'function') renderIcons();
-    document.getElementById(card?.dataset.variant === 'other' ? 'btn-ios-push-open-safari' : 'btn-ios-push-install-done')?.focus();
+    (card?.dataset.variant === 'other' ? card.querySelector('[data-ios-open-safari]') : document.getElementById('btn-ios-push-install-done'))?.focus();
 }
 
-// Push lands on the notification settings (the #notifications deep link app.js handles), so the
-// page Safari opens is the one the user was trying to change.
 function _iosInstallTargetUrl(purpose) {
     return window.location.origin + '/' + (purpose === 'push' ? '#notifications' : '');
 }
 
-async function copyIOSPushInstallLink() {
-    const purpose = document.querySelector('#overlay-ios-push-install [data-purpose]')?.dataset.purpose;
-    const url = _iosInstallTargetUrl(purpose);
+// navigator.clipboard is missing or refused in some iOS browsers (in-app and privacy-focused ones
+// among them), where a selected, off-screen textarea and execCommand still copies.
+async function _copyText(text) {
     try {
-        await navigator.clipboard.writeText(url);
-        showToast('Link copied. Paste it into Safari.', 'saved');
+        await navigator.clipboard.writeText(text);
+        return true;
     } catch (err) {
+        // fall through to the textarea route
+    }
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;font-size:16px;';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    ta.setSelectionRange(0, text.length);
+    let ok = false;
+    try {
+        ok = document.execCommand('copy');
+    } catch (err) {
+        ok = false;
+    }
+    ta.remove();
+    return ok;
+}
+
+async function copyIOSInstallLink(container) {
+    const url = _iosInstallTargetUrl(container?.dataset.purpose);
+    if (await _copyText(url)) {
+        showToast('Link copied. Paste it into Safari.', 'saved');
+    } else {
         showToast('Copy failed. Open ' + url + ' in Safari.', 'info', 7000);
     }
 }
