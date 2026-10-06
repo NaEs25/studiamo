@@ -1155,6 +1155,19 @@ html[data-standalone="true"] .app-overlay {
     }
 }
 
+/* The reminders step with the iPhone install guide is the tallest one. On short screens the
+   guide's phone shrinks and Chompy's header row steps aside, so the step fits the card without
+   scrolling inside it. */
+@media (max-height: 700px) {
+    .onboarding-ios-active .onboarding-reminder-chompy {
+        display: none;
+    }
+
+    .onboarding-ios-active .ios-anim-phone {
+        zoom: 0.8;
+    }
+}
+
 .onboarding-info-box {
     font-size: 0.875rem;
     line-height: 1.5;

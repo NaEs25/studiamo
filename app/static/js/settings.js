@@ -1795,6 +1795,8 @@ function renderReminderStep() {
         const showGuide = !(_reminderPushEnabled || canPush || !_isIOSDevice() || isStandalone);
         if (showGuide) configureIOSInstallGuide(iosGuide, 'install');
         iosGuide.classList.toggle('hidden', !showGuide);
+        // Lets short screens make room for the guide (.onboarding-ios-active in style.css).
+        iosGuide.closest('.onboarding-step')?.classList.toggle('onboarding-ios-active', showGuide);
     }
     // A way to Settings (for Telegram and the rest) outside the welcome flow, which only leads forward.
     document.getElementById('onboarding-reminder-settings-btn')?.classList.toggle('hidden', _onboardingFlow !== 'reminders');
