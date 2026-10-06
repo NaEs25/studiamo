@@ -100,6 +100,9 @@ TABLES_SQL = [
     -- When the user last saw the "Chompy ate N quizzes while you were away" message; videos
     -- eaten after this are the ones it reports (routers/dashboard.py).
     ALTER TABLE user_profile ADD COLUMN IF NOT EXISTS chompy_seen_at TIMESTAMPTZ;
+    -- How many times the Study Queue hint (queued videos get no reviews until removed) has been
+    -- shown. The goals tab stops showing it after two.
+    ALTER TABLE user_profile ADD COLUMN IF NOT EXISTS queue_hint_count INTEGER DEFAULT 0;
 
     -- Referral system (see routers/auth.py's signup path and database.py's code generation).
     ALTER TABLE user_profile ADD COLUMN IF NOT EXISTS referral_code VARCHAR;

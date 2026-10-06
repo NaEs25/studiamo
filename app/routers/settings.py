@@ -726,13 +726,14 @@ def get_onboarding_status(username: str = Depends(get_active_username)):
         cursor = conn.cursor()
         cursor.execute(
             """SELECT has_seen_onboarding, has_seen_updates, has_seen_reminder_setup,
-                      notify_push, notify_telegram, notify_email, google_email
+                      notify_push, notify_telegram, notify_email, google_email, queue_hint_count
                FROM user_profile WHERE user_uuid = %s;""",
             (user_uuid,),
         )
         row = cursor.fetchone()
         if row:
             return {
+                "queue_hint_count": row.get("queue_hint_count") or 0,
                 "has_seen_onboarding": bool(row.get("has_seen_onboarding")),
                 "has_seen_updates": (row.get("has_seen_updates") or 0) >= config.CURRENT_UPDATE_VERSION,
                 "has_seen_reminder_setup": bool(row.get("has_seen_reminder_setup")),
@@ -768,6 +769,26 @@ def update_onboarding_status(
         if has_seen_updates is not None:
             val = config.CURRENT_UPDATE_VERSION if _parse_bool(has_seen_updates) else 0
             cursor.execute("UPDATE user_profile SET has_seen_updates = %s WHERE user_uuid = %s;", (val, user_uuid))
+        conn.commit()
+        return {"status": "ok"}
+    finally:
+        conn.close()
+
+
+# The hint is shown at most this many times per account (see maybeShowQueueHint in goals.js).
+QUEUE_HINT_MAX = 2
+
+
+@router.post("/user/queue_hint_seen")
+def mark_queue_hint_seen(username: str = Depends(get_active_username)):
+    """Counts one showing of the Study Queue hint, capped at QUEUE_HINT_MAX."""
+    conn = database.get_db_connection(username)
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE user_profile SET queue_hint_count = LEAST(COALESCE(queue_hint_count, 0) + 1, %s) WHERE user_uuid = %s;",
+            (QUEUE_HINT_MAX, conn.user_uuid),
+        )
         conn.commit()
         return {"status": "ok"}
     finally:

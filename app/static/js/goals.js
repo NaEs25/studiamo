@@ -1,5 +1,30 @@
 // --- Studiamo Goals Module ---
 
+// Videos in the Study Queue get no review quizzes or reminders until they are taken out of it,
+// which is easy to miss. Once the queue passes this size the hint is shown, up to twice per
+// account (the count lives on user_profile.queue_hint_count, capped server-side).
+const QUEUE_HINT_THRESHOLD = 5;
+let queueHintChecked = false;
+
+async function maybeShowQueueHint(queueSize) {
+    if (queueHintChecked || queueSize <= QUEUE_HINT_THRESHOLD) return;
+    queueHintChecked = true;
+    try {
+        const status = await fetchAPI('/api/user/onboarding_status');
+        if ((status.queue_hint_count || 0) >= 2) return;
+        await fetchAPI('/api/user/queue_hint_seen', { method: 'POST' });
+        await showConfirm({
+            title: 'Your Study Queue is filling up',
+            message: 'Videos in the Study Queue get no review quizzes and no reminders. Once you have watched one, tap its bookmark icon to take it out of the queue, and its reviews will start.',
+            confirmText: 'Got it',
+            hideCancel: true,
+            icon: 'bookmark'
+        });
+    } catch (e) {
+        queueHintChecked = false;
+    }
+}
+
 async function loadGoals() {
     try {
         const data = await fetchAPI('/api/dashboard');
@@ -7,6 +32,7 @@ async function loadGoals() {
         const archivedGoals = data.archived_goals || [];
         const videos = data.videos || [];
         const quizzes = data.quizzes || [];
+        maybeShowQueueHint(videos.filter(v => v.is_watchlist === 1).length);
 
         // Cache video data for context operations
         window._videoCardCache = {};
