@@ -14,8 +14,8 @@
     --color-text:           #1c1917;
     --color-text-muted:     #6b655f;
     --color-text-faint:     #a8a29e;
-    --color-primary:        #d97706;
-    --color-primary-hover:  #b45309;
+    --color-primary:        #bd5b08;
+    --color-primary-hover:  #9f4c07;
     --color-primary-bg:     #fef3c7;
     --color-primary-border: #fde68a;
     --font-sans:            'Outfit', system-ui, sans-serif;
@@ -33,8 +33,8 @@
     --color-border-strong-rgb:  223 213 197;
     --color-text-rgb:           28 25 23;
     --color-text-muted-rgb:     107 101 95;
-    --color-primary-rgb:        217 119 6;
-    --color-primary-hover-rgb:  180 83 9;
+    --color-primary-rgb:        189 91 8;
+    --color-primary-hover-rgb:  159 76 7;
 
     /* iOS home-screen PWA: apple-mobile-web-app-status-bar-style=black-translucent
        (index.html) draws the status bar/home-indicator area over the page, so anything

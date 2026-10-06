@@ -39,3 +39,21 @@ def test_correct_letter_is_not_constant(logged_in_page):
         return seen;
     }""")
     assert len(set(positions)) > 1
+
+
+def test_correct_letter_never_repeats_back_to_back(logged_in_page):
+    page = logged_in_page
+    page.goto("/app")
+    page.wait_for_selector("#nav-dashboard", timeout=15000)
+    seen = page.evaluate("""() => {
+        const out = [];
+        for (let n = 0; n < 200; n++) {
+            const q = { options: ['right', 'a', 'b', 'c'], correct_index: 0 };
+            renderQuizOptions(q);
+            out.push([q.correct_index, q.options[q.correct_index]]);
+        }
+        return out;
+    }""")
+    assert all(text == "right" for _, text in seen)
+    assert all(a[0] != b[0] for a, b in zip(seen, seen[1:]))
+    assert len({i for i, _ in seen}) == 4

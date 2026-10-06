@@ -309,6 +309,7 @@ function effectiveQuizMode(question) {
 // once per question object (correct_index is remapped with it), so re-rendering the same card
 // never moves the options under the learner.
 const shuffledQuestions = new WeakSet();
+let lastCorrectSlot = -1;
 
 function shuffleQuestionOptions(question) {
     if (shuffledQuestions.has(question) || !questionSupportsChoice(question)) return;
@@ -318,9 +319,20 @@ function shuffleQuestionOptions(question) {
         const j = Math.floor(Math.random() * (i + 1));
         [order[i], order[j]] = [order[j], order[i]];
     }
+    // The same letter twice in a row looks like a pattern even when chance produced it, so a
+    // correct answer that landed where the previous one did swaps with a random other slot.
+    // Only repeats are blocked, which keeps the sequence from becoming a predictable A, B, C, D.
+    let correctSlot = order.indexOf(question.correct_index);
+    if (correctSlot === lastCorrectSlot && order.length > 1) {
+        let other = Math.floor(Math.random() * (order.length - 1));
+        if (other >= correctSlot) other += 1;
+        [order[correctSlot], order[other]] = [order[other], order[correctSlot]];
+        correctSlot = other;
+    }
+    lastCorrectSlot = correctSlot;
     const original = question.options;
     question.options = order.map(i => original[i]);
-    question.correct_index = order.indexOf(question.correct_index);
+    question.correct_index = correctSlot;
 }
 
 function renderQuizOptions(question) {
