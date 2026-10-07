@@ -441,11 +441,10 @@ def _normalise_analysis(result: dict) -> dict:
     return result
 
 
-def _build_generation_config(response_schema, temperature: float):
+def _build_generation_config(response_schema):
     return types.GenerateContentConfig(
         response_mime_type="application/json",
         response_schema=response_schema,
-        temperature=temperature,
         # Pins low media resolution (~66 tokens/frame). This is a cost *guard*, not a
         # cost *cut*: measured 2026-08-10 against gemini-3.5-flash-lite, native YouTube
         # ingestion already defaults to low, so LOW and MEDIUM both measure identical
@@ -459,7 +458,7 @@ def _build_generation_config(response_schema, temperature: float):
     )
 
 
-def generate_content_with_retry(client: genai.Client, model: str, contents, response_schema, temperature: float, action_type: str, video_id: int = None, quiz_id: int = None, username: str = "default_user") -> str:
+def generate_content_with_retry(client: genai.Client, model: str, contents, response_schema, action_type: str, video_id: int = None, quiz_id: int = None, username: str = "default_user") -> str:
     """Calls Gemini, retrying only where a retry can actually help, then falling back a tier.
 
     Retrying is not free here: `contents` usually carries a whole video, so every attempt
@@ -492,7 +491,7 @@ def generate_content_with_retry(client: genai.Client, model: str, contents, resp
                 response = client.models.generate_content(
                     model=candidate,
                     contents=contents,
-                    config=_build_generation_config(response_schema, temperature)
+                    config=_build_generation_config(response_schema)
                 )
 
                 usage = response.usage_metadata
@@ -878,7 +877,6 @@ def analyze_youtube_video(youtube_url: str, question_count: int, username: str =
         model=model_name,
         contents=[video_part, prompt],
         response_schema=video_analysis_schema,
-        temperature=0.2,
         action_type="video_analysis",
         username=username
     )
@@ -933,7 +931,6 @@ def analyze_video_transcript(transcript_text: str, question_count: int, active_g
         model=model_name,
         contents=prompt,
         response_schema=video_analysis_schema,
-        temperature=0.2,
         action_type="video_analysis",
         video_id=video_id,
         username=username
@@ -960,7 +957,6 @@ def generate_topic_quiz(topic: str, description: str, question_count: int, quiz_
         model=model_name,
         contents=prompt,
         response_schema=topic_quiz_schema,
-        temperature=0.3,
         action_type="topic_quiz",
         quiz_id=quiz_id,
         username=username
@@ -1084,7 +1080,6 @@ def fact_check_transcript(transcript_text: str, video_id: int = None, username: 
         model=model_name,
         contents=prompt,
         response_schema=fact_check_schema,
-        temperature=0.1,
         action_type="fact_check",
         video_id=video_id,
         username=username
@@ -1118,7 +1113,6 @@ def verify_user_guess(question: str, correct_answer: str, user_guess: str, quiz_
         model=model_name,
         contents=prompt,
         response_schema=quiz_verification_schema,
-        temperature=0.1,
         action_type="quiz_verification",
         video_id=video_id,
         quiz_id=quiz_id,
@@ -1210,7 +1204,6 @@ def generate_daily_recommendations(goals: list, force_refresh: bool = False, use
             model="gemini-3.5-flash-lite",
             contents=prompt,
             response_schema=query_schema,
-            temperature=0.8 if force_refresh else 0.4,
             action_type="daily_recommendation_queries",
             username=username
         )
@@ -1288,7 +1281,6 @@ def generate_goal_recommendations(goal_title: str, goal_description: str = "", u
             model="gemini-3.5-flash-lite",
             contents=prompt,
             response_schema=rec_schema,
-            temperature=0.3,
             action_type="goal_recommendations",
             username=username
         )
