@@ -1115,6 +1115,10 @@ html[data-standalone="true"] .app-overlay {
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
+    /* Setting overflow-y alone makes overflow-x compute to auto as well, so anything a few
+       pixels too wide produced a horizontal scrollbar, which in turn took height and made
+       the step scroll vertically too. */
+    overflow-x: hidden;
 }
 
 /* Short screens (iPhone SE and similar, roughly 600px of visible height or less): the same
