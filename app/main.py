@@ -252,10 +252,17 @@ async def serve_robots():
 
 @app.get("/sitemap.xml", include_in_schema=False)
 async def serve_sitemap():
+    """The static file plus the guide pages that have reached their release date."""
     sitemap_path = STATIC_DIR / "sitemap.xml"
-    if sitemap_path.exists():
-        return FileResponse(sitemap_path, media_type="application/xml")
-    raise HTTPException(status_code=404, detail="sitemap.xml not found")
+    if not sitemap_path.exists():
+        raise HTTPException(status_code=404, detail="sitemap.xml not found")
+    guides = "".join(
+        f"  <url>\n    <loc>https://www.studiamo.cloud/{p['slug']}</loc>\n"
+        f"    <lastmod>{p['published'].isoformat()}</lastmod>\n"
+        "    <changefreq>monthly</changefreq>\n    <priority>0.6</priority>\n  </url>\n"
+        for p in content_pages.PAGES.values() if content_pages.is_live(p))
+    xml = sitemap_path.read_text(encoding="utf-8").replace("</urlset>", guides + "</urlset>")
+    return Response(content=xml, media_type="application/xml")
 
 
 @app.get("/llms.txt", include_in_schema=False)
@@ -413,11 +420,18 @@ async def serve_science(request: Request):
     return templates.TemplateResponse(request, "science.html", {"current_page": "science"})
 
 
+def _is_preview_host(request: Request) -> bool:
+    """Staging shows guide pages before their release date so they can be reviewed."""
+    return (request.url.hostname or "").startswith("staging.")
+
+
 def _register_content_pages():
     """One explicit route per guide in app/content_pages/, so no catch-all path pattern can
     shadow another single-segment route."""
     for slug, page in content_pages.PAGES.items():
         async def serve(request: Request, page=page, slug=slug):
+            if not content_pages.is_live(page, _is_preview_host(request)):
+                raise HTTPException(status_code=404, detail="Not found")
             return templates.TemplateResponse(request, "content_page.html",
                                               {"page": page, "current_page": slug})
         app.add_api_route(f"/{slug}", serve, methods=["GET"],
@@ -425,6 +439,15 @@ def _register_content_pages():
 
 
 _register_content_pages()
+
+
+@app.get("/articles", response_class=HTMLResponse, include_in_schema=False)
+async def serve_articles(request: Request):
+    """Index of the guide pages, newest first."""
+    preview = _is_preview_host(request)
+    pages = sorted((p for p in content_pages.PAGES.values() if content_pages.is_live(p, preview)), key=lambda p: (p["published"], p["slug"]), reverse=True)
+    return templates.TemplateResponse(request, "articles.html",
+                                      {"pages": pages, "current_page": "articles"})
 
 
 @app.get("/research")

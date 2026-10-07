@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Articles on Remembering What You Learn | Studiamo</title>
+    <meta name="description" content="Guides on remembering what you learn from videos: active recall, spaced repetition and how to tame a long watch list.">
+    <link rel="canonical" href="https://www.studiamo.cloud/articles">
+    <meta property="og:title" content="Articles | Studiamo">
+    <meta property="og:description" content="Guides on remembering what you learn from videos: active recall, spaced repetition and how to tame a long watch list.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://www.studiamo.cloud/articles">
+    <meta property="og:image" content="https://www.studiamo.cloud/static/images/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Studiamo: Chompy the brain monster eats what you forget. Quizzes from YouTube, timed to your memory.">
+    <meta name="twitter:card" content="summary_large_image">
+        <link rel="icon" type="image/png" href="/static/images/favicon.png">
+    {% if umami_website_id %}<script defer src="{{ umami_script_url }}" data-website-id="{{ umami_website_id }}"></script>{% endif %}
+    <link rel="stylesheet" href="/static/css/tailwind-built.css">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/fonts.css">
+    <script src="/static/vendor/lucide-1.48.0.min.js"></script>
+</head>
+<body class="font-sans bg-paperBg text-stoneText antialiased min-h-screen flex flex-col justify-between">
+
+    {% include "partials/_header.html" %}
+
+    <main class="max-w-2xl mx-auto px-4 sm:px-6 py-12 w-full">
+        <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-stoneText leading-tight mb-8">Articles</h1>
+        <ul class="space-y-4">
+            {% for p in pages %}
+            <li>
+                <a href="/{{ p.slug }}" class="block bg-paperCard border border-paperBorder rounded-2xl p-5 hover:border-paperBorderStrong transition">
+                    <h2 class="text-lg font-extrabold text-stoneText leading-snug">{{ p.h1 }}</h2>
+                    <p class="text-sm text-stoneMuted mt-1.5 leading-relaxed">{{ p.description }}</p>
+                    <time class="block text-xs text-stoneMuted mt-2" datetime="{{ p.published.isoformat() }}">{{ p.published.strftime('%B %-d, %Y') }}</time>
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+    </main>
+
+    {% include "partials/_footer.html" %}
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            if (window.lucide) { lucide.createIcons(); }
+        });
+    </script>
+</body>
+</html>

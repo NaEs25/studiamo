@@ -6,7 +6,7 @@ Published as YYYY-MM-DD, H1), a blank line, then the body. The body uses a delib
 Everything is HTML-escaped before the inline rules run, and links are limited to site paths
 and https URLs, so a page file cannot inject markup or a javascript: link."""
 import html
-from datetime import date
+from datetime import date, datetime, timezone
 import re
 from pathlib import Path
 
@@ -104,3 +104,9 @@ def load_pages() -> dict:
 
 
 PAGES = load_pages()
+
+
+def is_live(page: dict, preview: bool = False) -> bool:
+    """A page goes live on its Published date (UTC) and not before, so a batch can be released
+    a day apart without a deploy each. `preview` shows everything, for the staging host."""
+    return preview or page["published"] <= datetime.now(timezone.utc).date()

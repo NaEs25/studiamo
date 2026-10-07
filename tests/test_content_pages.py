@@ -7,12 +7,28 @@ from app.main import app
 
 
 def test_every_page_is_served():
-    client = TestClient(app)
+    # The staging host shows pages ahead of their release date.
+    client = TestClient(app, base_url="https://staging.studiamo.cloud")
     assert content_pages.PAGES
     for slug, page in content_pages.PAGES.items():
         res = client.get(f"/{slug}")
         assert res.status_code == 200, slug
         assert page["title"] in res.text
+
+
+def test_pages_stay_hidden_until_their_release_date():
+    from datetime import date, timedelta
+    future = {"slug": "x", "published": date.today() + timedelta(days=2)}
+    assert not content_pages.is_live(future)
+    assert content_pages.is_live(future, preview=True)
+    assert content_pages.is_live({"slug": "y", "published": date.today()})
+
+
+def test_articles_index_lists_every_page():
+    res = TestClient(app, base_url="https://staging.studiamo.cloud").get("/articles")
+    assert res.status_code == 200
+    for slug in content_pages.PAGES:
+        assert f'href="/{slug}"' in res.text
 
 
 def test_renderer_escapes_and_limits_links():
