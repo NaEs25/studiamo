@@ -15,6 +15,19 @@
     <meta property="og:image:height" content="630">
     <meta property="og:image:alt" content="Studiamo: Chompy the brain monster eats what you forget. Quizzes from YouTube, timed to your memory.">
     <meta name="twitter:card" content="summary_large_image">
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Article",
+      "headline": {{ page.h1|tojson }},
+      "description": {{ page.description|tojson }},
+      "datePublished": "{{ page.published.isoformat() }}",
+      "dateModified": "{{ page.published.isoformat() }}",
+      "mainEntityOfPage": "https://www.studiamo.cloud/{{ page.slug }}",
+      "author": {"@type": "Person", "name": "Karl Hildebrand", "url": "https://www.studiamo.cloud/impressum"},
+      "publisher": {"@type": "Organization", "name": "Studiamo", "url": "https://www.studiamo.cloud/"}
+    }
+    </script>
     <link rel="icon" type="image/png" href="/static/images/favicon.png">
     {% if umami_website_id %}<script defer src="{{ umami_script_url }}" data-website-id="{{ umami_website_id }}"></script>{% endif %}
     <link rel="stylesheet" href="/static/css/tailwind-built.css">
@@ -42,7 +55,8 @@
 
     <main class="max-w-2xl mx-auto px-4 sm:px-6 py-12 w-full">
         <article>
-            <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-stoneText leading-tight mb-8">{{ page.h1 }}</h1>
+            <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-stoneText leading-tight mb-3">{{ page.h1 }}</h1>
+            <p class="text-sm text-stoneMuted mb-8">By <a href="/impressum" rel="author" class="underline">Karl Hildebrand</a> &middot; <time datetime="{{ page.published.isoformat() }}">{{ page.published.strftime('%B %-d, %Y') }}</time></p>
             <div class="cp-body">{{ page.body_html|safe }}</div>
         </article>
 

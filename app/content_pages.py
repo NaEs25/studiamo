@@ -1,11 +1,12 @@
 """Long-form public pages (guides) kept as markdown files under app/content_pages/.
 
 Each file starts with a header block of `Key: value` lines (Slug, Title tag, Meta description,
-H1), a blank line, then the body. The body uses a deliberately small markdown subset:
+Published as YYYY-MM-DD, H1), a blank line, then the body. The body uses a deliberately small markdown subset:
 `##` headings, paragraphs, `-` and `1.` lists, a pipe table, **bold**, *italic* and links.
 Everything is HTML-escaped before the inline rules run, and links are limited to site paths
 and https URLs, so a page file cannot inject markup or a javascript: link."""
 import html
+from datetime import date
 import re
 from pathlib import Path
 
@@ -88,6 +89,7 @@ def _load(path: Path) -> dict:
         "title": meta["title tag"],
         "description": meta["meta description"],
         "h1": meta["h1"],
+        "published": date.fromisoformat(meta["published"]),
         "body_html": render_body(body),
     }
 

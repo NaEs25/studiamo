@@ -1,6 +1,7 @@
 Slug: /active-recall-for-video-courses
 Title tag: Active Recall for Video Courses and Lectures | Studiamo
 Meta description: How to use active recall on online courses and lecture videos: what to ask yourself, when to do it, and how to avoid passive watching.
+Published: 2026-10-05
 H1: Active recall for video courses
 
 Video courses are built for watching. Active recall is the opposite: closing the material and

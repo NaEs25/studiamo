@@ -1,6 +1,7 @@
 Slug: /tutorial-fatigue
 Title tag: Tutorial Fatigue: Why You Forget What You Watch (and What Helps) | Studiamo
 Meta description: Watching one tutorial after another and keeping none of it is common. Why it happens and a small routine that makes learning stick without more hours.
+Published: 2026-10-06
 H1: Tutorial fatigue: why you keep watching and keep forgetting
 
 You finish a tutorial and feel good. The next day you open the editor, or the textbook, and

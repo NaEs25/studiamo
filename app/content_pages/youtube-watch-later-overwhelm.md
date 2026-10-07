@@ -1,6 +1,7 @@
 Slug: /youtube-watch-later-overwhelm
 Title tag: Watch Later Overload: Turn Your YouTube Backlog Into Something You Remember | Studiamo
 Meta description: Hundreds of saved videos and no memory of the ones you watched? A practical way to shrink the backlog and keep what matters.
+Published: 2026-10-06
 H1: Your Watch Later list is not a to-do list
 
 Most people's Watch Later list is a graveyard. Videos go in faster than they come out, and

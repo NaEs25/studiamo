@@ -1,6 +1,7 @@
 Slug: /too-many-things-to-learn
 Title tag: Too Many Things to Learn? How to Organize Your Learning | Studiamo
 Meta description: Learning five things at once and finishing none? A simple way to sort goals, decide what to review, and stop feeling behind.
+Published: 2026-10-06
 H1: Too many things to learn? How to organize it
 
 Curiosity does not come with a limit. Next to the course you are halfway through there is a
