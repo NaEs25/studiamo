@@ -28,6 +28,17 @@
       "publisher": {"@type": "Organization", "name": "Studiamo", "url": "https://www.studiamo.cloud/"}
     }
     </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.studiamo.cloud/"},
+        {"@type": "ListItem", "position": 2, "name": "Articles", "item": "https://www.studiamo.cloud/articles"},
+        {"@type": "ListItem", "position": 3, "name": {{ page.h1|tojson }}}
+      ]
+    }
+    </script>
     <link rel="icon" type="image/png" href="/static/images/favicon.png">
     {% if umami_website_id %}<script defer src="{{ umami_script_url }}" data-website-id="{{ umami_website_id }}"></script>{% endif %}
     <link rel="stylesheet" href="/static/css/tailwind-built.css">
@@ -54,6 +65,15 @@
     {% include "partials/_header.html" %}
 
     <main class="max-w-2xl mx-auto px-4 sm:px-6 py-12 w-full">
+        <nav aria-label="Breadcrumb" class="text-xs text-stoneMuted mb-6">
+            <ol class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <li><a href="/landing" class="hover:text-amberHover underline">Home</a></li>
+                <li aria-hidden="true">&rsaquo;</li>
+                <li><a href="/articles" class="hover:text-amberHover underline">Articles</a></li>
+                <li aria-hidden="true">&rsaquo;</li>
+                <li aria-current="page" class="truncate max-w-full">{{ page.h1 }}</li>
+            </ol>
+        </nav>
         <article>
             <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-stoneText leading-tight mb-3">{{ page.h1 }}</h1>
             <p class="text-sm text-stoneMuted mb-8">By <a href="/impressum" rel="author" class="underline">Karl Hildebrand</a> &middot; <time datetime="{{ page.published.isoformat() }}">{{ page.published.strftime('%B %-d, %Y') }}</time></p>

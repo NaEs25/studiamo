@@ -27,6 +27,13 @@
     {% include "partials/_header.html" %}
 
     <main class="max-w-2xl mx-auto px-4 sm:px-6 py-12 w-full">
+        <nav aria-label="Breadcrumb" class="text-xs text-stoneMuted mb-6">
+            <ol class="flex items-center gap-x-2">
+                <li><a href="/landing" class="hover:text-amberHover underline">Home</a></li>
+                <li aria-hidden="true">&rsaquo;</li>
+                <li aria-current="page">Articles</li>
+            </ol>
+        </nav>
         <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-stoneText leading-tight mb-8">Articles</h1>
         <ul class="space-y-4">
             {% for p in pages %}
