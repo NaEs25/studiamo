@@ -1,7 +1,7 @@
 Slug: /remember-what-you-watch
 Title tag: How to Remember What You Learn From YouTube Videos | Studiamo
 Meta description: Why you forget most of a tutorial within days, and a simple routine of quizzing yourself and spacing reviews that makes it stick.
-Published: 2026-10-05
+Published: 2026-10-01
 H1: How to remember what you learn from YouTube videos
 
 You watch a good tutorial, it all makes sense, and a week later you can barely describe it.

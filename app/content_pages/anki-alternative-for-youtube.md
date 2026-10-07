@@ -1,7 +1,7 @@
 Slug: /anki-alternative-for-youtube
 Title tag: Anki Alternative for Learning From YouTube | Studiamo
 Meta description: Anki is excellent for decks you build yourself. Here is when a tool that writes the questions from a YouTube video is the better fit.
-Published: 2026-10-05
+Published: 2026-10-03
 H1: An Anki alternative for learning from YouTube
 
 Anki is a strong spaced repetition tool, free and open source, with a huge deck library and
