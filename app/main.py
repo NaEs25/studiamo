@@ -281,20 +281,27 @@ async def serve_llms_full_txt():
 
 @app.get("/", response_class=HTMLResponse)
 def serve_root(request: Request):
-    """Serves index dashboard for authenticated users, landing page for guests in cloud mode, or redirects to /login in selfhosted mode."""
+    """Signed-in users are sent on to /app (query string kept, since the Google link flow
+    returns to /?google_linked=true). Guests get the landing page in cloud mode, or /login in
+    selfhosted mode. A 303, never a 301: a cached permanent redirect would keep sending a
+    signed-out visitor to /app after they log out."""
     auth_user = get_authenticated_username(request)
-    if not auth_user and config.IS_SELFHOSTED:
+    if auth_user:
+        query = f"?{request.url.query}" if request.url.query else ""
+        return RedirectResponse(url=f"/app{query}", status_code=303)
+    if config.IS_SELFHOSTED:
         return RedirectResponse(url="/login", status_code=303)
-    template_name = "index.html" if auth_user else "landing.html"
-    template_path = Path(__file__).resolve().parent / "templates" / template_name
-    if not template_path.exists():
-        raise HTTPException(status_code=404, detail="HTML template not found")
-    return templates.TemplateResponse(request, template_name)
+    return templates.TemplateResponse(request, "landing.html")
 
 
-@app.get("/landing")
-async def serve_landing():
-    return RedirectResponse(url="/", status_code=301)
+@app.get("/landing", response_class=HTMLResponse)
+async def serve_landing(request: Request):
+    """The landing page for everyone, signed in or not: this is where the Home links on the
+    public pages point, so a signed-in reader can get back to it without being bounced into
+    the app. Same page as / (whose canonical it carries). Selfhosted has no landing page."""
+    if config.IS_SELFHOSTED:
+        return RedirectResponse(url="/", status_code=301)
+    return templates.TemplateResponse(request, "landing.html")
 
 
 @app.get("/login", response_class=HTMLResponse)

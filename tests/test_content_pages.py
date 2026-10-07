@@ -20,3 +20,17 @@ def test_renderer_escapes_and_limits_links():
     assert "<script>" not in out
     assert 'href="javascript' not in out
     assert '<a href="/science">b</a>' in out
+
+
+def test_root_redirects_signed_in_users_but_landing_does_not(client_as, test_username, make_client):
+    """/ sends a signed-in user to /app, keeping the query string; /landing stays the landing
+    page for them. Guests see the landing page on both."""
+    me = client_as(test_username)
+    res = me.get("/?google_linked=true")
+    assert res.status_code == 303
+    assert res.headers["location"] == "/app?google_linked=true"
+    assert me.get("/landing").status_code == 200
+
+    guest = make_client(follow_redirects=False)
+    assert guest.get("/").status_code == 200
+    assert guest.get("/landing").status_code == 200

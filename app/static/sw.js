@@ -1,8 +1,8 @@
 // Everything is served network-first (see the fetch handler), so a changed asset reaches users
 // without a bump. Bumping still clears out caches left by older versions of this worker.
-const CACHE_NAME = 'studiamo-pwa-v13';
+const CACHE_NAME = 'studiamo-pwa-v14';
 const ASSETS_TO_CACHE = [
-  '/',
+  '/app',
   '/static/css/style.css',
   '/static/css/fonts.css',
   '/static/vendor/fonts/outfit-v15-latin.woff2',
