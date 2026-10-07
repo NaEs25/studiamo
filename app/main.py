@@ -13,7 +13,7 @@ from fastapi.templating import Jinja2Templates
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
-from app import database, config, schema
+from app import database, config, schema, content_pages
 from app.dependencies import limiter, get_authenticated_username, clean_external_referrer
 from app.telegram_bot import telegram_long_polling, managed_telegram_long_polling, run_scheduler_daemon
 
@@ -404,6 +404,20 @@ async def serve_science(request: Request):
     if not template_path.exists():
         raise HTTPException(status_code=404, detail="Science HTML template not found")
     return templates.TemplateResponse(request, "science.html", {"current_page": "science"})
+
+
+def _register_content_pages():
+    """One explicit route per guide in app/content_pages/, so no catch-all path pattern can
+    shadow another single-segment route."""
+    for slug, page in content_pages.PAGES.items():
+        async def serve(request: Request, page=page, slug=slug):
+            return templates.TemplateResponse(request, "content_page.html",
+                                              {"page": page, "current_page": slug})
+        app.add_api_route(f"/{slug}", serve, methods=["GET"],
+                          response_class=HTMLResponse, include_in_schema=False)
+
+
+_register_content_pages()
 
 
 @app.get("/research")

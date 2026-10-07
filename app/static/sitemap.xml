@@ -16,6 +16,36 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://www.studiamo.cloud/active-recall-for-video-courses</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://www.studiamo.cloud/anki-alternative-for-youtube</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://www.studiamo.cloud/remember-what-you-watch</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://www.studiamo.cloud/too-many-things-to-learn</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://www.studiamo.cloud/tutorial-fatigue</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://www.studiamo.cloud/youtube-watch-later-overwhelm</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://www.studiamo.cloud/privacy</loc>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>

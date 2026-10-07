@@ -11,6 +11,12 @@ Allow: /impressum
 Allow: /imprint
 Allow: /legal
 Allow: /science
+Allow: /active-recall-for-video-courses
+Allow: /anki-alternative-for-youtube
+Allow: /remember-what-you-watch
+Allow: /too-many-things-to-learn
+Allow: /tutorial-fatigue
+Allow: /youtube-watch-later-overwhelm
 Allow: /research
 Allow: /llms.txt
 Allow: /llms-full.txt

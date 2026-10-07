@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page.title }}</title>
+    <meta name="description" content="{{ page.description }}">
+    <link rel="canonical" href="https://www.studiamo.cloud/{{ page.slug }}">
+    <meta property="og:title" content="{{ page.title }}">
+    <meta property="og:description" content="{{ page.description }}">
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://www.studiamo.cloud/{{ page.slug }}">
+    <meta property="og:image" content="https://www.studiamo.cloud/static/images/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Studiamo: Chompy the brain monster eats what you forget. Quizzes from YouTube, timed to your memory.">
+    <meta name="twitter:card" content="summary_large_image">
+    <link rel="icon" type="image/png" href="/static/images/favicon.png">
+    {% if umami_website_id %}<script defer src="{{ umami_script_url }}" data-website-id="{{ umami_website_id }}"></script>{% endif %}
+    <link rel="stylesheet" href="/static/css/tailwind-built.css">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/fonts.css">
+    <script src="/static/vendor/lucide-1.48.0.min.js"></script>
+    <style>
+        .cp-body p, .cp-body li { line-height: 1.75; color: rgb(var(--color-text-rgb)); }
+        .cp-body p { margin: 0 0 1rem; }
+        .cp-body h2 { font-size: 1.25rem; font-weight: 800; margin: 2rem 0 0.75rem; color: rgb(var(--color-text-rgb)); }
+        .cp-body ul, .cp-body ol { margin: 0 0 1rem 1.25rem; }
+        .cp-body ul { list-style: disc; }
+        .cp-body ol { list-style: decimal; }
+        .cp-body li { margin-bottom: 0.4rem; }
+        .cp-body a { color: rgb(var(--color-primary-hover-rgb)); font-weight: 600; text-decoration: underline; }
+        .cp-table { overflow-x: auto; margin: 0 0 1rem; }
+        .cp-table table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+        .cp-table th, .cp-table td { border: 1px solid rgb(var(--color-border-rgb)); padding: 0.6rem 0.75rem; text-align: left; vertical-align: top; }
+        .cp-table th { background: rgb(var(--color-surface-2-rgb)); }
+    </style>
+</head>
+<body class="font-sans bg-paperBg text-stoneText antialiased min-h-screen flex flex-col justify-between">
+
+    {% include "partials/_header.html" %}
+
+    <main class="max-w-2xl mx-auto px-4 sm:px-6 py-12 w-full">
+        <article>
+            <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-stoneText leading-tight mb-8">{{ page.h1 }}</h1>
+            <div class="cp-body">{{ page.body_html|safe }}</div>
+        </article>
+
+        <div class="bg-paperCard border border-paperBorderStrong rounded-3xl p-8 text-center space-y-4 mt-12">
+            <h2 class="text-2xl font-extrabold text-stoneText">Turn a video into a quiz</h2>
+            <a href="/login" class="inline-block px-6 py-2.5 bg-amberPrimary hover:bg-amberHover text-white text-sm font-extrabold rounded-xl shadow-md transition">
+                Try the Cloud Beta
+            </a>
+        </div>
+    </main>
+
+    {% include "partials/_footer.html" %}
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            if (window.lucide) { lucide.createIcons(); }
+        });
+    </script>
+</body>
+</html>
