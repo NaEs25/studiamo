@@ -18,7 +18,7 @@ from urllib.parse import urlencode
 import httpx
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 
-from app import config, database
+from app import config, database, plans
 from app.dependencies import get_active_username, limiter
 
 logger = logging.getLogger("studiamo")
@@ -146,9 +146,19 @@ def get_billing_status(username: str = Depends(get_active_username)):
     _require_cloud()
     snapshot = database.get_access_snapshot(username)
     row = snapshot["profile"]
+    plan = plans.get_plan(username)
+    free_video = (
+        plans.get_free_video_state(str(row["user_uuid"])) if (plan == plans.PLAN_FREE and row.get("user_uuid"))
+        else {"state": "used", "video_id": None}
+    )
 
     return {
         "has_access": snapshot["has_access"],
+        # "free" | "paid" | "tester". has_access stays the subscription/tester answer; the
+        # plan is what the frontend uses to tell an account without a plan (which uses the app,
+        # minus AI) from a lapsed one.
+        "plan": plan,
+        "free_video": free_video["state"],
         "status": row.get("subscription_status") or "inactive",
         # Kept for backward compatibility with clients still reading the flat flag. New code
         # should read `tester` below, which is the one that knows about end dates.

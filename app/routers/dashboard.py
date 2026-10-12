@@ -2,7 +2,7 @@ import logging
 from fastapi import APIRouter, Depends
 from app import chompy, database, gamification, local_days
 from app.dependencies import (
-    require_app_access,
+    require_account_access,
     get_srs_intervals,
     get_srs_caps_and_repetition,
     compute_max_stages,
@@ -51,7 +51,7 @@ def _attach_video_summaries(video_list: list):
 
 
 @router.get("/dashboard")
-def get_dashboard_data(username: str = Depends(require_app_access)):
+def get_dashboard_data(username: str = Depends(require_account_access)):
     """Retrieves full aggregated dashboard data: user profile, active/archived goals, videos, and quizzes."""
     conn = database.get_db_connection(username)
     try:
@@ -242,7 +242,7 @@ def get_dashboard_data(username: str = Depends(require_app_access)):
 
 
 @router.post("/chompy/seen")
-def acknowledge_chompy(username: str = Depends(require_app_access)):
+def acknowledge_chompy(username: str = Depends(require_account_access)):
     """Marks the "Chompy ate N quizzes while you were away" message as seen."""
     conn = database.get_db_connection(username)
     try:
@@ -255,7 +255,7 @@ def acknowledge_chompy(username: str = Depends(require_app_access)):
 
 
 @router.get("/stats")
-def get_ai_stats(username: str = Depends(require_app_access)):
+def get_ai_stats(username: str = Depends(require_account_access)):
     """Returns AI API usage logs and total call count for the active user."""
     conn = database.get_db_connection(username)
     user_uuid = conn.user_uuid
@@ -296,7 +296,7 @@ def get_ai_stats(username: str = Depends(require_app_access)):
 
 
 @router.get("/stats/history")
-def get_stats_history(username: str = Depends(require_app_access), include_attempts: bool = False):
+def get_stats_history(username: str = Depends(require_account_access), include_attempts: bool = False):
     """Returns active recall quiz attempt statistics and accuracy metrics for the active user.
     quiz_attempts stores one row per graded question (grade='remembered'/'forgot'), not one row
     per quiz, there is no score/total_questions column, so aggregation happens over `grade`.

@@ -4,10 +4,12 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
+from contextlib import contextmanager
+
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, Request
 from fastapi.responses import FileResponse
 
-from app import config, database, storage, ai, youtube, local_days
+from app import config, database, storage, ai, youtube, local_days, plans
 from app.import_manager import ImportQueueManager
 from app.ai import UsageLimitExceeded
 from app.dependencies import (
@@ -18,7 +20,8 @@ from app.dependencies import (
     get_srs_caps_and_repetition,
     compute_max_stages,
     get_user_timezone,
-    require_app_access,
+    require_account_access,
+    get_client_ip,
     build_concept_pool,
     select_stage_questions,
     STAGE_KEYS,
@@ -36,14 +39,38 @@ logger = logging.getLogger("studiamo")
 router = APIRouter(prefix="/api", tags=["Videos & Content"])
 
 
+@contextmanager
+def _free_generation(request: Request, username: str):
+    """For a request that starts an AI import: spends the account's one free generation first
+    when it has no plan, and refuses with 402 when it cannot (already used, address threshold
+    reached, no way to tell). The claim is tied to the material when the import is enqueued
+    (ImportQueueManager.enqueue_task); if the request ends without enqueuing one (a duplicate,
+    a validation error) the claim is given back here. A no-op for accounts on a plan."""
+    user_uuid = None
+    if config.IS_CLOUD and plans.get_plan(username) == plans.PLAN_FREE:
+        user_uuid = str(config.get_user_uuid_from_db(username))
+        result = plans.claim_free_video(user_uuid, plans.hash_client_ip(get_client_ip(request)))
+        if result != plans.CLAIM_OK:
+            message = (
+                "Your free video has been used. Pick a plan to generate more."
+                if result == plans.CLAIM_USED else ai.PLAN_REQUIRED_MESSAGE
+            )
+            raise HTTPException(status_code=402, detail={"code": ai.PLAN_REQUIRED_CODE, "message": message})
+    try:
+        yield
+    finally:
+        if user_uuid:
+            plans.release_unattached_claim(user_uuid)
+
+
 @router.get("/videos/import-tasks")
-def get_import_tasks_route(username: str = Depends(require_app_access)):
+def get_import_tasks_route(username: str = Depends(require_account_access)):
     """Returns active and recent import backlog tasks."""
     return ImportQueueManager.get_instance().get_user_backlog(username)
 
 
 @router.post("/videos/import-tasks/{task_id}/retry")
-async def retry_import_task_route(task_id: str, username: str = Depends(require_app_access)):
+async def retry_import_task_route(task_id: str, username: str = Depends(require_account_access)):
     """Retries a failed import backlog task."""
     success = ImportQueueManager.get_instance().retry_task(task_id, username)
     if not success:
@@ -52,7 +79,7 @@ async def retry_import_task_route(task_id: str, username: str = Depends(require_
 
 
 @router.delete("/videos/import-tasks/{task_id}")
-def dismiss_import_task_route(task_id: str, username: str = Depends(require_app_access)):
+def dismiss_import_task_route(task_id: str, username: str = Depends(require_account_access)):
     """Dismisses/deletes an import task from backlog view."""
     success = ImportQueueManager.get_instance().dismiss_task(task_id, username)
     if not success:
@@ -62,6 +89,7 @@ def dismiss_import_task_route(task_id: str, username: str = Depends(require_app_
 
 @router.post("/videos")
 async def add_content(
+    request: Request,
     url: Optional[str] = Form(None),
     text_content: Optional[str] = Form(None),
     title: Optional[str] = Form(None),
@@ -69,9 +97,26 @@ async def add_content(
     learning_goal_id: Optional[int] = Form(None),
     is_watchlist: int = Form(0),
     file: Optional[UploadFile] = File(None),
-    username: str = Depends(require_app_access)
+    username: str = Depends(require_account_access)
 ):
-    """Enqueues video, PDF document, or text notes processing in the background via persistent task queue."""
+    """Enqueues video, PDF document, or text notes processing in the background via persistent task queue.
+
+    Open to accounts without a plan, which may spend their one free generation here (see
+    _free_generation); every AI call the import makes is checked again by the chokepoint."""
+    with _free_generation(request, username):
+        return await _add_content(url, text_content, title, importance_rating, learning_goal_id, is_watchlist, file, username)
+
+
+async def _add_content(
+    url: Optional[str],
+    text_content: Optional[str],
+    title: Optional[str],
+    importance_rating: int,
+    learning_goal_id: Optional[int],
+    is_watchlist: int,
+    file: Optional[UploadFile],
+    username: str,
+):
     if not config.is_configured(username):
         raise HTTPException(status_code=400, detail="App is not configured yet. Complete the setup wizard.")
         
@@ -252,7 +297,7 @@ async def add_content(
 @router.post("/videos/{video_id}/retry")
 async def retry_video_import_route(
     video_id: int,
-    username: str = Depends(require_app_access)
+    username: str = Depends(require_account_access)
 ):
     """Retries a failed video/document import task via ImportQueueManager."""
     conn = database.get_db_connection(username)
@@ -348,7 +393,7 @@ def _document_media_type(target_file: Path) -> str:
 
 
 @router.get("/videos/{video_id}/document")
-def serve_video_document(video_id: int, username: str = Depends(require_app_access)):
+def serve_video_document(video_id: int, username: str = Depends(require_account_access)):
     """Serves raw PDF/document file as a forced download."""
     target_file = _resolve_video_document(video_id, username)
     return FileResponse(
@@ -360,7 +405,7 @@ def serve_video_document(video_id: int, username: str = Depends(require_app_acce
 
 
 @router.get("/videos/{video_id}/pdf")
-def serve_video_pdf_inline(video_id: int, username: str = Depends(require_app_access)):
+def serve_video_pdf_inline(video_id: int, username: str = Depends(require_account_access)):
     """Serves raw PDF/document file inline for in-browser previewing."""
     target_file = _resolve_video_document(video_id, username)
     return FileResponse(
@@ -372,7 +417,7 @@ def serve_video_pdf_inline(video_id: int, username: str = Depends(require_app_ac
 
 
 @router.post("/videos/{id}/archive")
-def archive_video(id: int, username: str = Depends(require_app_access)):
+def archive_video(id: int, username: str = Depends(require_account_access)):
     """Toggles archived status for a video."""
     conn = database.get_db_connection(username)
     try:
@@ -393,7 +438,7 @@ def archive_video(id: int, username: str = Depends(require_app_access)):
 
 
 @router.post("/videos/{id}/pause")
-def pause_video(id: int, username: str = Depends(require_app_access)):
+def pause_video(id: int, username: str = Depends(require_account_access)):
     """Toggles paused status for a video SRS review schedule."""
     conn = database.get_db_connection(username)
     try:
@@ -424,7 +469,7 @@ def pause_video(id: int, username: str = Depends(require_app_access)):
 
 
 @router.delete("/videos/{id}")
-def delete_video(id: int, username: str = Depends(require_app_access)):
+def delete_video(id: int, username: str = Depends(require_account_access)):
     """Deletes a video and its associated quiz & JSON files."""
     conn = database.get_db_connection(username)
     try:
@@ -450,7 +495,7 @@ def delete_video(id: int, username: str = Depends(require_app_access)):
 def assign_video_goal(
     id: int,
     learning_goal_id: Optional[int] = Form(None),
-    username: str = Depends(require_app_access)
+    username: str = Depends(require_account_access)
 ):
     """Assigns or updates the learning goal ID for a video."""
     conn = database.get_db_connection(username)
@@ -470,7 +515,7 @@ def assign_video_goal(
 
 
 @router.post("/videos/{id}/watchlist")
-def toggle_watchlist(id: int, username: str = Depends(require_app_access)):
+def toggle_watchlist(id: int, username: str = Depends(require_account_access)):
     """Toggles watchlist status for a video."""
     conn = database.get_db_connection(username)
     try:
@@ -491,7 +536,7 @@ def toggle_watchlist(id: int, username: str = Depends(require_app_access)):
 
 
 @router.get("/videos/{id}/factcheck")
-def get_fact_check(id: int, username: str = Depends(require_app_access)):
+def get_fact_check(id: int, username: str = Depends(require_account_access)):
     """Returns AI fact-checking analysis for a video content payload, using cached result if available."""
     conn = database.get_db_connection(username)
     try:
@@ -526,9 +571,10 @@ def get_fact_check(id: int, username: str = Depends(require_app_access)):
             raise HTTPException(status_code=409, detail="No content available to fact-check yet. Wait for the video's summary to finish generating.")
 
         try:
-            fact_check = ai.fact_check_transcript(text_content, video_id=id, username=username)
+            with plans.generation_scope(username, id):
+                fact_check = ai.fact_check_transcript(text_content, video_id=id, username=username)
         except UsageLimitExceeded as e:
-            raise HTTPException(status_code=429, detail=str(e))
+            raise ai.usage_http_exception(e)
         database.save_video_analysis(id, username, fact_check=fact_check)
         return fact_check
     finally:
@@ -543,7 +589,7 @@ def edit_video(
     importance_rating: Optional[int] = Form(None),
     learning_goal_id: Optional[int] = Form(None),
     custom_notes: Optional[str] = Form(None),
-    username: str = Depends(require_app_access)
+    username: str = Depends(require_account_access)
 ):
     """Edits video details, rating, goal mapping, and notes safely supporting partial updates."""
     conn = database.get_db_connection(username)
@@ -584,7 +630,7 @@ def edit_video(
 def update_video_position(
     id: int,
     position: float = Form(0.0),
-    username: str = Depends(require_app_access)
+    username: str = Depends(require_account_access)
 ):
     """Updates the saved playback position (in seconds) for a video material."""
     conn = database.get_db_connection(username)
@@ -612,7 +658,7 @@ def create_preview_video(
     url: str = Form(...),
     title: Optional[str] = Form(None),
     goal_id: Optional[int] = Form(None),
-    username: str = Depends(require_app_access)
+    username: str = Depends(require_account_access)
 ):
     """Imports a YouTube video in 24h temporary Preview mode (is_temporary=1) without generating quizzes yet."""
     import re
@@ -689,10 +735,16 @@ def create_preview_video(
 
 @router.post("/videos/{id}/confirm_import")
 async def confirm_video_import(
+    request: Request,
     id: int,
-    username: str = Depends(require_app_access)
+    username: str = Depends(require_account_access)
 ):
     """Converts a 24h temporary preview material into a permanent video (is_temporary=0) and enqueues background processing for AI takeaways & quiz generation."""
+    with _free_generation(request, username):
+        return await _confirm_video_import(id, username)
+
+
+async def _confirm_video_import(id: int, username: str):
     conn = database.get_db_connection(username)
     user_uuid = conn.user_uuid
     try:
@@ -747,7 +799,7 @@ async def confirm_video_import(
 def generate_video_quiz_for_level(
     id: int,
     level: int = Form(3),
-    username: str = Depends(require_app_access)
+    username: str = Depends(require_account_access)
 ):
     """Generates or retrieves active recall quiz for a specific importance level of a video material."""
     conn = database.get_db_connection(username)
@@ -784,6 +836,13 @@ def generate_video_quiz_for_level(
         conn.close()
         return {"status": "success", "quiz_id": q_row["id"]}
 
+    # Refused before anything is written: the chokepoint would refuse the AI call below anyway,
+    # but only after the quiz row above exists, and an empty quiz row is a card that is due and
+    # cannot be opened.
+    if not plans.may_generate_for(username, id):
+        conn.close()
+        raise ai.usage_http_exception(ai.PlanRequired())
+
     intervals = get_srs_intervals(cursor, user_uuid=user_uuid)
     multipliers = get_srs_multipliers(username)
     multiplier = multipliers.get(level, 1.5)
@@ -808,20 +867,21 @@ def generate_video_quiz_for_level(
         question_count = max(q_counts.values()) if q_counts else 12
 
         try:
-            if row.get("youtube_id"):
-                ai_quiz_data = ai.analyze_youtube_video(f"https://www.youtube.com/watch?v={row['youtube_id']}", question_count=question_count, username=username)
-            else:
-                desc_text = "\n".join(video_data.get("summary", [])) if video_data else title
-                ai_quiz_data = ai.generate_topic_quiz(
-                    topic=title,
-                    description=desc_text[:6000],
-                    question_count=question_count,
-                    username=username
-                )
+            with plans.generation_scope(username, id):
+                if row.get("youtube_id"):
+                    ai_quiz_data = ai.analyze_youtube_video(f"https://www.youtube.com/watch?v={row['youtube_id']}", question_count=question_count, username=username)
+                else:
+                    desc_text = "\n".join(video_data.get("summary", [])) if video_data else title
+                    ai_quiz_data = ai.generate_topic_quiz(
+                        topic=title,
+                        description=desc_text[:6000],
+                        question_count=question_count,
+                        username=username
+                    )
         except UsageLimitExceeded as e:
             # conn.close() happens in the enclosing `finally` below, don't double-release
             # the pooled connection here.
-            raise HTTPException(status_code=429, detail=str(e))
+            raise ai.usage_http_exception(e)
         except Exception as e:
             logger.warning(f"AI quiz generation fallback used for quiz {quiz_id}: {e}")
             ai_quiz_data = {"quiz": [], "stages": {}}
@@ -928,7 +988,7 @@ def _build_focus_stages(pool: list, focus: dict) -> list:
 
 
 @router.get("/videos/{id}/concept-pool")
-def get_concept_pool(id: int, username: str = Depends(require_app_access)):
+def get_concept_pool(id: int, username: str = Depends(require_account_access)):
     """Returns the topics and questions available per SRS stage, for the learning-focus overlay."""
     row, pool, focus, target_count = _load_focus_context(id, username)
 
@@ -984,7 +1044,7 @@ def add_focus_card(
     topic: str = Form(...),
     question: str = Form(...),
     answer: str = Form(...),
-    username: str = Depends(require_app_access)
+    username: str = Depends(require_account_access)
 ):
     """Adds a user-written question to a material's pool. Costs no AI call."""
     row, _, _, target_count = _load_focus_context(id, username)
@@ -1006,7 +1066,7 @@ def add_focus_card(
 
 
 @router.delete("/videos/{id}/cards/{card_id}")
-def remove_focus_card(id: int, card_id: str, username: str = Depends(require_app_access)):
+def remove_focus_card(id: int, card_id: str, username: str = Depends(require_account_access)):
     """Removes one question from a material's pool."""
     row, _, _, target_count = _load_focus_context(id, username)
 
@@ -1027,7 +1087,7 @@ def edit_focus_card(
     topic: Optional[str] = Form(None),
     question: Optional[str] = Form(None),
     answer: Optional[str] = Form(None),
-    username: str = Depends(require_app_access)
+    username: str = Depends(require_account_access)
 ):
     """Edits a question's text, answer or topic. A field left out is unchanged."""
     row, _, _, target_count = _load_focus_context(id, username)
@@ -1061,7 +1121,7 @@ def rename_focus_topic(
     id: int,
     old_topic: str = Form(...),
     new_topic: str = Form(...),
-    username: str = Depends(require_app_access)
+    username: str = Depends(require_account_access)
 ):
     """Renames a topic in every stage of a material, carrying any saved selection with it."""
     row, _, _, target_count = _load_focus_context(id, username)
@@ -1087,7 +1147,7 @@ def rename_focus_topic(
 def save_concept_focus(
     id: int,
     focus_topics: str = Form(...),
-    username: str = Depends(require_app_access)
+    username: str = Depends(require_account_access)
 ):
     """Saves the per-stage topic selection and rebuilds the active question list.
 
@@ -1127,7 +1187,7 @@ def save_concept_focus(
 
 
 @router.get("/videos/{id}/stats")
-def get_video_stats(id: int, username: str = Depends(require_app_access)):
+def get_video_stats(id: int, username: str = Depends(require_account_access)):
     """Returns analytics, SRS status, and attempt history for a specific material/video."""
     conn = database.get_db_connection(username)
     try:

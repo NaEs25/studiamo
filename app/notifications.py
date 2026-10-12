@@ -24,7 +24,7 @@ import time
 from dataclasses import dataclass, field
 from datetime import timezone
 
-from app import activity, chompy, database, gamification, local_days
+from app import activity, chompy, database, gamification, local_days, plans
 from app import notification_templates as templates
 from app.dependencies import effective_reminder_hour
 
@@ -322,6 +322,7 @@ async def run_tick(now=None):
         except Exception as e:
             logger.warning(f"Pruning notification_log failed: {e}")
         await asyncio.to_thread(activity.prune_activity_days)
+        await asyncio.to_thread(plans.prune_ip_hashes)
 
 
 # ---------------------------------------------------------------------------------------------

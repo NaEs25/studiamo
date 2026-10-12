@@ -314,6 +314,37 @@ def require_app_access(request: Request) -> str:
     return username
 
 
+def require_account_access(request: Request) -> str:
+    """Dependency guard: a signed-in account, on any plan.
+
+    The free plan runs the whole app except the AI features, so the routes that do no AI work
+    depend on this instead of require_app_access. It is get_active_username under a name that
+    says why a route is open to accounts without a subscription. Every route that can reach the
+    AI uses require_ai_access or relies on the chokepoint in ai.enforce_usage_limits."""
+    return get_active_username(request)
+
+
+def require_ai_access(request: Request) -> str:
+    """Dependency guard for routes whose whole purpose is an AI call.
+
+    Answers 402 with the code ai_requires_plan for an account without a plan, before any work
+    is done, so the frontend shows the upgrade prompt instead of the full-screen paywall (which
+    is for a lapsed subscription, see require_app_access). Routes that may still run for the
+    account's one free generation do not use this: they open plans.generation_scope and let the
+    chokepoint in ai.enforce_usage_limits decide.
+
+    No-op outside cloud mode, like require_app_access."""
+    from app import plans
+    username = get_active_username(request)
+    if config.IS_CLOUD and plans.get_plan(username) == plans.PLAN_FREE:
+        from app import ai
+        raise HTTPException(
+            status_code=402,
+            detail={"code": ai.PLAN_REQUIRED_CODE, "message": ai.PLAN_REQUIRED_MESSAGE},
+        )
+    return username
+
+
 def require_local_auth_enabled() -> None:
     """Dependency guard: blocks local username+password signup/login endpoints
     when running in cloud mode, where Google SSO is the only supported login.

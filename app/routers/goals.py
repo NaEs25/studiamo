@@ -5,12 +5,13 @@ from typing import Optional
 from fastapi import APIRouter, Form, HTTPException, Depends, Query
 from fastapi.responses import JSONResponse
 
-from app import database, storage, ai, youtube, local_days
+from app import config, database, storage, ai, youtube, local_days, plans
 from app.dependencies import (
     get_srs_intervals,
     get_srs_multipliers,
     get_user_timezone,
-    require_app_access,
+    require_account_access,
+    require_ai_access,
     build_concept_pool,
 )
 
@@ -23,7 +24,7 @@ router = APIRouter(prefix="/api", tags=["Goals"])
 
 
 @router.get("/goals")
-def get_goals(include_archived: bool = False, username: str = Depends(require_app_access)):
+def get_goals(include_archived: bool = False, username: str = Depends(require_account_access)):
     """Retrieves all active or archived goals along with their associated videos for active user."""
     conn = database.get_db_connection(username)
     try:
@@ -101,7 +102,7 @@ def _assert_title_available(cursor, user_uuid: str, title: str, exclude_goal_id:
 
 
 @router.post("/goals")
-def create_goal(title: str = Form(...), description: str = Form(""), username: str = Depends(require_app_access)) -> JSONResponse:
+def create_goal(title: str = Form(...), description: str = Form(""), username: str = Depends(require_account_access)) -> JSONResponse:
     """Creates a new learning goal and saves its JSON file."""
     conn = database.get_db_connection(username)
     try:
@@ -130,7 +131,7 @@ def create_goal(title: str = Form(...), description: str = Form(""), username: s
 
 
 @router.post("/goals/{id}/edit")
-def edit_goal(id: int, title: str = Form(...), description: str = Form(""), username: str = Depends(require_app_access)):
+def edit_goal(id: int, title: str = Form(...), description: str = Form(""), username: str = Depends(require_account_access)):
     """Edits a learning goal title and description, cascading video category renames."""
     conn = database.get_db_connection(username)
     try:
@@ -157,7 +158,7 @@ def edit_goal(id: int, title: str = Form(...), description: str = Form(""), user
 
 
 @router.post("/goals/{id}/reorder")
-def reorder_goal(id: int, direction: str = Form(...), username: str = Depends(require_app_access)):
+def reorder_goal(id: int, direction: str = Form(...), username: str = Depends(require_account_access)):
     """Reorders a goal position up or down among active goals."""
     conn = database.get_db_connection(username)
     try:
@@ -208,7 +209,7 @@ def reorder_goal(id: int, direction: str = Form(...), username: str = Depends(re
 def delete_goal(
     id: int,
     delete_materials: bool = Query(False),
-    username: str = Depends(require_app_access)
+    username: str = Depends(require_account_access)
 ):
     """Deletes a learning goal and optionally deletes associated videos and quizzes."""
     conn = database.get_db_connection(username)
@@ -242,7 +243,7 @@ def delete_goal(
 
 
 @router.post("/goals/{id}/archive")
-def archive_goal(id: int, username: str = Depends(require_app_access)):
+def archive_goal(id: int, username: str = Depends(require_account_access)):
     """Toggles archived status for a learning goal."""
     conn = database.get_db_connection(username)
     try:
@@ -265,7 +266,7 @@ def archive_goal(id: int, username: str = Depends(require_app_access)):
 
 
 @router.get("/goals/{id}/recommendations")
-async def get_goal_recommendations(id: int, username: str = Depends(require_app_access)):
+async def get_goal_recommendations(id: int, username: str = Depends(require_ai_access)):
     """Generates AI search queries & scraped YouTube video recommendations for a specific goal."""
     saved = storage.get_saved_goal_recommendations(id, username=username)
     if saved and saved.get("videos"):
@@ -284,7 +285,7 @@ async def get_goal_recommendations(id: int, username: str = Depends(require_app_
         try:
             recs = await asyncio.to_thread(ai.generate_goal_recommendations, row["title"], row["description"], username)
         except ai.UsageLimitExceeded as e:
-            raise HTTPException(status_code=429, detail=str(e))
+            raise ai.usage_http_exception(e)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"AI recommendations generation failed: {e}")
 
@@ -326,7 +327,7 @@ async def get_goal_recommendations(id: int, username: str = Depends(require_app_
 async def replace_one_goal_recommendation(
     id: int,
     dismissed_yt_id: str = Form(...),
-    username: str = Depends(require_app_access)
+    username: str = Depends(require_ai_access)
 ):
     """Dismisses 1 recommendation and returns 1 replacement video not previously excluded."""
     storage.add_dismissed_recommendation(dismissed_yt_id, username=username)
@@ -378,7 +379,7 @@ async def replace_one_goal_recommendation(
 @router.post("/goals/{id}/recommendations/reload_all")
 async def reload_all_goal_recommendations(
     id: int,
-    username: str = Depends(require_app_access)
+    username: str = Depends(require_ai_access)
 ):
     """Forces fresh 4 video recommendations for a goal excluding all dismissed videos."""
     conn = database.get_db_connection(username)
@@ -394,7 +395,7 @@ async def reload_all_goal_recommendations(
         try:
             recs = await asyncio.to_thread(ai.generate_goal_recommendations, row["title"], row["description"], username)
         except ai.UsageLimitExceeded as e:
-            raise HTTPException(status_code=429, detail=str(e))
+            raise ai.usage_http_exception(e)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"AI recommendations generation failed: {e}")
 
@@ -431,8 +432,15 @@ async def reload_all_goal_recommendations(
 
 
 @router.get("/daily-recommendations")
-def get_daily_recommendations(username: str = Depends(require_app_access)):
-    """Retrieves or generates daily video recommendations for active user, cached in local DB."""
+def get_daily_recommendations(username: str = Depends(require_account_access)):
+    """Retrieves or generates daily video recommendations for active user, cached in local DB.
+
+    For an account without a plan this answers 200 with an empty list and requires_plan set
+    instead of the 402 the other AI routes give: the Home tab loads it on every visit, and an
+    error toast each time would punish the account for opening the app. The Home tab shows its
+    plan card from the flag."""
+    if config.IS_CLOUD and plans.get_plan(username) == plans.PLAN_FREE:
+        return {"recommendations": [], "requires_plan": True, "date": datetime.now().strftime("%B %d, %Y")}
     today_str = datetime.now().strftime("%Y-%m-%d")
     conn = database.get_db_connection(username)
     try:
@@ -521,7 +529,7 @@ def get_daily_recommendations(username: str = Depends(require_app_access)):
 def dismiss_daily_recommendation(
     youtube_id: str = Form(...),
     delete_notes: Optional[str] = Form(None),
-    username: str = Depends(require_app_access)
+    username: str = Depends(require_account_access)
 ):
     """Dismisses a recommended video so it won't show again today.
 
@@ -557,7 +565,7 @@ def dismiss_daily_recommendation(
 
 
 @router.post("/daily-recommendations/refresh")
-def refresh_daily_recommendations(username: str = Depends(require_app_access)):
+def refresh_daily_recommendations(username: str = Depends(require_ai_access)):
     """Refreshes daily recommendations by generating new queries and saving to DB."""
     storage.clear_daily_recommendation_cache(username=username)
     conn = database.get_db_connection(username)
@@ -609,7 +617,7 @@ def refresh_daily_recommendations(username: str = Depends(require_app_access)):
 def generate_goal_practice_quiz(
     id: int,
     question_count: int = Form(5),
-    username: str = Depends(require_app_access)
+    username: str = Depends(require_ai_access)
 ):
     """Generates an active recall quiz from transcripts of all videos associated with a goal."""
     conn = database.get_db_connection(username)

@@ -15,7 +15,8 @@ from app.dependencies import (
     compute_max_stages,
     get_question_counts,
     get_user_timezone,
-    require_app_access,
+    require_account_access,
+    require_ai_access,
     build_concept_pool,
     select_stage_questions,
 )
@@ -26,7 +27,7 @@ router = APIRouter(prefix="/api", tags=["Quizzes & SRS"])
 
 
 @router.get("/quiz/{id}")
-def get_quiz(id: int, username: str = Depends(require_app_access)):
+def get_quiz(id: int, username: str = Depends(require_account_access)):
     """Retrieves full SRS quiz questions and stage metadata for a specific quiz ID."""
     with database.get_db_connection(username) as conn:
         user_uuid = conn.user_uuid
@@ -83,7 +84,7 @@ def get_quiz(id: int, username: str = Depends(require_app_access)):
                     username=username
                 )
         except UsageLimitExceeded as e:
-            raise HTTPException(status_code=429, detail=str(e))
+            raise ai.usage_http_exception(e)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to automatically regenerate quiz: {e}")
 
@@ -171,7 +172,7 @@ def get_quiz(id: int, username: str = Depends(require_app_access)):
                 # Surfaced rather than swallowed: this path used to leave `questions_pool`
                 # empty and return 200 with a blank quiz, which looked like a bug rather
                 # than a usage cap the user could understand.
-                raise HTTPException(status_code=429, detail=str(e))
+                raise ai.usage_http_exception(e)
             except Exception as e:
                 logger.error(f"Auto-repair quiz {id} failed: {e}")
 
@@ -214,7 +215,7 @@ def get_quiz(id: int, username: str = Depends(require_app_access)):
 async def generate_edge_tts(
     text: str = Form(...),
     speed: float = Form(1.0),
-    username: str = Depends(require_app_access)
+    username: str = Depends(require_account_access)
 ):
     """Generates audio bytes via Edge-TTS for question speech readout."""
     if not text or not text.strip():
@@ -242,7 +243,7 @@ def grade_quiz(
     is_final_question: bool = Form(False),
     explanation: Optional[str] = Form(None),
     feedback: Optional[str] = Form(None),
-    username: str = Depends(require_app_access)
+    username: str = Depends(require_account_access)
 ):
     """Grades a quiz attempt item, updates SRS stages on final completion, computes XP/Streaks, and updates badges."""
     if grade not in ["remembered", "forgot"]:
@@ -452,7 +453,7 @@ def grade_quiz(
 
 
 @router.post("/quiz/{id}/reschedule")
-def reschedule_quiz(id: int, username: str = Depends(require_app_access)):
+def reschedule_quiz(id: int, username: str = Depends(require_account_access)):
     """Moves a review that is due today to tomorrow ("+1 Day").
 
     Only for reviews due today. An overdue review is already on Chompy's clock
@@ -491,7 +492,7 @@ def verify_quiz_guess(
     quiz_id: int = Form(...),
     question_index: int = Form(...),
     user_guess: str = Form(""),
-    username: str = Depends(require_app_access)
+    username: str = Depends(require_ai_access)
 ):
     """Uses Gemini AI to conceptually evaluate a user's typed guess against the correct answer."""
     quiz_data = database.get_quiz_row(quiz_id, username=username)
@@ -520,7 +521,7 @@ def verify_quiz_guess(
         # A usage cap is not a wrong answer: returning is_correct=False here (as the
         # generic except below does) told the user their guess was wrong when the real
         # reason was a quota, with the actual explanation buried in the feedback text.
-        raise HTTPException(status_code=429, detail=str(e))
+        raise ai.usage_http_exception(e)
     except Exception as e:
         logger.error(f"Error in verify_quiz_guess: {e}")
         return {

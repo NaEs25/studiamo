@@ -634,6 +634,21 @@ TABLES_SQL = [
         day       DATE NOT NULL,
         PRIMARY KEY (user_uuid, day)
     );
+
+    -- The one AI generation an account without a plan may spend, ever. One row per account:
+    -- the primary key is what makes claiming it atomic, a second claim cannot insert.
+    -- video_id is the material the generation was spent on (NULL until the import row exists).
+    -- ip_hash is a salted hash, never the address; rows are pruned after the IP window.
+    -- active is FALSE after a failed import gave the claim back; releases counts those, so the
+    -- row (and its count) survives a release and a bad video cannot be retried forever.
+    CREATE TABLE IF NOT EXISTS free_video_claims (
+        user_uuid  UUID PRIMARY KEY,
+        video_id   INTEGER,
+        ip_hash    TEXT,
+        active     BOOLEAN NOT NULL DEFAULT TRUE,
+        claimed_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        releases   INTEGER NOT NULL DEFAULT 0
+    );
     """,
     """
     ALTER TABLE user_profile ENABLE ROW LEVEL SECURITY;
@@ -659,6 +674,7 @@ TABLES_SQL = [
     ALTER TABLE notification_log ENABLE ROW LEVEL SECURITY;
     ALTER TABLE user_activity_days ENABLE ROW LEVEL SECURITY;
     ALTER TABLE notification_template_stats ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE free_video_claims ENABLE ROW LEVEL SECURITY;
     """,
 ]
 
@@ -757,6 +773,8 @@ INDEXES_SQL = [
     # table when reading the batch after a cohort ends.
     "CREATE INDEX IF NOT EXISTS idx_tester_feedback_created ON tester_feedback(created_at DESC);",
     "CREATE INDEX IF NOT EXISTS idx_tester_feedback_user ON tester_feedback(user_uuid);",
+    # Counting claims per address hash inside the rolling window (see database.claim_free_video).
+    "CREATE INDEX IF NOT EXISTS idx_free_video_claims_ip ON free_video_claims(ip_hash, claimed_at) WHERE ip_hash IS NOT NULL;",
 ]
 
 

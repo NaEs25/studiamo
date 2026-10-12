@@ -10,7 +10,7 @@ from typing import Dict, Optional, List, Union
 from pathlib import Path
 
 
-from app import database, config, storage, ai, youtube, local_days
+from app import database, config, storage, ai, youtube, local_days, plans
 
 
 # ==============================================================================
@@ -658,6 +658,15 @@ class ImportQueueManager:
             cls._instance = ImportQueueManager()
         return cls._instance
 
+    @staticmethod
+    def _process_in_plan_scope(processor, task_id, video_id, payload, username, update_stage_fn):
+        """Runs a processor with the account's free-generation scope open for the task's own
+        material. For an account without a plan this is what lets the import's AI calls through
+        the chokepoint, and only for the material the claim was made for; for an account on a
+        plan the scope changes nothing."""
+        with plans.generation_scope(username, video_id):
+            return processor.process(task_id, video_id, payload, username, update_stage_fn)
+
     def enqueue_task(
         self,
         username: str,
@@ -680,6 +689,12 @@ class ImportQueueManager:
             res = cursor.fetchone()
             task_id = res["id"] if isinstance(res, dict) and "id" in res else (res[0] if res else cursor.lastrowid)
             conn.commit()
+
+            # An account without a plan claims its one free generation before it gets here, with
+            # no material yet; this ties the claim to the material being imported. A no-op for
+            # every other account.
+            if video_id:
+                plans.attach_free_video(str(user_uuid), video_id)
 
             # Trigger non-blocking async execution
             asyncio.create_task(self._process_task_async(task_id, username))
@@ -775,7 +790,7 @@ class ImportQueueManager:
 
                 # Execute blocking sync processor inside thread pool executor to prevent blocking FastAPI event loop!
                 result = await asyncio.to_thread(
-                    processor.process, task_id, video_id, payload, username, update_stage_fn
+                    self._process_in_plan_scope, processor, task_id, video_id, payload, username, update_stage_fn
                 )
 
                 cursor.execute(
@@ -822,6 +837,11 @@ class ImportQueueManager:
                 traceback.print_exc()
 
                 # Failed imports are deliberately not logged to import_timings, # the progress bar is calibrated against runs that actually finish.
+
+                # A failed import hands the account's one free generation back (a no-op for
+                # an account on a plan, or whose claim is for another material).
+                if task_dict and task_dict.get("video_id"):
+                    plans.release_free_video(str(user_uuid), task_dict["video_id"])
 
                 try:
                     raw_fail_conn = database.get_pooled_raw_connection()

@@ -10,7 +10,7 @@ import json
 import time
 from app.config import get_config, IS_CLOUD
 from app.database import get_db_connection, get_app_setting
-from app import youtube
+from app import youtube, plans
 
 logger = logging.getLogger("studiamo")
 
@@ -36,12 +36,36 @@ MAX_TRANSCRIPT_WORDS = 15000
 # All thresholds are operator-configured via the app_settings table (database.get_app_setting
 # / set_app_setting) rather than hardcoded.
 
+PLAN_REQUIRED_CODE = "ai_requires_plan"
+PLAN_REQUIRED_MESSAGE = "AI features need a plan. Pick a plan to use this feature."
+
+
 class UsageLimitExceeded(Exception):
     """Raised before an AI call when a user has hit the rate limit or monthly budget."""
 
     def __init__(self, kind: str, message: str):
-        self.kind = kind  # "rate_limit" or "budget"
+        self.kind = kind  # "rate_limit", "budget" or "plan_required"
         super().__init__(message)
+
+
+class PlanRequired(UsageLimitExceeded):
+    """Raised before an AI call on an account without a plan, outside its one free generation.
+
+    A UsageLimitExceeded so every existing handler of that type (the import worker's curated
+    error, the routes' catch blocks) already treats it as a deliberate refusal. Routes turn it
+    into a 402 with a machine-readable code through usage_http_exception()."""
+
+    def __init__(self, message: str = PLAN_REQUIRED_MESSAGE):
+        super().__init__("plan_required", message)
+
+
+def usage_http_exception(exc: "UsageLimitExceeded"):
+    """The HTTP error for a refused AI call: 402 with a code the frontend turns into the
+    upgrade prompt for a missing plan, 429 for the rate limit and budget caps."""
+    from fastapi import HTTPException
+    if isinstance(exc, PlanRequired):
+        return HTTPException(status_code=402, detail={"code": PLAN_REQUIRED_CODE, "message": str(exc)})
+    return HTTPException(status_code=429, detail=str(exc))
 
 
 # USD price per 1M tokens: (input, output). Source: Google's published Gemini API pricing.
@@ -178,11 +202,18 @@ def get_recent_call_count(username: str, minutes: int = None) -> int:
 
 
 def enforce_usage_limits(username: str) -> None:
-    """Raises UsageLimitExceeded before an AI call if the user is over budget or firing calls unusually fast.
+    """Raises UsageLimitExceeded before an AI call if the user is over budget or firing calls unusually fast,
+    and PlanRequired if the account has no plan and the call is not part of its one free generation.
 
     No-op outside cloud mode (self-hosted users own their key and their own cost)."""
     if not IS_CLOUD:
         return
+
+    # Before the budget: an account without a plan has no budget to speak of, and the refusal
+    # should say so instead of reporting an allowance. The only way through is the scope the
+    # code processing the account's one free generation opens (see app/plans.py).
+    if plans.get_plan(username) == plans.PLAN_FREE and not plans.scope_allows(username):
+        raise PlanRequired()
 
     max_calls = _get_app_setting_int("ai_rate_limit_max_calls", _FALLBACK_RATE_LIMIT_MAX_CALLS)
     if get_recent_call_count(username) >= max_calls:

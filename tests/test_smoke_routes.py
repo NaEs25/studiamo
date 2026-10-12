@@ -137,10 +137,15 @@ def _requires_auth(route) -> bool:
         return False
     for dep in dependant.dependencies:
         name = getattr(dep.call, "__name__", "")
-        # require_app_access (the paid-access gate) calls get_active_username as its
-        # own first step, so an unauthenticated request still 401s before it ever
-        # reaches the payment check , safe to treat the same as the other two.
-        if "active_username" in name or "authenticated_username" in name or name == "require_app_access":
+        # require_app_access (the paid-access gate), require_account_access (any plan) and
+        # require_ai_access (the AI-only gate) all call get_active_username as their own
+        # first step, so an unauthenticated request still 401s before it ever reaches the
+        # plan check , safe to treat the same as the other two.
+        if (
+            "active_username" in name
+            or "authenticated_username" in name
+            or name in ("require_app_access", "require_account_access", "require_ai_access")
+        ):
             return True
     return False
 

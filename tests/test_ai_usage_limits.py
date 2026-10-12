@@ -48,6 +48,9 @@ def usage(monkeypatch):
         lambda key, default: state["max_calls"] if key == "ai_rate_limit_max_calls" else default,
     )
     monkeypatch.setattr(ai, "IS_CLOUD", True)
+    # These tests are about the budget and the rate limit, so the account is on a plan; the
+    # plan check has its own tests in test_plans.py.
+    monkeypatch.setattr(ai.plans, "get_plan", lambda username: ai.plans.PLAN_PAID)
     return state
 
 
