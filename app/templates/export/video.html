@@ -56,7 +56,7 @@
     <h2>Fact Check</h2>
     {% if fc.get("overall_verdict") %}<p>{{ fc.get("overall_verdict") }}</p>{% endif %}
     {% for claim in fc.get("disputed_claims") or [] %}
-    <div class="qa" style="border-left-color:#dc2626;">
+    <div class="qa" style="border-left-color:#d71e21;">
         <div class="q">{{ claim.get("claim") }}</div>
         <div class="meta">{{ claim.get("severity", "") }}{% if claim.get("time_label") %} &middot; at {{ claim.get("time_label") }}{% endif %}</div>
         {% if claim.get("actual_consensus") %}<div>{{ claim.get("actual_consensus") }}</div>{% endif %}

@@ -43,6 +43,15 @@ module.exports = {
                 darkBorder: "#202636",
                 primary: "#f59e0b",
                 accent: "#fbbf24",
+
+                // Darkened shades so text in these colors passes WCAG AA on the paper
+                // background. They extend the default palette: every other step keeps its
+                // stock value, and existing classes (text-emerald-600, bg-red-600, ...) pick
+                // up the new values without a template change.
+                emerald: { 600: "#007E53" },
+                red: { 600: "#D71E21" },
+                amber: { 600: "#D47200", 700: "#B35208" },
+                stone: { 400: "#908A86", 500: "#746D68" },
             },
             // font-mono keeps Tailwind's default system monospace stack: it only styles
             // short labels (timestamps, percentages, dates), so no webfont is loaded for it.

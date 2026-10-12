@@ -150,7 +150,7 @@ def send_waitlist_confirmation_email(recipient_email: str) -> bool:
                 margin-bottom: 28px;
             }}
             .logo-icon {{
-                background: #d97706;
+                background: #d47200;
                 border-radius: 10px;
                 width: 38px;
                 height: 38px;
@@ -178,7 +178,7 @@ def send_waitlist_confirmation_email(recipient_email: str) -> bool:
                 line-height: 1.65;
                 margin: 0 0 16px;
             }}
-            .highlight {{ color: #d97706; font-weight: 600; }}
+            .highlight {{ color: #d47200; font-weight: 600; }}
             .card {{
                 background: #fbf8f2;
                 border: 1px solid #e7dfd3;
@@ -189,7 +189,7 @@ def send_waitlist_confirmation_email(recipient_email: str) -> bool:
             .card p {{ margin: 0; font-size: 14px; color: #44403c; }}
             .footer {{
                 font-size: 12px;
-                color: #a8a29e;
+                color: #908a86;
                 margin-top: 28px;
                 text-align: center;
                 border-top: 1px solid #e7dfd3;
@@ -235,7 +235,7 @@ def send_waitlist_confirmation_email(recipient_email: str) -> bool:
             <div class="footer">
                 © 2026 Studiamo Learning System · Made in Basel 🇨🇭<br>
                 You're receiving this because you signed up at studiamo.app.<br>
-                <a href="https://studiamo.cloud/api/waitlist/unsubscribe?email={encoded_email}&token={unsub_token}" style="color: #a8a29e; text-decoration: underline;">Unsubscribe</a>
+                <a href="https://studiamo.cloud/api/waitlist/unsubscribe?email={encoded_email}&token={unsub_token}" style="color: #908a86; text-decoration: underline;">Unsubscribe</a>
             </div>
         </div>
     </body>
@@ -347,11 +347,11 @@ def send_waitlist_status_email(recipient_email: str, referral_code: str) -> bool
             <p style="color: #57534e; font-size: 15px; line-height: 1.65; margin: 0 0 16px;">
                 By joining the waitlist, you agreed to receive one email when your spot is ready, that's this one,
                 plus a single follow-up when you're promoted. See our
-                <a href="https://studiamo.cloud/privacy" style="color: #d97706;">Privacy Policy</a>.
+                <a href="https://studiamo.cloud/privacy" style="color: #d47200;">Privacy Policy</a>.
             </p>
-            <div style="font-size: 12px; color: #a8a29e; margin-top: 28px; text-align: center; border-top: 1px solid #e7dfd3; padding-top: 20px; line-height: 1.6;">
+            <div style="font-size: 12px; color: #908a86; margin-top: 28px; text-align: center; border-top: 1px solid #e7dfd3; padding-top: 20px; line-height: 1.6;">
                 © 2026 Studiamo Learning System<br>
-                <a href="{unsubscribe_url(recipient_email)}" style="color: #a8a29e; text-decoration: underline;">Unsubscribe</a>
+                <a href="{unsubscribe_url(recipient_email)}" style="color: #908a86; text-decoration: underline;">Unsubscribe</a>
             </div>
         </div>
     </body>
@@ -392,15 +392,15 @@ def send_notification_email(recipient_email: str, subject: str, heading: str, bo
             </div>
             <h1 style="color: #1c1917; font-size: 26px; font-weight: 800; margin: 0 0 12px; letter-spacing: -0.5px;">{heading_html}</h1>
             <p style="color: #57534e; font-size: 15px; line-height: 1.65; margin: 0 0 16px;">{body_html}</p>
-            <a href="{cta_url}" style="display: inline-block; background: #d97706; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 14px; padding: 12px 24px; border-radius: 12px; margin: 8px 0 20px;">{html.escape(cta_label)}</a>
+            <a href="{cta_url}" style="display: inline-block; background: #d47200; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 14px; padding: 12px 24px; border-radius: 12px; margin: 8px 0 20px;">{html.escape(cta_label)}</a>
             <div style="font-size: 13px; color: #57534e; background: #fbf8f2; border: 1px solid #e7dfd3; border-radius: 12px; padding: 14px 16px; margin-top: 12px; line-height: 1.6;">
                 Rather get these as push notifications or on Telegram?
-                <a href="{settings_link}" style="color: #b45309; font-weight: 700;">Change it in your notification settings</a>.
+                <a href="{settings_link}" style="color: #b35208; font-weight: 700;">Change it in your notification settings</a>.
             </div>
-            <div style="font-size: 12px; color: #a8a29e; margin-top: 28px; text-align: center; border-top: 1px solid #e7dfd3; padding-top: 20px; line-height: 1.6;">
+            <div style="font-size: 12px; color: #908a86; margin-top: 28px; text-align: center; border-top: 1px solid #e7dfd3; padding-top: 20px; line-height: 1.6;">
                 © 2026 Studiamo Learning System<br>
                 Reminders tell you when a review is due, which is what makes spaced repetition work.<br>
-                <a href="{off_url}" style="color: #a8a29e; text-decoration: underline;">Turn off reminder emails</a>
+                <a href="{off_url}" style="color: #908a86; text-decoration: underline;">Turn off reminder emails</a>
             </div>
         </div>
     </body>
@@ -439,10 +439,10 @@ def send_promotion_email(recipient_email: str) -> bool:
                 Good news, a spot just opened up and your Studiamo account is now active.
                 Sign in with Google whenever you're ready.
             </p>
-            <a href="https://studiamo.cloud/login?src=waitlist_promotion" style="display: inline-block; background: #d97706; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 14px; padding: 12px 24px; border-radius: 12px; margin: 8px 0 20px;">Sign in to Studiamo</a>
-            <div style="font-size: 12px; color: #a8a29e; margin-top: 28px; text-align: center; border-top: 1px solid #e7dfd3; padding-top: 20px; line-height: 1.6;">
+            <a href="https://studiamo.cloud/login?src=waitlist_promotion" style="display: inline-block; background: #d47200; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 14px; padding: 12px 24px; border-radius: 12px; margin: 8px 0 20px;">Sign in to Studiamo</a>
+            <div style="font-size: 12px; color: #908a86; margin-top: 28px; text-align: center; border-top: 1px solid #e7dfd3; padding-top: 20px; line-height: 1.6;">
                 © 2026 Studiamo Learning System<br>
-                <a href="{unsubscribe_url(recipient_email)}" style="color: #a8a29e; text-decoration: underline;">Unsubscribe</a>
+                <a href="{unsubscribe_url(recipient_email)}" style="color: #908a86; text-decoration: underline;">Unsubscribe</a>
             </div>
         </div>
     </body>
@@ -498,8 +498,8 @@ def send_tester_access_email(recipient_email: str, expires_at=None) -> bool:
                 Use it the way you would actually use it, and tell us what gets in your way.
                 That's the whole point of a test phase.
             </p>
-            <a href="https://studiamo.cloud/login?src=tester_access" style="display: inline-block; background: #d97706; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 14px; padding: 12px 24px; border-radius: 12px; margin: 8px 0 20px;">Open Studiamo</a>
-            <div style="font-size: 12px; color: #a8a29e; margin-top: 28px; text-align: center; border-top: 1px solid #e7dfd3; padding-top: 20px; line-height: 1.6;">
+            <a href="https://studiamo.cloud/login?src=tester_access" style="display: inline-block; background: #d47200; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 14px; padding: 12px 24px; border-radius: 12px; margin: 8px 0 20px;">Open Studiamo</a>
+            <div style="font-size: 12px; color: #908a86; margin-top: 28px; text-align: center; border-top: 1px solid #e7dfd3; padding-top: 20px; line-height: 1.6;">
                 © 2026 Studiamo Learning System<br>
                 You're receiving this one-off email because your account was given tester access.
             </div>

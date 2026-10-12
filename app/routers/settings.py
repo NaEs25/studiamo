@@ -666,7 +666,7 @@ def reminder_emails_off_page(email: str = "", token: str = ""):
         .card {{ max-width: 480px; margin: 0 auto; background: #ffffff; border: 1px solid #e7dfd3; border-radius: 24px; padding: 40px 28px; }}
         h1 {{ font-size: 24px; font-weight: 800; margin: 0 0 12px; }}
         p {{ font-size: 15px; color: #57534e; line-height: 1.6; margin: 0 0 24px; }}
-        a {{ display: inline-block; background: #d97706; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 14px; padding: 12px 24px; border-radius: 12px; }}
+        a {{ display: inline-block; background: #d47200; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 14px; padding: 12px 24px; border-radius: 12px; }}
     </style>
 </head>
 <body>

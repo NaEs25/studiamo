@@ -1225,7 +1225,7 @@ function renderVideoCard(video, quizzes, goals) {
             <div id="details-content-${video.id}" class="hidden space-y-2 pt-0.5 text-xs">
                 ${hasTakeaways ? `
                 <div class="space-y-1">
-                    ${hasNotes ? '<h5 class="font-semibold text-stone-400 text-[10px] uppercase tracking-wider">Key Takeaways</h5>' : ''}
+                    ${hasNotes ? '<h5 class="font-semibold text-stone-500 text-[10px] uppercase tracking-wider">Key Takeaways</h5>' : ''}
                     <ul class="list-disc list-inside space-y-1 text-stone-600 pl-1 leading-relaxed">
                         ${validSummaryBullets.map(s => `<li>${s}</li>`).join('')}
                     </ul>
@@ -1234,7 +1234,7 @@ function renderVideoCard(video, quizzes, goals) {
                 
                 ${hasNotes ? `
                 <div class="pt-2 space-y-1">
-                    <h5 class="font-semibold text-stone-400 text-[10px] uppercase tracking-wider">My Notes</h5>
+                    <h5 class="font-semibold text-stone-500 text-[10px] uppercase tracking-wider">My Notes</h5>
                     <div class="bg-stone-50 border border-stone-200 p-2.5 rounded-xl text-stone-700 leading-relaxed break-words prose prose-sm prose-stone max-w-none">
                         ${renderMarkdownSafe(video.custom_notes)}
                     </div>
@@ -1663,7 +1663,7 @@ async function showFactCheck(id) {
                     const badgeLabel = claim.severity || 'Disputed';
                     const citationHtml = claim.source_citation ? `
                         <div class="space-y-0.5 border-t border-stone-200/60 pt-2">
-                            <span class="text-[10px] font-bold text-stone-400 uppercase tracking-wider block">Source:</span>
+                            <span class="text-[10px] font-bold text-stone-500 uppercase tracking-wider block">Source:</span>
                             <p class="text-[11px] text-stone-500 leading-relaxed">${claim.source_citation}</p>
                         </div>
                     ` : '';

@@ -234,10 +234,10 @@ def unsubscribe_waitlist(email: str = "", token: str = ""):
     <style>
         body {{ font-family: system-ui, -apple-system, sans-serif; background-color: #f6f1e7; color: #1c1917; margin: 0; padding: 60px 20px; text-align: center; }}
         .card {{ max-width: 480px; margin: 0 auto; background: #ffffff; border: 1px solid #e7dfd3; border-radius: 24px; padding: 40px 28px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); }}
-        .icon {{ width: 56px; height: 56px; background: #fef3c7; color: #d97706; border-radius: 16px; display: inline-flex; align-items: center; justify-content: center; font-size: 28px; margin-bottom: 20px; }}
+        .icon {{ width: 56px; height: 56px; background: #fef3c7; color: #d47200; border-radius: 16px; display: inline-flex; align-items: center; justify-content: center; font-size: 28px; margin-bottom: 20px; }}
         h1 {{ font-size: 24px; font-weight: 800; margin: 0 0 12px; color: #1c1917; }}
         p {{ font-size: 15px; color: #57534e; line-height: 1.6; margin: 0 0 24px; }}
-        a {{ display: inline-block; background: #d97706; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 14px; padding: 12px 24px; border-radius: 12px; }}
+        a {{ display: inline-block; background: #d47200; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 14px; padding: 12px 24px; border-radius: 12px; }}
     </style>
 </head>
 <body>
