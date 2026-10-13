@@ -237,3 +237,32 @@ def test_paying_account_keeps_the_normal_limits_and_no_link_cap(monkeypatch):
     monkeypatch.setattr(plans, "get_plan", lambda username: plans.PLAN_PAID)
     assert plans.storage_limits("someone") == (config.get_user_storage_quota_bytes(), config.get_max_file_upload_bytes())
     assert plans.max_links("someone") == 0
+
+
+# --- the free generation cannot be recovered by deleting things -------------------------------
+
+def test_a_failed_import_after_the_ai_ran_does_not_give_the_generation_back(claimant):
+    user_uuid, _ = claimant
+    assert plans.claim_free_video(user_uuid, "test-" + user_uuid[:8]) == plans.CLAIM_OK
+    plans.attach_free_video(user_uuid, 31)
+    conn = plans._connect()
+    try:
+        conn.cursor().execute(
+            "INSERT INTO ai_usage_logs (user_uuid, model, action_type, status) VALUES (%s, 'test-model', 'video_analysis', 'success');",
+            (user_uuid,),
+        )
+        # The material is deleted while it is still importing, so the import then fails.
+        assert plans.release_free_video(user_uuid, 31) is False
+        assert plans.get_free_video_state(user_uuid)["state"] == "used"
+    finally:
+        conn.cursor().execute("DELETE FROM ai_usage_logs WHERE user_uuid = %s AND model = 'test-model';", (user_uuid,))
+        plans.database.release_pooled_connection(conn)
+
+
+def test_a_claim_outlives_its_deleted_material(claimant):
+    user_uuid, _ = claimant
+    assert plans.claim_free_video(user_uuid, "test-" + user_uuid[:8]) == plans.CLAIM_OK
+    plans.attach_free_video(user_uuid, 32)
+    # Nothing removes a claim when its video row goes: the state stays used.
+    assert plans.get_free_video_state(user_uuid)["state"] == "used"
+    assert plans.claim_free_video(user_uuid, "test-" + user_uuid[:8]) == plans.CLAIM_USED

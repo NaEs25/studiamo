@@ -103,10 +103,30 @@ async function loadGoals() {
             window._videoCardCache[v.id] = v;
         });
 
+        // 0. Starter set: ready-made example materials, in their own soft green block.
+        const starterVideos = videos.filter(v => v.is_starter);
+        const starterContainer = document.getElementById('goals-starter-container');
+        if (starterContainer) {
+            starterContainer.innerHTML = starterVideos.length === 0 ? '' : `
+                <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 space-y-3 shadow-sm">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[11px] font-bold tracking-wider uppercase text-emerald-700 flex items-center gap-1.5">
+                            <i data-lucide="sprout" class="w-4 h-4"></i>Starter set
+                        </span>
+                        <button type="button" data-goal-action="remove-starter" class="p-1 text-stone-400 hover:text-stone-700 transition" title="Remove the starter set" aria-label="Remove the starter set">
+                            <i data-lucide="x" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 items-start">
+                        ${starterVideos.map(item => renderVideoCard(item, quizzes, goals)).join('')}
+                    </div>
+                </div>`;
+        }
+
         // 1. Render Watchlist Queue at top if populated
         const watchlistContainer = document.getElementById('goals-watchlist-container');
         if (watchlistContainer) {
-            const watchlistVideos = videos.filter(v => v.is_watchlist === 1);
+            const watchlistVideos = videos.filter(v => v.is_watchlist === 1 && !v.is_starter);
             if (watchlistVideos.length > 0) {
                 const isWatchlistOpen = localStorage.getItem('accordion-open-watchlist') !== 'false';
                 watchlistContainer.innerHTML = `
@@ -285,7 +305,7 @@ async function loadGoals() {
         // 3. Render Unassociated Videos Container
         const unassociatedContainer = document.getElementById('goals-unassociated-container');
         if (unassociatedContainer) {
-            const unassociatedVideos = videos.filter(v => !v.learning_goal_id && v.is_watchlist !== 1);
+            const unassociatedVideos = videos.filter(v => !v.learning_goal_id && v.is_watchlist !== 1 && !v.is_starter);
             if (unassociatedVideos.length > 0) {
                 const isUnassocOpen = localStorage.getItem('accordion-open-unassociated') === 'true';
                 unassociatedContainer.innerHTML = `
@@ -961,6 +981,7 @@ function initGoalsActions() {
             case 'set-view': setGoalsView(el.dataset.view); break;
             case 'open-reorder': openGoalReorder(); break;
             case 'add-material': openImportForGoal(goalId); break;
+            case 'remove-starter': removeStarterSet(); break;
             case 'open-goal': openGoalPage(goalId); break;
             case 'menu': toggleGoalMenu(e, goalId, el); break;
             case 'toggle-materials': toggleGoalMaterials(goalId); break;
@@ -1203,6 +1224,27 @@ window.loadGoals = loadGoals;
 window.initGoalsModal = initGoalsModal;
 window.openCreateGoalModal = openCreateGoalModal;
 window.toggleArchivedGoals = toggleArchivedGoals;
+
+// Removes every starter material after a confirmation. They are ordinary materials, so this is the
+// normal delete; the account is not given the set again (user_profile.starter_set_added_at).
+async function removeStarterSet() {
+    const starters = ((window._goalsPageData && window._goalsPageData.videos) || []).filter(v => v.is_starter);
+    if (starters.length === 0) return;
+    const ok = await showConfirm({
+        title: 'Remove the starter set?',
+        message: 'The example videos and their quizzes are deleted from your account. They will not come back.',
+        confirmText: 'Remove',
+        icon: 'trash-2',
+    });
+    if (!ok) return;
+    try {
+        for (const v of starters) await fetchAPI(`/api/videos/${v.id}`, { method: 'DELETE' });
+    } catch (e) {
+        showToast('Could not remove the starter set: ' + (e.message || e), 'failed', 3500);
+    }
+    await loadGoals();
+    if (typeof loadDashboard === 'function') loadDashboard();
+}
 
 // --- Add material to a goal --------------------------------------------------------------------
 

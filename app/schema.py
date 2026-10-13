@@ -244,6 +244,31 @@ TABLES_SQL = [
     -- any AI work and has no quiz yet.
     ALTER TABLE videos ADD COLUMN IF NOT EXISTS material_type TEXT;
     ALTER TABLE videos ADD COLUMN IF NOT EXISTS source_url TEXT;
+    -- Set on the copies of a ready-made study set that app.starter adds to a free account. They
+    -- are ordinary materials (the learner can delete them) shown in their own block.
+    ALTER TABLE videos ADD COLUMN IF NOT EXISTS is_starter BOOLEAN NOT NULL DEFAULT FALSE;
+    -- When this account was given the starter set, so deleting it does not bring it back.
+    ALTER TABLE user_profile ADD COLUMN IF NOT EXISTS starter_set_added_at TIMESTAMPTZ;
+
+    -- Ready-made study sets, system-owned: no user_uuid and no goal, notes or learner data. Each
+    -- row is one example video with the analysis a real import produced for it (summary, outline
+    -- and the full card pool), captured once by scripts/snapshot_starter_set.py and copied into
+    -- an account as an ordinary material and quiz. Nothing here is readable through a user route.
+    CREATE TABLE IF NOT EXISTS starter_sets (
+        id               SERIAL PRIMARY KEY,
+        position         INTEGER NOT NULL DEFAULT 0,
+        youtube_id       TEXT UNIQUE NOT NULL,
+        title            TEXT NOT NULL,
+        category         TEXT,
+        thumbnail_url    TEXT,
+        duration_seconds INTEGER DEFAULT 0,
+        summary          JSONB NOT NULL DEFAULT '[]'::jsonb,
+        outline          JSONB NOT NULL DEFAULT '[]'::jsonb,
+        concept_pool     JSONB NOT NULL DEFAULT '[]'::jsonb,
+        model            TEXT,
+        analyzed_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        active           BOOLEAN NOT NULL DEFAULT TRUE
+    );
     """,
     """
     CREATE TABLE IF NOT EXISTS quizzes (
@@ -682,6 +707,7 @@ TABLES_SQL = [
     ALTER TABLE user_activity_days ENABLE ROW LEVEL SECURITY;
     ALTER TABLE notification_template_stats ENABLE ROW LEVEL SECURITY;
     ALTER TABLE free_video_claims ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE starter_sets ENABLE ROW LEVEL SECURITY;
     """,
 ]
 

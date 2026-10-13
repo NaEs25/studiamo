@@ -176,10 +176,18 @@ def release_free_video(user_uuid: str, video_id: int) -> bool:
     try:
         conn = _connect()
         cur = conn.cursor()
+        # Not once the AI has already run: the generation was spent even if the import failed
+        # afterwards (or the material was deleted while it was still processing). Only a failure
+        # before any successful AI call since the claim, which cost nothing, gives it back.
         cur.execute(
-            """UPDATE free_video_claims
+            """UPDATE free_video_claims c
                   SET active = FALSE, video_id = NULL, releases = releases + 1
-                WHERE user_uuid = %s AND active IS TRUE AND video_id = %s AND releases < %s;""",
+                WHERE c.user_uuid = %s AND c.active IS TRUE AND c.video_id = %s AND c.releases < %s
+                  AND NOT EXISTS (
+                      SELECT 1 FROM ai_usage_logs l
+                       WHERE l.user_uuid = c.user_uuid::text AND l.status = 'success'
+                         AND l.timestamp >= c.claimed_at
+                  );""",
             (user_uuid, video_id, max_releases),
         )
         return cur.rowcount > 0
@@ -239,8 +247,8 @@ def get_free_video_state(user_uuid: str) -> dict:
 
 
 def prune_ip_hashes() -> int:
-    """Clears address hashes older than the window. The claim itself stays (it is what marks the
-    generation as spent); only the hash goes. Returns the number of rows cleared."""
+    """Clears address hashes older than the window. The claim itself stays for a live account (it
+    is what marks the generation as spent); only the hash goes. Returns the number cleared."""
     window_days = _setting_int("free_video_ip_window_days", _FALLBACK_IP_WINDOW_DAYS)
     conn = None
     try:
@@ -252,7 +260,15 @@ def prune_ip_hashes() -> int:
                   AND claimed_at < CURRENT_TIMESTAMP - make_interval(days => %s);""",
             (window_days,),
         )
-        return cur.rowcount
+        cleared = cur.rowcount
+        # A claim kept from a deleted account (see database.delete_user_account) has nothing left
+        # to say once its address hash is gone.
+        cur.execute(
+            """DELETE FROM free_video_claims c
+                WHERE c.ip_hash IS NULL
+                  AND NOT EXISTS (SELECT 1 FROM user_profile p WHERE p.user_uuid = c.user_uuid);"""
+        )
+        return cleared
     except Exception as e:
         logger.warning(f"[plans] Address hash pruning failed: {e}")
         return 0

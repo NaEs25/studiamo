@@ -1318,7 +1318,7 @@ function renderVideoCard(video, quizzes, goals) {
 
     // Eaten videos keep the normal two-button row, with "Win it back" as the primary half. A
     // preview leads with the wide import button and keeps Watch & Notes as a gray icon beside it.
-    const isTwoButtonRow = isNormalState || isEatenState || isPreviewState;
+    const isTwoButtonRow = isNormalState || isEatenState || isPreviewState || isLinkMaterial;
     // A link has one action (open it), so it gets the single-action layout and no Watch & Notes.
 
     const watchNotesButtonHTML = isPreviewState ? `
@@ -1336,9 +1336,9 @@ function renderVideoCard(video, quizzes, goals) {
             <span class="leading-tight whitespace-nowrap">Watch &amp; Notes</span>
         </button>
     ` : `
-        <button data-video-action="watch-notes" data-video-id="${video.id}" class="px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900 font-extrabold rounded-xl border border-stone-200 text-xs transition flex items-center justify-center space-x-2 min-h-[38px] shrink-0" title="Open Study Studio: watch the video and take notes side by side">
-            <i data-lucide="book-open" class="w-3.5 h-3.5 shrink-0"></i>
-            <span class="leading-tight">Watch &amp; Notes</span>
+        <button data-video-action="watch-notes" data-video-id="${video.id}" class="${isLinkMaterial ? 'w-full ' : ''}px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900 font-extrabold rounded-xl border border-stone-200 text-xs transition flex items-center justify-center space-x-2 min-h-[38px] shrink-0" title="${isLinkMaterial ? 'Take notes next to the page' : 'Open Study Studio: watch the video and take notes side by side'}">
+            <i data-lucide="${isLinkMaterial ? 'notebook-pen' : 'book-open'}" class="w-3.5 h-3.5 shrink-0"></i>
+            <span class="leading-tight">${isLinkMaterial ? 'Notes' : 'Watch &amp; Notes'}</span>
         </button>
     `;
 
@@ -1383,7 +1383,7 @@ function renderVideoCard(video, quizzes, goals) {
             ${actionControlsHTML}
         </div>
         <div class="flex items-center space-x-2 shrink-0">
-            ${(video.status === 'processing' || isLinkMaterial) ? '' : watchNotesButtonHTML}
+            ${video.status === 'processing' ? '' : watchNotesButtonHTML}
             ${bookmarkButtonHTML}
             ${trailingButtonHTML}
         </div>
@@ -2297,6 +2297,10 @@ async function openStudyStudio(id) {
     if (pdfWrapper) pdfWrapper.classList.add('hidden');
     if (docWrapper) docWrapper.classList.add('hidden');
     if (docDownloadBtn) docDownloadBtn.classList.add('hidden');
+    const linkWrapper = document.getElementById('studio-link-wrapper');
+    const linkViewer = document.getElementById('studio-link-viewer');
+    if (linkWrapper) linkWrapper.classList.add('hidden');
+    if (linkViewer) linkViewer.src = 'about:blank';
 
     if (cardData && cardData.youtube_id) {
         const startSec = Math.floor(parseFloat(cardData.last_position_seconds) || 0);
@@ -2320,6 +2324,20 @@ async function openStudyStudio(id) {
                     ? `<ul class="list-disc list-inside space-y-1.5">${validStudioBullets.map(s => `<li>${s}</li>`).join('')}</ul>`
                     : '<p class="text-stone-500 italic">No video takeaways recorded.</p>';
             }
+        }
+    } else if (cardData && cardData.material_type === 'link') {
+        // Only http and https addresses are ever framed or opened, whatever is stored.
+        const linkUrl = /^https?:\/\//i.test(cardData.source_url || '') ? cardData.source_url : '';
+        if (linkWrapper && linkUrl) {
+            linkWrapper.classList.remove('hidden');
+            let host = linkUrl;
+            try { host = new URL(linkUrl).hostname; } catch (e) { /* keep the raw address */ }
+            const hostEl = document.getElementById('studio-link-host');
+            if (hostEl) hostEl.textContent = host;
+            const openBtn = document.getElementById('studio-link-open-btn');
+            if (openBtn) openBtn.href = linkUrl;
+            // Not on phones: a framed page is too cramped there, and setting src would still load it.
+            if (linkViewer && window.innerWidth >= 640) linkViewer.src = linkUrl;
         }
     } else if (cardData && cardData.title && cardData.title.toLowerCase().endsWith('.pdf')) {
         if (pdfWrapper) {
@@ -2436,6 +2454,8 @@ function closeStudyStudio() {
 
     const ytWrapper = document.getElementById('studio-yt-wrapper');
     if (ytWrapper) ytWrapper.innerHTML = '';
+    const linkViewerEl = document.getElementById('studio-link-viewer');
+    if (linkViewerEl) linkViewerEl.src = 'about:blank';
     const miniVideo = document.getElementById('mini-player-video');
     if (miniVideo) miniVideo.innerHTML = '';
     const miniPlayer = document.getElementById('studio-mini-player');

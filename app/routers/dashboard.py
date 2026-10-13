@@ -1,6 +1,6 @@
 import logging
 from fastapi import APIRouter, Depends
-from app import chompy, database, gamification, local_days
+from app import chompy, database, gamification, local_days, starter
 from app.dependencies import (
     require_account_access,
     get_srs_intervals,
@@ -53,6 +53,9 @@ def _attach_video_summaries(video_list: list):
 @router.get("/dashboard")
 def get_dashboard_data(username: str = Depends(require_account_access)):
     """Retrieves full aggregated dashboard data: user profile, active/archived goals, videos, and quizzes."""
+    # An account on the free plan gets the ready-made starter set once, here, before its
+    # materials are read below (a no-op for every other account and after the first time).
+    starter.add_starter_set_if_due(username)
     conn = database.get_db_connection(username)
     try:
         user_uuid = conn.user_uuid
@@ -140,7 +143,7 @@ def get_dashboard_data(username: str = Depends(require_account_access)):
         cursor.execute("""
             SELECT v.id, v.youtube_id, v.title, v.category, v.thumbnail_url,
                    v.importance_rating, v.learning_goal_id, v.is_archived, v.is_paused, v.eaten_at,
-                   v.status, v.status_error, v.is_watchlist, v.custom_notes, v.material_type, v.source_url,
+                   v.status, v.status_error, v.is_watchlist, v.custom_notes, v.material_type, v.source_url, v.is_starter,
                    v.last_position_seconds, v.duration_seconds, v.is_temporary, v.expires_at, v.summary,
                    g.title AS goal_title,
                    -- Gates the "Adjust Learning Focus" menu entry. Material imported before topic
@@ -167,7 +170,7 @@ def get_dashboard_data(username: str = Depends(require_account_access)):
         cursor.execute("""
             SELECT v.id, v.youtube_id, v.title, v.category, v.thumbnail_url, v.importance_rating,
                    v.learning_goal_id, v.is_archived, v.is_paused, v.eaten_at, v.status, v.status_error,
-                   v.is_watchlist, v.custom_notes, v.material_type, v.source_url, v.summary,
+                   v.is_watchlist, v.custom_notes, v.material_type, v.source_url, v.is_starter, v.summary,
                    g.title AS goal_title,
                    EXISTS (
                        SELECT 1 FROM quizzes q

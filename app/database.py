@@ -1711,6 +1711,18 @@ def delete_user_account(username: str, dry_run: bool = True) -> dict:
                 cursor.execute(f"DELETE FROM {table} WHERE user_uuid = %s;", (user_uuid,))
                 counts[table] = cursor.rowcount
 
+        # The free-generation claim is kept, cut loose from the account: its address hash is what
+        # stops someone from deleting an account and signing up again for another free
+        # generation. It gets a random user_uuid, so nothing links it back to the person, and
+        # plans.prune_ip_hashes removes it once the address window has passed.
+        cursor.execute("SELECT COUNT(*) AS n FROM free_video_claims WHERE user_uuid = %s;", (user_uuid,))
+        counts["free_video_claims_unlinked"] = cursor.fetchone()["n"]
+        if not dry_run:
+            cursor.execute(
+                "UPDATE free_video_claims SET user_uuid = gen_random_uuid(), video_id = NULL WHERE user_uuid = %s;",
+                (user_uuid,),
+            )
+
         # Anyone this user referred keeps their account, but their referred_by
         # pointer has to go first: user_profile.referred_by is a FK back to
         # user_profile.user_uuid with no ON DELETE rule, so deleting a user who

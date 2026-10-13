@@ -81,3 +81,21 @@ def test_saved_material_offers_generate_and_a_link_offers_open(import_page):
     saved.locator("[data-video-action='generate-saved']").click()
     page.wait_for_timeout(400)
     assert generated
+
+
+def test_link_card_opens_the_studio_with_a_preview_frame_and_notes(import_page):
+    page = import_page
+    page.route("https://example.com/**", lambda route: route.fulfill(status=200, content_type="text/html", body="<p>page</p>"))
+    page.click("#nav-goals")
+    page.wait_for_selector("[data-goal-card='9001']", state="attached")
+    page.click("[data-goal-card='9001'] [data-goal-action='open-goal']")
+    link = page.locator("#goal-page #video-card-8201")
+    link.wait_for()
+    assert link.locator("[data-video-action='watch-notes']").is_visible()
+    link.locator("[data-video-action='watch-notes']").click()
+    page.wait_for_selector("#overlay-study-studio:not(.hidden)")
+    assert page.locator("#studio-link-wrapper").is_visible()
+    assert page.locator("#studio-link-open-btn").get_attribute("href") == "https://example.com/paper"
+    assert page.locator("#studio-link-viewer").get_attribute("src") == "https://example.com/paper"
+    assert page.locator("#studio-notes-editor").is_visible()
+    assert page.locator("#studio-yt-wrapper").is_hidden()
