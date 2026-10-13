@@ -223,6 +223,14 @@ window.renderGoalBoxes = function(goals) {
     });
 };
 
+// A web address typed without http:// or https:// gets https://. The server does the same
+// (videos.py _clean_link_url); this makes the field read back what will be saved.
+function withHttps(raw) {
+    const value = (raw || '').trim();
+    if (!value || value.includes('://') || value.split('/')[0].includes(':')) return value;
+    return 'https://' + value;
+}
+
 function initImportTab() {
     const form = document.getElementById('import-form');
     const inputImportance = document.getElementById('input-importance');
@@ -280,6 +288,8 @@ function initImportTab() {
     if (btnDoc) btnDoc.addEventListener('click', () => setTab('document'));
     if (btnNotes) btnNotes.addEventListener('click', () => setTab('notes'));
     if (btnLink) btnLink.addEventListener('click', () => setTab('link'));
+    const linkInput = document.getElementById('input-link-url');
+    if (linkInput) linkInput.addEventListener('blur', () => { linkInput.value = withHttps(linkInput.value); });
     
     const dropZone = document.getElementById('drop-zone');
     const fileInput = document.getElementById('input-file-upload');
@@ -348,7 +358,7 @@ function initImportTab() {
                     hideLoader();
                     return;
                 }
-                formData.append('link_url', linkVal);
+                formData.append('link_url', withHttps(linkVal));
                 const linkTitle = (document.getElementById('input-link-title').value || '').trim();
                 if (linkTitle) formData.append('title', linkTitle);
             } else if (isYoutubeVisible) {
@@ -2295,6 +2305,8 @@ async function openStudyStudio(id) {
     if (pdfWrapper) pdfWrapper.classList.add('hidden');
     if (docWrapper) docWrapper.classList.add('hidden');
     if (docDownloadBtn) docDownloadBtn.classList.add('hidden');
+    // A timestamp points into a video, so the button only exists for one.
+    document.getElementById('btn-studio-timestamp')?.classList.toggle('hidden', !(cardData && cardData.youtube_id));
     const linkWrapper = document.getElementById('studio-link-wrapper');
     const linkViewer = document.getElementById('studio-link-viewer');
     if (linkWrapper) linkWrapper.classList.add('hidden');
@@ -2805,6 +2817,8 @@ function clearPinnedFontSize(block) {
 function insertStudioTimestamp() {
     const editor = document.getElementById('studio-notes-editor');
     if (!editor) return;
+    const card = window._videoCardCache && window._videoCardCache[_currentStudioVideoId];
+    if (!card || !card.youtube_id) return;
     editor.focus();
 
     let pos = _currentStudioVideoCurrentTime;

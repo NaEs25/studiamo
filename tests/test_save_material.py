@@ -39,7 +39,7 @@ def test_saving_the_same_link_twice_returns_the_first(client, cleanup):
     assert again["video_id"] == first["video_id"] and again["already_existed"] is True
 
 
-@pytest.mark.parametrize("bad", ["javascript:alert(1)", "data:text/html,x", "ftp://example.com/f", "example.com", "http://"])
+@pytest.mark.parametrize("bad", ["javascript:alert(1)", "data:text/html,x", "ftp://example.com/f", "http://", "not a url", "vbscript:x"])
 def test_link_must_be_a_full_http_or_https_address(client, bad):
     assert client.post("/api/videos/save", data={"link_url": bad}).status_code == 400
 
@@ -85,3 +85,10 @@ def test_material_order_is_stored_and_refuses_a_list_that_does_not_match(client,
         assert client.post("/api/goals/2147483000/materials/order", data={"ids": "1"}).status_code == 404
     finally:
         client.delete(f"/api/goals/{goal}?delete_materials=true")
+
+
+def test_a_bare_domain_gets_https(client, cleanup):
+    saved = client.post("/api/videos/save", data={"link_url": "  www.example.com/page "}).json()
+    cleanup.append(saved["video_id"])
+    card = next(v for v in client.get("/api/dashboard").json()["videos"] if v["id"] == saved["video_id"])
+    assert card["source_url"] == "https://www.example.com/page"

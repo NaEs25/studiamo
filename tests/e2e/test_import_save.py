@@ -99,3 +99,21 @@ def test_link_card_opens_the_studio_with_a_preview_frame_and_notes(import_page):
     assert page.locator("#studio-link-viewer").get_attribute("src") == "https://example.com/paper"
     assert page.locator("#studio-notes-editor").is_visible()
     assert page.locator("#studio-yt-wrapper").is_hidden()
+
+
+def test_link_field_adds_https_and_the_studio_hides_the_timestamp_button_for_non_video(import_page):
+    page = import_page
+    page.click("#import-btn-link")
+    page.fill("#input-link-url", "example.com/reading")
+    page.locator("#input-link-title").click()
+    assert page.input_value("#input-link-url") == "https://example.com/reading"
+    page.click("#nav-goals")
+    page.wait_for_selector("[data-goal-card='9001']", state="attached")
+    page.click("[data-goal-card='9001'] [data-goal-action='open-goal']")
+    page.locator("#goal-page #video-card-8201 [data-video-action='watch-notes']").click()
+    page.wait_for_selector("#overlay-study-studio:not(.hidden)")
+    assert page.locator("#btn-studio-timestamp").is_hidden()
+    page.evaluate("closeStudyStudio()")
+    page.locator("#goal-page #video-card-8200 [data-video-action='watch-notes']").click()
+    page.wait_for_selector("#overlay-study-studio:not(.hidden)")
+    assert page.locator("#btn-studio-timestamp").is_visible()

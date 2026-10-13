@@ -305,13 +305,19 @@ MAX_LINK_TITLE_CHARS = 200
 
 
 def _clean_link_url(raw: str) -> str:
-    """The address of a link material, or a 400. Only http and https are accepted: the URL is
+    """The address of a link material (https:// is added when none is given), or a 400. Only http and https are accepted: the URL is
     later rendered as a clickable anchor, and a javascript: or data: address there would run in
     the app's own origin."""
     url = (raw or "").strip()
+    # A bare domain or path ("example.com/page") gets https://. Anything that names a scheme
+    # ("javascript:...", "ftp://...") is left alone and refused below, so this cannot turn a
+    # dangerous address into an acceptable one.
+    if url and "://" not in url and ":" not in url.split("/")[0]:
+        url = "https://" + url
     parsed = urlparse(url)
-    if len(url) > MAX_LINK_URL_CHARS or parsed.scheme not in ("http", "https") or not parsed.netloc:
-        raise HTTPException(status_code=400, detail="Enter a full web address starting with http:// or https://.")
+    if (len(url) > MAX_LINK_URL_CHARS or parsed.scheme not in ("http", "https") or not parsed.netloc
+            or any(ch.isspace() for ch in url)):
+        raise HTTPException(status_code=400, detail="That does not look like a web address. Try something like example.com/page.")
     return url
 
 
