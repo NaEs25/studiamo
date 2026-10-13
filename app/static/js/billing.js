@@ -305,6 +305,9 @@ async function initPaywall() {
         _freeVideoState = (status && status.free_video) || 'used';
         window.userPlan = _plan;
         if (_resolvePlanReady) _resolvePlanReady(_plan);
+        // Cards drawn before the plan was known get their plan tags now.
+        if (isFreePlan() && typeof loadGoals === 'function') loadGoals();
+        document.getElementById('import-plan-tag')?.classList.toggle('hidden', !isFreePlan() || freeVideoAvailable());
         // Populated before the modal opens, so the code is already on screen rather than
         // appearing a moment after the user starts reading.
         renderDiscountNote(status && status.beta_discount_code);

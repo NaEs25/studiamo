@@ -49,6 +49,14 @@ function goalControlsHTML(g) {
         </div>`;
 }
 
+// A small "Plan" tag on an AI button, shown only to an account without a plan so the upgrade
+// toast it will get is never a surprise. The buttons stay visible and clickable.
+function planTagHTML() {
+    return (typeof isFreePlan === 'function' && isFreePlan())
+        ? '<span class="ml-1 text-[9px] font-extrabold uppercase tracking-wider bg-amber-100 border border-amber-300 text-amber-800 rounded px-1 py-0.5">Plan</span>'
+        : '';
+}
+
 function goalRankBadgeHTML(rank) {
     return `<div class="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-700 font-bold text-xs shrink-0">#${rank}</div>`;
 }
@@ -229,7 +237,7 @@ async function loadGoals() {
                             <div class="flex gap-2 pt-1">
                                 <button id="btn-recs-trigger-${g.id}" data-has-saved-recs="${g.has_saved_recommendations ? 1 : 0}" data-goal-action="load-recs" data-goal-id="${g.id}" class="flex-grow py-1.5 px-3 bg-[#fbf8f2] hover:bg-[#f3ebd9] text-stone-800 border border-[#e7dfd3] font-semibold rounded-lg text-xs transition flex items-center justify-center space-x-1.5 shadow-sm">
                                     <i data-lucide="compass" class="w-3.5 h-3.5 text-stone-600"></i>
-                                    <span class="recs-btn-text">${recsBtnLabel}</span>
+                                    <span class="recs-btn-text">${recsBtnLabel}</span>${planTagHTML()}
                                 </button>
                                 
                                 <button disabled class="flex-grow py-1.5 px-3 bg-amber-500/10 text-amber-900/60 border border-amber-500/20 font-semibold rounded-lg text-xs flex items-center justify-center space-x-1.5 cursor-not-allowed opacity-75 shadow-sm">
