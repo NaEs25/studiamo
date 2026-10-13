@@ -268,27 +268,30 @@ option {
 }
 
 /* The "Plan" tag on AI buttons for an account without a plan: the Beta badge's shape, shimmer and
-   motion in yellow, so the two read as one family but never as the same badge. Dark text, because
-   white on yellow does not pass contrast. Shares the Beta badge's keyframes. */
+   motion in blue, so the two read as one family but never as the same badge. Shares the Beta
+   badge's keyframes. */
 .plan-badge {
     position: relative;
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
     overflow: hidden;
-    padding: 0.125rem 0.5rem;
+    padding: 0.2rem 0.5rem;
     border-radius: 0.375rem;
     font-size: 10px;
     font-weight: 800;
     letter-spacing: 0.02em;
-    line-height: 1.25;
-    color: #78350f;
-    text-shadow: 0 1px 0 rgb(255 255 255 / 0.45);
-    background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 35%, #fde68a 50%, #fbbf24 75%, #f59e0b 100%);
+    line-height: 1;
+    color: #fff;
+    text-shadow: 0 1px 1px rgb(30 58 138 / 0.4);
+    background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 35%, #3b82f6 50%, #2563eb 75%, #1d4ed8 100%);
     background-size: 200% 200%;
-    border: 1px solid rgb(255 255 255 / 0.6);
+    border: 1px solid rgb(255 255 255 / 0.5);
     box-shadow:
-        inset 0 1px 0 rgb(255 255 255 / 0.6),
-        inset 0 -1px 0 rgb(120 53 15 / 0.2),
-        0 1px 4px rgb(245 158 11 / 0.4);
+        inset 0 1px 0 rgb(255 255 255 / 0.4),
+        inset 0 -1px 0 rgb(30 58 138 / 0.3),
+        0 1px 4px rgb(37 99 235 / 0.4);
     animation: betaBadgeShift 6s ease-in-out infinite;
 }
 .plan-badge::after {
