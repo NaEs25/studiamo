@@ -100,3 +100,30 @@ def test_reordering_materials_posts_the_full_list(many_materials_page):
     assert sent and 'name="ids"' in sent[0]
     ids = sent[0].split('name="ids"')[1].strip().split("\r\n")[0].split(",")
     assert len(ids) == 6 and ids[1] == first
+
+
+def test_reorder_sheet_shows_the_new_order_after_an_arrow(logged_in_page):
+    """Against the real API (the test account): the sheet must redraw from the reloaded list, not
+    from the one it had before the move. Creates three goals and deletes them again."""
+    page = logged_in_page
+    page.goto("/app")
+    make = lambda title: page.evaluate(
+        """async (t) => { const f = new FormData(); f.append('title', t); const r = await fetch('/api/goals', {method: 'POST', body: f}); return (await r.json()).goal_id; }""",
+        title)
+    goals = [make(f"Sheet order test {n} {id(page)}") for n in range(3)]
+    try:
+        page.reload()
+        page.click("#nav-goals")
+        page.wait_for_selector(f"[data-goal-card='{goals[0]}']", state="attached")
+        page.click("#btn-goals-reorder")
+        rows = lambda: [str(x) for x in page.evaluate(
+            "[...document.querySelectorAll('#goal-reorder-list [data-reorder-row]')].map(e => Number(e.dataset.reorderRow))")]
+        before = [r for r in rows() if r in map(str, goals)]
+        assert before == [str(g) for g in goals]
+        page.click(f"[data-reorder-row='{goals[0]}'] [data-reorder-move='down']")
+        page.wait_for_function(
+            "([a, b]) => { const r = [...document.querySelectorAll('#goal-reorder-list [data-reorder-row]')].map(e => e.dataset.reorderRow); return r.indexOf(String(a)) > r.indexOf(String(b)); }",
+            arg=[goals[0], goals[1]], timeout=5000)
+    finally:
+        for g in goals:
+            page.evaluate("async (g) => { await fetch('/api/goals/' + g + '?delete_materials=true', {method: 'DELETE'}); }", g)

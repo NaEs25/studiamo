@@ -1947,3 +1947,11 @@ button:active:not(:disabled) {
 #tab-goals > #goal-page { display: none; }
 #tab-goals.goal-page-open > :not(#goal-page) { display: none; }
 #tab-goals.goal-page-open > #goal-page { display: block; }
+
+/* Dragging uses the browser's drag and drop, which touch screens do not fire: there the handle and
+   the drag wording go away and the arrows are the way to reorder. */
+.touch-hint { display: none; }
+@media (pointer: coarse) {
+    .drag-handle, .drag-hint { display: none; }
+    .touch-hint { display: inline; }
+}

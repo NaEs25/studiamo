@@ -488,7 +488,8 @@ async function reorderGoal(id, direction) {
             method: 'POST',
             body: formData
         });
-        loadGoals();
+        // Awaited: the reorder sheet redraws from the reloaded list right after this returns.
+        await loadGoals();
         if (typeof loadDashboard === 'function') loadDashboard();
     } catch (e) {
         console.error("Failed to reorder goal:", e);
@@ -1266,7 +1267,7 @@ function renderGoalReorderList() {
     const goals = (window._goalsPageData && window._goalsPageData.goals) || [];
     list.innerHTML = goals.map((g, i) => `
         <div class="flex items-center gap-3 bg-white border border-stone-200 rounded-xl px-3 py-2.5 shadow-sm" data-reorder-row="${g.id}" draggable="true">
-            <i data-lucide="grip-vertical" class="w-4 h-4 text-stone-400 cursor-grab shrink-0"></i>
+            <i data-lucide="grip-vertical" class="drag-handle w-4 h-4 text-stone-400 cursor-grab shrink-0"></i>
             ${goalRankBadgeHTML(i + 1)}
             <span class="font-bold text-sm text-stone-900 truncate flex-1">${escapeHtml(g.title)}</span>
             <button type="button" data-reorder-move="up" data-goal-id="${g.id}" ${i === 0 ? 'disabled' : ''} class="p-1.5 bg-stone-100 border border-stone-200 rounded-lg ${i === 0 ? 'text-stone-300' : 'text-stone-600'}" aria-label="Move up"><i data-lucide="arrow-up" class="w-4 h-4"></i></button>
@@ -1289,8 +1290,6 @@ function openGoalReorder() {
 // Moves one goal in the sheet by the same endpoint the arrows on the cards used, then redraws.
 async function moveGoalInSheet(goalId, direction) {
     await reorderGoal(goalId, direction);
-    // loadGoals() was started by reorderGoal; wait for the cache to refresh before redrawing.
-    await new Promise(resolve => setTimeout(resolve, 250));
     renderGoalReorderList();
 }
 
@@ -1379,7 +1378,7 @@ function materialMetaText(v, quizzes) {
 
 function goalPageRowHTML(v, quizzes, editing) {
     const kind = materialKind(v);
-    const handle = editing ? '<i data-lucide="grip-vertical" class="w-4 h-4 text-stone-400 cursor-grab shrink-0"></i>' : '';
+    const handle = editing ? '<i data-lucide="grip-vertical" class="drag-handle w-4 h-4 text-stone-400 cursor-grab shrink-0"></i>' : '';
     let action = '';
     if (editing) {
         action = `
@@ -1428,7 +1427,7 @@ function renderGoalPage() {
         body = '<p class="text-xs text-stone-400 italic py-2 pl-2">No learning materials added to this goal yet.</p>';
     } else if (view === 'list' || editing) {
         body = `<div class="space-y-2">${materials.map(v => goalPageRowHTML(v, data.quizzes, editing)).join('')}</div>`
-            + (editing ? '<p class="text-[11px] text-stone-500 text-center">Drag the handle or use the arrows. The order saves as you go.</p>' : '');
+            + (editing ? '<p class="text-[11px] text-stone-500 text-center"><span class="drag-hint">Drag the handle or use the arrows.</span><span class="touch-hint">Use the arrows.</span> The order saves as you go.</p>' : '');
     } else {
         body = `<div class="space-y-3">${materials.map(v => renderVideoCard(v, data.quizzes, data.goals)).join('')}</div>`;
     }
