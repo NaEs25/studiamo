@@ -140,7 +140,7 @@ def get_dashboard_data(username: str = Depends(require_account_access)):
         cursor.execute("""
             SELECT v.id, v.youtube_id, v.title, v.category, v.thumbnail_url,
                    v.importance_rating, v.learning_goal_id, v.is_archived, v.is_paused, v.eaten_at,
-                   v.status, v.status_error, v.is_watchlist, v.custom_notes,
+                   v.status, v.status_error, v.is_watchlist, v.custom_notes, v.material_type, v.source_url,
                    v.last_position_seconds, v.duration_seconds, v.is_temporary, v.expires_at, v.summary,
                    g.title AS goal_title,
                    -- Gates the "Adjust Learning Focus" menu entry. Material imported before topic
@@ -167,7 +167,7 @@ def get_dashboard_data(username: str = Depends(require_account_access)):
         cursor.execute("""
             SELECT v.id, v.youtube_id, v.title, v.category, v.thumbnail_url, v.importance_rating,
                    v.learning_goal_id, v.is_archived, v.is_paused, v.eaten_at, v.status, v.status_error,
-                   v.is_watchlist, v.custom_notes, v.summary,
+                   v.is_watchlist, v.custom_notes, v.material_type, v.source_url, v.summary,
                    g.title AS goal_title,
                    EXISTS (
                        SELECT 1 FROM quizzes q

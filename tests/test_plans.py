@@ -219,3 +219,21 @@ def test_scope_opens_only_for_the_claimed_material(claimant, monkeypatch):
     assert not plans.scope_allows("someone")
     with plans.generation_scope("someone", 100) as opened:
         assert not opened and not plans.scope_allows("someone")
+
+
+# --- storage limits and link cap ------------------------------------------------------------
+
+def test_free_plan_gets_its_own_tight_storage_limits(monkeypatch):
+    monkeypatch.setattr(plans, "get_plan", lambda username: plans.PLAN_FREE)
+    monkeypatch.setattr(plans, "_setting_int", lambda key, default: default)
+    quota, per_file = plans.storage_limits("someone")
+    assert quota == plans._FALLBACK_FREE_QUOTA_MB * 1024 * 1024
+    assert per_file == plans._FALLBACK_FREE_MAX_FILE_MB * 1024 * 1024
+    assert plans.max_links("someone") == plans._FALLBACK_FREE_MAX_LINKS
+
+
+def test_paying_account_keeps_the_normal_limits_and_no_link_cap(monkeypatch):
+    from app import config
+    monkeypatch.setattr(plans, "get_plan", lambda username: plans.PLAN_PAID)
+    assert plans.storage_limits("someone") == (config.get_user_storage_quota_bytes(), config.get_max_file_upload_bytes())
+    assert plans.max_links("someone") == 0

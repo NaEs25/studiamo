@@ -237,6 +237,13 @@ TABLES_SQL = [
     -- time, keeping its SRS stage and schedule. Cleared when the user wins it back with a quiz
     -- or reactivates it. NULL for every video paused by hand.
     ALTER TABLE videos ADD COLUMN IF NOT EXISTS eaten_at TIMESTAMPTZ;
+    -- What kind of material the row is: 'youtube', 'document', 'notes' or 'link'. NULL for rows
+    -- created before this column existed; readers derive the kind from the other columns then
+    -- (youtube_id set means YouTube, otherwise the stored doc_<id> file). source_url holds the
+    -- address of a 'link' row and nothing else. A row with status 'saved' has been stored without
+    -- any AI work and has no quiz yet.
+    ALTER TABLE videos ADD COLUMN IF NOT EXISTS material_type TEXT;
+    ALTER TABLE videos ADD COLUMN IF NOT EXISTS source_url TEXT;
     """,
     """
     CREATE TABLE IF NOT EXISTS quizzes (

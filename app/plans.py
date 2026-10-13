@@ -43,6 +43,10 @@ CLAIM_UNAVAILABLE = "unavailable"
 _FALLBACK_IP_MAX = 1
 _FALLBACK_IP_WINDOW_DAYS = 30
 _FALLBACK_MAX_RELEASES = 1
+# Free-plan storage, in MB. Tight on purpose; the real limits are set in app_settings.
+_FALLBACK_FREE_QUOTA_MB = 25
+_FALLBACK_FREE_MAX_FILE_MB = 5
+_FALLBACK_FREE_MAX_LINKS = 50
 
 
 def _setting_int(key: str, default: int) -> int:
@@ -69,6 +73,28 @@ def get_plan(username: str) -> str:
     subscribed = (row.get("subscription_status") or "").lower() in database._ACCESS_GRANTING_STATUSES
     tester = database._derive_tester_state(row)["state"] == "active"
     return PLAN_TESTER if (tester and not subscribed) else PLAN_PAID
+
+
+def storage_limits(username: str) -> tuple:
+    """(total bytes, per-file bytes) this account may store. Accounts on a plan get the normal
+    limits from config; the free plan gets its own, from app_settings, with tight fallbacks.
+    Existing data above a limit is never removed: the limit only refuses new uploads."""
+    from app import config
+    if get_plan(username) != PLAN_FREE:
+        return config.get_user_storage_quota_bytes(), config.get_max_file_upload_bytes()
+    mb = 1024 * 1024
+    return (
+        _setting_int("free_storage_quota_mb", _FALLBACK_FREE_QUOTA_MB) * mb,
+        _setting_int("free_storage_max_file_mb", _FALLBACK_FREE_MAX_FILE_MB) * mb,
+    )
+
+
+def max_links(username: str) -> int:
+    """How many link materials the account may keep. 0 means no limit, which is what an account
+    on a plan gets. Existing links above a limit are kept; the limit only refuses new ones."""
+    if get_plan(username) != PLAN_FREE:
+        return 0
+    return _setting_int("free_max_links", _FALLBACK_FREE_MAX_LINKS)
 
 
 def hash_client_ip(ip: Optional[str]) -> Optional[str]:

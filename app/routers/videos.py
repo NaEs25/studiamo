@@ -4,7 +4,9 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Optional
 
+import asyncio
 from contextlib import contextmanager
+from urllib.parse import urlparse
 
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, Request
 from fastapi.responses import FileResponse
@@ -161,7 +163,7 @@ async def _add_content(
     file_bytes = None
     content_hash = None
     if file:
-        user_quota = config.get_user_storage_quota_bytes()
+        user_quota, max_file_bytes = plans.storage_limits(username)
         if user_quota > 0 and config.get_user_storage_bytes(username) >= user_quota:
             quota_gb = user_quota / (1024 * 1024 * 1024)
             quota_str = f"{quota_gb:.0f} GB" if quota_gb >= 1 else f"{user_quota / (1024 * 1024):.0f} MB"
@@ -170,7 +172,6 @@ async def _add_content(
                 detail=f"You've reached your {quota_str} storage limit. Delete some videos or documents before uploading more.",
             )
 
-        max_file_bytes = config.get_max_file_upload_bytes()
         if max_file_bytes > 0:
             file_bytes = await file.read(max_file_bytes + 1)
             if len(file_bytes) > max_file_bytes:
@@ -206,7 +207,9 @@ async def _add_content(
             cursor.execute("SELECT id, status, is_watchlist, is_temporary FROM videos WHERE youtube_id = %s AND user_uuid = %s;", (yt_id, user_uuid))
             existing = cursor.fetchone()
             if existing:
-                if existing["status"] == "failed" or existing.get("is_temporary") == 1 or existing.get("is_temporary") == True:
+                # 'saved' is a material stored without a quiz (POST /videos/save): importing it now
+                # runs the import on that row rather than refusing it as a duplicate.
+                if existing["status"] in ("failed", "saved") or existing.get("is_temporary") == 1 or existing.get("is_temporary") == True:
                     cursor.execute("UPDATE videos SET status = 'processing', status_error = NULL, is_temporary = 0, expires_at = NULL WHERE id = %s AND user_uuid = %s;", (existing["id"], user_uuid))
                     if is_watchlist == 1:
                         cursor.execute("UPDATE videos SET is_watchlist = 1 WHERE id = %s AND user_uuid = %s;", (existing["id"], user_uuid))
@@ -292,6 +295,193 @@ async def _add_content(
         return {"status": "processing", "video_id": video_id, "task_id": task_id, "title": placeholder_title}
     finally:
         conn.close()
+
+
+
+# --- Saving material without any AI work ------------------------------------------------------
+
+MAX_LINK_URL_CHARS = 2048
+MAX_LINK_TITLE_CHARS = 200
+
+
+def _clean_link_url(raw: str) -> str:
+    """The address of a link material, or a 400. Only http and https are accepted: the URL is
+    later rendered as a clickable anchor, and a javascript: or data: address there would run in
+    the app's own origin."""
+    url = (raw or "").strip()
+    parsed = urlparse(url)
+    if len(url) > MAX_LINK_URL_CHARS or parsed.scheme not in ("http", "https") or not parsed.netloc:
+        raise HTTPException(status_code=400, detail="Enter a full web address starting with http:// or https://.")
+    return url
+
+
+@router.post("/videos/save")
+async def save_material(
+    url: Optional[str] = Form(None),
+    link_url: Optional[str] = Form(None),
+    text_content: Optional[str] = Form(None),
+    title: Optional[str] = Form(None),
+    importance_rating: int = Form(3),
+    learning_goal_id: Optional[int] = Form(None),
+    is_watchlist: int = Form(0),
+    file: Optional[UploadFile] = File(None),
+    username: str = Depends(require_account_access)
+):
+    """Stores a material without generating anything: no AI call, no quiz, nothing that needs a
+    plan. A YouTube video, a file, pasted notes or a plain link. The material can get its quiz
+    later (POST /videos/{id}/generate); a link never does.
+
+    The row has status 'saved' and no quiz. Storage limits apply exactly as for an import."""
+    kinds = [bool(url and url.strip()), bool(link_url and link_url.strip()), bool(file), bool(text_content and text_content.strip())]
+    if sum(kinds) != 1:
+        raise HTTPException(status_code=400, detail="Provide exactly one of a YouTube URL, a link, a file or pasted notes.")
+    importance_rating = max(1, min(5, importance_rating))
+
+    material_type = "youtube" if kinds[0] else "link" if kinds[1] else "document" if kinds[2] else "notes"
+    yt_id = None
+    source_url = None
+    thumbnail = "/static/images/notes-icon.svg"
+    display_title = (title or "").strip()[:MAX_LINK_TITLE_CHARS]
+    file_bytes = None
+    content_hash = None
+    doc_ext = None
+
+    user_quota, max_file_bytes = plans.storage_limits(username)
+
+    if material_type == "youtube":
+        yt_id = youtube.extract_video_id(url)
+        if not yt_id:
+            raise HTTPException(status_code=400, detail=youtube.describe_unsupported_url(url) or "Invalid YouTube URL.")
+        thumbnail = f"https://img.youtube.com/vi/{yt_id}/hqdefault.jpg"
+        meta = await asyncio.to_thread(youtube.get_video_metadata, yt_id)
+        display_title = display_title or (meta or {}).get("title") or f"YouTube Video ({yt_id})"
+    elif material_type == "link":
+        source_url = _clean_link_url(link_url)
+        thumbnail = "/static/images/link-icon.svg"
+        display_title = display_title or (urlparse(source_url).hostname or source_url)
+    else:
+        if material_type == "document":
+            doc_ext = storage.safe_doc_extension(file.filename)
+            display_title = display_title or file.filename
+            thumbnail = "/static/images/document-icon.svg"
+            limit = max_file_bytes
+            file_bytes = await file.read(limit + 1) if limit > 0 else await file.read()
+        else:
+            doc_ext = ".txt"
+            display_title = display_title or f"Notes ({datetime.now().strftime('%Y-%m-%d')})"
+            file_bytes = text_content.encode("utf-8")
+            limit = max_file_bytes
+        if limit > 0 and len(file_bytes) > limit:
+            raise HTTPException(status_code=413, detail=f"That is too large to store (maximum size is {max(limit // (1024 * 1024), 1)}MB).")
+        if user_quota > 0 and config.get_user_storage_bytes(username) >= user_quota:
+            raise HTTPException(
+                status_code=413,
+                detail=f"You've reached your {max(user_quota // (1024 * 1024), 1)} MB storage limit. Delete some materials before adding more.",
+            )
+        content_hash = storage.content_hash_bytes(file_bytes) if material_type == "document" else storage.content_hash_text(text_content)
+
+    conn = database.get_db_connection(username)
+    try:
+        user_uuid = conn.user_uuid
+        cursor = conn.cursor()
+        assert_goal_owned(cursor, user_uuid, learning_goal_id)
+
+        if yt_id:
+            cursor.execute("SELECT id, is_watchlist FROM videos WHERE youtube_id = %s AND user_uuid = %s;", (yt_id, user_uuid))
+            existing = cursor.fetchone()
+            if existing:
+                if is_watchlist == 1:
+                    cursor.execute("UPDATE videos SET is_watchlist = 1 WHERE id = %s AND user_uuid = %s;", (existing["id"], user_uuid))
+                    conn.commit()
+                return {"status": "success", "video_id": existing["id"], "already_existed": True}
+        elif source_url:
+            cursor.execute("SELECT id FROM videos WHERE source_url = %s AND user_uuid = %s LIMIT 1;", (source_url, user_uuid))
+            existing = cursor.fetchone()
+            if existing:
+                return {"status": "success", "video_id": existing["id"], "already_existed": True}
+            limit_links = plans.max_links(username)
+            if limit_links > 0:
+                cursor.execute("SELECT COUNT(*) AS c FROM videos WHERE user_uuid = %s AND material_type = 'link';", (user_uuid,))
+                if (cursor.fetchone() or {}).get("c", 0) >= limit_links:
+                    raise HTTPException(status_code=413, detail=f"You've reached the limit of {limit_links} saved links. Remove some before adding more.")
+        else:
+            cursor.execute(
+                "SELECT id FROM videos WHERE user_uuid = %s AND content_hash = %s AND status <> 'failed' LIMIT 1;",
+                (user_uuid, content_hash),
+            )
+            if cursor.fetchone():
+                raise HTTPException(status_code=400, detail="This content has already been saved.")
+
+        cursor.execute(
+            """INSERT INTO videos
+               (user_uuid, youtube_id, title, category, thumbnail_url, importance_rating, learning_goal_id,
+                is_archived, is_paused, is_watchlist, status, content_hash, material_type, source_url)
+               VALUES (%s, %s, %s, 'Saved', %s, %s, %s, 0, 0, %s, 'saved', %s, %s, %s) RETURNING id;""",
+            (user_uuid, yt_id, display_title, thumbnail, importance_rating, learning_goal_id,
+             1 if is_watchlist == 1 else 0, content_hash, material_type, source_url),
+        )
+        video_id = cursor.fetchone()["id"]
+        conn.commit()
+
+        if file_bytes is not None:
+            # Same home as an imported document, so serving, deleting and a later generate all
+            # find it by doc_<video_id>.
+            storage.get_document_path(video_id, doc_ext, username=username).write_bytes(file_bytes)
+        return {"status": "success", "video_id": video_id, "title": display_title}
+    finally:
+        conn.close()
+
+
+@router.post("/videos/{id}/generate")
+async def generate_saved_material(
+    request: Request,
+    id: int,
+    username: str = Depends(require_account_access)
+):
+    """Runs the normal import (summary, quiz, fact check) on a material that was saved without
+    one. Goes through the same free-generation claim as a new import: an account without a plan
+    can do this once, for one material, and is told so otherwise."""
+    with _free_generation(request, username):
+        conn = database.get_db_connection(username)
+        try:
+            user_uuid = conn.user_uuid
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT youtube_id, title, importance_rating, learning_goal_id, status, material_type FROM videos WHERE id = %s AND user_uuid = %s;",
+                (id, user_uuid),
+            )
+            row = cursor.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="Material not found.")
+            if row["material_type"] == "link":
+                raise HTTPException(status_code=400, detail="Links are reference material and have no quiz.")
+            if row["status"] != "saved":
+                raise HTTPException(status_code=409, detail="This material has already been generated.")
+
+            payload = {
+                "title": row["title"],
+                "importance_rating": row["importance_rating"],
+                "learning_goal_id": row["learning_goal_id"],
+            }
+            if row["youtube_id"]:
+                task_type = "youtube"
+                payload["url"] = f"https://www.youtube.com/watch?v={row['youtube_id']}"
+            else:
+                task_type = "document"
+                matches = sorted(storage.get_user_items_dir(username).glob(f"doc_{id}.*"))
+                if not matches:
+                    raise HTTPException(status_code=409, detail="The stored file could not be found.")
+                payload["file_path"] = str(matches[0])
+
+            cursor.execute("UPDATE videos SET status = 'processing', status_error = NULL WHERE id = %s AND user_uuid = %s;", (id, user_uuid))
+            conn.commit()
+        finally:
+            conn.close()
+
+        task_id = ImportQueueManager.get_instance().enqueue_task(
+            username=username, task_type=task_type, title=row["title"], payload=payload, video_id=id
+        )
+        return {"status": "processing", "video_id": id, "task_id": task_id}
 
 
 @router.post("/videos/{video_id}/retry")
