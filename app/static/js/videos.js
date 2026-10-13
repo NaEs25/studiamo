@@ -1196,7 +1196,7 @@ function renderVideoCard(video, quizzes, goals) {
         `;
     } else if (isLinkMaterial) {
         actionControlsHTML = `
-            <button data-video-action="open-link" data-video-id="${video.id}" class="btn-primary w-full py-2 font-extrabold rounded-xl text-xs transition flex items-center justify-center space-x-2 min-h-[38px]" title="Open ${escapeHtml(video.source_url || 'link')} in a new tab">
+            <button data-video-action="open-link" data-video-id="${video.id}" class="w-full px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900 font-extrabold rounded-xl border border-stone-200 text-xs transition flex items-center justify-center space-x-2 min-h-[38px]" title="Open ${escapeHtml(video.source_url || 'link')} in a new tab">
                  <i data-lucide="external-link" class="w-3.5 h-3.5 shrink-0"></i>
                  <span class="leading-tight">Open link</span>
             </button>
@@ -1243,9 +1243,7 @@ function renderVideoCard(video, quizzes, goals) {
         `;
     }
 
-    const titleHTML = isLinkMaterial
-        ? `<a href="javascript:void(0)" data-video-action="open-link" data-video-id="${video.id}" class="block font-bold text-sm text-stone-900 truncate hover:text-amber-700 transition" title="${escapeHtml(video.title)}">${escapeHtml(video.title)}</a>`
-        : `<a href="javascript:void(0)" data-video-action="open-studio" data-video-id="${video.id}" class="block font-bold text-sm text-stone-900 truncate hover:text-amber-700 transition" title="Open in Study Studio: ${escapeHtml(video.title)}">${escapeHtml(video.title)}</a>`;
+    const titleHTML = `<a href="javascript:void(0)" data-video-action="open-studio" data-video-id="${video.id}" class="block font-bold text-sm text-stone-900 truncate hover:text-amber-700 transition" title="Open in Study Studio: ${escapeHtml(video.title)}">${escapeHtml(video.title)}</a>`;
     
     const linkHost = (() => { try { return new URL(video.source_url).hostname; } catch (e) { return ''; } })();
     const stageBadgeHTML = isLinkMaterial
@@ -1336,9 +1334,9 @@ function renderVideoCard(video, quizzes, goals) {
             <span class="leading-tight whitespace-nowrap">Watch &amp; Notes</span>
         </button>
     ` : `
-        <button data-video-action="watch-notes" data-video-id="${video.id}" class="${isLinkMaterial ? 'w-full ' : ''}px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900 font-extrabold rounded-xl border border-stone-200 text-xs transition flex items-center justify-center space-x-2 min-h-[38px] shrink-0" title="${isLinkMaterial ? 'Take notes next to the page' : 'Open Study Studio: watch the video and take notes side by side'}">
-            <i data-lucide="${isLinkMaterial ? 'notebook-pen' : 'book-open'}" class="w-3.5 h-3.5 shrink-0"></i>
-            <span class="leading-tight">${isLinkMaterial ? 'Notes' : 'Watch &amp; Notes'}</span>
+        <button data-video-action="watch-notes" data-video-id="${video.id}" class="${isLinkMaterial ? 'btn-primary w-full py-2 ' : 'px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900 border border-stone-200 '}font-extrabold rounded-xl text-xs transition flex items-center justify-center space-x-2 min-h-[38px] shrink-0" title="${isLinkMaterial ? 'Open the Study Studio: the page and your notes side by side' : 'Open Study Studio: watch the video and take notes side by side'}">
+            <i data-lucide="${isLinkMaterial ? 'book-open' : 'book-open'}" class="w-3.5 h-3.5 shrink-0"></i>
+            <span class="leading-tight">${isLinkMaterial ? 'Study Studio' : 'Watch &amp; Notes'}</span>
         </button>
     `;
 

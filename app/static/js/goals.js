@@ -1395,7 +1395,7 @@ function goalPageRowHTML(v, quizzes, editing) {
         const level = v.importance_rating || v.importance_level || 3;
         action = `<button type="button" data-video-action="study" data-video-id="${v.id}" data-level="${level}" class="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 border border-stone-200 rounded-lg text-xs font-extrabold text-stone-600 flex items-center gap-1"><i data-lucide="brain" class="w-3.5 h-3.5"></i>Quiz</button>`;
     }
-    const titleAction = v.material_type === 'link' ? 'open-link' : 'open-studio';
+    const titleAction = 'open-studio';
     const metaClass = v.status === 'saved' ? 'text-amber-700' : 'text-stone-500';
     return `
         <div id="video-card-${v.id}" data-goalpage-row="${v.id}" ${editing ? 'draggable="true"' : ''} class="flex items-center gap-3 bg-white border border-stone-200 rounded-xl px-3 py-2.5 shadow-sm">
