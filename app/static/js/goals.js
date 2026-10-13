@@ -1464,10 +1464,10 @@ function renderGoalPage() {
         <div class="flex items-center justify-between gap-2">
             <div class="flex gap-1 p-1 bg-stone-100 border border-stone-200 rounded-xl">${seg('Detail', view === 'detail' && !editing, 'view-detail')}${seg('List', view === 'list' || editing, 'view-list')}</div>
             <div class="flex items-center gap-2">
-                <button type="button" data-goal-action="add-material" data-goal-id="${goalId}" class="btn-primary px-3 py-2 rounded-xl text-xs font-extrabold flex items-center gap-1.5"><i data-lucide="plus" class="w-3.5 h-3.5"></i>Add material</button>
                 ${materials.length > 1 ? (editing
                     ? '<button type="button" data-goalpage-action="toggle-reorder" class="btn-primary px-4 py-2 rounded-xl text-xs font-extrabold">Done</button>'
-                    : '<button type="button" data-goalpage-action="toggle-reorder" class="px-3 py-2 bg-white border border-stone-200 rounded-xl text-xs font-bold text-stone-700 flex items-center gap-1.5"><i data-lucide="menu" class="w-3.5 h-3.5"></i>Reorder</button>') : ''}
+                    : '<button type="button" data-goalpage-action="toggle-reorder" class="p-2.5 bg-white border border-stone-200 rounded-xl text-stone-700 hover:bg-stone-50 shadow-sm transition" title="Reorder materials" aria-label="Reorder materials"><i data-lucide="menu" class="w-4 h-4"></i></button>') : ''}
+                <button type="button" data-goal-action="add-material" data-goal-id="${goalId}" class="btn-primary px-3 py-2 rounded-xl text-xs font-extrabold flex items-center gap-1.5 whitespace-nowrap"><i data-lucide="plus" class="w-3.5 h-3.5"></i>Add material</button>
             </div>
         </div>
         ${body}`;
