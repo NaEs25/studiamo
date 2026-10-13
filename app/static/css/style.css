@@ -1619,8 +1619,8 @@ button:active:not(:disabled) {
     bottom: 0;
     height: 0.875rem;
     border-radius: 9999px;
-    border: 2px solid #292524;
-    background-image: repeating-linear-gradient(90deg, #44403c 0 14px, #57534e 14px 28px);
+    border: 1.5px solid #c9b79c;
+    background-image: repeating-linear-gradient(90deg, #e9dcc3 0 14px, #f3ebd9 14px 28px);
 }
 /* On the belt the track is in the flow, between the notes and the labels. */
 .belt-stations > .belt-track { position: relative; left: auto; right: auto; bottom: auto; }
@@ -1633,7 +1633,7 @@ button:active:not(:disabled) {
     bottom: -6px;
     width: 2px;
     border-radius: 1px;
-    background: #908a86;
+    background: #c9b79c;
 }
 .belt-stations > .belt-track::before { left: 33.333%; }
 .belt-stations > .belt-track::after { left: 66.666%; }
@@ -1667,8 +1667,8 @@ button:active:not(:disabled) {
     transform: rotate(45deg);
 }
 /* Above his head on the belt, reaching left over the empty end of the header. */
-.belt-chompy-speech { right: 0; bottom: calc(100% + 0.375rem); }
-.belt-chompy-speech::after { right: 1.1rem; }
+.belt-chompy-speech { right: 0; bottom: calc(100% + 0.375rem); background: var(--chompy-warm-bg); border-color: var(--chompy-warm-ink); color: var(--chompy-warm-ink); }
+.belt-chompy-speech::after { right: 1.1rem; background: var(--chompy-warm-bg); border-color: var(--chompy-warm-ink); }
 .tickle-speech { right: 62%; top: -0.75rem; }
 .tickle-speech::after { right: 0.75rem; }
 @media (min-width: 768px) {
