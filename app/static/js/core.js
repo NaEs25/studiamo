@@ -118,15 +118,29 @@ async function fetchAPI(url, options = {}) {
             // this only adds the explanation. notifyPaymentRequired() (not openPaywall) is
             // deliberate: it no-ops when the modal is already open, so a burst of concurrent
             // 402s cannot reset a user who is reading the beta offer back to step one.
-            if (response.status === 402 && typeof notifyPaymentRequired === 'function') {
+            //
+            // A 402 whose detail carries the code ai_requires_plan is a different thing: the
+            // account is signed in and may use the app, but an AI feature needs a plan. That
+            // gets the upgrade toast, not the full-screen paywall.
+            let errBody = null;
+            if (!response.ok) {
+                try { errBody = await response.clone().json(); } catch (e) { /* not JSON */ }
+            }
+            const needsPlan = response.status === 402 && errBody && errBody.detail
+                && typeof errBody.detail === 'object' && errBody.detail.code === 'ai_requires_plan';
+            if (needsPlan) {
+                if (typeof notifyPlanRequired === 'function') notifyPlanRequired(errBody.detail.message);
+            } else if (response.status === 402 && typeof notifyPaymentRequired === 'function') {
                 notifyPaymentRequired();
             }
             if (!response.ok) {
                 let msg = 'API Call failed';
                 try {
-                    const err = await response.json();
+                    const err = errBody || await response.json();
                     if (typeof err.detail === 'string') {
                         msg = err.detail;
+                    } else if (err.detail && typeof err.detail === 'object' && typeof err.detail.message === 'string') {
+                        msg = err.detail.message;
                     } else if (Array.isArray(err.detail)) {
                         msg = err.detail.map(d => d.msg || JSON.stringify(d)).join(', ');
                     } else if (err.detail) {
@@ -141,6 +155,7 @@ async function fetchAPI(url, options = {}) {
                 // says "rate limiting", so its guard never once fired.
                 const apiError = new Error(msg);
                 apiError.status = response.status;
+                if (needsPlan) apiError.code = 'ai_requires_plan';
                 throw apiError;
             }
             return await response.json();

@@ -335,6 +335,31 @@ async function loadDailyRecommendations() {
         const data = await fetchAPI('/api/daily-recommendations');
         if (panel) panel.classList.remove('hidden');
 
+        // The free plan has no recommendations to show. Say what will appear here and where to
+        // get it, instead of an empty grid, and hide the refresh button (it is an AI call).
+        const refreshBtn = document.getElementById('btn-refresh-daily-recs');
+        if (refreshBtn) refreshBtn.classList.toggle('hidden', !!(data && data.requires_plan));
+        if (data && data.requires_plan) {
+            grid.innerHTML = `
+                <div class="col-span-full text-center py-8 px-6 bg-white rounded-3xl border border-dashed border-amber-500/30 shadow-sm space-y-3">
+                    <div class="w-14 h-14 bg-amber-500/10 border border-amber-500/30 text-amber-600 rounded-2xl flex items-center justify-center mx-auto">
+                        <i data-lucide="sparkles" class="w-7 h-7"></i>
+                    </div>
+                    <h3 class="text-lg font-extrabold text-stone-900 tracking-tight">Video picks show up here</h3>
+                    <p class="text-xs text-stone-500 max-w-xs mx-auto leading-relaxed">Every day Studiamo suggests videos that fit your learning goals. Included with every plan.</p>
+                    <button type="button" data-open-plans class="btn-primary px-6 py-2.5 font-extrabold text-xs rounded-xl inline-flex items-center space-x-2">
+                        <span>See plans</span>
+                        <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            `;
+            const plansBtn = grid.querySelector('[data-open-plans]');
+            if (plansBtn) plansBtn.addEventListener('click', () => { if (typeof openPlanPicker === 'function') openPlanPicker(); });
+            if (typeof renderIcons === 'function') renderIcons();
+            else if (typeof lucide !== 'undefined') lucide.createIcons();
+            return;
+        }
+
         if (!data || !data.recommendations || data.recommendations.length === 0) {
             const message = data && data.youtube_api_key_missing
                 ? 'To enable recommendations, add a YouTube Data API v3 key (see the self-hosting setup guide for details).'

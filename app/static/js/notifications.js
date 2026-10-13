@@ -5,14 +5,20 @@
 
 let _appToastTimer = null;
 let _appToastDuration = 0;
+// Set when a toast with an action is shown. The callers of fetchAPI show their own "failed"
+// toast from their catch blocks, a few milliseconds after the upgrade prompt, and would replace
+// it before anyone could read it. Within this window an error toast without an action is dropped.
+let _toastActionLockUntil = 0;
+const TOAST_ACTION_LOCK_MS = 1500;
 
 /**
  * Display a non-blocking toast notification pill at the bottom of the screen.
  * @param {string} text Notification text message to display.
  * @param {string} type Notification type: 'saving' | 'saved' | 'loading' | 'info' | 'failed' | 'error' | 'success'.
  * @param {number|null} duration Auto-dismiss delay in milliseconds (0 or null for persistent loading toasts).
+ * @param {{label: string, onClick: Function}|null} action Optional button shown in the toast; tapping it runs onClick and closes the toast.
  */
-function showToast(text, type = 'saved', duration = null) {
+function showToast(text, type = 'saved', duration = null, action = null) {
     const indicator = document.getElementById('app-toast-indicator') || document.getElementById('settings-autosave-indicator');
     const textEl = document.getElementById('app-toast-text') || document.getElementById('settings-autosave-text');
     const pill = document.getElementById('app-toast-pill') || document.getElementById('settings-autosave-pill');
@@ -20,7 +26,24 @@ function showToast(text, type = 'saved', duration = null) {
 
     if (!indicator) return;
 
+    if (!action && (type === 'failed' || type === 'error') && Date.now() < _toastActionLockUntil) return;
+    if (action) _toastActionLockUntil = Date.now() + TOAST_ACTION_LOCK_MS;
+
     if (textEl) textEl.textContent = text;
+
+    // The action is set (or cleared) on every call: a toast without one must not inherit the
+    // button, or its handler, from the previous toast.
+    const actionBtn = document.getElementById('app-toast-action');
+    if (actionBtn) {
+        if (action && action.label && typeof action.onClick === 'function') {
+            actionBtn.textContent = action.label;
+            actionBtn.classList.remove('hidden');
+            actionBtn.onclick = () => { hideToast(); action.onClick(); };
+        } else {
+            actionBtn.classList.add('hidden');
+            actionBtn.onclick = null;
+        }
+    }
 
     let iconHtml = '';
     let pillClasses = 'px-4 py-2 rounded-2xl text-xs font-bold text-left shadow-2xl border backdrop-blur-md flex items-start space-x-2 ';
@@ -105,6 +128,9 @@ function initToastSwipe() {
     let pointerId = null;
 
     pill.addEventListener('pointerdown', (e) => {
+        // A press on the action button is a tap, not the start of a swipe: capturing the pointer
+        // here would send its click to the pill instead of the button.
+        if (e.target.closest('[data-toast-action]')) return;
         startY = e.clientY;
         pointerId = e.pointerId;
         pill.setPointerCapture(pointerId);

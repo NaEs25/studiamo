@@ -654,7 +654,10 @@ function initQuizEvents() {
             // already short-circuits an empty guess, so this only skipped a pointless round
             // trip, but it is what makes flip mode genuinely instant.
             const currentQ = activeQuizSession.questions[currentQuestionIndex];
-            if (!guess) {
+            // The AI verdict is an AI call, so on the free plan a typed guess is treated like a
+            // flip: the answer is revealed and the learner grades themselves, as they do after
+            // a verdict anyway.
+            if (!guess || (typeof isFreePlan === 'function' && isFreePlan())) {
                 window._lastFeedback = '';
                 window._lastExplanation = currentQ ? (currentQ.explanation || '') : '';
                 lastVerdictIsCorrect = null;

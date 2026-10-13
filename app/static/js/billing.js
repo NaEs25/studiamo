@@ -11,6 +11,23 @@
 // discounted offer is gated on this and on nothing else: no URL parameter, no deep link.
 let _paywallDeclinedStandard = false;
 
+// The account's plan from /api/billing/status: 'free' | 'paid' | 'tester', null until known (or
+// when the status call fails, which is treated as "show nothing plan-specific"). An account on
+// the free plan uses the whole app except the AI features, so the paywall below is not a wall
+// for it: it opens as a plan picker the user can close, from the upgrade toast, the Home card
+// and Settings.
+let _plan = null;
+let _freeVideoState = 'used';
+let _resolvePlanReady = null;
+// Resolves once the first status answer (or failure) is in, so code that decides what to show
+// on the free plan (onboarding, the Home card) can wait for it instead of racing it.
+window.planReady = new Promise(resolve => { _resolvePlanReady = resolve; });
+
+function isFreePlan() { return _plan === 'free'; }
+function freeVideoAvailable() { return isFreePlan() && _freeVideoState === 'available'; }
+window.isFreePlan = isFreePlan;
+window.freeVideoAvailable = freeVideoAvailable;
+
 // How long to wait for the Lemon Squeezy webhook after returning from checkout.
 const ACTIVATION_POLL_INTERVAL_MS = 2000;
 const ACTIVATION_POLL_TIMEOUT_MS = 30000;
@@ -37,12 +54,65 @@ function _paywallError(message) {
 }
 
 
+/**
+ * Shapes the paywall overlay for the account in front of it. For a lapsed subscription it is a
+ * wall (no close button, no Escape). For the free plan it is a plan picker: it can be closed,
+ * and its wording says what a plan adds instead of thanking the user for choosing one.
+ */
+function _applyPlanPickerMode() {
+    const free = isFreePlan();
+    const toggle = (id, hidden) => { const el = document.getElementById(id); if (el) el.classList.toggle('hidden', hidden); };
+    toggle('paywall-close', !free);
+    toggle('paywall-copy-free', !free);
+    toggle('paywall-copy-paid', free);
+    document.querySelectorAll('[data-paywall-decline]').forEach(el => { el.textContent = free ? 'Not now' : 'Log out instead'; });
+    document.querySelectorAll('[data-paywall-leave]').forEach(el => { el.textContent = free ? 'Maybe later' : 'Log out'; });
+}
+
+
 function openPaywall(stepId = 'paywall-step-standard') {
     _paywallShowStep(stepId);
-    // No close function: this overlay has no Escape route by design, see openOverlay in core.js.
-    openOverlay('overlay-paywall');
+    _applyPlanPickerMode();
+    // A wall has no close function and so no Escape route, see openOverlay in core.js. The
+    // plan picker for a free account does.
+    openOverlay('overlay-paywall', isFreePlan() ? closePaywall : null);
     if (typeof renderIcons === 'function') renderIcons();
 }
+
+
+/** Opens the plan picker from anywhere (the upgrade toast, the Home card, Settings). */
+function openPlanPicker() {
+    openPaywall('paywall-step-standard');
+}
+window.openPlanPicker = openPlanPicker;
+
+
+// Shown once per device, right after onboarding, so the plans are in front of a new free
+// account at the moment it has seen what the app does. Afterwards they are reached only
+// through the toast, the Home card and Settings.
+const PLAN_SHEET_SEEN_KEY = 'plan-sheet-seen';
+
+function maybeShowPlanSheet() {
+    if (!isFreePlan()) return;
+    try {
+        if (localStorage.getItem(PLAN_SHEET_SEEN_KEY)) return;
+        localStorage.setItem(PLAN_SHEET_SEEN_KEY, '1');
+    } catch (e) { /* storage blocked: show it, there is just no memory of it */ }
+    openPlanPicker();
+}
+window.maybeShowPlanSheet = maybeShowPlanSheet;
+
+
+/**
+ * An AI feature was refused because the account has no plan (a 402 with code ai_requires_plan,
+ * see fetchAPI). Shown as a toast with a button, not the full-screen paywall, because the
+ * account is fine: only this feature needs a plan.
+ */
+function notifyPlanRequired(message) {
+    _plan = _plan || 'free';
+    showToast(message || 'AI features need a plan.', 'info', 7000, { label: 'See plans', onClick: openPlanPicker });
+}
+window.notifyPlanRequired = notifyPlanRequired;
 
 
 function closePaywall() {
@@ -115,6 +185,10 @@ function declineStandardPrice() {
 
 
 async function logoutFromPaywall() {
+    // On the free plan this button is "Maybe later": there is nothing to log out of, the
+    // account simply stays on the free plan.
+    if (isFreePlan()) return closePaywall();
+
     // Delegates to the app's own logout so session cleanup stays in one place.
     //
     // The fallback below is not decoration. This originally called a function named
@@ -227,11 +301,17 @@ async function initPaywall() {
     try {
         const status = await fetchAPI('/api/billing/status');
         _testerState = (status && status.tester) || null;
+        _plan = (status && status.plan) || null;
+        _freeVideoState = (status && status.free_video) || 'used';
+        window.userPlan = _plan;
+        if (_resolvePlanReady) _resolvePlanReady(_plan);
         // Populated before the modal opens, so the code is already on screen rather than
         // appearing a moment after the user starts reading.
         renderDiscountNote(status && status.beta_discount_code);
         renderTesterPill(_testerState);
-        if (status && !status.has_access) {
+        // The free plan is not behind a wall: the app works, minus the AI. The plan picker opens
+        // from the toast, the Home card and Settings instead.
+        if (status && !status.has_access && !isFreePlan()) {
             const step = _blockedStepFor(_testerState);
             if (step === 'paywall-step-tester-expired') {
                 _ackTesterNotice('expiry');
@@ -248,6 +328,7 @@ async function initPaywall() {
         // A failed status check must not lock anyone out of an app they have paid for.
         // The server-side dependency is the real gate; this is only the explanation.
         console.warn('Billing status check failed, not showing paywall:', e);
+        if (_resolvePlanReady) _resolvePlanReady(null);
     }
 }
 
@@ -453,7 +534,7 @@ function renderSubscriptionCard(settings) {
         paused:    { label: 'Paused',      variant: 'status-badge-neutral',  text: 'Your subscription is paused.' },
         unpaid:    { label: 'Unpaid',      variant: 'status-badge-danger',   text: 'Your subscription is unpaid.' },
         expired:   { label: 'Expired',     variant: 'status-badge-neutral',  text: 'Your subscription has expired.' },
-        inactive:  { label: 'None',        variant: 'status-badge-neutral',  text: 'You do not have an active subscription.' },
+        inactive:  { label: 'Free plan',   variant: 'status-badge-neutral',  text: 'You are on the free plan: everything works except the AI features.' },
     };
 
     // A real subscription outranks a tester grant: someone who subscribed mid-test phase is
@@ -467,6 +548,14 @@ function renderSubscriptionCard(settings) {
     } else {
         preset = PRESETS[status] || PRESETS.inactive;
         preset = { ...preset, text: _datedSubscriptionText(status, settings, preset.text) };
+        if (status === 'inactive' && isFreePlan()) {
+            preset = {
+                ...preset,
+                text: preset.text + (freeVideoAvailable()
+                    ? ' Your first video is included.'
+                    : ' Your free video has been used.'),
+            };
+        }
     }
 
     textEl.textContent = preset.text;

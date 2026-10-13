@@ -1512,8 +1512,11 @@ async function _completeWelcomeFlow() {
         console.error("Saving the end of onboarding failed:", err);
     }
 
+    // A free account meets the plans once, here, unless its first quiz opens right away (a plan
+    // sheet over a quiz would be in the way; the toast and the Home card still lead there).
     if (!_welcomeImport) {
         switchTab('goals');
+        if (typeof maybeShowPlanSheet === 'function') maybeShowPlanSheet();
     } else if (_welcomeImportState() === 'completed') {
         switchTab('dashboard');
         startQuiz(null, _welcomeImport.videoId);
@@ -1523,6 +1526,7 @@ async function _completeWelcomeFlow() {
             window.globalImportBacklog.toggleDrawer(true);
             window.globalImportBacklog.poll();
         }
+        if (typeof maybeShowPlanSheet === 'function') maybeShowPlanSheet();
     }
 }
 
@@ -1592,9 +1596,14 @@ function renderVideoStep() {
     }
     // Left out where the server has no YouTube key: the call would spend AI budget on search
     // queries and then find no videos to show.
-    const available = !!(_onboardingStatusCache && _onboardingStatusCache.suggestions_available);
+    // Also left out on the free plan: the suggestions come from an AI call.
+    const free = typeof isFreePlan === 'function' && isFreePlan();
+    const available = !!(_onboardingStatusCache && _onboardingStatusCache.suggestions_available) && !free;
     document.getElementById('onboarding-suggest-btn')
         ?.classList.toggle('hidden', !available || _welcomeSuggestions.length > 0);
+    // The free plan's one generation is this video: say so before the link is pasted.
+    document.getElementById('onboarding-free-video')
+        ?.classList.toggle('hidden', !(typeof freeVideoAvailable === 'function' && freeVideoAvailable()));
 }
 
 async function _submitWelcomeVideoLink() {
