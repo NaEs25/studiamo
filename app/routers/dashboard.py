@@ -153,7 +153,7 @@ def get_dashboard_data(username: str = Depends(require_account_access)):
             FROM videos v
             LEFT JOIN goals g ON v.learning_goal_id = g.id AND g.user_uuid = v.user_uuid
             WHERE v.user_uuid = %s AND v.is_archived = 0
-            ORDER BY v.id DESC;
+            ORDER BY v.goal_order_index ASC, v.id DESC;
         """, (user_uuid,))
         videos = [dict(r) for r in cursor.fetchall()]
 

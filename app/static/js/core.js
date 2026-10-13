@@ -679,7 +679,8 @@ function renderMediaThumbHTML(video, opts) {
     }
 
     const isPdfDoc = video && !video.youtube_id && video.title && video.title.toLowerCase().endsWith('.pdf');
-    const iconLucide = isPdfDoc ? 'file-text' : 'file-edit';
+    const isLinkMaterial = video && video.material_type === 'link';
+    const iconLucide = isLinkMaterial ? 'globe' : (isPdfDoc ? 'file-text' : 'file-edit');
     return `<div ${clickAttr}
             class="${sizeClasses} flex items-center justify-center rounded-lg border border-amber-500/20 bg-amber-500/10 text-amber-700 shrink-0 cursor-pointer hover:opacity-80 transition"
             title="${title}"><i data-lucide="${iconLucide}" class="w-5 h-5"></i></div>`;

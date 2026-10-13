@@ -28,12 +28,24 @@ def test_goal_card_buttons(goals_page):
     page.click("#goal-materials-chevron-9001")
     assert materials.is_visible() == was_open
 
-    # Reorder: the first goal's "down" button posts, its disabled "up" button doesn't.
+    # Reorder lives in a sheet now: the first goal's "down" arrow posts, its "up" arrow is
+    # disabled, and the cards themselves carry no rank arrows.
+    assert page.locator("[data-goal-card='9001'] [data-direction]").count() == 0
+    page.click("#btn-goals-reorder")
+    assert page.locator("#overlay-goal-reorder").is_visible()
+    assert page.locator("[data-reorder-row='9001'] [data-reorder-move='up']").is_disabled()
     with page.expect_request("**/api/goals/9001/reorder"):
-        page.click("[data-goal-card='9001'] [data-direction='down']")
-    assert page.locator("[data-goal-card='9001'] [data-direction='up']").is_disabled()
+        page.click("[data-reorder-row='9001'] [data-reorder-move='down']")
+    page.click("#btn-goal-reorder-done")
+    assert page.locator("#overlay-goal-reorder").is_hidden()
+    page.wait_for_timeout(1500)  # the move reloads the goals; let that finish before the next click
 
     # The options menu opens and its items work.
+    # The menu closes on any scroll, and the second goal's button sits under the fixed nav bar at
+    # this viewport height, so Playwright would scroll right after the menu opens and dismiss it.
+    # Scroll first, and let that settle.
+    page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+    page.wait_for_timeout(400)
     page.click("#btn-goal-menu-9002")
     page.locator("#portal-goal-menu [data-goal-menu-action='edit']").click()
     assert page.locator("#overlay-goal-modal").is_visible()

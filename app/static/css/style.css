@@ -1941,3 +1941,9 @@ button:active:not(:disabled) {
     .ios-anim-tap-a2hs { background: var(--color-primary); }
     .ios-anim-finger { display: none; }
 }
+
+
+/* Goal page: while one goal is open, the Goals tab shows only that page. */
+#tab-goals > #goal-page { display: none; }
+#tab-goals.goal-page-open > :not(#goal-page) { display: none; }
+#tab-goals.goal-page-open > #goal-page { display: block; }

@@ -236,10 +236,12 @@ function initImportTab() {
     const btnYt = document.getElementById('import-btn-youtube');
     const btnDoc = document.getElementById('import-btn-document');
     const btnNotes = document.getElementById('import-btn-notes');
+    const btnLink = document.getElementById('import-btn-link');
     
     const panelYt = document.getElementById('panel-youtube');
     const panelDoc = document.getElementById('panel-document');
     const panelNotes = document.getElementById('panel-notes');
+    const panelLink = document.getElementById('panel-link');
     
     // Only .is-active moves. The buttons' own .segmented-tab styling and their padding
     // stay in the template: this used to reassign .className with a full utility chain
@@ -248,8 +250,9 @@ function initImportTab() {
         if (panelYt) panelYt.classList.add('hidden');
         if (panelDoc) panelDoc.classList.add('hidden');
         if (panelNotes) panelNotes.classList.add('hidden');
+        if (panelLink) panelLink.classList.add('hidden');
 
-        [btnYt, btnDoc, btnNotes].forEach(b => b && b.classList.remove('is-active'));
+        [btnYt, btnDoc, btnNotes, btnLink].forEach(b => b && b.classList.remove('is-active'));
     }
 
     function setTab(tab) {
@@ -263,12 +266,20 @@ function initImportTab() {
         } else if (tab === 'notes') {
             if (panelNotes) panelNotes.classList.remove('hidden');
             if (btnNotes) btnNotes.classList.add('is-active');
+        } else if (tab === 'link') {
+            if (panelLink) panelLink.classList.remove('hidden');
+            if (btnLink) btnLink.classList.add('is-active');
         }
+        // A link has no quiz: no star rating, and nothing to generate.
+        const isLink = tab === 'link';
+        document.getElementById('import-importance-block')?.classList.toggle('hidden', isLink);
+        document.getElementById('btn-import-generate')?.classList.toggle('hidden', isLink);
     }
 
     if (btnYt) btnYt.addEventListener('click', () => setTab('youtube'));
     if (btnDoc) btnDoc.addEventListener('click', () => setTab('document'));
     if (btnNotes) btnNotes.addEventListener('click', () => setTab('notes'));
+    if (btnLink) btnLink.addEventListener('click', () => setTab('link'));
     
     const dropZone = document.getElementById('drop-zone');
     const fileInput = document.getElementById('input-file-upload');
@@ -310,13 +321,17 @@ function initImportTab() {
     }
     
     if (form) {
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
+        // action: 'generate' imports and builds a quiz (AI); 'save' stores the material in the
+        // goal and 'queue' stores it in the Study Queue. Saving runs no AI.
+        const runImport = async (action) => {
+            const saving = action !== 'generate';
             const isYoutubeVisible = panelYt && !panelYt.classList.contains('hidden');
             const isDocVisible = panelDoc && !panelDoc.classList.contains('hidden');
+            const isLinkVisible = panelLink && !panelLink.classList.contains('hidden');
             
-            if (isDocVisible || (!isYoutubeVisible && !isDocVisible)) {
+            if (saving) {
+                showLoader("Saving", "Storing your material.");
+            } else if (isDocVisible || (!isYoutubeVisible && !isDocVisible)) {
                 showLoader("Analyzing Document Content", "Gemini is analyzing document sections, auto-categorizing, and generating active recall questions.");
             } else {
                 showLoader("Generating AI Quizzes & Summaries", "Gemini is extracting video content, auto-categorizing, and generating active recall questions.");
@@ -324,8 +339,19 @@ function initImportTab() {
             
             const formData = new FormData();
             formData.append('importance_rating', inputImportance ? inputImportance.value : 3);
+            if (action === 'queue') formData.append('is_watchlist', 1);
 
-            if (isYoutubeVisible) {
+            if (isLinkVisible) {
+                const linkVal = (document.getElementById('input-link-url').value || '').trim();
+                if (!linkVal) {
+                    showToast('Please enter a web address', 'failed');
+                    hideLoader();
+                    return;
+                }
+                formData.append('link_url', linkVal);
+                const linkTitle = (document.getElementById('input-link-title').value || '').trim();
+                if (linkTitle) formData.append('title', linkTitle);
+            } else if (isYoutubeVisible) {
                 const urlVal = document.getElementById('input-youtube-url').value;
                 if (!urlVal) {
                     showToast('Please enter a YouTube video URL', 'failed');
@@ -402,9 +428,9 @@ function initImportTab() {
 
             try {
                 if (typeof showToast === 'function') {
-                    showToast('Importing material & generating questions...', 'loading', 0);
+                    showToast(saving ? 'Saving...' : 'Importing material & generating questions...', 'loading', 0);
                 }
-                const result = await fetchAPI('/api/videos', {
+                const result = await fetchAPI(saving ? '/api/videos/save' : '/api/videos', {
                     method: 'POST',
                     body: formData
                 });
@@ -412,6 +438,8 @@ function initImportTab() {
                 document.getElementById('input-youtube-url').value = '';
                 document.getElementById('input-notes-title').value = '';
                 document.getElementById('input-notes-text').value = '';
+                document.getElementById('input-link-url').value = '';
+                document.getElementById('input-link-title').value = '';
                 if (fileInput) fileInput.value = '';
                 if (fileInfo) fileInfo.classList.add('hidden');
                 if (dropZone) dropZone.classList.remove('hidden');
@@ -439,7 +467,8 @@ function initImportTab() {
                 // way clicking a thumbnail on the dashboard does (navigateToVideoInGoals).
                 if (typeof loadDashboard === 'function') await loadDashboard();
 
-                if (window.globalImportBacklog) {
+                // Nothing is being processed when only saving, so the import list stays closed.
+                if (!saving && window.globalImportBacklog) {
                     window.globalImportBacklog.toggleDrawer(true);
                     window.globalImportBacklog.poll();
                 }
@@ -449,12 +478,22 @@ function initImportTab() {
                 // Only queued at this point , the completion toast fires from the
                 // import backlog poll once the task actually finishes.
                 if (typeof showToast === 'function') {
-                    showToast('Import started, you can keep working.', 'saved', 2500);
+                    showToast(saving
+                        ? (result.already_existed ? 'Already in your library.' : (action === 'queue' ? 'Added to your Study Queue.' : 'Saved.'))
+                        : 'Import started, you can keep working.', 'saved', 2500);
                 }
             } catch (err) {
                 console.error("Video creation error:", err);
-                showToast('Import failed: ' + (err.detail || err.message || err), 'failed', 4000);
+                // An upgrade prompt has already been shown by fetchAPI; a second error toast
+                // would only cover it.
+                if (err.code !== 'ai_requires_plan') {
+                    showToast((saving ? 'Could not save: ' : 'Import failed: ') + (err.detail || err.message || err), 'failed', 4000);
+                }
             }
+        };
+        form.addEventListener('submit', (e) => { e.preventDefault(); runImport('generate'); });
+        document.querySelectorAll('[data-import-action]').forEach(btn => {
+            btn.addEventListener('click', () => runImport(btn.dataset.importAction));
         });
     }
 }
@@ -1137,6 +1176,11 @@ function renderVideoCard(video, quizzes, goals) {
         `;
     }
     
+    // A material stored without a quiz (status 'saved'). A link is reference material and never
+    // gets one: it opens the page instead.
+    const isLinkMaterial = video.material_type === 'link';
+    const isSaved = video.status === 'saved' && !isLinkMaterial;
+
     let actionControlsHTML = '';
     let isNormalState = false;
     let isEatenState = false;
@@ -1148,6 +1192,21 @@ function renderVideoCard(video, quizzes, goals) {
             <button data-video-action="import-preview" data-video-id="${video.id}" class="btn-primary w-full py-2 font-extrabold rounded-xl text-xs transition flex items-center justify-center space-x-1.5 min-h-[38px]">
                  <i data-lucide="plus-circle" class="w-3.5 h-3.5 shrink-0"></i>
                  <span class="leading-tight">Import to Goal</span>
+            </button>
+        `;
+    } else if (isLinkMaterial) {
+        actionControlsHTML = `
+            <button data-video-action="open-link" data-video-id="${video.id}" class="btn-primary w-full py-2 font-extrabold rounded-xl text-xs transition flex items-center justify-center space-x-2 min-h-[38px]" title="Open ${escapeHtml(video.source_url || 'link')} in a new tab">
+                 <i data-lucide="external-link" class="w-3.5 h-3.5 shrink-0"></i>
+                 <span class="leading-tight">Open link</span>
+            </button>
+        `;
+    } else if (isSaved) {
+        isNormalState = true;
+        actionControlsHTML = `
+            <button data-video-action="generate-saved" data-video-id="${video.id}" class="w-full px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 font-extrabold rounded-xl border border-amber-300 text-xs transition flex items-center justify-center space-x-1.5 h-[38px]" title="Create a summary and quiz from this material">
+                 <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-600"></i>
+                 <span>Generate quiz</span>
             </button>
         `;
     } else if (video.status === 'processing') {
@@ -1184,9 +1243,16 @@ function renderVideoCard(video, quizzes, goals) {
         `;
     }
 
-    const titleHTML = `<a href="javascript:void(0)" data-video-action="open-studio" data-video-id="${video.id}" class="block font-bold text-sm text-stone-900 truncate hover:text-amber-700 transition" title="Open in Study Studio: ${escapeHtml(video.title)}">${escapeHtml(video.title)}</a>`;
+    const titleHTML = isLinkMaterial
+        ? `<a href="javascript:void(0)" data-video-action="open-link" data-video-id="${video.id}" class="block font-bold text-sm text-stone-900 truncate hover:text-amber-700 transition" title="${escapeHtml(video.title)}">${escapeHtml(video.title)}</a>`
+        : `<a href="javascript:void(0)" data-video-action="open-studio" data-video-id="${video.id}" class="block font-bold text-sm text-stone-900 truncate hover:text-amber-700 transition" title="Open in Study Studio: ${escapeHtml(video.title)}">${escapeHtml(video.title)}</a>`;
     
-    const stageBadgeHTML = isTemporaryVideo(video)
+    const linkHost = (() => { try { return new URL(video.source_url).hostname; } catch (e) { return ''; } })();
+    const stageBadgeHTML = isLinkMaterial
+        ? `<span class="text-[9px] bg-stone-100 border border-stone-200 text-stone-600 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Link</span><span class="text-[11px] text-stone-500 truncate">${escapeHtml(linkHost)}</span>`
+        : isSaved
+        ? `<span class="text-[9px] bg-stone-100 border border-stone-200 text-stone-600 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider flex items-center space-x-1" title="Saved without a quiz"><i data-lucide="bookmark" class="w-3 h-3 text-stone-500"></i><span>Saved</span></span>`
+        : isTemporaryVideo(video)
         ? `<span class="text-[9px] bg-amber-500/15 border border-amber-500/30 text-amber-900 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider flex items-center space-x-1" title="Preview mode: expires in ~24h unless imported"><i data-lucide="clock" class="w-3 h-3 text-amber-700"></i><span>24h Preview</span></span>`
         : isEaten
         ? `<span class="eaten-badge text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider flex items-center space-x-1"><img src="/static/images/chompy/chompy-icon.png" alt="" class="w-3.5 h-3.5"><span>Eaten by Chompy</span></span><button data-chompy-info class="eaten-info p-0.5" title="What does this mean?" aria-label="What does eaten by Chompy mean?"><i data-lucide="info" class="w-3.5 h-3.5"></i></button>`
@@ -1253,6 +1319,7 @@ function renderVideoCard(video, quizzes, goals) {
     // Eaten videos keep the normal two-button row, with "Win it back" as the primary half. A
     // preview leads with the wide import button and keeps Watch & Notes as a gray icon beside it.
     const isTwoButtonRow = isNormalState || isEatenState || isPreviewState;
+    // A link has one action (open it), so it gets the single-action layout and no Watch & Notes.
 
     const watchNotesButtonHTML = isPreviewState ? `
         <button data-video-action="watch-notes" data-video-id="${video.id}" class="p-2 bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900 rounded-xl border border-stone-200 transition flex items-center justify-center h-[38px] w-[38px] shrink-0" title="Watch &amp; Notes: watch the video and take notes side by side" aria-label="Watch and take notes">
@@ -1316,7 +1383,7 @@ function renderVideoCard(video, quizzes, goals) {
             ${actionControlsHTML}
         </div>
         <div class="flex items-center space-x-2 shrink-0">
-            ${video.status === 'processing' ? '' : watchNotesButtonHTML}
+            ${(video.status === 'processing' || isLinkMaterial) ? '' : watchNotesButtonHTML}
             ${bookmarkButtonHTML}
             ${trailingButtonHTML}
         </div>
@@ -1331,7 +1398,7 @@ function renderVideoCard(video, quizzes, goals) {
                 <div class="min-w-0 flex-grow">
                     ${titleHTML}
                     <div class="flex items-center space-x-1.5 mt-1.5 flex-wrap gap-y-1">
-                        <div class="flex">${starsHTML}</div>
+                        ${isLinkMaterial ? '' : `<div class="flex">${starsHTML}</div>`}
                         ${stageBadgeHTML}
                     </div>
                 </div>
@@ -1374,7 +1441,10 @@ function toggleVideoMenu(event, id, anchorEl = null) {
     const isPaused = cardData ? cardData.is_paused : false;
     const isWatchlist = cardData ? cardData.is_watchlist : false;
     const isArchived = cardData ? cardData.is_archived : false;
-    const isImported = !cardData || (cardData.status !== 'processing' && cardData.status !== 'failed');
+    // A saved material has no summary or quiz yet, so the entries that work on those (focus,
+    // fact check, analytics, pausing intervals) are left out until it is generated.
+    const isSavedOnly = !!cardData && cardData.status === 'saved';
+    const isImported = !cardData || (cardData.status !== 'processing' && cardData.status !== 'failed' && !isSavedOnly);
     // Material imported before topic extraction existed has an empty concept_pool, and its
     // overlay would have nothing to show, so the entry is hidden rather than opening empty.
     const hasConceptPool = !!(cardData && cardData.has_concept_pool);
@@ -1390,12 +1460,12 @@ function toggleVideoMenu(event, id, anchorEl = null) {
             <i data-lucide="shield-alert" class="w-4 h-4 text-amber-500"></i><span>Verify Accuracy</span>
         </button>
         ` : ''}
-        <button data-video-menu-action="stats" class="flex items-center space-x-2.5 w-full text-left px-4 py-2.5 text-xs text-stone-700 hover:bg-stone-50 hover:text-stone-900 transition">
+        ${!isSavedOnly ? `<button data-video-menu-action="stats" class="flex items-center space-x-2.5 w-full text-left px-4 py-2.5 text-xs text-stone-700 hover:bg-stone-50 hover:text-stone-900 transition">
             <i data-lucide="bar-chart-2" class="w-4 h-4 text-amber-600"></i><span>View Material Analytics</span>
         </button>
         <button data-video-menu-action="pause" class="flex items-center space-x-2.5 w-full text-left px-4 py-2.5 text-xs text-stone-700 hover:bg-stone-50 hover:text-stone-900 transition">
             <i data-lucide="${isPaused ? 'play' : 'pause'}" class="w-4 h-4 text-amber-600"></i><span>${isPaused ? 'Resume intervals' : 'Pause intervals'}</span>
-        </button>
+        </button>` : ''}
         ${!isWatchlist ? `
         <button data-video-menu-action="watchlist" class="flex items-center space-x-2.5 w-full text-left px-4 py-2.5 text-xs text-stone-700 hover:bg-stone-50 hover:text-stone-900 transition">
             <i data-lucide="bookmark" class="w-4 h-4 text-stone-400"></i><span>Queue to Watchlist</span>
@@ -1453,6 +1523,8 @@ function initVideoCardActions() {
                 case 'rate': changeVideoRating(e, id, level); break;
                 case 'import-preview': confirmPreviewImport(id, el); break;
                 case 'retry': retryVideoImport(id); break;
+                case 'generate-saved': e.stopPropagation(); generateSavedMaterial(id, el); break;
+                case 'open-link': e.stopPropagation(); openSavedLink(id); break;
                 case 'study': handleStudyButtonClick(e, id, level); break;
                 case 'open-studio': openStudyStudio(id); break;
                 case 'watch-notes': e.stopPropagation(); openStudyStudio(id); break;
@@ -1554,6 +1626,35 @@ async function toggleWatchlist(id) {
     await fetchAPI(`/api/videos/${id}/watchlist`, { method: 'POST' });
     if (typeof loadDashboard === 'function') loadDashboard();
     if (typeof loadGoals === 'function') loadGoals();
+}
+
+// Opens a link material in a new tab. Reads the address from the card cache and re-checks the
+// scheme: only http and https are ever opened, whatever the stored value says.
+function openSavedLink(id) {
+    const card = window._videoCardCache && window._videoCardCache[id];
+    const url = card && card.source_url;
+    if (!url || !/^https?:\/\//i.test(url)) return;
+    window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+// Runs the normal import on a material that was saved without a quiz.
+async function generateSavedMaterial(id, btn) {
+    if (btn) btn.disabled = true;
+    try {
+        await fetchAPI(`/api/videos/${id}/generate`, { method: 'POST' });
+        if (window.globalImportBacklog) {
+            window.globalImportBacklog.toggleDrawer(true);
+            window.globalImportBacklog.poll();
+        }
+        if (typeof loadDashboard === 'function') loadDashboard();
+        if (typeof loadGoals === 'function') loadGoals();
+        showToast('Generating your quiz. You can keep working.', 'saved', 2500);
+    } catch (e) {
+        // An upgrade prompt is already showing for a missing plan.
+        if (e.code !== 'ai_requires_plan') showToast('Could not generate: ' + (e.detail || e.message || e), 'failed', 4000);
+    } finally {
+        if (btn) btn.disabled = false;
+    }
 }
 
 async function retryVideoImport(id) {

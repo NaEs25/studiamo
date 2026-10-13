@@ -839,6 +839,8 @@ window.addEventListener('DOMContentLoaded', () => {
     if (typeof initGoalsModal === 'function') initGoalsModal();
     if (typeof initGoalsSearch === 'function') initGoalsSearch();
     if (typeof initGoalsActions === 'function') initGoalsActions();
+    if (typeof initGoalPage === 'function') initGoalPage();
+    if (typeof initGoalReorderSheet === 'function') initGoalReorderSheet();
     if (typeof initEditVideoEvents === 'function') initEditVideoEvents();
     if (typeof initFocusModalEvents === 'function') initFocusModalEvents();
     
@@ -906,6 +908,9 @@ function navigateToVideoInGoals(videoId) {
             }
         }
 
+        // A goal card lists only its first few materials; a jump to a later one shows it.
+        const extra = card.closest('[data-extra-material]');
+        if (extra) extra.classList.remove('hidden');
         card.scrollIntoView({ behavior: 'smooth', block: 'center' });
         card.classList.add('ring-2', 'ring-amber-500', 'ring-offset-2');
         setTimeout(() => card.classList.remove('ring-2', 'ring-amber-500', 'ring-offset-2'), 2500);

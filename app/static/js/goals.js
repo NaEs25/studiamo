@@ -25,6 +25,61 @@ async function maybeShowQueueHint(queueSize) {
     }
 }
 
+// The most materials a goal card lists before pointing at the goal page.
+const GOAL_CARD_MATERIAL_LIMIT = 3;
+const GOALS_VIEW_KEY = 'goals-view';
+
+function getGoalsView() {
+    return localStorage.getItem(GOALS_VIEW_KEY) === 'compact' ? 'compact' : 'expanded';
+}
+
+// The same three controls on a goal in every view: add material, open the goal page, menu.
+function goalControlsHTML(g) {
+    return `
+        <div class="flex items-center space-x-1 shrink-0 bg-stone-100 border border-stone-200 rounded-xl p-1">
+            <button type="button" data-goal-action="add-material" data-goal-id="${g.id}" class="p-1 bg-amber-100 hover:bg-amber-200 border border-amber-300 text-amber-800 rounded-lg transition" title="Add material to this goal" aria-label="Add material to this goal">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+            </button>
+            <button type="button" data-goal-action="open-goal" data-goal-id="${g.id}" class="p-1 text-stone-600 hover:text-amber-700 transition" title="Open goal page" aria-label="Open goal page">
+                <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
+            </button>
+            <button type="button" data-goal-action="menu" data-goal-id="${g.id}" id="btn-goal-menu-${g.id}" class="p-1 text-stone-600 hover:text-stone-900 transition" title="Goal Options" aria-label="Goal options">
+                <i data-lucide="more-vertical" class="w-4 h-4"></i>
+            </button>
+        </div>`;
+}
+
+function goalRankBadgeHTML(rank) {
+    return `<div class="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-700 font-bold text-xs shrink-0">#${rank}</div>`;
+}
+
+function compactGoalRowHTML(g, rank, materialCount) {
+    return `
+        <div data-goal-card="${g.id}" class="flex items-center justify-between gap-3 bg-white border border-stone-200 rounded-xl px-3 py-2.5 shadow-sm">
+            <div class="flex items-center gap-3 min-w-0">
+                ${goalRankBadgeHTML(rank)}
+                <button type="button" data-goal-action="open-goal" data-goal-id="${g.id}" class="font-bold text-sm text-stone-900 truncate text-left hover:text-amber-700 transition">${escapeHtml(g.title)}</button>
+                <span class="text-[10px] bg-amber-500/20 text-amber-700 px-2 py-0.5 rounded-full font-bold shrink-0">${materialCount}</span>
+            </div>
+            ${goalControlsHTML(g)}
+        </div>`;
+}
+
+function setGoalsView(view) {
+    localStorage.setItem(GOALS_VIEW_KEY, view === 'compact' ? 'compact' : 'expanded');
+    if (typeof loadGoals === 'function') loadGoals();
+}
+
+function syncGoalsViewButtons() {
+    const view = getGoalsView();
+    ['expanded', 'compact'].forEach(v => {
+        const btn = document.getElementById(`btn-goals-view-${v}`);
+        if (!btn) return;
+        btn.classList.toggle('is-active', v === view);
+        btn.setAttribute('aria-pressed', String(v === view));
+    });
+}
+
 async function loadGoals() {
     try {
         const data = await fetchAPI('/api/dashboard');
@@ -71,6 +126,8 @@ async function loadGoals() {
 
         window._goalsCache = {};
         goals.forEach(g => { window._goalsCache[g.id] = g; });
+        window._goalsPageData = { goals, videos, quizzes };
+        syncGoalsViewButtons();
         window._archivedGoalsCache = {};
         archivedGoals.forEach(g => { window._archivedGoalsCache[g.id] = g; });
         if (typeof renderGoalBoxes === 'function') renderGoalBoxes(goals);
@@ -101,17 +158,41 @@ async function loadGoals() {
                 `;
                 if (typeof renderIcons === 'function') renderIcons();
             } else {
+                const compactView = getGoalsView() === 'compact';
                 goals.forEach((g, index) => {
                     const rankNumber = index + 1;
                     const goalVideos = videos.filter(v => v.learning_goal_id === g.id && v.is_watchlist !== 1);
+                    if (compactView) {
+                        container.innerHTML += compactGoalRowHTML(g, rankNumber, goalVideos.length);
+                        return;
+                    }
                     const isMaterialsOpen = localStorage.getItem(`goal-materials-open-${g.id}`) === 'true';
                     
                     let linkedVideoCardsHTML = '';
                     if (goalVideos.length === 0) {
                         linkedVideoCardsHTML = `<p class="text-xs text-stone-400 italic py-2 pl-2">No learning materials added to this goal yet.</p>`;
                     } else {
-                        linkedVideoCardsHTML = goalVideos.map(v => renderVideoCard(v, quizzes, goals)).join('');
+                        // Only the first few are listed; the rest are rendered hidden so search can
+                        // still find them (applyGoalsSearch reveals a matching one), and the goal page
+                        // lists them all.
+                        linkedVideoCardsHTML = goalVideos.map((v, i) => {
+                            const card = renderVideoCard(v, quizzes, goals);
+                            return i < GOAL_CARD_MATERIAL_LIMIT
+                                ? card
+                                : `<div data-extra-material class="hidden">${card}</div>`;
+                        }).join('');
+                        if (goalVideos.length > GOAL_CARD_MATERIAL_LIMIT) {
+                            linkedVideoCardsHTML += `
+                                <button type="button" data-goal-action="open-goal" data-goal-id="${g.id}" class="w-full py-2 bg-white hover:bg-stone-50 border border-stone-200 text-stone-700 font-bold rounded-xl text-xs shadow-sm flex items-center justify-center gap-1.5 transition">
+                                    <span>See all ${goalVideos.length} on the goal page</span>
+                                    <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                                </button>`;
+                        }
                     }
+                    linkedVideoCardsHTML += `
+                        <button type="button" data-goal-action="add-material" data-goal-id="${g.id}" class="w-full py-2 border border-dashed border-amber-500/30 hover:bg-amber-500/5 text-amber-700 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition">
+                            <i data-lucide="plus" class="w-3.5 h-3.5"></i><span>Add material</span>
+                        </button>`;
 
                     const isDrawerOpen = Boolean(window._openGoalRecommendations && window._openGoalRecommendations[g.id]);
                     const hasSavedRecs = Boolean(g.has_saved_recommendations);
@@ -122,26 +203,12 @@ async function loadGoals() {
                             <div class="flex justify-between items-start">
                                 <div class="flex flex-col min-w-0">
                                     <div class="flex items-center space-x-3">
-                                        <div class="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 font-bold text-xs shrink-0">
-                                            #${rankNumber}
-                                        </div>
+                                        ${goalRankBadgeHTML(rankNumber)}
                                         <h3 class="font-bold text-lg text-stone-900 leading-tight">${escapeHtml(g.title)}</h3>
                                     </div>
                                     ${g.description ? `<p class="hidden sm:block text-xs text-stone-500 mt-1 ml-11">${escapeHtml(g.description)}</p>` : ''}
                                 </div>
-                                
-                                <div class="flex items-center space-x-1 shrink-0 bg-stone-100 border border-stone-200 rounded-xl p-1">
-                                    <button type="button" data-goal-action="reorder" data-goal-id="${g.id}" data-direction="up" ${index === 0 ? 'disabled class="p-1 text-stone-300 cursor-not-allowed"' : 'class="p-1 text-stone-600 hover:text-amber-600 transition"'} title="Move Priority Up (Rank #${rankNumber - 1})">
-                                        <i data-lucide="arrow-up" class="w-4 h-4"></i>
-                                    </button>
-                                    <button type="button" data-goal-action="reorder" data-goal-id="${g.id}" data-direction="down" ${index === goals.length - 1 ? 'disabled class="p-1 text-stone-300 cursor-not-allowed"' : 'class="p-1 text-stone-600 hover:text-amber-600 transition"'} title="Move Priority Down (Rank #${rankNumber + 1})">
-                                        <i data-lucide="arrow-down" class="w-4 h-4"></i>
-                                    </button>
-                                    <div class="w-px h-4 bg-stone-100 mx-0.5"></div>
-                                    <button type="button" data-goal-action="menu" data-goal-id="${g.id}" id="btn-goal-menu-${g.id}" class="p-1 text-stone-600 hover:text-stone-900 transition" title="Goal Options">
-                                        <i data-lucide="more-vertical" class="w-4 h-4"></i>
-                                    </button>
-                                </div>
+                                ${goalControlsHTML(g)}
                             </div>
 
                             <div class="space-y-3 pt-1">
@@ -295,6 +362,7 @@ async function loadGoals() {
 
         // Re-renders replace every card, so an active search has to be applied again.
         applyGoalsSearch();
+        if (window._openGoalPageId) renderGoalPage();
         renderIcons();
     } catch (e) {
         console.error("Goals load error:", e);
@@ -882,6 +950,10 @@ function initGoalsActions() {
             case 'toggle-accordion': toggleAccordion(el.dataset.cat); break;
             case 'create-goal': openCreateGoalModal(); break;
             case 'reorder': reorderGoal(goalId, el.dataset.direction); break;
+            case 'set-view': setGoalsView(el.dataset.view); break;
+            case 'open-reorder': openGoalReorder(); break;
+            case 'add-material': openImportForGoal(goalId); break;
+            case 'open-goal': openGoalPage(goalId); break;
             case 'menu': toggleGoalMenu(e, goalId, el); break;
             case 'toggle-materials': toggleGoalMaterials(goalId); break;
             case 'load-recs': loadRecommendations(goalId, el); break;
@@ -953,6 +1025,9 @@ function filterMaterialCards(containerEl, terms) {
     containerEl.querySelectorAll('[id^="video-card-"]').forEach(card => {
         const video = (window._videoCardCache || {})[card.id.replace('video-card-', '')];
         const isMatch = !!video && matchesSearchTerms(video.title, terms);
+        // A material past the card's limit is kept hidden until a search matches it.
+        const extra = card.closest('[data-extra-material]');
+        if (extra) extra.classList.toggle('hidden', !isMatch);
         setSearchMiss(card, !isMatch);
         if (isMatch) matched++;
     });
@@ -972,6 +1047,7 @@ function applyGoalsSearch() {
 
     if (terms.length === 0) {
         tab.querySelectorAll('.search-miss').forEach(el => el.classList.remove('search-miss'));
+        tab.querySelectorAll('[data-extra-material]').forEach(el => el.classList.add('hidden'));
         if (status) status.textContent = '';
         if (empty) empty.classList.add('hidden');
         return;
@@ -1119,6 +1195,315 @@ window.loadGoals = loadGoals;
 window.initGoalsModal = initGoalsModal;
 window.openCreateGoalModal = openCreateGoalModal;
 window.toggleArchivedGoals = toggleArchivedGoals;
+
+// --- Add material to a goal --------------------------------------------------------------------
+
+// Opens the Import tab with this goal already selected.
+function openImportForGoal(goalId) {
+    const selected = document.getElementById('input-goal-selected-id');
+    if (selected) selected.value = String(goalId);
+    if (typeof switchTab === 'function') switchTab('import');
+    document.getElementById('new-goal-inline-fields')?.classList.add('hidden');
+    if (typeof renderGoalBoxes === 'function') renderGoalBoxes(Object.values(window._goalsCache || {}));
+}
+window.openImportForGoal = openImportForGoal;
+
+// --- Reorder goals -----------------------------------------------------------------------------
+
+function renderGoalReorderList() {
+    const list = document.getElementById('goal-reorder-list');
+    if (!list) return;
+    const goals = (window._goalsPageData && window._goalsPageData.goals) || [];
+    list.innerHTML = goals.map((g, i) => `
+        <div class="flex items-center gap-3 bg-white border border-stone-200 rounded-xl px-3 py-2.5 shadow-sm" data-reorder-row="${g.id}" draggable="true">
+            <i data-lucide="grip-vertical" class="w-4 h-4 text-stone-400 cursor-grab shrink-0"></i>
+            ${goalRankBadgeHTML(i + 1)}
+            <span class="font-bold text-sm text-stone-900 truncate flex-1">${escapeHtml(g.title)}</span>
+            <button type="button" data-reorder-move="up" data-goal-id="${g.id}" ${i === 0 ? 'disabled' : ''} class="p-1.5 bg-stone-100 border border-stone-200 rounded-lg ${i === 0 ? 'text-stone-300' : 'text-stone-600'}" aria-label="Move up"><i data-lucide="arrow-up" class="w-4 h-4"></i></button>
+            <button type="button" data-reorder-move="down" data-goal-id="${g.id}" ${i === goals.length - 1 ? 'disabled' : ''} class="p-1.5 bg-stone-100 border border-stone-200 rounded-lg ${i === goals.length - 1 ? 'text-stone-300' : 'text-stone-600'}" aria-label="Move down"><i data-lucide="arrow-down" class="w-4 h-4"></i></button>
+        </div>`).join('') || '<p class="text-xs text-stone-500 py-4 text-center">No goals yet.</p>';
+    if (typeof renderIcons === 'function') renderIcons();
+}
+
+function closeGoalReorder() {
+    document.getElementById('overlay-goal-reorder')?.classList.add('hidden');
+    closeOverlay('overlay-goal-reorder');
+}
+
+function openGoalReorder() {
+    renderGoalReorderList();
+    document.getElementById('overlay-goal-reorder')?.classList.remove('hidden');
+    openOverlay('overlay-goal-reorder', closeGoalReorder);
+}
+
+// Moves one goal in the sheet by the same endpoint the arrows on the cards used, then redraws.
+async function moveGoalInSheet(goalId, direction) {
+    await reorderGoal(goalId, direction);
+    // loadGoals() was started by reorderGoal; wait for the cache to refresh before redrawing.
+    await new Promise(resolve => setTimeout(resolve, 250));
+    renderGoalReorderList();
+}
+
+// Drag a goal onto another to place it there: the endpoint moves one step at a time, so the
+// drop is replayed as that many moves.
+async function dropGoalOn(draggedId, targetId) {
+    const goals = (window._goalsPageData && window._goalsPageData.goals) || [];
+    const from = goals.findIndex(g => String(g.id) === String(draggedId));
+    const to = goals.findIndex(g => String(g.id) === String(targetId));
+    if (from < 0 || to < 0 || from === to) return;
+    const direction = to > from ? 'down' : 'up';
+    for (let i = 0; i < Math.abs(to - from); i++) {
+        const formData = new FormData();
+        formData.append('direction', direction);
+        await fetchAPI(`/api/goals/${draggedId}/reorder`, { method: 'POST', body: formData });
+    }
+    await loadGoals();
+    renderGoalReorderList();
+}
+
+function initGoalReorderSheet() {
+    const sheet = document.getElementById('overlay-goal-reorder');
+    if (!sheet || sheet.dataset.bound) return;
+    sheet.dataset.bound = '1';
+    document.getElementById('btn-goal-reorder-done')?.addEventListener('click', closeGoalReorder);
+    sheet.addEventListener('click', (e) => {
+        if (e.target === sheet) { closeGoalReorder(); return; }
+        const btn = e.target.closest('[data-reorder-move]');
+        if (btn && !btn.disabled) moveGoalInSheet(Number(btn.dataset.goalId), btn.dataset.reorderMove);
+    });
+    let dragged = null;
+    sheet.addEventListener('dragstart', (e) => {
+        const row = e.target.closest('[data-reorder-row]');
+        if (!row) return;
+        dragged = row.dataset.reorderRow;
+        e.dataTransfer.effectAllowed = 'move';
+    });
+    sheet.addEventListener('dragover', (e) => { if (dragged && e.target.closest('[data-reorder-row]')) e.preventDefault(); });
+    sheet.addEventListener('drop', (e) => {
+        const row = e.target.closest('[data-reorder-row]');
+        if (!row || !dragged) return;
+        e.preventDefault();
+        const id = dragged;
+        dragged = null;
+        dropGoalOn(id, row.dataset.reorderRow);
+    });
+}
+
+// --- Goal page ---------------------------------------------------------------------------------
+// One goal on its own page, inside the Goals tab: style.css hides the rest of the tab while
+// #tab-goals has .goal-page-open. It is a view, not a document: it gets a history entry so the
+// back gesture of an installed app returns to the list, and loadGoals() redraws it with the rest.
+
+const GOAL_PAGE_VIEW_KEY = 'goal-page-view';
+const goalPageState = { reordering: false };
+
+function goalPageView() {
+    return localStorage.getItem(GOAL_PAGE_VIEW_KEY) === 'list' ? 'list' : 'detail';
+}
+
+function goalPageMaterials(goalId) {
+    const data = window._goalsPageData || { videos: [] };
+    return data.videos.filter(v => v.learning_goal_id === goalId && v.is_watchlist !== 1);
+}
+
+function materialKind(v) {
+    if (v.material_type === 'link') return { icon: 'globe', label: 'Link' };
+    if (v.youtube_id && !String(v.youtube_id).startsWith('doc_')) return { icon: 'play-circle', label: 'Video' };
+    if (v.material_type === 'notes') return { icon: 'notebook-pen', label: 'Notes' };
+    return { icon: 'file-text', label: 'File' };
+}
+
+function materialMetaText(v, quizzes) {
+    const kind = materialKind(v).label;
+    if (v.material_type === 'link') {
+        let host = '';
+        try { host = new URL(v.source_url).hostname; } catch (e) { /* not a URL */ }
+        return `${kind}${host ? ', ' + host : ''}`;
+    }
+    if (v.status === 'saved') return `${kind}, saved`;
+    if (v.status === 'processing') return `${kind}, importing`;
+    if (v.status === 'failed') return `${kind}, import failed`;
+    const quiz = (quizzes || []).find(q => String(q.video_id) === String(v.id));
+    return `${kind}${quiz ? ', stage ' + (quiz.srs_stage || 0) : ''}`;
+}
+
+function goalPageRowHTML(v, quizzes, editing) {
+    const kind = materialKind(v);
+    const handle = editing ? '<i data-lucide="grip-vertical" class="w-4 h-4 text-stone-400 cursor-grab shrink-0"></i>' : '';
+    let action = '';
+    if (editing) {
+        action = `
+            <button type="button" data-goalpage-move="up" data-video-id="${v.id}" class="p-1.5 bg-stone-100 border border-stone-200 rounded-lg text-stone-600" aria-label="Move up"><i data-lucide="arrow-up" class="w-4 h-4"></i></button>
+            <button type="button" data-goalpage-move="down" data-video-id="${v.id}" class="p-1.5 bg-stone-100 border border-stone-200 rounded-lg text-stone-600" aria-label="Move down"><i data-lucide="arrow-down" class="w-4 h-4"></i></button>`;
+    } else if (v.material_type === 'link') {
+        action = `<button type="button" data-video-action="open-link" data-video-id="${v.id}" class="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 border border-stone-200 rounded-lg text-xs font-extrabold text-stone-600 flex items-center gap-1"><i data-lucide="external-link" class="w-3.5 h-3.5"></i>Open</button>`;
+    } else if (v.status === 'saved') {
+        action = `<button type="button" data-video-action="generate-saved" data-video-id="${v.id}" class="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-300 rounded-lg text-xs font-extrabold text-amber-900 flex items-center gap-1"><i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-600"></i>Generate</button>`;
+    } else if (v.status === 'failed') {
+        action = `<button type="button" data-video-action="retry" data-video-id="${v.id}" class="px-3 py-1.5 bg-red-50 border border-red-200 rounded-lg text-xs font-extrabold text-red-600">Retry</button>`;
+    } else if (v.status !== 'processing') {
+        const level = v.importance_rating || v.importance_level || 3;
+        action = `<button type="button" data-video-action="study" data-video-id="${v.id}" data-level="${level}" class="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 border border-stone-200 rounded-lg text-xs font-extrabold text-stone-600 flex items-center gap-1"><i data-lucide="brain" class="w-3.5 h-3.5"></i>Quiz</button>`;
+    }
+    const titleAction = v.material_type === 'link' ? 'open-link' : 'open-studio';
+    const metaClass = v.status === 'saved' ? 'text-amber-700' : 'text-stone-500';
+    return `
+        <div id="video-card-${v.id}" data-goalpage-row="${v.id}" ${editing ? 'draggable="true"' : ''} class="flex items-center gap-3 bg-white border border-stone-200 rounded-xl px-3 py-2.5 shadow-sm">
+            ${handle}
+            <i data-lucide="${kind.icon}" class="w-4 h-4 text-amber-600 shrink-0"></i>
+            <div class="min-w-0 flex-1">
+                <button type="button" data-video-action="${titleAction}" data-video-id="${v.id}" class="block font-bold text-sm text-stone-900 truncate text-left max-w-full hover:text-amber-700 transition">${escapeHtml(v.title)}</button>
+                <p class="text-[11px] ${metaClass}">${escapeHtml(materialMetaText(v, quizzes))}</p>
+            </div>
+            <div class="flex items-center gap-1 shrink-0">${action}</div>
+        </div>`;
+}
+
+function renderGoalPage() {
+    const page = document.getElementById('goal-page');
+    const goalId = window._openGoalPageId;
+    if (!page || !goalId) return;
+    const data = window._goalsPageData || { goals: [], videos: [], quizzes: [] };
+    const goal = data.goals.find(g => g.id === goalId);
+    if (!goal) { closeGoalPage(); return; }
+
+    const rank = data.goals.findIndex(g => g.id === goalId) + 1;
+    const materials = goalPageMaterials(goalId);
+    const view = goalPageView();
+    const editing = goalPageState.reordering;
+    const seg = (label, on, action) => `<button type="button" data-goalpage-action="${action}" class="px-3 py-1.5 rounded-lg text-xs font-bold ${on ? 'bg-amber-100 border border-amber-300 text-amber-900' : 'text-stone-600'}">${label}</button>`;
+
+    let body;
+    if (materials.length === 0) {
+        body = '<p class="text-xs text-stone-400 italic py-2 pl-2">No learning materials added to this goal yet.</p>';
+    } else if (view === 'list' || editing) {
+        body = `<div class="space-y-2">${materials.map(v => goalPageRowHTML(v, data.quizzes, editing)).join('')}</div>`
+            + (editing ? '<p class="text-[11px] text-stone-500 text-center">Drag the handle or use the arrows. The order saves as you go.</p>' : '');
+    } else {
+        body = `<div class="space-y-3">${materials.map(v => renderVideoCard(v, data.quizzes, data.goals)).join('')}</div>`;
+    }
+
+    page.innerHTML = `
+        <button type="button" data-goalpage-action="back" class="flex items-center gap-1.5 text-sm font-bold text-amber-700 hover:text-amber-900 transition">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i><span>Goals</span>
+        </button>
+        <div class="flex items-start justify-between gap-3">
+            <div class="flex items-center space-x-3 min-w-0">${goalRankBadgeHTML(rank)}<h2 class="text-2xl font-bold tracking-tight leading-tight">${escapeHtml(goal.title)}</h2></div>
+            ${goalControlsHTML(goal)}
+        </div>
+        ${goal.description ? `<p class="text-sm text-stone-500">${escapeHtml(goal.description)}</p>` : ''}
+        <p class="text-xs text-stone-400">${materials.length} ${materials.length === 1 ? 'material' : 'materials'}</p>
+        <div class="flex items-center justify-between">
+            <div class="flex gap-1 p-1 bg-stone-100 border border-stone-200 rounded-xl">${seg('Detail', view === 'detail' && !editing, 'view-detail')}${seg('List', view === 'list' || editing, 'view-list')}</div>
+            ${materials.length > 1 ? (editing
+                ? '<button type="button" data-goalpage-action="toggle-reorder" class="btn-primary px-4 py-2 rounded-xl text-xs font-extrabold">Done</button>'
+                : '<button type="button" data-goalpage-action="toggle-reorder" class="px-3 py-2 bg-white border border-stone-200 rounded-xl text-xs font-bold text-stone-700 flex items-center gap-1.5"><i data-lucide="menu" class="w-3.5 h-3.5"></i>Reorder</button>') : ''}
+        </div>
+        ${body}
+        <button type="button" data-goal-action="add-material" data-goal-id="${goalId}" class="w-full py-2 border border-dashed border-amber-500/30 hover:bg-amber-500/5 text-amber-700 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition">
+            <i data-lucide="plus" class="w-3.5 h-3.5"></i><span>Add material</span>
+        </button>`;
+    if (typeof renderIcons === 'function') renderIcons();
+}
+
+function openGoalPage(goalId, push = true) {
+    if (!window._goalsCache || !window._goalsCache[goalId]) return;
+    const tab = document.getElementById('tab-goals');
+    if (!tab) return;
+    const alreadyOpen = window._openGoalPageId === goalId && tab.classList.contains('goal-page-open');
+    if (!alreadyOpen) goalPageState.reordering = false;
+    window._openGoalPageId = goalId;
+    tab.classList.add('goal-page-open');
+    renderGoalPage();
+    if (alreadyOpen) return;
+    window.scrollTo(0, 0);
+    if (push) history.pushState({ goalPage: goalId }, '');
+}
+
+// Hides the page. Going back through history is the caller's job (see goBackFromGoalPage).
+function closeGoalPage() {
+    window._openGoalPageId = null;
+    goalPageState.reordering = false;
+    document.getElementById('tab-goals')?.classList.remove('goal-page-open');
+}
+
+function goBackFromGoalPage() {
+    if (history.state && history.state.goalPage) history.back();
+    else closeGoalPage();
+}
+
+async function saveMaterialOrder(goalId, ids) {
+    const formData = new FormData();
+    formData.append('ids', ids.join(','));
+    try {
+        await fetchAPI(`/api/goals/${goalId}/materials/order`, { method: 'POST', body: formData });
+    } catch (e) {
+        showToast('Could not save the order: ' + (e.message || e), 'failed', 3000);
+    }
+    await loadGoals();
+}
+
+function moveGoalMaterial(videoId, direction) {
+    const goalId = window._openGoalPageId;
+    const ids = goalPageMaterials(goalId).map(v => v.id);
+    const from = ids.indexOf(videoId);
+    const to = direction === 'up' ? from - 1 : from + 1;
+    if (from < 0 || to < 0 || to >= ids.length) return;
+    [ids[from], ids[to]] = [ids[to], ids[from]];
+    saveMaterialOrder(goalId, ids);
+}
+
+function dropGoalMaterial(draggedId, targetId) {
+    const goalId = window._openGoalPageId;
+    const ids = goalPageMaterials(goalId).map(v => v.id);
+    const from = ids.indexOf(draggedId);
+    const to = ids.indexOf(targetId);
+    if (from < 0 || to < 0 || from === to) return;
+    ids.splice(to, 0, ids.splice(from, 1)[0]);
+    saveMaterialOrder(goalId, ids);
+}
+
+function initGoalPage() {
+    const page = document.getElementById('goal-page');
+    if (!page || page.dataset.bound) return;
+    page.dataset.bound = '1';
+    page.addEventListener('click', (e) => {
+        const act = e.target.closest('[data-goalpage-action]');
+        if (act) {
+            switch (act.dataset.goalpageAction) {
+                case 'back': goBackFromGoalPage(); break;
+                case 'view-detail': goalPageState.reordering = false; localStorage.setItem(GOAL_PAGE_VIEW_KEY, 'detail'); renderGoalPage(); break;
+                case 'view-list': localStorage.setItem(GOAL_PAGE_VIEW_KEY, 'list'); renderGoalPage(); break;
+                case 'toggle-reorder': goalPageState.reordering = !goalPageState.reordering; renderGoalPage(); break;
+            }
+            return;
+        }
+        const move = e.target.closest('[data-goalpage-move]');
+        if (move) moveGoalMaterial(Number(move.dataset.videoId), move.dataset.goalpageMove);
+    });
+    let dragged = null;
+    page.addEventListener('dragstart', (e) => {
+        const row = e.target.closest('[data-goalpage-row]');
+        if (!row || !goalPageState.reordering) return;
+        dragged = Number(row.dataset.goalpageRow);
+        e.dataTransfer.effectAllowed = 'move';
+    });
+    page.addEventListener('dragover', (e) => { if (dragged && e.target.closest('[data-goalpage-row]')) e.preventDefault(); });
+    page.addEventListener('drop', (e) => {
+        const row = e.target.closest('[data-goalpage-row]');
+        if (!row || dragged === null) return;
+        e.preventDefault();
+        const id = dragged;
+        dragged = null;
+        dropGoalMaterial(id, Number(row.dataset.goalpageRow));
+    });
+    // The browser's back gesture closes the page; going forward again reopens it.
+    window.addEventListener('popstate', (e) => {
+        if (e.state && e.state.goalPage) openGoalPage(e.state.goalPage, false);
+        else if (window._openGoalPageId) closeGoalPage();
+    });
+}
+
 window.setAllAccordions = setAllAccordions;
 window.closeDeleteGoalModal = closeDeleteGoalModal;
 window.confirmDeleteGoal = confirmDeleteGoal;

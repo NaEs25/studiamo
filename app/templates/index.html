@@ -250,32 +250,36 @@
         </section>
 
         <!-- 2. Import / Add Content Tab -->
-        <section id="tab-import" class="tab-content hidden space-y-6 pb-28">
+        <section id="tab-import" class="tab-content hidden space-y-6 pb-44">
             <div>
                 <h2 class="text-2xl font-bold tracking-tight">Import Material</h2>
-                <p class="text-sm text-stone-400">Add YouTube links, copy-paste articles, or upload documents to
-                    generate active recall quizzes.</p>
+                <p class="text-sm text-stone-400">Save sources to a goal, or turn them into active recall quizzes.</p>
             </div>
 
             <!-- Form Type Selector -->
-            <div class="grid grid-cols-3 gap-2 p-1 bg-stone-100 border border-stone-200 rounded-xl">
+            <div class="grid grid-cols-4 gap-2 p-1 bg-stone-100 border border-stone-200 rounded-xl">
                 <button id="import-btn-youtube"
                     class="segmented-tab is-active py-2.5 rounded-lg flex items-center justify-center space-x-1.5">
                     <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
                         <path
                             d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2 31.6 31.6 0 0 0 0 12a31.6 31.6 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1A31.6 31.6 0 0 0 24 12a31.6 31.6 0 0 0-.5-5.8zM9.7 15.5V8.5l6.3 3.5-6.3 3.5z" />
                     </svg>
-                    <span>YouTube URL</span>
+                    <span>YouTube</span>
                 </button>
                 <button id="import-btn-document"
                     class="segmented-tab py-2.5 rounded-lg flex items-center justify-center space-x-1.5">
                     <i data-lucide="file-text" class="w-4 h-4"></i>
-                    <span>Upload File</span>
+                    <span>File</span>
                 </button>
                 <button id="import-btn-notes"
                     class="segmented-tab py-2.5 rounded-lg flex items-center justify-center space-x-1.5">
                     <i data-lucide="edit-3" class="w-4 h-4"></i>
-                    <span>Paste Notes</span>
+                    <span>Notes</span>
+                </button>
+                <button id="import-btn-link"
+                    class="segmented-tab py-2.5 rounded-lg flex items-center justify-center space-x-1.5">
+                    <i data-lucide="link" class="w-4 h-4"></i>
+                    <span>Link</span>
                 </button>
             </div>
 
@@ -331,10 +335,27 @@
                         class="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900 placeholder-stone-400"></textarea>
                 </div>
 
+                <!-- 4. Link Panel: reference material only. No quiz and no AI, so on this tab only
+                     the two save actions below are shown (videos.js initImportTab). -->
+                <div id="panel-link" class="hidden bg-white p-6 rounded-2xl border border-stone-200 space-y-4">
+                    <label class="block text-sm font-semibold text-stone-700" for="input-link-url">Website or paper link</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i data-lucide="globe" class="w-5 h-5 text-stone-400"></i>
+                        </div>
+                        <input type="url" id="input-link-url" placeholder="https://..."
+                            class="w-full bg-stone-50 border border-stone-200 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900 placeholder-stone-400">
+                    </div>
+                    <label class="block text-sm font-semibold text-stone-700" for="input-link-title">Title <span class="font-normal text-stone-400">(optional)</span></label>
+                    <input type="text" id="input-link-title" maxlength="200" placeholder="Shown on the card instead of the address"
+                        class="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900 placeholder-stone-400">
+                    <p class="text-xs text-stone-500">Links are reference material: no quiz and no AI. You can open them from the goal and keep notes next to them.</p>
+                </div>
+
                 <!-- Shared Settings (Importance Stars, Goal Cards) -->
                 <div class="bg-white p-6 rounded-2xl border border-stone-200 space-y-6">
-                    <!-- Importance Rating Star Selector -->
-                    <div>
+                    <!-- Importance Rating Star Selector (hidden on the Link tab: a link has no quiz) -->
+                    <div id="import-importance-block">
                         <div class="flex justify-between items-center mb-2">
                             <label class="text-sm font-semibold text-stone-700">Importance Rating</label>
                             <button type="button" id="importance-info-toggle"
@@ -396,11 +417,21 @@
             <div class="fixed inset-x-0 bottom-0 z-30 bg-[#f6f1e7]/50 pointer-events-none">
                 <div class="max-w-4xl mx-auto px-4 pointer-events-auto"
                     style="padding-top: 14px; padding-bottom: calc(4.5rem + var(--safe-bottom));">
-                    <button type="submit" form="import-form"
+                    <button type="submit" form="import-form" id="btn-import-generate"
                         class="btn-primary w-full py-3.5 font-extrabold rounded-xl transition-all flex items-center justify-center space-x-2">
                         <i data-lucide="sparkles" class="w-5 h-5"></i>
-                        <span>Generate AI Quizzes & Summaries</span>
+                        <span>Generate quiz</span>
                     </button>
+                    <div class="grid grid-cols-2 gap-2 mt-2">
+                        <button type="button" data-import-action="save"
+                            class="py-3 bg-white hover:bg-stone-50 border border-stone-200 text-stone-800 font-bold rounded-xl text-xs shadow-sm flex items-center justify-center gap-1.5 transition">
+                            <i data-lucide="folder-plus" class="w-4 h-4 text-amber-600"></i><span>Save to goal</span>
+                        </button>
+                        <button type="button" data-import-action="queue"
+                            class="py-3 bg-white hover:bg-stone-50 border border-stone-200 text-stone-800 font-bold rounded-xl text-xs shadow-sm flex items-center justify-center gap-1.5 transition">
+                            <i data-lucide="bookmark" class="w-4 h-4 text-amber-600"></i><span>Add to queue</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </section>
@@ -422,19 +453,23 @@
                             <i data-lucide="search" class="w-4 h-4"></i>
                         </button>
                     </div>
-                    <!-- Collapse / Expand All Buttons -->
-                    <div class="flex items-center bg-stone-100 border border-stone-200 rounded-xl p-1 space-x-1">
-                        <button onclick="setAllAccordions(true)"
-                            class="p-1.5 hover:bg-stone-100 rounded-lg text-stone-600 hover:text-stone-900 transition"
-                            title="Expand All Sections">
-                            <i data-lucide="chevrons-down" class="w-4 h-4"></i>
+                    <!-- View: today's expanded cards, or one row per goal (goals.js setGoalsView) -->
+                    <div class="flex items-center bg-stone-100 border border-stone-200 rounded-xl p-1 space-x-1" role="group" aria-label="Goals view">
+                        <button type="button" data-goal-action="set-view" data-view="expanded" id="btn-goals-view-expanded"
+                            class="segmented-tab is-active p-1.5 rounded-lg" title="Expanded view" aria-pressed="true">
+                            <i data-lucide="rows-3" class="w-4 h-4"></i>
                         </button>
-                        <button onclick="setAllAccordions(false)"
-                            class="p-1.5 hover:bg-stone-100 rounded-lg text-stone-600 hover:text-stone-900 transition"
-                            title="Collapse All Sections">
-                            <i data-lucide="chevrons-up" class="w-4 h-4"></i>
+                        <button type="button" data-goal-action="set-view" data-view="compact" id="btn-goals-view-compact"
+                            class="segmented-tab p-1.5 rounded-lg" title="Titles only" aria-pressed="false">
+                            <i data-lucide="list" class="w-4 h-4"></i>
                         </button>
                     </div>
+                    <button type="button" data-goal-action="open-reorder" id="btn-goals-reorder"
+                        class="px-2.5 py-2 bg-stone-100 hover:bg-stone-200 border border-stone-200 rounded-xl text-xs font-bold text-stone-700 flex items-center space-x-1.5 transition"
+                        title="Reorder goals">
+                        <i data-lucide="menu" class="w-4 h-4"></i>
+                        <span class="hidden sm:inline">Reorder</span>
+                    </button>
                     <button id="btn-add-goal-modal"
                         class="btn-primary px-3 sm:px-4 py-2 font-extrabold rounded-xl text-xs sm:text-sm flex items-center space-x-1 transition shrink-0">
                         <i data-lucide="plus" class="w-4 h-4 stroke-[3]"></i>
@@ -466,6 +501,10 @@
                 <p class="text-sm font-bold text-stone-700 mt-3">Nothing matches your search</p>
                 <p class="text-xs text-stone-500 mt-1">Search looks at goal names, descriptions, and material titles, archived ones included.</p>
             </div>
+
+            <!-- One goal on its own page (goals.js openGoalPage). Shown instead of everything else
+                 in this tab while open; style.css hides the other children. -->
+            <div id="goal-page" class="space-y-4"></div>
 
             <!-- Watchlist / Study Queue Container -->
             <div id="goals-watchlist-container" class="space-y-4"></div>
@@ -2004,6 +2043,21 @@
                     Permanently Delete
                 </button>
             </div>
+        </div>
+    </div>
+
+    <!-- Reorder goals: a sheet with the goals in priority order (goals.js openGoalReorder). -->
+    <div id="overlay-goal-reorder" role="dialog" aria-modal="true" aria-labelledby="goal-reorder-title"
+        class="app-overlay hidden fixed inset-0 bg-stone-950/70 backdrop-blur-md z-50 flex items-end sm:items-center justify-center sm:p-4">
+        <div class="bg-white border border-[#e7dfd3] rounded-t-3xl sm:rounded-3xl w-full max-w-lg shadow-2xl flex flex-col max-h-[88vh]">
+            <div class="flex items-center justify-between p-5 pb-3 border-b border-[#e7dfd3] shrink-0">
+                <h3 id="goal-reorder-title" class="text-base font-extrabold text-stone-900 flex items-center space-x-2">
+                    <i data-lucide="menu" class="w-4 h-4 text-amber-600 shrink-0"></i><span>Reorder goals</span>
+                </h3>
+                <button type="button" id="btn-goal-reorder-done" class="btn-primary px-4 py-2 rounded-xl text-xs font-extrabold">Done</button>
+            </div>
+            <div class="px-5 pt-3 text-xs text-stone-500">Drag a goal by its handle, or use the arrows. #1 is your top priority.</div>
+            <div id="goal-reorder-list" class="px-5 py-3 space-y-2 overflow-y-auto grow"></div>
         </div>
     </div>
 

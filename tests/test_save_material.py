@@ -64,3 +64,24 @@ def test_notes_are_saved_and_a_link_never_generates(client, cleanup):
     refused = client.post(f"/api/videos/{link['video_id']}/generate")
     assert refused.status_code == 400
     assert client.post("/api/videos/2147483000/generate").status_code == 404
+
+
+def test_material_order_is_stored_and_refuses_a_list_that_does_not_match(client, cleanup):
+    goal = client.post("/api/goals", data={"title": "Order test goal"}).json()["goal_id"]
+    try:
+        ids = []
+        for n in range(3):
+            saved = client.post("/api/videos/save", data={"link_url": f"https://example.com/order{n}", "learning_goal_id": goal}).json()
+            cleanup.append(saved["video_id"])
+            ids.append(saved["video_id"])
+        wanted = [ids[2], ids[0], ids[1]]
+        assert client.post(f"/api/goals/{goal}/materials/order", data={"ids": ",".join(map(str, wanted))}).status_code == 200
+        videos = [v["id"] for v in client.get("/api/dashboard").json()["videos"] if v["learning_goal_id"] == goal]
+        assert videos == wanted
+        # Missing one, repeating one, or naming a row that is not in the goal are all refused.
+        assert client.post(f"/api/goals/{goal}/materials/order", data={"ids": f"{ids[0]},{ids[1]}"}).status_code == 409
+        assert client.post(f"/api/goals/{goal}/materials/order", data={"ids": f"{ids[0]},{ids[0]},{ids[1]}"}).status_code == 400
+        assert client.post(f"/api/goals/{goal}/materials/order", data={"ids": ",".join(map(str, ids)) + ",2147483000"}).status_code == 409
+        assert client.post("/api/goals/2147483000/materials/order", data={"ids": "1"}).status_code == 404
+    finally:
+        client.delete(f"/api/goals/{goal}?delete_materials=true")
