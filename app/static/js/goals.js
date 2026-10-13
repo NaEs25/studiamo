@@ -73,6 +73,51 @@ function compactGoalRowHTML(g, rank, materialCount) {
         </div>`;
 }
 
+// The AI recommendations button, the "Coming Soon" placeholder beside it, and the recommendations
+// drawer. Shown at the top of a goal card and of the goal page. Its ids are per goal, so only one
+// copy may exist at a time: while a goal's page is open its card leaves this section out.
+function goalRecsSectionHTML(g) {
+    const isDrawerOpen = Boolean(window._openGoalRecommendations && window._openGoalRecommendations[g.id]);
+    const hasSavedRecs = Boolean(g.has_saved_recommendations);
+    const recsBtnLabel = (isDrawerOpen || hasSavedRecs) ? 'View AI Recommendations' : 'Get AI Recommendations';
+    return `
+                            <div data-recs-section class="flex gap-2 pt-1">
+                                <button id="btn-recs-trigger-${g.id}" data-has-saved-recs="${g.has_saved_recommendations ? 1 : 0}" data-goal-action="load-recs" data-goal-id="${g.id}" class="flex-grow py-1.5 px-3 bg-[#fbf8f2] hover:bg-[#f3ebd9] text-stone-800 border border-[#e7dfd3] font-semibold rounded-lg text-xs transition flex items-center justify-center space-x-1.5 shadow-sm">
+                                    <i data-lucide="compass" class="w-3.5 h-3.5 text-stone-600"></i>
+                                    <span class="recs-btn-text">${recsBtnLabel}</span>${planTagHTML()}
+                                </button>
+                                
+                                <button disabled class="flex-grow py-1.5 px-3 bg-amber-500/10 text-amber-900/60 border border-amber-500/20 font-semibold rounded-lg text-xs flex items-center justify-center space-x-1.5 cursor-not-allowed opacity-75 shadow-sm">
+                                    <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-700/60"></i>
+                                    <span>Coming Soon</span>
+                                </button>
+                            </div>
+                            
+                            <div id="recs-${g.id}" data-recs-section class="${isDrawerOpen ? '' : 'hidden'} p-3.5 bg-[#fbf8f2] border border-[#e7dfd3] rounded-xl space-y-3 shadow-sm">
+                                <div class="flex items-start justify-between pb-2 border-b border-[#e7dfd3]/80 gap-2">
+                                    <div class="min-w-0 flex-1 space-y-2">
+                                        <button type="button" data-goal-action="toggle-concepts" class="concepts-toggle flex items-center space-x-1.5 text-xs font-bold text-stone-800 hover:text-amber-700 transition" data-goal-id="${g.id}" aria-expanded="false" aria-controls="concepts-${g.id}">
+                                            <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-700 shrink-0"></i>
+                                            <span>Concepts</span>
+                                            <span id="concepts-count-${g.id}" class="text-[10px] bg-amber-500/20 text-amber-700 px-1.5 py-0.5 rounded-full font-bold"></span>
+                                            <i data-lucide="chevron-down" class="concepts-chevron w-3.5 h-3.5 text-stone-400 transition-transform"></i>
+                                        </button>
+                                        <div id="concepts-${g.id}" class="hidden text-[11px] text-stone-600 leading-relaxed break-words"></div>
+                                    </div>
+                                    <div class="flex items-center space-x-1 shrink-0">
+                                        <button type="button" data-goal-action="reload-recs" data-goal-id="${g.id}" class="p-1.5 bg-stone-100 hover:bg-stone-200/80 text-stone-600 hover:text-amber-800 rounded-lg transition border border-stone-200/80 shadow-sm" title="Reload Recommendations">
+                                            <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
+                                        </button>
+                                        <button type="button" data-goal-action="close-recs" data-goal-id="${g.id}" class="p-1.5 hover:bg-stone-200/80 text-stone-400 hover:text-stone-700 rounded-lg transition ml-0.5" title="Collapse Panel">
+                                            <i data-lucide="x" class="w-4 h-4"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="vids-${g.id}" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]"></div>
+                            </div>
+`;
+}
+
 function setGoalsView(view) {
     localStorage.setItem(GOALS_VIEW_KEY, view === 'compact' ? 'compact' : 'expanded');
     if (typeof loadGoals === 'function') loadGoals();
@@ -222,10 +267,6 @@ async function loadGoals() {
                             <i data-lucide="plus" class="w-3.5 h-3.5"></i><span>Add material</span>
                         </button>`;
 
-                    const isDrawerOpen = Boolean(window._openGoalRecommendations && window._openGoalRecommendations[g.id]);
-                    const hasSavedRecs = Boolean(g.has_saved_recommendations);
-                    const recsBtnLabel = (isDrawerOpen || hasSavedRecs) ? 'View AI Recommendations' : 'Get AI Recommendations';
-
                     const cardHTML = `
                         <div data-goal-card="${g.id}" class="bg-white border border-stone-200 p-5 rounded-2xl space-y-4 shadow-sm relative group">
                             <div class="flex justify-between items-start">
@@ -237,6 +278,8 @@ async function loadGoals() {
                                 </div>
                                 ${goalControlsHTML(g)}
                             </div>
+
+                            ${window._openGoalPageId === g.id ? '' : goalRecsSectionHTML(g)}
 
                             <div class="space-y-3 pt-1">
                                 <div class="flex justify-between items-center">
@@ -253,40 +296,6 @@ async function loadGoals() {
                                 </div>
                             </div>
 
-                            <div class="flex gap-2 pt-1">
-                                <button id="btn-recs-trigger-${g.id}" data-has-saved-recs="${g.has_saved_recommendations ? 1 : 0}" data-goal-action="load-recs" data-goal-id="${g.id}" class="flex-grow py-1.5 px-3 bg-[#fbf8f2] hover:bg-[#f3ebd9] text-stone-800 border border-[#e7dfd3] font-semibold rounded-lg text-xs transition flex items-center justify-center space-x-1.5 shadow-sm">
-                                    <i data-lucide="compass" class="w-3.5 h-3.5 text-stone-600"></i>
-                                    <span class="recs-btn-text">${recsBtnLabel}</span>${planTagHTML()}
-                                </button>
-                                
-                                <button disabled class="flex-grow py-1.5 px-3 bg-amber-500/10 text-amber-900/60 border border-amber-500/20 font-semibold rounded-lg text-xs flex items-center justify-center space-x-1.5 cursor-not-allowed opacity-75 shadow-sm">
-                                    <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-700/60"></i>
-                                    <span>Coming Soon</span>
-                                </button>
-                            </div>
-                            
-                            <div id="recs-${g.id}" class="${isDrawerOpen ? '' : 'hidden'} p-3.5 bg-[#fbf8f2] border border-[#e7dfd3] rounded-xl space-y-3 shadow-sm">
-                                <div class="flex items-start justify-between pb-2 border-b border-[#e7dfd3]/80 gap-2">
-                                    <div class="min-w-0 flex-1 space-y-2">
-                                        <button type="button" data-goal-action="toggle-concepts" class="concepts-toggle flex items-center space-x-1.5 text-xs font-bold text-stone-800 hover:text-amber-700 transition" data-goal-id="${g.id}" aria-expanded="false" aria-controls="concepts-${g.id}">
-                                            <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-700 shrink-0"></i>
-                                            <span>Concepts</span>
-                                            <span id="concepts-count-${g.id}" class="text-[10px] bg-amber-500/20 text-amber-700 px-1.5 py-0.5 rounded-full font-bold"></span>
-                                            <i data-lucide="chevron-down" class="concepts-chevron w-3.5 h-3.5 text-stone-400 transition-transform"></i>
-                                        </button>
-                                        <div id="concepts-${g.id}" class="hidden text-[11px] text-stone-600 leading-relaxed break-words"></div>
-                                    </div>
-                                    <div class="flex items-center space-x-1 shrink-0">
-                                        <button type="button" data-goal-action="reload-recs" data-goal-id="${g.id}" class="p-1.5 bg-stone-100 hover:bg-stone-200/80 text-stone-600 hover:text-amber-800 rounded-lg transition border border-stone-200/80 shadow-sm" title="Reload Recommendations">
-                                            <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
-                                        </button>
-                                        <button type="button" data-goal-action="close-recs" data-goal-id="${g.id}" class="p-1.5 hover:bg-stone-200/80 text-stone-400 hover:text-stone-700 rounded-lg transition ml-0.5" title="Collapse Panel">
-                                            <i data-lucide="x" class="w-4 h-4"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                <div id="vids-${g.id}" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]"></div>
-                            </div>
                         </div>
                     `;
 
@@ -294,7 +303,7 @@ async function loadGoals() {
                 });
 
                 goals.forEach(g => {
-                    if (window._openGoalRecommendations && window._openGoalRecommendations[g.id]) {
+                    if (g.id !== window._openGoalPageId && window._openGoalRecommendations && window._openGoalRecommendations[g.id]) {
                         populateRecommendationDrawer(g.id, window._openGoalRecommendations[g.id]);
                     }
                 });
@@ -981,6 +990,7 @@ function initGoalsActions() {
             case 'open-reorder': openGoalReorder(); break;
             case 'add-material': openImportForGoal(goalId); break;
             case 'remove-starter': removeStarterSet(); break;
+            case 'edit': openEditGoalModal(goalId); break;
             case 'open-goal': openGoalPage(goalId); break;
             case 'menu': toggleGoalMenu(e, goalId, el); break;
             case 'toggle-materials': toggleGoalMaterials(goalId); break;
@@ -1412,7 +1422,7 @@ function renderGoalPage() {
     if (!page || !goalId) return;
     const data = window._goalsPageData || { goals: [], videos: [], quizzes: [] };
     const goal = data.goals.find(g => g.id === goalId);
-    if (!goal) { closeGoalPage(); return; }
+    if (!goal) { goBackFromGoalPage(); return; }
 
     const rank = data.goals.findIndex(g => g.id === goalId) + 1;
     const materials = goalPageMaterials(goalId);
@@ -1430,15 +1440,20 @@ function renderGoalPage() {
         body = `<div class="space-y-3">${materials.map(v => renderVideoCard(v, data.quizzes, data.goals)).join('')}</div>`;
     }
 
+    const actionBtn = 'px-3 py-2 bg-white hover:bg-stone-50 border border-stone-200 rounded-xl text-xs font-bold text-stone-700 flex items-center gap-1.5 shadow-sm transition';
     page.innerHTML = `
         <button type="button" data-goalpage-action="back" class="flex items-center gap-1.5 text-sm font-bold text-amber-700 hover:text-amber-900 transition">
             <i data-lucide="arrow-left" class="w-4 h-4"></i><span>Goals</span>
         </button>
-        <div class="flex items-start justify-between gap-3">
-            <div class="flex items-center space-x-3 min-w-0">${goalRankBadgeHTML(rank)}<h2 class="text-2xl font-bold tracking-tight leading-tight">${escapeHtml(goal.title)}</h2></div>
-            ${goalControlsHTML(goal)}
-        </div>
+        <div class="flex items-center space-x-3 min-w-0">${goalRankBadgeHTML(rank)}<h2 class="text-2xl font-bold tracking-tight leading-tight">${escapeHtml(goal.title)}</h2></div>
         ${goal.description ? `<p class="text-sm text-stone-500">${escapeHtml(goal.description)}</p>` : ''}
+        ${goalRecsSectionHTML(goal)}
+        <div class="flex flex-wrap items-center gap-2">
+            <button type="button" data-goal-action="add-material" data-goal-id="${goalId}" class="btn-primary px-3 py-2 rounded-xl text-xs font-extrabold flex items-center gap-1.5"><i data-lucide="plus" class="w-3.5 h-3.5"></i>Add material</button>
+            <button type="button" data-goal-action="edit" data-goal-id="${goalId}" class="${actionBtn}"><i data-lucide="edit-3" class="w-3.5 h-3.5 text-amber-600"></i>Edit</button>
+            <button type="button" data-goal-action="archive" data-goal-id="${goalId}" class="${actionBtn}"><i data-lucide="archive" class="w-3.5 h-3.5 text-amber-600"></i>Archive</button>
+            <button type="button" data-goal-action="delete" data-goal-id="${goalId}" class="px-3 py-2 bg-white hover:bg-red-50 border border-red-200 rounded-xl text-xs font-bold text-red-700 flex items-center gap-1.5 shadow-sm transition"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i>Delete</button>
+        </div>
         <p class="text-xs text-stone-400">${materials.length} ${materials.length === 1 ? 'material' : 'materials'}</p>
         <div class="flex items-center justify-between">
             <div class="flex gap-1 p-1 bg-stone-100 border border-stone-200 rounded-xl">${seg('Detail', view === 'detail' && !editing, 'view-detail')}${seg('List', view === 'list' || editing, 'view-list')}</div>
@@ -1446,10 +1461,11 @@ function renderGoalPage() {
                 ? '<button type="button" data-goalpage-action="toggle-reorder" class="btn-primary px-4 py-2 rounded-xl text-xs font-extrabold">Done</button>'
                 : '<button type="button" data-goalpage-action="toggle-reorder" class="px-3 py-2 bg-white border border-stone-200 rounded-xl text-xs font-bold text-stone-700 flex items-center gap-1.5"><i data-lucide="menu" class="w-3.5 h-3.5"></i>Reorder</button>') : ''}
         </div>
-        ${body}
-        <button type="button" data-goal-action="add-material" data-goal-id="${goalId}" class="w-full py-2 border border-dashed border-amber-500/30 hover:bg-amber-500/5 text-amber-700 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition">
-            <i data-lucide="plus" class="w-3.5 h-3.5"></i><span>Add material</span>
-        </button>`;
+        ${body}`;
+    // The drawer is drawn fresh with the page, so fill it from what is already loaded.
+    if (window._openGoalRecommendations && window._openGoalRecommendations[goalId]) {
+        populateRecommendationDrawer(goalId, window._openGoalRecommendations[goalId]);
+    }
     if (typeof renderIcons === 'function') renderIcons();
 }
 
@@ -1460,10 +1476,14 @@ function openGoalPage(goalId, push = true) {
     const alreadyOpen = window._openGoalPageId === goalId && tab.classList.contains('goal-page-open');
     if (!alreadyOpen) goalPageState.reordering = false;
     window._openGoalPageId = goalId;
+    // Its recommendations controls move to the page: ids are per goal, so the card gives them up.
+    document.querySelectorAll(`[data-goal-card="${goalId}"] [data-recs-section]`).forEach(el => el.remove());
     tab.classList.add('goal-page-open');
     renderGoalPage();
     if (alreadyOpen) return;
+    // Scroll to the top before the page fades in, so it does not appear to jump after it shows.
     window.scrollTo(0, 0);
+    playPageAnimation(document.getElementById('goal-page'), 'goal-page-enter');
     if (push) history.pushState({ goalPage: goalId }, '');
 }
 
@@ -1471,7 +1491,23 @@ function openGoalPage(goalId, push = true) {
 function closeGoalPage() {
     window._openGoalPageId = null;
     goalPageState.reordering = false;
-    document.getElementById('tab-goals')?.classList.remove('goal-page-open');
+    const tab = document.getElementById('tab-goals');
+    tab?.classList.remove('goal-page-open');
+    // Emptied so the page's copy of the goal's per-goal ids is gone before the card draws its own.
+    const page = document.getElementById('goal-page');
+    if (page) page.innerHTML = '';
+    // The goal's card gave up its recommendations controls to the page; redraw it with them.
+    loadGoals().then(() => playPageAnimation(document.getElementById('goals-container'), 'goal-page-enter'));
+}
+
+// Plays a short fade-in on an element and removes the class again when it ends, so the class is
+// there to be added next time. Skipped for people who ask for reduced motion (see style.css).
+function playPageAnimation(el, className) {
+    if (!el) return;
+    el.classList.remove(className);
+    void el.offsetWidth;
+    el.classList.add(className);
+    el.addEventListener('animationend', () => el.classList.remove(className), { once: true });
 }
 
 function goBackFromGoalPage() {

@@ -82,11 +82,14 @@ def _calls(page):
 
 def _open_menu(page, vid=NORMAL):
     button = page.locator(f"#video-card-{vid} [data-video-action='menu']")
-    button.scroll_into_view_if_needed()
+    # Centered, not just brought into view: at the edge of the screen the fixed nav bar covers the
+    # button, and the click would scroll again and close the menu.
+    button.evaluate("el => el.scrollIntoView({block: 'center', behavior: 'instant'})")
     # A scroll event arrives a frame after the scroll itself. Clicking in between opens the menu
     # just in time for that event, which the menu takes as the page scrolling away and closes
     # on (core.js toggleContextMenuPortal). A person never clicks that fast after a scroll.
     page.evaluate("() => new Promise(done => requestAnimationFrame(() => requestAnimationFrame(done)))")
+    page.wait_for_timeout(300)
     button.click()
     page.locator("#video-context-menu-portal").wait_for(state="visible", timeout=5000)
 

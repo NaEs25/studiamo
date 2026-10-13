@@ -1955,3 +1955,8 @@ button:active:not(:disabled) {
     .drag-handle, .drag-hint { display: none; }
     .touch-hint { display: inline; }
 }
+
+/* Opening a goal page, and coming back to the list: a short fade and rise instead of a hard swap. */
+@keyframes goalPageIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.goal-page-enter { animation: goalPageIn 200ms ease-out both; }
+@media (prefers-reduced-motion: reduce) { .goal-page-enter { animation: none; } }

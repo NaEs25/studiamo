@@ -134,3 +134,38 @@ def test_goal_description_is_only_on_the_goal_page(goals_page):
     assert "Pods and deployments" not in page.locator("[data-goal-card='9001']").text_content()
     page.click("[data-goal-card='9001'] [data-goal-action='open-goal']")
     assert "Pods and deployments" in page.text_content("#goal-page")
+
+
+def test_goal_page_has_its_buttons_at_the_top_as_plain_buttons(goals_page):
+    page = goals_page
+    # On the card the recommendations buttons sit above the materials, not below them.
+    card = page.locator("[data-goal-card='9001']")
+    recs_y = card.locator("#btn-recs-trigger-9001").bounding_box()["y"]
+    materials_y = card.locator("[data-goal-action='toggle-materials']").first.bounding_box()["y"]
+    assert recs_y < materials_y
+
+    page.click("[data-goal-card='9001'] [data-goal-action='open-goal']")
+    page.wait_for_selector("#goal-page [data-goal-action='edit']")
+    # Exactly one copy of the recommendations controls while the page is open (their ids are per goal).
+    assert page.locator("#btn-recs-trigger-9001").count() == 1
+    assert page.locator("#goal-page #btn-recs-trigger-9001").count() == 1
+    for action in ("add-material", "edit", "archive", "delete"):
+        assert page.locator(f"#goal-page > div [data-goal-action='{action}']").first.is_visible()
+    assert page.locator("#goal-page [data-goal-action='menu']").count() == 0
+    buttons_y = page.locator("#goal-page [data-goal-action='archive']").bounding_box()["y"]
+    first_material_y = page.locator("#goal-page [id^='video-card-']").first.bounding_box()["y"]
+    assert page.locator("#goal-page #btn-recs-trigger-9001").bounding_box()["y"] < first_material_y
+    assert buttons_y < first_material_y
+
+    page.click("#goal-page [data-goal-action='edit']")
+    assert page.locator("#overlay-goal-modal").is_visible()
+    assert page.input_value("#goal-modal-title") == "Kubernetes Basics"
+
+
+def test_closing_the_goal_page_gives_the_card_its_recommendations_back(goals_page):
+    page = goals_page
+    page.click("[data-goal-card='9001'] [data-goal-action='open-goal']")
+    page.click("[data-goalpage-action='back']")
+    page.wait_for_selector("#goal-page", state="hidden")
+    page.wait_for_selector("[data-goal-card='9001'] #btn-recs-trigger-9001", state="attached")
+    assert page.locator("#btn-recs-trigger-9001").count() == 1
