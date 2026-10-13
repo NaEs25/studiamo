@@ -234,7 +234,6 @@ async function loadGoals() {
                                         ${goalRankBadgeHTML(rankNumber)}
                                         <h3 class="font-bold text-lg text-stone-900 leading-tight">${escapeHtml(g.title)}</h3>
                                     </div>
-                                    ${g.description ? `<p class="hidden sm:block text-xs text-stone-500 mt-1 ml-11">${escapeHtml(g.description)}</p>` : ''}
                                 </div>
                                 ${goalControlsHTML(g)}
                             </div>
@@ -358,7 +357,6 @@ async function loadGoals() {
                         <div data-archived-goal="${g.id}" class="flex items-center justify-between p-3 bg-stone-50 border border-stone-200 rounded-xl">
                             <div class="min-w-0">
                                 <span class="block text-xs font-bold text-stone-900">${escapeHtml(g.title)}</span>
-                                ${g.description ? `<p class="text-[10px] text-stone-400 truncate max-w-xs md:max-w-md" title="${escapeHtml(g.description)}">${escapeHtml(g.description)}</p>` : ''}
                             </div>
                             <div class="flex items-center space-x-1 shrink-0 ml-4 bg-stone-100 border border-stone-200 rounded-xl p-0.5">
                                 <button type="button" data-goal-action="archive" data-goal-id="${g.id}" class="p-1 text-stone-400 hover:text-emerald-500 transition" title="Restore Goal to Active">

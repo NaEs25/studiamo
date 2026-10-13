@@ -127,3 +127,10 @@ def test_reorder_sheet_shows_the_new_order_after_an_arrow(logged_in_page):
     finally:
         for g in goals:
             page.evaluate("async (g) => { await fetch('/api/goals/' + g + '?delete_materials=true', {method: 'DELETE'}); }", g)
+
+
+def test_goal_description_is_only_on_the_goal_page(goals_page):
+    page = goals_page
+    assert "Pods and deployments" not in page.locator("[data-goal-card='9001']").text_content()
+    page.click("[data-goal-card='9001'] [data-goal-action='open-goal']")
+    assert "Pods and deployments" in page.text_content("#goal-page")
