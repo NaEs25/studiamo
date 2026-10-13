@@ -847,10 +847,14 @@ window.addEventListener('DOMContentLoaded', () => {
     if (typeof initFocusModalEvents === 'function') initFocusModalEvents();
     
     // A reload on a goal page (#goal-<id>) stays on that page.
-    const onGoalPage = /^#goal-\d+$/.test(window.location.hash);
-    const savedTab = onGoalPage ? 'goals' : (localStorage.getItem('active_studiamo_tab') || 'dashboard');
+    // It is remembered two ways: the address (#goal-<id>) and local storage, in case a browser
+    // drops the hash on reload. Reloading anywhere else just returns to the saved tab.
+    const hashGoalPage = /^#goal-\d+$/.test(window.location.hash);
+    const storedTab = localStorage.getItem('active_studiamo_tab') || 'dashboard';
+    const storedGoalPage = storedTab === 'goals' && /^\d+$/.test(localStorage.getItem('active_goal_page') || '');
+    const savedTab = hashGoalPage ? 'goals' : storedTab;
     switchTab(savedTab);
-    if (onGoalPage && typeof restoreGoalPageFromHash === 'function') restoreGoalPageFromHash();
+    if ((hashGoalPage || storedGoalPage) && typeof restoreGoalPageFromHash === 'function') restoreGoalPageFromHash();
     // Reminder emails link to /#notifications (app/email_utils.py send_notification_email).
     if (window.location.hash === '#notifications' && typeof goToNotificationSettings === 'function') {
         goToNotificationSettings();

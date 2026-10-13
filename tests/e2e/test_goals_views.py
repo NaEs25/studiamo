@@ -136,26 +136,36 @@ def test_goal_description_is_only_on_the_goal_page(goals_page):
     assert "Pods and deployments" in page.text_content("#goal-page")
 
 
-def test_goal_page_has_its_buttons_at_the_top_as_plain_buttons(goals_page):
+def test_goal_card_keeps_the_recommendations_below_the_materials(goals_page):
     page = goals_page
-    # On the card the recommendations buttons sit above the materials, not below them.
     card = page.locator("[data-goal-card='9001']")
     recs_y = card.locator("#btn-recs-trigger-9001").bounding_box()["y"]
     materials_y = card.locator("[data-goal-action='toggle-materials']").first.bounding_box()["y"]
-    assert recs_y < materials_y
+    assert recs_y > materials_y
 
+
+def test_goal_page_layout_buttons_and_boxes(goals_page):
+    page = goals_page
     page.click("[data-goal-card='9001'] [data-goal-action='open-goal']")
     page.wait_for_selector("#goal-page [data-goal-action='edit']")
     # Exactly one copy of the recommendations controls while the page is open (their ids are per goal).
     assert page.locator("#btn-recs-trigger-9001").count() == 1
-    assert page.locator("#goal-page #btn-recs-trigger-9001").count() == 1
-    for action in ("add-material", "edit", "archive", "delete"):
-        assert page.locator(f"#goal-page [data-goal-action='{action}']").first.is_visible()
     assert page.locator("#goal-page [data-goal-action='menu']").count() == 0
-    buttons_y = page.locator("#goal-page [data-goal-action='archive']").bounding_box()["y"]
-    first_material_y = page.locator("#goal-page [id^='video-card-']").first.bounding_box()["y"]
-    assert page.locator("#goal-page #btn-recs-trigger-9001").bounding_box()["y"] < first_material_y
-    assert buttons_y < first_material_y
+
+    box = page.locator("#goal-page > div").first
+    title_mid = lambda loc: loc.bounding_box()["y"] + loc.bounding_box()["height"] / 2
+    title = page.locator("#goal-page h2")
+    # Edit, Archive and Delete share the title line, inside the box with the recommendations.
+    for action in ("edit", "archive", "delete"):
+        button = box.locator(f"[data-goal-action='{action}']")
+        assert abs(title_mid(button) - title_mid(title)) < 12, action
+    assert box.locator("#btn-recs-trigger-9001").count() == 1
+    # Add material is not in that box: it sits below it, on the row of the Detail and List toggle.
+    assert box.locator("[data-goal-action='add-material']").count() == 0
+    add = page.locator("#goal-page [data-goal-action='add-material']")
+    toggle = page.locator("[data-goalpage-action='view-detail']")
+    assert abs(title_mid(add) - title_mid(toggle)) < 12
+    assert add.bounding_box()["y"] > box.bounding_box()["y"] + box.bounding_box()["height"]
 
     page.click("#goal-page [data-goal-action='edit']")
     assert page.locator("#overlay-goal-modal").is_visible()
@@ -182,6 +192,21 @@ def test_reload_on_a_goal_page_stays_on_it_and_back_returns_to_the_list(goals_pa
     page.wait_for_selector("#goal-page", state="hidden")
     assert "#goal-" not in page.url
     assert page.locator("#goals-container").is_visible()
+
+
+def test_reload_reopens_the_goal_page_even_if_the_address_loses_its_hash(goals_page):
+    page = goals_page
+    page.click("[data-goal-card='9001'] [data-goal-action='open-goal']")
+    assert page.evaluate("localStorage.getItem('active_goal_page')") == "9001"
+    page.evaluate("history.replaceState(null, '', location.pathname)")
+    page.reload()
+    page.wait_for_selector("#goal-page [data-goal-action='edit']", timeout=10000)
+    page.click("[data-goalpage-action='back']")
+    page.wait_for_selector("#goal-page", state="hidden")
+    assert page.evaluate("localStorage.getItem('active_goal_page')") is None
+    page.reload()
+    page.wait_for_selector("[data-goal-card='9001']", state="attached")
+    assert page.locator("#goal-page").is_hidden()
 
 
 def test_goal_page_edit_sits_on_the_title_line_inside_one_box(goals_page):

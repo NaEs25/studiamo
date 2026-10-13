@@ -207,6 +207,7 @@ async function logoutFromPaywall() {
     }
     localStorage.removeItem('active_username');
     localStorage.removeItem('active_studiamo_tab');
+    localStorage.removeItem('active_goal_page');
     sessionStorage.removeItem('profile_password');
     document.cookie = 'username=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
     document.cookie = 'profile_password=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';

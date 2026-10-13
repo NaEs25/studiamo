@@ -53,7 +53,7 @@ function goalControlsHTML(g) {
 // toast it will get is never a surprise. The buttons stay visible and clickable.
 function planTagHTML() {
     return (typeof isFreePlan === 'function' && isFreePlan())
-        ? '<span class="ml-1 text-[9px] font-extrabold uppercase tracking-wider bg-amber-100 border border-amber-300 text-amber-800 rounded px-1 py-0.5">Plan</span>'
+        ? '<span class="plan-badge ml-1 select-none">Plan</span>'
         : '';
 }
 
@@ -280,8 +280,6 @@ async function loadGoals() {
                                 ${goalControlsHTML(g)}
                             </div>
 
-                            ${window._openGoalPageId === g.id ? '' : goalRecsSectionHTML(g)}
-
                             <div class="space-y-3 pt-1">
                                 <div class="flex justify-between items-center">
                                     <button type="button" data-goal-action="toggle-materials" data-goal-id="${g.id}" class="flex items-center space-x-2 text-xs font-bold text-stone-700 hover:text-amber-600 transition">
@@ -296,6 +294,8 @@ async function loadGoals() {
                                     ${linkedVideoCardsHTML}
                                 </div>
                             </div>
+
+                            ${window._openGoalPageId === g.id ? '' : goalRecsSectionHTML(g)}
 
                         </div>
                     `;
@@ -1353,6 +1353,8 @@ function initGoalReorderSheet() {
 // back gesture of an installed app returns to the list, and loadGoals() redraws it with the rest.
 
 const GOAL_PAGE_VIEW_KEY = 'goal-page-view';
+// The goal page that is open, kept so a reload reopens it even when the address loses its hash.
+const GOAL_PAGE_STORE_KEY = 'active_goal_page';
 const goalPageState = { reordering: false };
 
 function goalPageView() {
@@ -1449,22 +1451,24 @@ function renderGoalPage() {
         <div class="bg-white border border-stone-200 p-5 rounded-2xl space-y-4 shadow-sm">
             <div class="flex items-center justify-between gap-3">
                 <div class="flex items-center space-x-3 min-w-0">${goalRankBadgeHTML(rank)}<h2 class="text-2xl font-bold tracking-tight leading-tight">${escapeHtml(goal.title)}</h2></div>
-                <button type="button" data-goal-action="edit" data-goal-id="${goalId}" class="${actionBtn} shrink-0"><i data-lucide="edit-3" class="w-3.5 h-3.5 text-amber-600"></i>Edit</button>
+                <div class="flex items-center gap-2 shrink-0">
+                    <button type="button" data-goal-action="edit" data-goal-id="${goalId}" class="${actionBtn}" aria-label="Edit goal"><i data-lucide="edit-3" class="w-3.5 h-3.5 text-amber-600"></i><span class="hidden sm:inline">Edit</span></button>
+                    <button type="button" data-goal-action="archive" data-goal-id="${goalId}" class="${actionBtn}" aria-label="Archive goal"><i data-lucide="archive" class="w-3.5 h-3.5 text-amber-600"></i><span class="hidden sm:inline">Archive</span></button>
+                    <button type="button" data-goal-action="delete" data-goal-id="${goalId}" class="px-3 py-2 bg-white hover:bg-red-50 border border-red-200 rounded-xl text-xs font-bold text-red-700 flex items-center gap-1.5 shadow-sm transition" aria-label="Delete goal"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i><span class="hidden sm:inline">Delete</span></button>
+                </div>
             </div>
             ${goal.description ? `<p class="text-sm text-stone-500">${escapeHtml(goal.description)}</p>` : ''}
             ${goalRecsSectionHTML(goal)}
-            <div class="flex flex-wrap items-center gap-2">
-                <button type="button" data-goal-action="add-material" data-goal-id="${goalId}" class="btn-primary px-3 py-2 rounded-xl text-xs font-extrabold flex items-center gap-1.5"><i data-lucide="plus" class="w-3.5 h-3.5"></i>Add material</button>
-                <button type="button" data-goal-action="archive" data-goal-id="${goalId}" class="${actionBtn}"><i data-lucide="archive" class="w-3.5 h-3.5 text-amber-600"></i>Archive</button>
-                <button type="button" data-goal-action="delete" data-goal-id="${goalId}" class="px-3 py-2 bg-white hover:bg-red-50 border border-red-200 rounded-xl text-xs font-bold text-red-700 flex items-center gap-1.5 shadow-sm transition"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i>Delete</button>
-            </div>
         </div>
         <p class="text-xs text-stone-400">${materials.length} ${materials.length === 1 ? 'material' : 'materials'}</p>
-        <div class="flex items-center justify-between">
+        <div class="flex items-center justify-between gap-2">
             <div class="flex gap-1 p-1 bg-stone-100 border border-stone-200 rounded-xl">${seg('Detail', view === 'detail' && !editing, 'view-detail')}${seg('List', view === 'list' || editing, 'view-list')}</div>
-            ${materials.length > 1 ? (editing
-                ? '<button type="button" data-goalpage-action="toggle-reorder" class="btn-primary px-4 py-2 rounded-xl text-xs font-extrabold">Done</button>'
-                : '<button type="button" data-goalpage-action="toggle-reorder" class="px-3 py-2 bg-white border border-stone-200 rounded-xl text-xs font-bold text-stone-700 flex items-center gap-1.5"><i data-lucide="menu" class="w-3.5 h-3.5"></i>Reorder</button>') : ''}
+            <div class="flex items-center gap-2">
+                <button type="button" data-goal-action="add-material" data-goal-id="${goalId}" class="btn-primary px-3 py-2 rounded-xl text-xs font-extrabold flex items-center gap-1.5"><i data-lucide="plus" class="w-3.5 h-3.5"></i>Add material</button>
+                ${materials.length > 1 ? (editing
+                    ? '<button type="button" data-goalpage-action="toggle-reorder" class="btn-primary px-4 py-2 rounded-xl text-xs font-extrabold">Done</button>'
+                    : '<button type="button" data-goalpage-action="toggle-reorder" class="px-3 py-2 bg-white border border-stone-200 rounded-xl text-xs font-bold text-stone-700 flex items-center gap-1.5"><i data-lucide="menu" class="w-3.5 h-3.5"></i>Reorder</button>') : ''}
+            </div>
         </div>
         ${body}`;
     // The drawer is drawn fresh with the page, so fill it from what is already loaded.
@@ -1489,6 +1493,7 @@ function openGoalPage(goalId, push = true) {
     // Scroll to the top before the page fades in, so it does not appear to jump after it shows.
     window.scrollTo(0, 0);
     playPageAnimation(document.getElementById('goal-page'), 'goal-page-enter');
+    try { localStorage.setItem(GOAL_PAGE_STORE_KEY, String(goalId)); } catch (e) { /* storage blocked */ }
     if (push) history.pushState({ goalPage: goalId }, '', `#goal-${goalId}`);
 }
 
@@ -1496,6 +1501,7 @@ function openGoalPage(goalId, push = true) {
 function closeGoalPage() {
     window._openGoalPageId = null;
     goalPageState.reordering = false;
+    try { localStorage.removeItem(GOAL_PAGE_STORE_KEY); } catch (e) { /* storage blocked */ }
     const tab = document.getElementById('tab-goals');
     tab?.classList.remove('goal-page-open');
     // A page reached without a history entry of its own (a reload that landed on it directly)
@@ -1523,13 +1529,18 @@ function playPageAnimation(el, className) {
 // drawn from them. Gives up quietly if the goal no longer exists.
 function restoreGoalPageFromHash() {
     const match = /^#goal-(\d+)$/.exec(location.hash);
-    if (!match) return;
-    const goalId = Number(match[1]);
+    let stored = null;
+    try { stored = localStorage.getItem(GOAL_PAGE_STORE_KEY); } catch (e) { /* storage blocked */ }
+    const raw = match ? match[1] : stored;
+    if (!raw || !/^\d+$/.test(raw)) return;
+    const goalId = Number(raw);
     const deadline = Date.now() + 6000;
     const attempt = () => {
         if (window._goalsCache && window._goalsCache[goalId]) { openGoalPage(goalId, false); return; }
         if (window._goalsLoaded || Date.now() >= deadline) {
-            history.replaceState(null, '', location.pathname + location.search);
+            // The goal is gone (or never loaded): forget the page and drop a stale hash.
+            try { localStorage.removeItem(GOAL_PAGE_STORE_KEY); } catch (e) { /* storage blocked */ }
+            if (location.hash.startsWith('#goal-')) history.replaceState(null, '', location.pathname + location.search);
             return;
         }
         setTimeout(attempt, 150);

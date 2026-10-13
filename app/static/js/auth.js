@@ -78,6 +78,7 @@ async function switchUserProfile(username) {
         activeUsername = username;
         localStorage.setItem('active_username', username);
         localStorage.removeItem('active_studiamo_tab');
+    localStorage.removeItem('active_goal_page');
         if (pwd) {
             // Remembered per-username so switching back to a known profile within the
             // same tab session doesn't require retyping it. Not the same thing as the
@@ -168,6 +169,7 @@ async function logoutUser() {
     } catch(e) {}
     localStorage.removeItem('active_username');
     localStorage.removeItem('active_studiamo_tab');
+    localStorage.removeItem('active_goal_page');
     document.cookie = 'username=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
     document.cookie = 'profile_password=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
     window.location.href = '/login';
