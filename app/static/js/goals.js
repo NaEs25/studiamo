@@ -200,6 +200,7 @@ async function loadGoals() {
         window._goalsCache = {};
         goals.forEach(g => { window._goalsCache[g.id] = g; });
         window._goalsPageData = { goals, videos, quizzes };
+        window._goalsLoaded = true;
         syncGoalsViewButtons();
         window._archivedGoalsCache = {};
         archivedGoals.forEach(g => { window._archivedGoalsCache[g.id] = g; });
@@ -1445,14 +1446,18 @@ function renderGoalPage() {
         <button type="button" data-goalpage-action="back" class="flex items-center gap-1.5 text-sm font-bold text-amber-700 hover:text-amber-900 transition">
             <i data-lucide="arrow-left" class="w-4 h-4"></i><span>Goals</span>
         </button>
-        <div class="flex items-center space-x-3 min-w-0">${goalRankBadgeHTML(rank)}<h2 class="text-2xl font-bold tracking-tight leading-tight">${escapeHtml(goal.title)}</h2></div>
-        ${goal.description ? `<p class="text-sm text-stone-500">${escapeHtml(goal.description)}</p>` : ''}
-        ${goalRecsSectionHTML(goal)}
-        <div class="flex flex-wrap items-center gap-2">
-            <button type="button" data-goal-action="add-material" data-goal-id="${goalId}" class="btn-primary px-3 py-2 rounded-xl text-xs font-extrabold flex items-center gap-1.5"><i data-lucide="plus" class="w-3.5 h-3.5"></i>Add material</button>
-            <button type="button" data-goal-action="edit" data-goal-id="${goalId}" class="${actionBtn}"><i data-lucide="edit-3" class="w-3.5 h-3.5 text-amber-600"></i>Edit</button>
-            <button type="button" data-goal-action="archive" data-goal-id="${goalId}" class="${actionBtn}"><i data-lucide="archive" class="w-3.5 h-3.5 text-amber-600"></i>Archive</button>
-            <button type="button" data-goal-action="delete" data-goal-id="${goalId}" class="px-3 py-2 bg-white hover:bg-red-50 border border-red-200 rounded-xl text-xs font-bold text-red-700 flex items-center gap-1.5 shadow-sm transition"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i>Delete</button>
+        <div class="bg-white border border-stone-200 p-5 rounded-2xl space-y-4 shadow-sm">
+            <div class="flex items-center justify-between gap-3">
+                <div class="flex items-center space-x-3 min-w-0">${goalRankBadgeHTML(rank)}<h2 class="text-2xl font-bold tracking-tight leading-tight">${escapeHtml(goal.title)}</h2></div>
+                <button type="button" data-goal-action="edit" data-goal-id="${goalId}" class="${actionBtn} shrink-0"><i data-lucide="edit-3" class="w-3.5 h-3.5 text-amber-600"></i>Edit</button>
+            </div>
+            ${goal.description ? `<p class="text-sm text-stone-500">${escapeHtml(goal.description)}</p>` : ''}
+            ${goalRecsSectionHTML(goal)}
+            <div class="flex flex-wrap items-center gap-2">
+                <button type="button" data-goal-action="add-material" data-goal-id="${goalId}" class="btn-primary px-3 py-2 rounded-xl text-xs font-extrabold flex items-center gap-1.5"><i data-lucide="plus" class="w-3.5 h-3.5"></i>Add material</button>
+                <button type="button" data-goal-action="archive" data-goal-id="${goalId}" class="${actionBtn}"><i data-lucide="archive" class="w-3.5 h-3.5 text-amber-600"></i>Archive</button>
+                <button type="button" data-goal-action="delete" data-goal-id="${goalId}" class="px-3 py-2 bg-white hover:bg-red-50 border border-red-200 rounded-xl text-xs font-bold text-red-700 flex items-center gap-1.5 shadow-sm transition"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i>Delete</button>
+            </div>
         </div>
         <p class="text-xs text-stone-400">${materials.length} ${materials.length === 1 ? 'material' : 'materials'}</p>
         <div class="flex items-center justify-between">
@@ -1484,7 +1489,7 @@ function openGoalPage(goalId, push = true) {
     // Scroll to the top before the page fades in, so it does not appear to jump after it shows.
     window.scrollTo(0, 0);
     playPageAnimation(document.getElementById('goal-page'), 'goal-page-enter');
-    if (push) history.pushState({ goalPage: goalId }, '');
+    if (push) history.pushState({ goalPage: goalId }, '', `#goal-${goalId}`);
 }
 
 // Hides the page. Going back through history is the caller's job (see goBackFromGoalPage).
@@ -1493,6 +1498,9 @@ function closeGoalPage() {
     goalPageState.reordering = false;
     const tab = document.getElementById('tab-goals');
     tab?.classList.remove('goal-page-open');
+    // A page reached without a history entry of its own (a reload that landed on it directly)
+    // still has its hash in the address bar; drop it so a reload does not reopen the page.
+    if (location.hash.startsWith('#goal-')) history.replaceState(history.state, '', location.pathname + location.search);
     // Emptied so the page's copy of the goal's per-goal ids is gone before the card draws its own.
     const page = document.getElementById('goal-page');
     if (page) page.innerHTML = '';
@@ -1509,6 +1517,26 @@ function playPageAnimation(el, className) {
     el.classList.add(className);
     el.addEventListener('animationend', () => el.classList.remove(className), { once: true });
 }
+
+// Reopens the goal page named by the address (#goal-<id>) after a reload, so reloading keeps you
+// on the page instead of dropping you on the goals list. Waits for the goals to load: the page is
+// drawn from them. Gives up quietly if the goal no longer exists.
+function restoreGoalPageFromHash() {
+    const match = /^#goal-(\d+)$/.exec(location.hash);
+    if (!match) return;
+    const goalId = Number(match[1]);
+    const deadline = Date.now() + 6000;
+    const attempt = () => {
+        if (window._goalsCache && window._goalsCache[goalId]) { openGoalPage(goalId, false); return; }
+        if (window._goalsLoaded || Date.now() >= deadline) {
+            history.replaceState(null, '', location.pathname + location.search);
+            return;
+        }
+        setTimeout(attempt, 150);
+    };
+    attempt();
+}
+window.restoreGoalPageFromHash = restoreGoalPageFromHash;
 
 function goBackFromGoalPage() {
     if (history.state && history.state.goalPage) history.back();
@@ -1582,7 +1610,8 @@ function initGoalPage() {
     });
     // The browser's back gesture closes the page; going forward again reopens it.
     window.addEventListener('popstate', (e) => {
-        if (e.state && e.state.goalPage) openGoalPage(e.state.goalPage, false);
+        const goalsTabShown = !document.getElementById('tab-goals')?.classList.contains('hidden');
+        if (e.state && e.state.goalPage) { if (goalsTabShown) openGoalPage(e.state.goalPage, false); }
         else if (window._openGoalPageId) closeGoalPage();
     });
 }

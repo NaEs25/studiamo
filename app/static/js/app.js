@@ -2,6 +2,8 @@
 
 function switchTab(tabId) {
     localStorage.setItem('active_studiamo_tab', tabId);
+    // A goal page belongs to the goals tab: leaving the tab closes it (and its address hash).
+    if (tabId !== 'goals' && window._openGoalPageId && typeof closeGoalPage === 'function') closeGoalPage();
     document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
 
     const activePanel = document.getElementById(`tab-${tabId}`);
@@ -844,8 +846,11 @@ window.addEventListener('DOMContentLoaded', () => {
     if (typeof initEditVideoEvents === 'function') initEditVideoEvents();
     if (typeof initFocusModalEvents === 'function') initFocusModalEvents();
     
-    const savedTab = localStorage.getItem('active_studiamo_tab') || 'dashboard';
+    // A reload on a goal page (#goal-<id>) stays on that page.
+    const onGoalPage = /^#goal-\d+$/.test(window.location.hash);
+    const savedTab = onGoalPage ? 'goals' : (localStorage.getItem('active_studiamo_tab') || 'dashboard');
     switchTab(savedTab);
+    if (onGoalPage && typeof restoreGoalPageFromHash === 'function') restoreGoalPageFromHash();
     // Reminder emails link to /#notifications (app/email_utils.py send_notification_email).
     if (window.location.hash === '#notifications' && typeof goToNotificationSettings === 'function') {
         goToNotificationSettings();

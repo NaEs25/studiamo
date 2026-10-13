@@ -150,7 +150,7 @@ def test_goal_page_has_its_buttons_at_the_top_as_plain_buttons(goals_page):
     assert page.locator("#btn-recs-trigger-9001").count() == 1
     assert page.locator("#goal-page #btn-recs-trigger-9001").count() == 1
     for action in ("add-material", "edit", "archive", "delete"):
-        assert page.locator(f"#goal-page > div [data-goal-action='{action}']").first.is_visible()
+        assert page.locator(f"#goal-page [data-goal-action='{action}']").first.is_visible()
     assert page.locator("#goal-page [data-goal-action='menu']").count() == 0
     buttons_y = page.locator("#goal-page [data-goal-action='archive']").bounding_box()["y"]
     first_material_y = page.locator("#goal-page [id^='video-card-']").first.bounding_box()["y"]
@@ -169,3 +169,42 @@ def test_closing_the_goal_page_gives_the_card_its_recommendations_back(goals_pag
     page.wait_for_selector("#goal-page", state="hidden")
     page.wait_for_selector("[data-goal-card='9001'] #btn-recs-trigger-9001", state="attached")
     assert page.locator("#btn-recs-trigger-9001").count() == 1
+
+
+def test_reload_on_a_goal_page_stays_on_it_and_back_returns_to_the_list(goals_page):
+    page = goals_page
+    page.click("[data-goal-card='9001'] [data-goal-action='open-goal']")
+    assert page.url.endswith("#goal-9001")
+    page.reload()
+    page.wait_for_selector("#goal-page [data-goal-action='edit']", timeout=10000)
+    assert page.locator("#tab-goals").is_visible() and page.locator("#goals-container").is_hidden()
+    page.click("[data-goalpage-action='back']")
+    page.wait_for_selector("#goal-page", state="hidden")
+    assert "#goal-" not in page.url
+    assert page.locator("#goals-container").is_visible()
+
+
+def test_goal_page_edit_sits_on_the_title_line_inside_one_box(goals_page):
+    page = goals_page
+    page.click("[data-goal-card='9001'] [data-goal-action='open-goal']")
+    title = page.locator("#goal-page h2").bounding_box()
+    edit = page.locator("#goal-page [data-goal-action='edit']").bounding_box()
+    assert abs((title["y"] + title["height"] / 2) - (edit["y"] + edit["height"] / 2)) < 12
+    box = page.locator("#goal-page > div").first
+    assert box.locator("#btn-recs-trigger-9001").count() == 1 and box.locator("h2").count() == 1
+
+
+def test_goals_header_puts_new_goal_on_the_row_of_the_view_toggle(goals_page):
+    page = goals_page
+    toggle = page.locator("#btn-goals-view-expanded").bounding_box()
+    new_goal = page.locator("#btn-add-goal-modal").bounding_box()
+    assert abs((toggle["y"] + toggle["height"] / 2) - (new_goal["y"] + new_goal["height"] / 2)) < 12
+    heading = page.locator("#tab-goals h2").first.bounding_box()
+    assert new_goal["y"] > heading["y"] + heading["height"] - 2
+
+
+def test_new_goal_button_sits_at_the_far_end_of_the_header_row(goals_page):
+    page = goals_page
+    new_goal = page.locator("#btn-add-goal-modal").bounding_box()
+    section = page.locator("#tab-goals").bounding_box()
+    assert abs((new_goal["x"] + new_goal["width"]) - (section["x"] + section["width"])) < 4
