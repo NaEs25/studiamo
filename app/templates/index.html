@@ -447,33 +447,33 @@
                 </div>
                 <!-- One row under the title: search, view, reorder, and New Goal at the far end. -->
                 <div class="flex items-center gap-2">
-                    <div class="flex items-center bg-stone-100 border border-stone-200 rounded-xl p-1">
+                    <div class="flex items-center bg-stone-100 border border-stone-200 rounded-xl p-1 h-11">
                         <button type="button" id="btn-goals-search-toggle" aria-controls="goals-search-bar"
                             aria-expanded="false"
-                            class="p-1.5 hover:bg-stone-100 rounded-lg text-stone-600 hover:text-stone-900 transition"
+                            class="h-full px-2.5 flex items-center hover:bg-stone-100 rounded-lg text-stone-600 hover:text-stone-900 transition"
                             title="Search Goals &amp; Materials">
                             <i data-lucide="search" class="w-4 h-4"></i>
                         </button>
                     </div>
                     <!-- View: today's expanded cards, or one row per goal (goals.js setGoalsView) -->
-                    <div class="flex items-center bg-stone-100 border border-stone-200 rounded-xl p-1 space-x-1" role="group" aria-label="Goals view">
+                    <div class="flex items-center bg-stone-100 border border-stone-200 rounded-xl p-1 gap-1 h-11" role="group" aria-label="Goals view">
                         <button type="button" data-goal-action="set-view" data-view="expanded" id="btn-goals-view-expanded"
-                            class="segmented-tab is-active p-1.5 rounded-lg" title="Expanded view" aria-pressed="true">
+                            class="segmented-tab is-active h-full px-2.5 flex items-center rounded-lg" title="Expanded view" aria-pressed="true">
                             <i data-lucide="rows-3" class="w-4 h-4"></i>
                         </button>
                         <button type="button" data-goal-action="set-view" data-view="compact" id="btn-goals-view-compact"
-                            class="segmented-tab p-1.5 rounded-lg" title="Titles only" aria-pressed="false">
+                            class="segmented-tab h-full px-2.5 flex items-center rounded-lg" title="Titles only" aria-pressed="false">
                             <i data-lucide="list" class="w-4 h-4"></i>
                         </button>
                     </div>
                     <button type="button" data-goal-action="open-reorder" id="btn-goals-reorder"
-                        class="px-2.5 py-2 bg-stone-100 hover:bg-stone-200 border border-stone-200 rounded-xl text-xs font-bold text-stone-700 flex items-center space-x-1.5 transition"
+                        class="h-11 px-3 bg-stone-100 hover:bg-stone-200 border border-stone-200 rounded-xl text-xs font-bold text-stone-700 flex items-center space-x-1.5 transition"
                         title="Reorder goals">
                         <i data-lucide="menu" class="w-4 h-4"></i>
                         <span class="hidden sm:inline">Reorder</span>
                     </button>
                     <button id="btn-add-goal-modal"
-                        class="btn-primary ml-auto px-3 sm:px-4 py-2 font-extrabold rounded-xl text-xs sm:text-sm flex items-center space-x-1 transition shrink-0">
+                        class="btn-primary ml-auto h-11 px-3 sm:px-4 font-extrabold rounded-xl text-xs sm:text-sm flex items-center space-x-1 transition shrink-0">
                         <i data-lucide="plus" class="w-4 h-4 stroke-[3]"></i>
                         <span class="hidden sm:inline">New Goal</span>
                         <span class="sm:hidden font-bold">Goal</span>

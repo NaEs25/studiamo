@@ -208,3 +208,11 @@ def test_new_goal_button_sits_at_the_far_end_of_the_header_row(goals_page):
     new_goal = page.locator("#btn-add-goal-modal").bounding_box()
     section = page.locator("#tab-goals").bounding_box()
     assert abs((new_goal["x"] + new_goal["width"]) - (section["x"] + section["width"])) < 4
+
+
+def test_the_four_header_controls_have_the_same_height(goals_page):
+    page = goals_page
+    boxes = [page.locator(sel).bounding_box() for sel in (
+        "#btn-goals-search-toggle >> xpath=..", "[aria-label='Goals view']", "#btn-goals-reorder", "#btn-add-goal-modal")]
+    heights = [round(b["height"]) for b in boxes]
+    assert len(set(heights)) == 1, heights
