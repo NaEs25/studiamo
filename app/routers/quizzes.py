@@ -127,7 +127,7 @@ def get_quiz(id: int, username: str = Depends(require_account_access)):
     # in the Focus overlay. Quizzes created before that column existed have an empty pool and
     # fall through to questions_json, which is the stage-0 set they have always been served.
     concept_pool, focus_topics = database.get_quiz_pool_and_focus(id, username=username)
-    questions_pool = select_stage_questions(concept_pool, srs_stage, focus_topics)
+    questions_pool = select_stage_questions(concept_pool, srs_stage, focus_topics, target_count, fill_seed=id)
 
     if not questions_pool and isinstance(quiz_data, dict):
         questions_pool = quiz_data.get("questions") or quiz_data.get("quiz") or []

@@ -1131,7 +1131,7 @@ def _load_focus_context(video_id: int, username: str):
     return row, pool, focus, target_count
 
 
-def _build_focus_stages(pool: list, focus: dict) -> list:
+def _build_focus_stages(pool: list, focus: dict, target_count: int = 0, quiz_id=None) -> list:
     """The per-stage topic listing the focus overlay renders, questions included.
 
     Selection state falls back to the AI's own picks when the user has never saved one, so the
@@ -1158,6 +1158,10 @@ def _build_focus_stages(pool: list, focus: dict) -> list:
                 "answer": item.get("answer") or "",
                 "origin": item.get("origin") or "ai",
                 "edited": bool(item.get("edited_at")),
+                # Multiple-choice cards (made by the AI for the early stages) carry their options so
+                # the card editor can edit them; the learner's own cards never have any.
+                "options": item.get("options") if isinstance(item.get("options"), list) else None,
+                "correct_index": item.get("correct_index") if isinstance(item.get("options"), list) else None,
             })
 
         for entry in topics.values():
@@ -1166,7 +1170,15 @@ def _build_focus_stages(pool: list, focus: dict) -> list:
             entry["selected"] = (entry["topic"] in saved) if saved else entry["recommended"]
 
         ordered = sorted(topics.values(), key=lambda t: (not t["recommended"], -t["count"], t["topic"]))
+        # What a quiz at this stage serves: the cards in rotation, in the order they are served,
+        # and how many of them were borrowed from other stages to reach the star rating's count.
+        # The card editor greys out every card not in this list.
+        served = select_stage_questions(pool, stage_index, focus, target_count or None, fill_seed=quiz_id)
+        own_ids = {card_id_of(q) for q in items}
+        served_ids = [card_id_of(q) for q in served]
         stages.append({
+            "served": served_ids,
+            "filled": sum(1 for cid in served_ids if cid not in own_ids),
             "stage": stage_index,
             "label": _STAGE_LABELS[stage_index],
             "topics": ordered,
@@ -1188,7 +1200,7 @@ def get_concept_pool(id: int, username: str = Depends(require_account_access)):
         "title": row.get("title"),
         "current_stage": row.get("srs_stage") or 0,
         "target_count": target_count,
-        "stages": _build_focus_stages(pool, focus),
+        "stages": _build_focus_stages(pool, focus, target_count, row["quiz_id"]),
     }
 
 
@@ -1198,7 +1210,7 @@ def _focus_edit_response(id: int, row: dict, pool: list, focus: dict, target_cou
         "quiz_id": row["quiz_id"],
         "current_stage": row.get("srs_stage") or 0,
         "target_count": target_count,
-        "stages": _build_focus_stages(pool, focus),
+        "stages": _build_focus_stages(pool, focus, target_count, row["quiz_id"]),
     }
 
 
@@ -1231,12 +1243,14 @@ def _run_pool_edit(row: dict, username: str, edit):
 def add_focus_card(
     id: int,
     stage: int = Form(...),
-    topic: str = Form(...),
+    topic: str = Form(""),
     question: str = Form(...),
     answer: str = Form(...),
     username: str = Depends(require_account_access)
 ):
-    """Adds a user-written question to a material's pool. Costs no AI call."""
+    """Adds a user-written question to a material's pool. Costs no AI call. A card with no topic
+    goes under "My cards"."""
+    topic = (topic or "").strip() or "My cards"
     row, _, _, target_count = _load_focus_context(id, username)
 
     def edit(pool, focus, srs_stage):
@@ -1248,7 +1262,7 @@ def add_focus_card(
         # sit in the pool and never be served. Adding to it is an explicit act of wanting it.
         if chosen and card["topic"] not in chosen:
             new_focus[key] = list(chosen) + [card["topic"]]
-        active = select_stage_questions(new_pool, srs_stage, new_focus, target_count)
+        active = select_stage_questions(new_pool, srs_stage, new_focus, target_count, fill_seed=row["quiz_id"])
         return new_pool, new_focus, active, (new_pool, new_focus), True
 
     new_pool, new_focus = _run_pool_edit(row, username, edit)
@@ -1263,7 +1277,7 @@ def remove_focus_card(id: int, card_id: str, username: str = Depends(require_acc
     def edit(pool, focus, srs_stage):
         new_pool, _removed = remove_card_from_pool(pool, card_id)
         new_focus = _prune_focus(new_pool, focus)
-        active = select_stage_questions(new_pool, srs_stage, new_focus, target_count)
+        active = select_stage_questions(new_pool, srs_stage, new_focus, target_count, fill_seed=row["quiz_id"])
         return new_pool, new_focus, active, (new_pool, new_focus), True
 
     new_pool, new_focus = _run_pool_edit(row, username, edit)
@@ -1277,14 +1291,23 @@ def edit_focus_card(
     topic: Optional[str] = Form(None),
     question: Optional[str] = Form(None),
     answer: Optional[str] = Form(None),
+    options: Optional[str] = Form(None),
+    correct_index: Optional[int] = Form(None),
     username: str = Depends(require_account_access)
 ):
-    """Edits a question's text, answer or topic. A field left out is unchanged."""
+    """Edits a question's text, answer or topic, and the four options of a multiple-choice card
+    (`options` is a JSON list, with `correct_index`). A field left out is unchanged."""
+    parsed_options = None
+    if options is not None:
+        try:
+            parsed_options = json.loads(options)
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=400, detail="Could not read the options.")
     row, _, _, target_count = _load_focus_context(id, username)
 
     def edit(pool, focus, srs_stage):
         before = next((q for q in pool if isinstance(q, dict) and card_id_of(q) == card_id), None)
-        new_pool, card = edit_card_in_pool(pool, card_id, topic=topic, question=question, answer=answer)
+        new_pool, card = edit_card_in_pool(pool, card_id, topic=topic, question=question, answer=answer, options=parsed_options, correct_index=correct_index)
 
         new_focus = dict(focus or {})
         moved = before is not None and topic_of(card) != topic_of(before)
@@ -1297,7 +1320,7 @@ def edit_focus_card(
                 new_focus[key] = list(chosen) + [topic_of(card)]
             new_focus = _prune_focus(new_pool, new_focus)
 
-        active = select_stage_questions(new_pool, srs_stage, new_focus, target_count)
+        active = select_stage_questions(new_pool, srs_stage, new_focus, target_count, fill_seed=row["quiz_id"])
         # Only a topic move can change which questions are served or in what order. A text
         # edit leaves every position alone, so a half-finished session keeps its place.
         return new_pool, new_focus, active, (new_pool, new_focus), moved
@@ -1325,7 +1348,7 @@ def rename_focus_topic(
                 new_focus[key] = [new_name if t == old_topic.strip() else t for t in chosen]
             else:
                 new_focus[key] = chosen
-        active = select_stage_questions(new_pool, srs_stage, new_focus, target_count)
+        active = select_stage_questions(new_pool, srs_stage, new_focus, target_count, fill_seed=row["quiz_id"])
         # Membership does not change, so neither do the served positions.
         return new_pool, new_focus, active, (new_pool, new_focus), False
 
@@ -1364,7 +1387,7 @@ def save_concept_focus(
             cleaned[stage_key] = kept
 
     current_stage = row.get("srs_stage") or 0
-    active = select_stage_questions(pool, current_stage, cleaned, target_count)
+    active = select_stage_questions(pool, current_stage, cleaned, target_count, fill_seed=row["quiz_id"])
     database.save_quiz_focus(row["quiz_id"], cleaned, active, username=username)
 
     return {

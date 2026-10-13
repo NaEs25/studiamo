@@ -2,6 +2,7 @@ import os
 import hmac
 import logging
 import hashlib
+import random
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -526,7 +527,33 @@ def build_concept_pool(analysis: dict) -> list:
     return pool
 
 
-def select_stage_questions(concept_pool, srs_stage, focus_topics=None, limit=None) -> list:
+def _rotation_key(item: dict) -> tuple:
+    """Sort key for the order cards are served in: a card the learner wrote comes first, then
+    the AI's recommended ones, then the rest. Sorting is stable, so the pool's own order survives
+    within each group."""
+    return (item.get("origin") != "human", not item.get("ai_recommended"))
+
+
+def has_saved_selection(focus_topics, stage: int) -> bool:
+    key = STAGE_KEYS[stage] if 0 <= stage < len(STAGE_KEYS) else None
+    return bool(isinstance(focus_topics, dict) and key and focus_topics.get(key))
+
+
+def fill_from_other_stages(concept_pool, stage: int, selected: list, target: int, seed) -> list:
+    """Tops a stage up to `target` cards with cards from the material's other stages, chosen at
+    random. The choice is seeded (by quiz and stage), so every request for the same pool picks
+    the same cards: the served list is addressed by position (see select_stage_questions), and a
+    different pick on each request would grade an answer against the wrong question."""
+    if not target or len(selected) >= target:
+        return selected
+    taken = {card_id_of(q) for q in selected}
+    others = [q for q in concept_pool if isinstance(q, dict) and _stage_of(q) != stage and card_id_of(q) not in taken]
+    rng = random.Random(f"{seed}:{stage}")
+    rng.shuffle(others)
+    return selected + others[: target - len(selected)]
+
+
+def select_stage_questions(concept_pool, srs_stage, focus_topics=None, limit=None, fill_seed=None) -> list:
     """Picks the active questions for one SRS stage out of a concept pool.
 
     Applies the user's saved topic selection for that stage when there is one, then takes the
@@ -562,6 +589,7 @@ def select_stage_questions(concept_pool, srs_stage, focus_topics=None, limit=Non
             # A saved selection is an explicit instruction, so it is honoured exactly, even
             # when it yields fewer questions than the star rating asks for. The overlay warns
             # about that before saving; silently topping it back up would undo the choice.
+            filtered = sorted(filtered, key=_rotation_key)
             return filtered[:limit] if limit else filtered
 
     # No saved selection means "use what the AI recommended", which is what the focus overlay
@@ -570,8 +598,14 @@ def select_stage_questions(concept_pool, srs_stage, focus_topics=None, limit=Non
     # configured length when the model marked fewer than that (a stage with 4 recommended
     # questions and a 5-question setting yields those 4 plus the next best one). Sorting is
     # stable, so the model's own ordering survives within each group.
-    ordered = sorted(items, key=lambda q: not q.get("ai_recommended"))
-    return ordered[:limit] if limit else ordered
+    ordered = sorted(items, key=_rotation_key)
+    picked = ordered[:limit] if limit else ordered
+    # A stage with fewer cards than the star rating asks for is topped up from the other stages
+    # (see fill_from_other_stages). Only without a saved selection, and only for a stage that has
+    # cards of its own: an empty stage already falls back to the nearest lower one above.
+    if limit and fill_seed is not None and items and len(picked) < limit:
+        picked = fill_from_other_stages(concept_pool, stage, picked, limit, fill_seed)
+    return picked
 
 
 MAX_POOL_CARDS = 300
@@ -707,7 +741,31 @@ def _existing_topic_name(pool: list, topic: str) -> str:
     return topic
 
 
-def edit_card_in_pool(pool: list, card_id: str, topic=None, question=None, answer=None) -> tuple:
+MAX_OPTION_LEN = 300
+
+
+def _clean_options(options, correct_index):
+    """(options, correct_index) for a multiple-choice card, or a CardEditError. Exactly four
+    non-empty, distinct options and an index inside them."""
+    if not isinstance(options, (list, tuple)) or len(options) != 4:
+        raise CardEditError("A multiple-choice card needs exactly four options.")
+    cleaned = [(o or "").strip() if isinstance(o, str) else "" for o in options]
+    if any(not o for o in cleaned):
+        raise CardEditError("Fill in all four options.")
+    if any(len(o) > MAX_OPTION_LEN for o in cleaned):
+        raise CardEditError(f"Options are limited to {MAX_OPTION_LEN} characters.")
+    if len({o.lower() for o in cleaned}) != 4:
+        raise CardEditError("The four options must be different.")
+    try:
+        correct_index = int(correct_index)
+    except (TypeError, ValueError):
+        raise CardEditError("Pick the correct option.")
+    if not 0 <= correct_index < 4:
+        raise CardEditError("Pick the correct option.")
+    return cleaned, correct_index
+
+
+def edit_card_in_pool(pool: list, card_id: str, topic=None, question=None, answer=None, options=None, correct_index=None) -> tuple:
     """Returns (new_pool, edited_card). A field left as None is unchanged.
 
     The card keeps its identity: an AI card's id is derived from its stage, topic and question,
@@ -741,6 +799,14 @@ def edit_card_in_pool(pool: list, card_id: str, topic=None, question=None, answe
         if len(answer) > MAX_ANSWER_LEN:
             raise CardEditError(f"Answers are limited to {MAX_ANSWER_LEN} characters.")
         card["answer"] = answer
+    if options is not None:
+        # Only a card that already is multiple choice (stages 0 and 1, made by the AI) can have
+        # options edited: the learner's own cards are plain front and back.
+        if not original.get("options"):
+            raise CardEditError("Only multiple-choice cards have options.")
+        card["options"], card["correct_index"] = _clean_options(options, correct_index)
+        # The answer shown after a miss is the correct option, so it follows the edit.
+        card["answer"] = card["options"][card["correct_index"]]
     if topic is not None:
         others = pool[:index] + pool[index + 1:]
         card["topic"] = _existing_topic_name(others, _clean_topic(topic))
@@ -751,7 +817,7 @@ def edit_card_in_pool(pool: list, card_id: str, topic=None, question=None, answe
                 and (item.get("question") or "").strip().lower() == (card.get("question") or "").strip().lower()):
             raise CardEditError("That question already exists in this topic.", 409)
 
-    changed = any(card.get(k) != original.get(k) for k in ("topic", "question", "answer"))
+    changed = any(card.get(k) != original.get(k) for k in ("topic", "question", "answer", "options", "correct_index"))
     if not changed:
         return pool, original
     card["edited_at"] = datetime.now(timezone.utc).isoformat()

@@ -1451,6 +1451,9 @@ function toggleVideoMenu(event, id, anchorEl = null) {
 
     const html = `<div class="py-1">
         ${isImported && hasConceptPool ? `
+        <button data-video-menu-action="cards" class="flex items-center space-x-2.5 w-full text-left px-4 py-2.5 text-xs text-stone-700 hover:bg-stone-50 hover:text-stone-900 transition">
+            <i data-lucide="layers" class="w-4 h-4 text-amber-600"></i><span>Edit cards</span>
+        </button>
         <button data-video-menu-action="focus" class="flex items-center space-x-2.5 w-full text-left px-4 py-2.5 text-xs text-stone-700 hover:bg-stone-50 hover:text-stone-900 transition">
             <i data-lucide="target" class="w-4 h-4 text-amber-600"></i><span>Adjust Learning Focus</span>
         </button>
@@ -1491,6 +1494,7 @@ function toggleVideoMenu(event, id, anchorEl = null) {
                 if (!item) return;
                 closeVideoMenu();
                 switch (item.dataset.videoMenuAction) {
+                    case 'cards': openCardsSheet(id); break;
                     case 'focus': openFocusModal(id); break;
                     case 'factcheck': showFactCheck(id); break;
                     case 'stats': openVideoStatsModal(id); break;

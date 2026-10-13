@@ -2061,6 +2061,33 @@
         </div>
     </div>
 
+    <!-- Card editor (cards.js openCardsSheet), opened from a material's 3-dot menu: per stage, which
+         cards a quiz serves and which are paused, with add, edit and remove. Full screen on phones. -->
+    <div id="overlay-cards" role="dialog" aria-modal="true" aria-labelledby="cards-title"
+        class="app-overlay hidden fixed inset-0 bg-stone-950/70 backdrop-blur-md z-50 flex items-stretch sm:items-center justify-center sm:p-4">
+        <div class="bg-white border border-[#e7dfd3] sm:rounded-3xl w-full sm:max-w-lg shadow-2xl flex flex-col sm:max-h-[88vh]">
+            <div class="flex items-start justify-between p-5 pb-3 border-b border-[#e7dfd3] shrink-0">
+                <div class="min-w-0 pr-3">
+                    <h3 id="cards-title" class="text-base font-extrabold text-stone-900 flex items-center space-x-2">
+                        <i data-lucide="layers" class="w-4 h-4 text-amber-600 shrink-0"></i><span>Cards</span>
+                    </h3>
+                    <p id="cards-subtitle" class="text-xs text-stone-500 mt-0.5 flex items-center gap-1.5 flex-wrap"></p>
+                </div>
+                <button type="button" id="btn-cards-close" aria-label="Close"
+                    class="p-2 rounded-lg text-stone-500 hover:text-stone-900 hover:bg-stone-100 transition shrink-0">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+            <div class="px-5 pt-3 shrink-0">
+                <div class="flex gap-1 p-1 bg-stone-100 border border-stone-200 rounded-xl w-max">
+                    <span class="px-4 py-1.5 rounded-lg text-xs font-bold bg-amber-100 border border-amber-300 text-amber-900">Cards</span>
+                    <button type="button" id="btn-cards-focus" class="px-4 py-1.5 rounded-lg text-xs font-bold text-stone-600 hover:text-stone-900">Focus topics</button>
+                </div>
+            </div>
+            <div id="cards-list" class="px-5 py-3 space-y-3 overflow-y-auto grow"></div>
+        </div>
+    </div>
+
     <!-- Learning-focus overlay, opened from a video card's 3-dot menu (openFocusModal in videos.js).
          Content is rendered client-side from GET /api/videos/{id}/concept-pool. -->
     <div id="overlay-focus" role="dialog" aria-modal="true" aria-labelledby="focus-modal-title"
@@ -3175,6 +3202,7 @@
     <script src="/static/js/quiz.js"></script>
     <script src="/static/js/goals.js"></script>
     <script src="/static/js/videos.js"></script>
+    <script src="/static/js/cards.js"></script>
     <script src="/static/js/settings.js"></script>
     <script src="/static/js/billing.js"></script>
     <script src="/static/js/app.js"></script>
