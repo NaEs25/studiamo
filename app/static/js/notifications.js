@@ -46,27 +46,29 @@ function showToast(text, type = 'saved', duration = null, action = null) {
     }
 
     let iconHtml = '';
-    let pillClasses = 'px-4 py-2 rounded-2xl text-xs font-bold text-left shadow-2xl border backdrop-blur-md flex items-start space-x-2 ';
+    let pillClasses = 'px-4 py-2 rounded-2xl text-xs font-bold text-left shadow-2xl border flex items-start space-x-2 ';
     let defaultDuration = 2500;
 
     if (type === 'saving' || type === 'loading') {
-        pillClasses += 'bg-amber-950/95 text-amber-200 border-amber-600/60 ring-2 ring-amber-500/30';
+        pillClasses += 'bg-amber-950 text-amber-200 border-amber-600/60 ring-2 ring-amber-500/30';
         iconHtml = '<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin text-amber-400"></i>';
         defaultDuration = type === 'loading' ? 0 : 3000;
     } else if (type === 'failed' || type === 'error') {
-        pillClasses += 'bg-red-950/95 text-red-200 border-red-600/60 ring-2 ring-red-500/30';
+        pillClasses += 'bg-red-950 text-red-200 border-red-600/60 ring-2 ring-red-500/30';
         iconHtml = '<i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-red-400"></i>';
         defaultDuration = 4000;
     } else if (type === 'info') {
-        pillClasses += 'bg-stone-900/95 text-amber-200 border-stone-700 ring-2 ring-amber-500/30';
+        pillClasses += 'bg-stone-900 text-amber-200 border-stone-700 ring-2 ring-amber-500/30';
         iconHtml = '<i data-lucide="info" class="w-3.5 h-3.5 text-amber-400"></i>';
         defaultDuration = 2500;
     } else { // 'saved', 'success'
-        pillClasses += 'bg-emerald-950/95 text-emerald-200 border-emerald-600/60 ring-2 ring-emerald-500/30';
+        pillClasses += 'bg-emerald-950 text-emerald-200 border-emerald-600/60 ring-2 ring-emerald-500/30';
         iconHtml = '<i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-emerald-400"></i>';
         defaultDuration = 2000;
     }
 
+    // A toast with a button centers its text against it instead of top-aligning.
+    if (action) pillClasses = pillClasses.replace('items-start', 'items-center');
     if (pill) {
         pill.className = pillClasses;
         // A swipe-dismissed toast leaves its transform and fade behind, so a new one starts clean.

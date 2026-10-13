@@ -253,7 +253,7 @@
         <section id="tab-import" class="tab-content hidden space-y-6 pb-44">
             <div>
                 <h2 class="text-2xl font-bold tracking-tight">Import Material</h2>
-                <p class="text-sm text-stone-400">Save sources to a goal, or turn them into active recall quizzes.</p>
+                <p class="hidden sm:block text-sm text-stone-400">Save sources to a goal, or turn them into active recall quizzes.</p>
             </div>
 
             <!-- Form Type Selector -->
@@ -1545,9 +1545,9 @@
 
     <!-- Global App Toast / Feedback Notification Indicator -->
     <div id="app-toast-indicator" role="status" aria-live="polite"
-        class="fixed bottom-20 left-1/2 -translate-x-1/2 z-[100] w-max max-w-[min(28rem,calc(100vw-2rem))] pointer-events-none transition-all duration-300 opacity-0 transform translate-y-2">
+        class="fixed bottom-24 left-1/2 -translate-x-1/2 z-[100] w-max max-w-[min(28rem,calc(100vw-2rem))] pointer-events-none transition-all duration-300 opacity-0 transform translate-y-2">
         <div id="app-toast-pill"
-            class="px-4 py-2 rounded-2xl text-xs font-bold text-left shadow-2xl border backdrop-blur-md flex items-start space-x-2 bg-stone-900/95 text-stone-100 border-stone-700 ring-2 ring-stone-500/20">
+            class="px-4 py-2 rounded-2xl text-xs font-bold text-left shadow-2xl border flex items-start space-x-2 bg-stone-900 text-stone-100 border-stone-700 ring-2 ring-stone-500/20">
             <span id="app-toast-icon" class="flex items-center shrink-0 h-4"></span>
             <span id="app-toast-text">Notification</span>
             <!-- Optional action (showToast's 4th argument), e.g. "See plans". Hidden for every

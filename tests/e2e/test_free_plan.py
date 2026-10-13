@@ -15,7 +15,7 @@ FREE_STATUS = {
                "needs_reminder": None},
     "renews_at": None, "ends_at": None, "has_portal": False, "beta_discount_code": "",
 }
-PLAN_REQUIRED = {"detail": {"code": "ai_requires_plan", "message": "AI features need a plan. Pick a plan to use this feature."}}
+PLAN_REQUIRED = {"detail": {"code": "ai_requires_plan", "message": "AI features need a plan."}}
 
 
 def _json(route, body, status=200):

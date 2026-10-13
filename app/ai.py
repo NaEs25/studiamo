@@ -37,7 +37,7 @@ MAX_TRANSCRIPT_WORDS = 15000
 # / set_app_setting) rather than hardcoded.
 
 PLAN_REQUIRED_CODE = "ai_requires_plan"
-PLAN_REQUIRED_MESSAGE = "AI features need a plan. Pick a plan to use this feature."
+PLAN_REQUIRED_MESSAGE = "AI features need a plan."
 
 
 class UsageLimitExceeded(Exception):
