@@ -1,5 +1,104 @@
 // --- Studiamo Settings & Statistics Module ---
 
+// --- Stats tab: last 7 days chart and streak calendar ---
+
+let statsCalendarMonth = null;
+let statsCalendarBound = false;
+
+function shiftMonth(ym, delta) {
+    const [y, m] = ym.split('-').map(Number);
+    const d = new Date(y, m - 1 + delta, 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function renderStatsWeek(week) {
+    const chart = document.getElementById('stats-week-chart');
+    if (!chart) return;
+    const maxQuizzes = Math.max(1, ...week.map(d => d.quizzes));
+    chart.replaceChildren(...week.map(d => {
+        const col = document.createElement('div');
+        col.className = 'flex flex-col items-center space-y-1 min-w-0';
+        const count = document.createElement('span');
+        count.className = 'text-[11px] font-bold text-stone-700';
+        count.textContent = d.quizzes;
+        const track = document.createElement('div');
+        track.className = 'stats-week-track w-full';
+        const bar = document.createElement('div');
+        bar.className = 'stats-week-bar' + (d.quizzes ? '' : ' is-empty');
+        bar.style.height = d.quizzes ? `${Math.max(8, (d.quizzes / maxQuizzes) * 100)}%` : '2px';
+        track.appendChild(bar);
+        const day = document.createElement('span');
+        day.className = 'text-[10px] uppercase font-bold text-stone-500';
+        const [y, m, dd] = d.date.split('-').map(Number);
+        day.textContent = new Date(y, m - 1, dd).toLocaleDateString(undefined, { weekday: 'short' });
+        const xp = document.createElement('span');
+        xp.className = 'text-[10px] text-stone-500';
+        xp.textContent = `${d.xp} XP`;
+        col.append(count, track, day, xp);
+        return col;
+    }));
+}
+
+function renderStatsCalendar(data) {
+    const grid = document.getElementById('stats-cal-grid');
+    const head = document.getElementById('stats-cal-head');
+    const label = document.getElementById('stats-cal-label');
+    if (!grid || !head || !label) return;
+    statsCalendarMonth = data.month;
+    const [y, m] = data.month.split('-').map(Number);
+    label.textContent = new Date(y, m - 1, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+
+    // Monday-first weekday headers (2024-01-01 was a Monday).
+    head.replaceChildren(...[0, 1, 2, 3, 4, 5, 6].map(i => {
+        const el = document.createElement('span');
+        el.textContent = new Date(2024, 0, 1 + i).toLocaleDateString(undefined, { weekday: 'narrow' });
+        return el;
+    }));
+
+    const active = new Set(data.month_days.map(d => d.date));
+    const daysInMonth = new Date(y, m, 0).getDate();
+    const lead = (new Date(y, m - 1, 1).getDay() + 6) % 7;
+    const key = day => `${data.month}-${String(day).padStart(2, '0')}`;
+    const cells = [];
+    for (let i = 0; i < lead; i++) cells.push(document.createElement('div'));
+    for (let day = 1; day <= daysInMonth; day++) {
+        const col = (lead + day - 1) % 7;
+        const cell = document.createElement('div');
+        cell.className = 'streak-cal-cell';
+        cell.textContent = day;
+        if (active.has(key(day))) {
+            cell.classList.add('is-active');
+            if (col > 0 && active.has(key(day - 1))) cell.classList.add('join-prev');
+            if (col < 6 && active.has(key(day + 1))) cell.classList.add('join-next');
+        }
+        if (key(day) === data.today) cell.classList.add('is-today');
+        cells.push(cell);
+    }
+    grid.replaceChildren(...cells);
+
+    const prev = document.getElementById('stats-cal-prev');
+    const next = document.getElementById('stats-cal-next');
+    if (prev) prev.disabled = !data.first_month || data.month <= data.first_month;
+    if (next) next.disabled = data.month >= data.today.slice(0, 7);
+}
+
+async function loadStatsActivity(month) {
+    try {
+        const url = month ? `/api/stats/activity?month=${encodeURIComponent(month)}` : '/api/stats/activity';
+        const data = await fetchAPI(url);
+        renderStatsWeek(data.week);
+        renderStatsCalendar(data);
+        if (!statsCalendarBound) {
+            statsCalendarBound = true;
+            document.getElementById('stats-cal-prev')?.addEventListener('click', () => loadStatsActivity(shiftMonth(statsCalendarMonth, -1)));
+            document.getElementById('stats-cal-next')?.addEventListener('click', () => loadStatsActivity(shiftMonth(statsCalendarMonth, 1)));
+        }
+        if (typeof renderIcons === 'function') renderIcons();
+    } catch (e) {
+        console.error("Stats activity load failed:", e);
+    }
+}
+
 async function loadStats() {
     try {
         try {
@@ -114,6 +213,8 @@ async function loadStats() {
             });
         }
         
+        loadStatsActivity();
+
         try {
             const lb = await fetchAPI('/api/leaderboard');
             const lbContainer = document.getElementById('leaderboard-container');

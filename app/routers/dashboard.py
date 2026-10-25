@@ -1,11 +1,13 @@
 import logging
+from datetime import timedelta
 from fastapi import APIRouter, Depends
-from app import chompy, database, gamification, local_days, starter
+from app import chompy, database, gamification, local_days, starter, stats_activity
 from app.dependencies import (
     require_account_access,
     get_srs_intervals,
     get_srs_caps_and_repetition,
     compute_max_stages,
+    get_user_timezone,
 )
 from app.ai import get_usage_status
 
@@ -371,3 +373,51 @@ def get_stats_history(username: str = Depends(require_account_access), include_a
     finally:
         conn.close()
 
+
+
+@router.get("/stats/activity")
+def get_stats_activity(month: str = "", username: str = Depends(require_account_access)):
+    """Returns the last seven local days of quizzes and XP, plus the active days of one month
+    (`month` is 'YYYY-MM', default the current one) for the streak calendar. Days are the
+    user's local calendar days, the same rule the streak uses."""
+    conn = database.get_db_connection(username)
+    user_uuid = conn.user_uuid
+    try:
+        cursor = conn.cursor()
+        tz = get_user_timezone(cursor, user_uuid)
+        today = local_days.local_today(tz)
+        first = stats_activity.parse_month(month, today)
+        month_start, month_end = stats_activity.month_bounds(first)
+        week_start = today - timedelta(days=stats_activity.WEEK_DAYS - 1)
+        window_start = local_days.local_midnight_utc(min(month_start, week_start), tz)
+        window_end = local_days.local_midnight_utc(max(month_end, today + timedelta(days=1)), tz)
+
+        cursor.execute(
+            """SELECT quiz_id, created_at FROM quiz_attempts
+               WHERE user_uuid = %s AND created_at >= %s AND created_at < %s;""",
+            (user_uuid, window_start, window_end),
+        )
+        attempts = [(r["quiz_id"], r["created_at"]) for r in cursor.fetchall()]
+        cursor.execute(
+            """SELECT xp, created_at FROM xp_events
+               WHERE user_uuid = %s AND created_at >= %s AND created_at < %s;""",
+            (user_uuid, window_start, window_end),
+        )
+        xp_rows = [(r["xp"], r["created_at"]) for r in cursor.fetchall()]
+        cursor.execute(
+            "SELECT MIN(created_at) AS first_at FROM quiz_attempts WHERE user_uuid = %s;",
+            (user_uuid,),
+        )
+        first_row = cursor.fetchone() or {}
+        first_day = local_days.local_date(first_row.get("first_at"), tz)
+
+        days = stats_activity.bucket_by_local_day(attempts, xp_rows, tz)
+        return {
+            "today": today.isoformat(),
+            "week": stats_activity.last_days(days, today),
+            "month": first.strftime("%Y-%m"),
+            "month_days": stats_activity.month_days(days, first),
+            "first_month": first_day.strftime("%Y-%m") if first_day else None,
+        }
+    finally:
+        conn.close()
