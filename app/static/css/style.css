@@ -18,6 +18,8 @@
     --color-primary-hover:  #9f4c07;
     --color-primary-bg:     #fef3c7;
     --color-primary-border: #fde68a;
+    --color-ui-yellow:      #fcd34d;
+    --color-logo-yellow:    #f8be12;
     --font-sans:            'Outfit', system-ui, sans-serif;
 
     /* RGB-triplet mirrors of the tokens above, for Tailwind's
@@ -35,6 +37,8 @@
     --color-text-muted-rgb:     107 101 95;
     --color-primary-rgb:        189 91 8;
     --color-primary-hover-rgb:  159 76 7;
+    --color-ui-yellow-rgb:      252 211 77;
+    --color-logo-yellow-rgb:    248 190 18;
 
     /* iOS home-screen PWA: apple-mobile-web-app-status-bar-style=black-translucent
        (index.html) draws the status bar/home-indicator area over the page, so anything
@@ -1448,7 +1452,7 @@ button:active:not(:disabled) {
 /* every button using .btn-primary updates. Padding, radius, font-weight, */
 /* and spacing stay as per-instance Tailwind utility classes. */
 .btn-primary {
-    background-color: #fcd34d; /* amber-300 */
+    background-color: var(--color-ui-yellow);
     color: #78350f; /* amber-900 */
     border: 2px solid #fbbf24; /* amber-400, just a step darker than the fill */
     box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
@@ -1456,6 +1460,21 @@ button:active:not(:disabled) {
 
 .btn-primary:hover {
     background-color: #fbbf24; /* amber-400 */
+}
+
+/* Destructive action button (delete account, delete goal). Solid fill rather than a
+   translucent tint so the color does not shift with whatever sits behind it. Layout
+   stays as per-instance Tailwind utilities, same split as .btn-primary. */
+.btn-danger {
+    background-color: #fef2f2; /* red-50 */
+    color: #b91c1c; /* red-700 */
+    border: 1px solid #fecaca; /* red-200 */
+}
+
+@media (hover: hover) {
+    .btn-danger:hover {
+        background-color: #fee2e2; /* red-100 */
+    }
 }
 
 

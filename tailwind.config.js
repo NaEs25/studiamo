@@ -32,6 +32,8 @@ module.exports = {
                 paperBorderStrong: withOpacity("--color-border-strong-rgb"),
                 amberPrimary: withOpacity("--color-primary-rgb"),
                 amberHover: withOpacity("--color-primary-hover-rgb"),
+                uiYellow: withOpacity("--color-ui-yellow-rgb"),
+                logoYellow: withOpacity("--color-logo-yellow-rgb"),
                 stoneText: withOpacity("--color-text-rgb"),
                 stoneMuted: withOpacity("--color-text-muted-rgb"),
 

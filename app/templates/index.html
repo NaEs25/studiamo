@@ -612,37 +612,35 @@
                 </div>
             </div>
 
-            {% include 'partials/_stats_activity.html' %}
-
-            <!-- Leaderboard & Badges split layout -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- Badges Unlocked -->
-                <div class="bg-white p-5 rounded-2xl border border-stone-200 space-y-4">
+            <!-- Weekly Leaderboard -->
+            <div class="bg-white p-5 rounded-2xl border border-stone-200 space-y-4">
+                <div class="flex items-center justify-between">
                     <h3 class="font-bold text-base flex items-center space-x-2">
-                        <i data-lucide="award" class="w-5 h-5 text-amber-600"></i>
-                        <span>Achievements & Badges</span>
+                        <i data-lucide="users" class="w-5 h-5 text-amber-400"></i>
+                        <span>Weekly Leaderboard</span>
                     </h3>
-                    <div id="badges-grid" class="grid grid-cols-2 gap-3">
-                        <!-- badge items -->
-                    </div>
+                    <span
+                        class="text-[11px] text-stone-400 font-medium bg-stone-100 px-2.5 py-1 rounded-lg border border-stone-200">Resets
+                        Mondays</span>
                 </div>
-
-                <!-- Weekly Leaderboard -->
-                <div class="bg-white p-5 rounded-2xl border border-stone-200 space-y-4">
-                    <div class="flex items-center justify-between">
-                        <h3 class="font-bold text-base flex items-center space-x-2">
-                            <i data-lucide="users" class="w-5 h-5 text-amber-400"></i>
-                            <span>Weekly Leaderboard</span>
-                        </h3>
-                        <span
-                            class="text-[11px] text-stone-400 font-medium bg-stone-100 px-2.5 py-1 rounded-lg border border-stone-200">Resets
-                            Mondays</span>
-                    </div>
-                    <div id="leaderboard-container" class="space-y-2">
-                        <p class="text-xs text-stone-400 text-center py-4">Loading...</p>
-                    </div>
+                <div id="leaderboard-container" class="space-y-2">
+                    <p class="text-xs text-stone-400 text-center py-4">Loading...</p>
                 </div>
+            </div>
 
+            {% include 'partials/_stats_calendar.html' %}
+
+            {% include 'partials/_stats_week.html' %}
+
+            <!-- Badges Unlocked -->
+            <div class="bg-white p-5 rounded-2xl border border-stone-200 space-y-4">
+                <h3 class="font-bold text-base flex items-center space-x-2">
+                    <i data-lucide="award" class="w-5 h-5 text-amber-600"></i>
+                    <span>Achievements & Badges</span>
+                </h3>
+                <div id="badges-grid" class="grid grid-cols-2 gap-3">
+                    <!-- badge items -->
+                </div>
             </div>
 
             <!-- In-Depth Analytics panel -->
@@ -1484,7 +1482,7 @@
                             quizzes, and uploaded files. This cannot be undone.</p>
                     </div>
                     <button type="button" onclick="openDeleteAccountStep1()"
-                        class="px-5 py-2.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-600 font-bold rounded-xl text-center text-xs transition whitespace-nowrap">
+                        class="px-5 py-2.5 btn-danger font-bold rounded-xl text-center text-xs transition whitespace-nowrap">
                         Delete My Account
                     </button>
                 </div>
@@ -1943,9 +1941,9 @@
                     <i data-lucide="arrow-right" class="w-4 h-4 text-amber-600"></i>
                 </button>
                 <button type="button" onclick="confirmDeleteGoal(true)"
-                    class="w-full py-3 px-4 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 font-bold rounded-xl text-xs transition flex items-center justify-between">
+                    class="w-full py-3 px-4 btn-danger font-bold rounded-xl text-xs transition flex items-center justify-between">
                     <span>Delete Goal &amp; All Linked Materials</span>
-                    <i data-lucide="trash-2" class="w-4 h-4 text-red-400"></i>
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
                 </button>
             </div>
 
@@ -1998,7 +1996,7 @@
                     Cancel &mdash; Keep My Account
                 </button>
                 <button type="button" onclick="openDeleteAccountStep2()"
-                    class="flex-1 py-2.5 px-4 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-600 font-bold rounded-xl text-xs transition">
+                    class="flex-1 py-2.5 px-4 btn-danger font-bold rounded-xl text-xs transition">
                     Continue to Delete
                 </button>
             </div>
