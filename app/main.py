@@ -430,10 +430,13 @@ def _register_content_pages():
     shadow another single-segment route."""
     for slug, page in content_pages.PAGES.items():
         async def serve(request: Request, page=page, slug=slug):
-            if not content_pages.is_live(page, _is_preview_host(request)):
+            preview = _is_preview_host(request)
+            if not content_pages.is_live(page, preview):
                 raise HTTPException(status_code=404, detail="Not found")
+            body_html = content_pages.hide_unreleased_links(page["body_html"], preview)
             return templates.TemplateResponse(request, "content_page.html",
-                                              {"page": page, "current_page": slug})
+                                              {"page": {**page, "body_html": body_html},
+                                               "current_page": slug})
         app.add_api_route(f"/{slug}", serve, methods=["GET"],
                           response_class=HTMLResponse, include_in_schema=False)
 

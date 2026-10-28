@@ -2,7 +2,7 @@
 
 Each file starts with a header block of `Key: value` lines (Slug, Title tag, Meta description,
 Published as YYYY-MM-DD, H1), a blank line, then the body. The body uses a deliberately small markdown subset:
-`##` headings, paragraphs, `-` and `1.` lists, a pipe table, **bold**, *italic* and links.
+`##` headings, paragraphs, `-` and `1.` lists (indent a wrapped item's continuation lines), a pipe table, **bold**, *italic* and links.
 Everything is HTML-escaped before the inline rules run, and links are limited to site paths
 and https URLs, so a page file cannot inject markup or a javascript: link."""
 import html
@@ -68,6 +68,10 @@ def render_body(markdown: str) -> str:
             while i < len(lines) and re.match(r"(- |\d+\. )", lines[i]):
                 items.append(re.sub(r"^(- |\d+\. )", "", lines[i].rstrip()))
                 i += 1
+                # An indented line continues the item above it (a hard-wrapped list item).
+                while i < len(lines) and lines[i].startswith(" ") and lines[i].strip():
+                    items[-1] += " " + lines[i].strip()
+                    i += 1
             tag = "ol" if ordered else "ul"
             out.append(f"<{tag}>" + "".join(f"<li>{_inline(t)}</li>" for t in items) + f"</{tag}>")
             continue
@@ -110,3 +114,15 @@ def is_live(page: dict, preview: bool = False) -> bool:
     """A page goes live on its Published date (UTC) and not before, so a batch can be released
     a day apart without a deploy each. `preview` shows everything, for the staging host."""
     return preview or page["published"] <= datetime.now(timezone.utc).date()
+
+
+_SITE_LINK = re.compile(r'<a href="/([^"]+)">(.*?)</a>')
+
+
+def hide_unreleased_links(body_html: str, preview: bool = False) -> str:
+    """Links to guides that are not live yet render as plain text, so a batch released a day
+    apart never sends a reader from a live page to a 404."""
+    def unlink(m):
+        target = PAGES.get(m.group(1))
+        return m.group(2) if target and not is_live(target, preview) else m.group(0)
+    return _SITE_LINK.sub(unlink, body_html)

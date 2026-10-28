@@ -24,6 +24,14 @@ def test_pages_stay_hidden_until_their_release_date():
     assert content_pages.is_live({"slug": "y", "published": date.today()})
 
 
+def test_links_to_unreleased_guides_render_as_text(monkeypatch):
+    from datetime import date, timedelta
+    monkeypatch.setitem(content_pages.PAGES, "later", {"slug": "later", "published": date.today() + timedelta(days=2)})
+    body = '<a href="/later">Soon</a> and <a href="/science">Science</a>'
+    assert content_pages.hide_unreleased_links(body) == 'Soon and <a href="/science">Science</a>'
+    assert content_pages.hide_unreleased_links(body, preview=True) == body
+
+
 def test_articles_index_lists_every_page():
     res = TestClient(app, base_url="https://staging.studiamo.cloud").get("/articles")
     assert res.status_code == 200
@@ -36,6 +44,11 @@ def test_renderer_escapes_and_limits_links():
     assert "<script>" not in out
     assert 'href="javascript' not in out
     assert '<a href="/science">b</a>' in out
+
+
+def test_wrapped_list_items_stay_in_their_list():
+    out = content_pages.render_body("1. **One.** First line\n   carries on.\n2. Two.\n\nAfter.")
+    assert out == "<ol><li><strong>One.</strong> First line carries on.</li><li>Two.</li></ol>\n<p>After.</p>"
 
 
 def test_root_redirects_signed_in_users_but_landing_does_not(client_as, test_username, make_client):
