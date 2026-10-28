@@ -18,6 +18,11 @@ Allow: /remember-what-you-watch
 Allow: /too-many-things-to-learn
 Allow: /tutorial-fatigue
 Allow: /youtube-watch-later-overwhelm
+Allow: /supercharge-your-brain
+Allow: /wakeful-rest-after-learning
+Allow: /incubation-break-when-stuck
+Allow: /screen-breaks-and-walks
+Allow: /nsdr-yoga-nidra
 Allow: /research
 Allow: /llms.txt
 Allow: /llms-full.txt
