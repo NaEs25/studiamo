@@ -45,6 +45,7 @@
     <link rel="stylesheet" href="/static/css/style.css">
     <link rel="stylesheet" href="/static/css/fonts.css">
     <script src="/static/vendor/lucide-1.48.0.min.js"></script>
+    <script src="/static/js/read_aloud.js" defer></script>
     <style>
         .cp-body p, .cp-body li { line-height: 1.75; color: rgb(var(--color-text-rgb)); }
         .cp-body p { margin: 0 0 1rem; }
@@ -74,8 +75,15 @@
                 <li aria-current="page" class="truncate max-w-full">{{ page.h1 }}</li>
             </ol>
         </nav>
-        <article>
-            <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-stoneText leading-tight mb-3">{{ page.h1 }}</h1>
+        <article id="article">
+            <div class="flex items-start justify-between gap-3 mb-3">
+                <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-stoneText leading-tight">{{ page.h1 }}</h1>
+                {# Shown by read_aloud.js only when the browser can speak. #}
+                <button type="button" id="read-aloud" class="hidden shrink-0 mt-1 inline-flex items-center justify-center w-9 h-9 rounded-full bg-stone-200/50 hover:bg-stone-200 text-stone-600 hover:text-amber-700 transition-colors" aria-label="Read this article aloud" aria-pressed="false" title="Read aloud">
+                    <span data-read-aloud-icon="start"><i data-lucide="volume-2" class="w-4 h-4"></i></span>
+                    <span data-read-aloud-icon="stop" class="hidden"><i data-lucide="square" class="w-4 h-4"></i></span>
+                </button>
+            </div>
             <p class="text-sm text-stoneMuted mb-8">By <a href="/impressum" rel="author" class="underline">Karl Hildebrand</a> &middot; <time datetime="{{ page.published.isoformat() }}">{{ page.published.strftime('%B %-d, %Y') }}</time></p>
             <div class="cp-body">{{ page.body_html|safe }}</div>
         </article>
