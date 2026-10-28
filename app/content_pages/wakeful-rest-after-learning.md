@@ -1,7 +1,7 @@
 Slug: /wakeful-rest-after-learning
 Title tag: Wakeful Rest: Why 10 Quiet Minutes After Learning Help You Remember | Studiamo
 Meta description: Sitting quietly for ten minutes after you learn something can help it stick for a week. What the studies found, how big the effect really is, and how to do it.
-Published: 2026-10-28
+Published: 2026-10-25
 H1: Rest for ten minutes after you learn something
 
 When you finish a lesson, the usual move is to start the next one or pick up your phone. A

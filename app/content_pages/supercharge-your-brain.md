@@ -1,7 +1,7 @@
 Slug: /supercharge-your-brain
 Title tag: Supercharge Your Brain: 4 Research-Backed Breaks for Learning | Studiamo
 Meta description: Four kinds of breaks with research behind them: quiet rest to remember more, an easy break when you are stuck, screen breaks and walks, and a short afternoon rest.
-Published: 2026-10-28
+Published: 2026-10-24
 H1: Supercharge your brain with better breaks
 
 More hours are not always the way to learn more or think better. What you do between them

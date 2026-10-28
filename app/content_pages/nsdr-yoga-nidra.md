@@ -1,7 +1,7 @@
 Slug: /nsdr-yoga-nidra
 Title tag: NSDR and Yoga Nidra: What a 20-Minute Rest Can and Cannot Do | Studiamo
 Meta description: Non-sleep deep rest is often said to raise dopamine by 65 percent. Where that number comes from, what yoga nidra and short naps actually do, and how to try them.
-Published: 2026-10-28
+Published: 2026-10-27
 H1: NSDR and yoga nidra: what a 20-minute afternoon rest can do
 
 Non-sleep deep rest, or NSDR, is a name the neuroscientist and podcaster Andrew Huberman made

@@ -1,7 +1,7 @@
 Slug: /screen-breaks-and-walks
 Title tag: Screen Breaks That Help: Look Away, Step Away, Walk Outside | Studiamo
 Meta description: Short breaks leave you less tired, and walks in green places help attention. What the research says about screen breaks, the 20-20-20 rule and "panoramic vision".
-Published: 2026-10-28
+Published: 2026-10-26
 H1: Screen breaks that help: look away, step away, walk outside
 
 After a long stretch at a screen, your eyes feel dry, your focus slips and you read the same
