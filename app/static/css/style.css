@@ -1788,8 +1788,9 @@ button:active:not(:disabled) {
     .belt-chompy-speech::after { right: 2rem; }
 }
 
-/* The poses look to their own right; Chompy sits right of the belt and faces left, at it. */
-.chompy-face-belt { transform: scaleX(-1); }
+/* Chompy sits right of the belt and must face left, at it. Most poses (full, chomping, tickled)
+   already face left; only the hungry pose looks right, so only it is mirrored. */
+.chompy-flip { transform: scaleX(-1); }
 .chompy-wake { animation: chompyWake 0.7s ease-out; }
 @keyframes chompyWake {
     0%, 100% { transform: scaleX(-1) translateY(0); }
@@ -1819,7 +1820,7 @@ button:active:not(:disabled) {
 /* A softer red than .btn-save-now: it is the main action on an eaten card, not an alarm. */
 .btn-win-back { background: #b95550; border: 1px solid #a64a46; color: #ffffff; }
 .btn-win-back:hover { background: #a64a46; }
-.due-card-peek { position: absolute; height: auto; pointer-events: none; transform: scaleX(-1); }
+.due-card-peek { position: absolute; height: auto; pointer-events: none; }
 .due-card-today .due-card-peek { right: -6px; bottom: -4px; width: 30px; opacity: 0.45; }
 .due-card-over1 .due-card-peek { right: -10px; bottom: -14px; width: 56px; }
 .due-card-over2 .due-card-peek { right: -8px; bottom: -10px; width: 84px; }

@@ -1183,6 +1183,7 @@ function renderChompyBelt(dueQuizzes, dayProgress) {
     const awake = counts.over1 + counts.over2 > 0;
     const img = document.getElementById('belt-chompy-img');
     img.src = awake ? CHOMPY_IMG.hungry : CHOMPY_IMG.full;
+    img.classList.toggle('chompy-flip', awake);
     img.alt = awake ? 'Chompy, awake and hungry' : 'Chompy, asleep';
     document.getElementById('belt-chompy-zz').classList.toggle('hidden', awake);
     img.dataset.state = awake ? 'awake' : 'asleep';
@@ -1248,7 +1249,7 @@ function renderDueCard(item) {
                     <span>+1 Day</span>
                 </button>` : ''}
             </div>
-            <img src="${peek}" alt="" class="due-card-peek">
+            <img src="${peek}" alt="" class="due-card-peek${station === 'over1' ? ' chompy-flip' : ''}">
         </div>
     `;
 }
