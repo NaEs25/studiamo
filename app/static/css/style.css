@@ -1081,6 +1081,22 @@ html[data-standalone="true"] #app-header {
     }
 }
 
+/* Header-colored strip exactly as tall as the iOS status bar, fixed above everything including
+   the blurred modal backdrops. Without it, whatever sits behind the status bar (a backdrop, or
+   scrolled content) shows through iOS's own scrim there as a blurred band. Zero height wherever
+   the safe-area inset is zero, so it is invisible outside an installed iOS app. */
+html[data-standalone="true"] body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: var(--safe-top);
+    background-color: #fdfbf7; /* the #app-header background */
+    z-index: 200;
+    pointer-events: none;
+}
+
 /* The Settings "Install as App" card offers nothing to a user already running the installed
    PWA, so it's dropped rather than left showing a redundant install button. */
 html[data-standalone="true"] #pwa-install-card {

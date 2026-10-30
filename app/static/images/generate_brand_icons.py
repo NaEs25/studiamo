@@ -1,5 +1,5 @@
 from pathlib import Path
-from PIL import Image
+from PIL import Image, ImageDraw
 import PIL.ImageOps
 
 def generate_brand_icons():
@@ -40,10 +40,23 @@ def generate_brand_icons():
     i112 = master_img.resize((112, 112), resample_filter)
     i112.save(images_dir / "logo-icon-112.png", "PNG")
 
-    i32 = master_img.resize((32, 32), resample_filter)
+    # Tab icons are rounded (transparent corners); the touch and PWA icons stay square because
+    # the OS applies its own mask to those.
+    def rounded(img, radius_ratio=0.22):
+        scale = 4
+        size = img.size[0]
+        mask = Image.new("L", (size * scale, size * scale), 0)
+        ImageDraw.Draw(mask).rounded_rectangle((0, 0, size * scale - 1, size * scale - 1), radius=int(size * scale * radius_ratio), fill=255)
+        out = img.copy()
+        out.putalpha(mask.resize((size, size), Image.Resampling.LANCZOS))
+        return out
+
+    tab_master = rounded(master_img.resize((256, 256), resample_filter))
+    i32 = tab_master.resize((32, 32), resample_filter)
+    ico = tab_master.resize((48, 48), resample_filter)
     i32.save(images_dir / "favicon.png", "PNG")
     i32.save(images_dir / "badge-favicon.png", "PNG")
-    i32.save(images_dir / "favicon.ico", format="ICO", sizes=[(16, 16), (32, 32), (48, 48)])
+    ico.save(images_dir / "favicon.ico", format="ICO", sizes=[(16, 16), (32, 32), (48, 48)])
 
     print("[brand_icons] Brand icons generated from logo_source.png.")
 
