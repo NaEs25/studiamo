@@ -2,6 +2,9 @@
 
 // --- Stats tab: last 7 days chart and streak calendar ---
 
+// Quizzes in one local day from which the calendar draws the day with a border.
+const STREAK_BUSY_QUIZZES = 3;
+
 let statsCalendarMonth = null;
 let statsCalendarBound = false;
 
@@ -56,6 +59,7 @@ function renderStatsCalendar(data) {
     }));
 
     const active = new Set(data.month_days.map(d => d.date));
+    const busy = new Set(data.month_days.filter(d => d.quizzes >= STREAK_BUSY_QUIZZES).map(d => d.date));
     const daysInMonth = new Date(y, m, 0).getDate();
     const lead = (new Date(y, m - 1, 1).getDay() + 6) % 7;
     const key = day => `${data.month}-${String(day).padStart(2, '0')}`;
@@ -68,6 +72,7 @@ function renderStatsCalendar(data) {
         cell.textContent = day;
         if (active.has(key(day))) {
             cell.classList.add('is-active');
+            if (busy.has(key(day))) cell.classList.add('is-busy');
             if (col > 0 && active.has(key(day - 1))) cell.classList.add('join-prev');
             if (col < 6 && active.has(key(day + 1))) cell.classList.add('join-next');
         }
