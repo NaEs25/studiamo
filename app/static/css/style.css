@@ -1536,6 +1536,10 @@ button:active:not(:disabled) {
 
 /* Rearranging on the goal page: a folder under a dragged material lights up as the place it
    will land. */
+/* Reorder goals sheet: the row being dragged, and the row it would take the place of. */
+[data-reorder-row].is-dragging { opacity: 0.5; }
+[data-reorder-row].is-drop-target { border-color: var(--color-primary); background-color: var(--color-primary-bg); }
+
 .goalpage-folder.is-drop-target {
     border-color: var(--color-primary);
     background-color: var(--color-primary-bg);

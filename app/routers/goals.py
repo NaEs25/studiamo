@@ -275,6 +275,33 @@ def reorder_goal(id: int, direction: str = Form(...), username: str = Depends(re
         conn.close()
 
 
+@router.post("/goals/order")
+def reorder_goals(ids: str = Form(...), username: str = Depends(require_account_access)):
+    """Stores the priority order of the active goals. `ids` is the full list of the account's
+    active goal ids in the wanted order, comma separated. Rejected unless it names exactly those
+    goals, so a request can neither reorder another account's rows nor drop a goal from the order."""
+    try:
+        wanted = [int(x) for x in ids.split(",") if x.strip()]
+    except ValueError:
+        raise HTTPException(status_code=400, detail="ids must be a comma separated list of numbers.")
+    if len(set(wanted)) != len(wanted):
+        raise HTTPException(status_code=400, detail="ids must not repeat.")
+    conn = database.get_db_connection(username)
+    try:
+        user_uuid = conn.user_uuid
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM goals WHERE user_uuid = %s AND is_archived = 0;", (user_uuid,))
+        have = {r["id"] for r in cursor.fetchall()}
+        if set(wanted) != have:
+            raise HTTPException(status_code=409, detail="The list changed. Reload and try again.")
+        for position, goal_id in enumerate(wanted, start=1):
+            cursor.execute("UPDATE goals SET order_index = %s WHERE id = %s AND user_uuid = %s;", (position, goal_id, user_uuid))
+        conn.commit()
+        return {"status": "success"}
+    finally:
+        conn.close()
+
+
 @router.post("/goals/{id}/materials/order")
 def reorder_goal_materials(id: int, ids: str = Form(...), username: str = Depends(require_account_access)):
     """Stores the order of a goal's materials. `ids` is the full list of the goal's material ids

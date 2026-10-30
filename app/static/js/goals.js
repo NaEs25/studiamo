@@ -1266,27 +1266,40 @@ function openGoalReorder() {
     openOverlay('overlay-goal-reorder', closeGoalReorder);
 }
 
-// Moves one goal in the sheet by the same endpoint the arrows on the cards used, then redraws.
+// The sheet shows a new order at once and saves all of it in one request; only a failed save
+// reloads the list from the server.
+async function saveGoalOrder(ids) {
+    const data = window._goalsPageData;
+    const byId = new Map(data.goals.map(g => [g.id, g]));
+    data.goals = ids.map(id => byId.get(id));
+    renderGoalReorderList();
+    const formData = new FormData();
+    formData.append('ids', ids.join(','));
+    try {
+        await fetchAPI('/api/goals/order', { method: 'POST', body: formData });
+        await loadGoals();
+        if (typeof loadDashboard === 'function') loadDashboard();
+    } catch (e) {
+        showToast('Could not save the order: ' + (e.message || e), 'failed', 3000);
+        await loadGoals();
+    }
+    renderGoalReorderList();
+}
+
+// An arrow moves one goal one step by the same endpoint the cards used, then redraws.
 async function moveGoalInSheet(goalId, direction) {
     await reorderGoal(goalId, direction);
     renderGoalReorderList();
 }
 
-// Drag a goal onto another to place it there: the endpoint moves one step at a time, so the
-// drop is replayed as that many moves.
-async function dropGoalOn(draggedId, targetId) {
-    const goals = (window._goalsPageData && window._goalsPageData.goals) || [];
-    const from = goals.findIndex(g => String(g.id) === String(draggedId));
-    const to = goals.findIndex(g => String(g.id) === String(targetId));
+// Drag a goal onto another to place it where that one is.
+function dropGoalOn(draggedId, targetId) {
+    const ids = ((window._goalsPageData && window._goalsPageData.goals) || []).map(g => g.id);
+    const from = ids.indexOf(Number(draggedId));
+    const to = ids.indexOf(Number(targetId));
     if (from < 0 || to < 0 || from === to) return;
-    const direction = to > from ? 'down' : 'up';
-    for (let i = 0; i < Math.abs(to - from); i++) {
-        const formData = new FormData();
-        formData.append('direction', direction);
-        await fetchAPI(`/api/goals/${draggedId}/reorder`, { method: 'POST', body: formData });
-    }
-    await loadGoals();
-    renderGoalReorderList();
+    ids.splice(to, 0, ids.splice(from, 1)[0]);
+    return saveGoalOrder(ids);
 }
 
 function initGoalReorderSheet() {
@@ -1300,19 +1313,29 @@ function initGoalReorderSheet() {
         if (btn && !btn.disabled) moveGoalInSheet(Number(btn.dataset.goalId), btn.dataset.reorderMove);
     });
     let dragged = null;
+    const clearMarks = () => sheet.querySelectorAll('.is-drop-target, .is-dragging').forEach(el => el.classList.remove('is-drop-target', 'is-dragging'));
     sheet.addEventListener('dragstart', (e) => {
         const row = e.target.closest('[data-reorder-row]');
         if (!row) return;
         dragged = row.dataset.reorderRow;
         e.dataTransfer.effectAllowed = 'move';
+        row.classList.add('is-dragging');
     });
-    sheet.addEventListener('dragover', (e) => { if (dragged && e.target.closest('[data-reorder-row]')) e.preventDefault(); });
+    sheet.addEventListener('dragover', (e) => {
+        const row = dragged && e.target.closest('[data-reorder-row]');
+        if (!row) return;
+        e.preventDefault();
+        sheet.querySelectorAll('.is-drop-target').forEach(el => { if (el !== row) el.classList.remove('is-drop-target'); });
+        if (row.dataset.reorderRow !== dragged) row.classList.add('is-drop-target');
+    });
+    sheet.addEventListener('dragend', () => { dragged = null; clearMarks(); });
     sheet.addEventListener('drop', (e) => {
         const row = e.target.closest('[data-reorder-row]');
         if (!row || !dragged) return;
         e.preventDefault();
         const id = dragged;
         dragged = null;
+        clearMarks();
         dropGoalOn(id, row.dataset.reorderRow);
     });
 }
