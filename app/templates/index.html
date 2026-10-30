@@ -81,7 +81,7 @@
                  countdown with nothing to count down to is noise. Clicking opens Settings,
                  where the date and the subscribe button are. -->
             <button type="button" id="tester-pill" onclick="switchTab('settings')"
-                class="hidden cloud-only items-center space-x-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border border-transparent transition hover:opacity-90 active:scale-[0.98]"
+                class="hidden cloud-only items-center space-x-1.5 px-3 py-1.5 rounded-md text-xs font-semibold border border-transparent transition hover:opacity-90 active:scale-[0.98]"
                 title="Your tester access, see Settings for details">
                 <i data-lucide="flask-conical" class="w-4 h-4"></i>
                 <span id="tester-pill-label">Tester</span>
@@ -165,7 +165,7 @@
 
             <!-- Quizzes Due Right Now Panel -->
             <div id="due-quizzes-panel" class="hidden space-y-3 mb-6">
-                <h3 class="text-sm font-bold uppercase tracking-wider text-stone-500 flex items-center space-x-1.5">
+                <h3 class="text-sm font-bold text-stone-500 flex items-center space-x-1.5">
                     <i data-lucide="brain" class="w-4 h-4 text-amber-400"></i>
                     <span>Quizzes Due Right Now</span>
                 </h3>
@@ -229,10 +229,10 @@
                 <!-- Collapsed by default so the home tab leads with today's work; app.js
                      initUpcomingToggle remembers the choice per browser. -->
                 <button type="button" id="upcoming-quizzes-toggle" aria-expanded="false" aria-controls="upcoming-quizzes-list"
-                    class="w-full text-sm font-bold uppercase tracking-wider text-stone-600 flex items-center space-x-1.5 hover:text-stone-900 transition">
+                    class="w-full text-sm font-bold text-stone-600 flex items-center space-x-1.5 hover:text-stone-900 transition">
                     <i data-lucide="calendar" class="w-4 h-4 text-amber-600"></i>
                     <span>Upcoming Review Schedule</span>
-                    <span id="upcoming-quizzes-count" class="text-[10px] bg-stone-200 text-stone-700 px-1.5 py-0.5 rounded-full normal-case tracking-normal hidden"></span>
+                    <span id="upcoming-quizzes-count" class="text-[10px] bg-stone-200 text-stone-700 px-1.5 py-0.5 rounded-md normal-case tracking-normal hidden"></span>
                     <i data-lucide="chevron-down" id="upcoming-quizzes-chevron" class="w-4 h-4 text-stone-400 transition-transform ml-auto"></i>
                 </button>
                 <div id="upcoming-quizzes-list" class="space-y-2 hidden">
@@ -396,7 +396,7 @@
                         <div id="new-goal-inline-fields"
                             class="hidden mt-3 p-4 bg-stone-50 border border-amber-300 rounded-xl space-y-3">
                             <h5
-                                class="text-xs font-bold text-amber-600 uppercase tracking-wider flex items-center space-x-1.5">
+                                class="text-xs font-bold text-amber-600 flex items-center space-x-1.5">
                                 <i data-lucide="target" class="w-4 h-4"></i>
                                 <span>Create New Learning Goal</span>
                             </h5>
@@ -524,10 +524,10 @@
                     </h3>
                     <div class="flex items-center space-x-2">
                         <span id="archived-goals-count"
-                            class="text-xs bg-stone-100 text-stone-400 px-2.5 py-1 rounded-full font-bold">0
+                            class="text-xs bg-stone-100 text-stone-400 px-2.5 py-1 rounded-md font-bold">0
                             Goals</span>
                         <span id="archived-videos-count"
-                            class="text-xs bg-stone-100 text-amber-600 px-2.5 py-1 rounded-full font-bold">0
+                            class="text-xs bg-stone-100 text-amber-600 px-2.5 py-1 rounded-md font-bold">0
                             Videos</span>
                         <i data-lucide="chevron-down" id="archived-goals-chevron"
                             class="w-5 h-5 text-stone-400 transition-transform"></i>
@@ -535,13 +535,13 @@
                 </button>
                 <div id="archived-goals-wrapper" class="hidden space-y-5 border-t border-stone-200 pt-4">
                     <div class="space-y-3">
-                        <h4 class="text-xs font-bold uppercase tracking-wider text-stone-500">Archived Goals</h4>
+                        <h4 class="text-xs font-bold text-stone-500">Archived Goals</h4>
                         <div id="archived-goals-list" class="grid gap-4 grid-cols-1">
                             <!-- Archived Goals loaded dynamically -->
                         </div>
                     </div>
                     <div class="space-y-3 pt-2 border-t border-stone-200">
-                        <h4 class="text-xs font-bold uppercase tracking-wider text-stone-500">Archived Videos &amp;
+                        <h4 class="text-xs font-bold text-stone-500">Archived Videos &amp;
                             Materials</h4>
                         <div id="archived-videos-list" class="grid gap-4 grid-cols-1 md:grid-cols-2 items-start">
                             <!-- Archived Videos loaded dynamically -->
@@ -562,7 +562,7 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <!-- Crystals Card (level in the data) -->
                 <div class="bg-[#fbf8f2] p-5 rounded-2xl border border-[#e7dfd3] space-y-3 shadow-sm">
-                    <span class="text-xs font-bold text-amber-700 uppercase tracking-wider">Knowledge Crystals</span>
+                    <span class="text-xs font-bold text-amber-700">Knowledge Crystals</span>
                     <div class="flex items-center space-x-2">
                         <img src="/static/images/crystal.png" alt="" class="w-9 h-9 shrink-0">
                         <span id="stats-level-val" class="text-4xl font-extrabold text-stone-900">1</span>
@@ -584,7 +584,7 @@
 
                 <!-- Streak Card -->
                 <div class="bg-[#fbf8f2] p-5 rounded-2xl border border-[#e7dfd3] space-y-3 shadow-sm">
-                    <span class="text-xs font-bold text-amber-700 uppercase tracking-wider">Consistency Streak</span>
+                    <span class="text-xs font-bold text-amber-700">Consistency Streak</span>
                     <div class="flex items-center space-x-2">
                         <img src="/static/images/streak-flame.png" alt="" class="w-9 h-9 shrink-0">
                         <span id="stats-streak-val" class="text-4xl font-extrabold text-stone-900">0</span>
@@ -595,7 +595,7 @@
 
                 <!-- Right / Wrong Ratio -->
                 <div class="bg-[#fbf8f2] p-5 rounded-2xl border border-[#e7dfd3] space-y-3 shadow-sm">
-                    <span class="text-xs font-bold text-emerald-700 uppercase tracking-wider">Right / Wrong Ratio</span>
+                    <span class="text-xs font-bold text-emerald-700">Right / Wrong Ratio</span>
                     <div class="flex items-center space-x-2">
                         <i data-lucide="target" class="w-9 h-9 text-emerald-600 shrink-0"></i>
                         <span id="stats-ratio-val" class="text-4xl font-extrabold text-stone-900">0%</span>
@@ -650,29 +650,29 @@
                 <div id="indepth-stats-content" class="hidden space-y-4 pt-3 border-t border-stone-200">
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div class="p-3 bg-[#fbf8f2] border border-[#e7dfd3] rounded-xl text-center shadow-sm">
-                            <span class="text-[9px] uppercase font-bold text-stone-600 tracking-wider block">Total
+                            <span class="text-[11px] font-bold text-stone-600 block">Total
                                 Attempts</span>
                             <span id="analytics-total-attempts" class="text-xl font-extrabold text-stone-900">0</span>
                         </div>
                         <div class="p-3 bg-[#fbf8f2] border border-[#e7dfd3] rounded-xl text-center shadow-sm">
                             <span
-                                class="text-[9px] uppercase font-bold text-emerald-700 tracking-wider block">Remembered</span>
+                                class="text-[11px] font-bold text-emerald-700 block">Remembered</span>
                             <span id="analytics-remembered" class="text-xl font-extrabold text-emerald-700">0</span>
                         </div>
                         <div class="p-3 bg-[#fbf8f2] border border-[#e7dfd3] rounded-xl text-center shadow-sm">
                             <span
-                                class="text-[9px] uppercase font-bold text-red-700 tracking-wider block">Forgotten</span>
+                                class="text-[11px] font-bold text-red-700 block">Forgotten</span>
                             <span id="analytics-forgot" class="text-xl font-extrabold text-red-700">0</span>
                         </div>
                         <div class="p-3 bg-[#fbf8f2] border border-[#e7dfd3] rounded-xl text-center shadow-sm">
-                            <span class="text-[9px] uppercase font-bold text-amber-800 tracking-wider block">Accuracy
+                            <span class="text-[11px] font-bold text-amber-800 block">Accuracy
                                 Rate</span>
                             <span id="analytics-accuracy" class="text-xl font-extrabold text-amber-800">0%</span>
                         </div>
                     </div>
 
                     <div class="space-y-3">
-                        <h4 class="text-[10px] uppercase font-bold text-stone-600 tracking-wider">Attempt History Log
+                        <h4 class="text-[11px] font-bold text-stone-600">Attempt History Log
                         </h4>
 
                         <!-- Search/Sort controls -->
@@ -685,7 +685,7 @@
                                     class="w-full pl-8 pr-3 py-1.5 bg-[#fcfaf6] border border-[#e7dfd3] rounded-lg text-xs text-stone-900 focus:outline-none focus:border-amber-500 transition">
                             </div>
                             <div class="flex items-center space-x-2.5 w-full sm:w-auto justify-end">
-                                <span class="text-[10px] uppercase font-bold text-stone-600 tracking-wider">Sort:</span>
+                                <span class="text-[11px] font-bold text-stone-600">Sort:</span>
                                 <select id="analytics-sort-select" onchange="renderAnalyticsHistory()"
                                     class="bg-[#fcfaf6] border border-[#e7dfd3] rounded-lg text-xs text-stone-900 px-2 py-1.5 focus:outline-none focus:border-amber-500 transition">
                                     <option value="time-desc">Time (Newest First)</option>
@@ -714,7 +714,7 @@
                     </h3>
                     <div class="flex items-center space-x-3">
                         <span id="stats-total-calls"
-                            class="text-xs bg-[#f3ebd9] text-stone-700 border border-[#dfd5c5] px-2.5 py-1 rounded-full font-bold">0
+                            class="text-xs bg-[#f3ebd9] text-stone-700 border border-[#dfd5c5] px-2.5 py-1 rounded-md font-bold">0
                             Requests</span>
                         <i data-lucide="chevron-down" id="api-logs-chevron"
                             class="w-5 h-5 text-stone-500 transition-transform"></i>
@@ -850,7 +850,7 @@
                     class="p-3.5 bg-[#fcfaf6] border border-[#e7dfd3] rounded-xl text-xs font-semibold text-stone-700 flex items-start justify-between gap-3">
                     <span id="subscription-status-text" class="leading-relaxed">Checking status…</span>
                     <span id="subscription-status-badge"
-                        class="flex-shrink-0 mt-px text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md whitespace-nowrap"></span>
+                        class="flex-shrink-0 mt-px text-[11px] font-bold px-2 py-0.5 rounded-md whitespace-nowrap"></span>
                 </div>
                 <div id="ai-usage-warning"
                     class="hidden p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs font-semibold text-amber-800 items-start space-x-2">
@@ -865,7 +865,7 @@
             </div>
 
             <div class="flex items-center justify-between px-1 mb-2">
-                <h2 class="text-sm uppercase tracking-wider font-extrabold text-stone-500">Preferences &amp;
+                <h2 class="text-sm font-extrabold text-stone-500">Preferences &amp;
                     Configuration</h2>
             </div>
 
@@ -1037,7 +1037,7 @@
                                     <span class="text-stone-600 text-[11px]">Browser notifications on this
                                         device:</span>
                                     <span id="browser-notif-status"
-                                        class="text-[10px] px-2 py-0.5 rounded-full font-mono bg-[#f3ebd9] text-stone-700 border border-[#dfd5c5]">Checking
+                                        class="text-[10px] px-2 py-0.5 rounded-md font-mono bg-[#f3ebd9] text-stone-700 border border-[#dfd5c5]">Checking
                                         browser...</span>
                                 </div>
                                 <div class="grid grid-cols-2 gap-2">
@@ -1220,7 +1220,7 @@
                         <!-- Section 1: Questions per Star -->
                         <div class="space-y-3">
                             <div class="flex items-center space-x-1.5">
-                                <h4 class="text-xs font-bold text-stone-700 uppercase tracking-wider">Recall Question
+                                <h4 class="text-xs font-bold text-stone-700">Recall Question
                                     Quantity (per Star Rating)</h4>
                                 <button type="button" id="star-count-info-toggle"
                                     class="p-1 rounded-full text-stone-400 hover:text-amber-600 hover:bg-stone-100 transition"
@@ -1266,35 +1266,35 @@
 
                         <!-- Section 2: Repetition Spacing Days -->
                         <div class="space-y-3 pt-4 border-t border-stone-200">
-                            <h4 class="text-xs font-bold text-stone-700 uppercase tracking-wider">Repetition Spacing in
+                            <h4 class="text-xs font-bold text-stone-700">Repetition Spacing in
                                 Days (Custom SRS Intervals)</h4>
                             <div class="grid grid-cols-3 sm:grid-cols-5 gap-3">
                                 <div class="text-center">
-                                    <label class="block text-[10px] uppercase font-bold text-stone-500 mb-1">Stage
+                                    <label class="block text-[11px] font-bold text-stone-500 mb-1">Stage
                                         1</label>
                                     <input type="number" id="srs-stage-1" placeholder="1"
                                         class="w-full bg-stone-50 border border-stone-200 rounded-lg p-2 text-center text-sm font-bold focus:outline-none focus:border-amber-500">
                                 </div>
                                 <div class="text-center">
-                                    <label class="block text-[10px] uppercase font-bold text-stone-500 mb-1">Stage
+                                    <label class="block text-[11px] font-bold text-stone-500 mb-1">Stage
                                         2</label>
                                     <input type="number" id="srs-stage-2" placeholder="3"
                                         class="w-full bg-stone-50 border border-stone-200 rounded-lg p-2 text-center text-sm font-bold focus:outline-none focus:border-amber-500">
                                 </div>
                                 <div class="text-center">
-                                    <label class="block text-[10px] uppercase font-bold text-stone-500 mb-1">Stage
+                                    <label class="block text-[11px] font-bold text-stone-500 mb-1">Stage
                                         3</label>
                                     <input type="number" id="srs-stage-3" placeholder="7"
                                         class="w-full bg-stone-50 border border-stone-200 rounded-lg p-2 text-center text-sm font-bold focus:outline-none focus:border-amber-500">
                                 </div>
                                 <div class="text-center">
-                                    <label class="block text-[10px] uppercase font-bold text-stone-500 mb-1">Stage
+                                    <label class="block text-[11px] font-bold text-stone-500 mb-1">Stage
                                         4</label>
                                     <input type="number" id="srs-stage-4" placeholder="14"
                                         class="w-full bg-stone-50 border border-stone-200 rounded-lg p-2 text-center text-sm font-bold focus:outline-none focus:border-amber-500">
                                 </div>
                                 <div class="text-center">
-                                    <label class="block text-[10px] uppercase font-bold text-stone-500 mb-1">Stage
+                                    <label class="block text-[11px] font-bold text-stone-500 mb-1">Stage
                                         5</label>
                                     <input type="number" id="srs-stage-5" placeholder="30"
                                         class="w-full bg-stone-50 border border-stone-200 rounded-lg p-2 text-center text-sm font-bold focus:outline-none focus:border-amber-500">
@@ -1318,7 +1318,7 @@
                                 <p class="text-xs text-stone-400">Set how often to repeat reviews once Stage 5 is
                                     reached:</p>
                                 <div class="w-48">
-                                    <label class="block text-[10px] uppercase font-bold text-stone-500 mb-1">Repeat
+                                    <label class="block text-[11px] font-bold text-stone-500 mb-1">Repeat
                                         Interval (Days)</label>
                                     <input type="number" min="1" max="365" id="srs-stage-5-repeat-interval"
                                         placeholder="30"
@@ -1374,7 +1374,7 @@
 
                         <!-- Section 4: Multipliers -->
                         <div class="space-y-3 pt-4 border-t border-stone-200">
-                            <h4 class="text-xs font-bold text-stone-700 uppercase tracking-wider">Star Rating Interval
+                            <h4 class="text-xs font-bold text-stone-700">Star Rating Interval
                                 Multipliers</h4>
                             <p class="text-xs text-stone-400">Customize interval multipliers by star rating:</p>
                             <div class="grid grid-cols-3 sm:grid-cols-5 gap-3">
@@ -1423,9 +1423,9 @@
                              select cannot fire one). -->
                         <div class="space-y-3 pt-4 border-t border-stone-200">
                             <div class="flex items-center space-x-2">
-                                <h4 class="text-xs font-bold text-stone-500 uppercase tracking-wider">Active Recall
+                                <h4 class="text-xs font-bold text-stone-500">Active Recall
                                     Grouping Mode</h4>
-                                <span class="text-[10px] font-bold uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">Coming soon</span>
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-0.5">Coming Soon</span>
                             </div>
                             <select id="settings-review-mode" disabled
                                 class="w-full bg-stone-100 border border-stone-200 rounded-xl px-4 py-3 text-sm text-stone-400 font-medium opacity-70 cursor-not-allowed">
@@ -1625,13 +1625,13 @@
                 <input type="hidden" id="wizard-base-url" value="">
 
                 <div class="space-y-1">
-                    <label class="block text-xs font-semibold text-stone-500 uppercase tracking-wider">Username</label>
+                    <label class="block text-xs font-semibold text-stone-500">Username</label>
                     <input type="text" id="wizard-username" placeholder="Choose or enter your username (e.g., alex)"
                         class="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900 font-medium">
                 </div>
 
                 <div class="space-y-1">
-                    <label class="block text-xs font-semibold text-stone-500 uppercase tracking-wider">Password</label>
+                    <label class="block text-xs font-semibold text-stone-500">Password</label>
                     <div class="relative">
                         <input type="password" id="wizard-password" placeholder="Choose a profile password"
                             class="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 pr-12 text-sm focus:outline-none focus:border-amber-500 text-stone-900 font-medium">
@@ -1643,7 +1643,7 @@
                 </div>
 
                 <div class="space-y-1">
-                    <label class="block text-xs font-semibold text-stone-500 uppercase tracking-wider">Google AI Studio
+                    <label class="block text-xs font-semibold text-stone-500">Google AI Studio
                         API Key</label>
                     <input type="password" id="wizard-gemini-key" required
                         placeholder="Paste key (starts with AIzaSy...)"
@@ -1651,7 +1651,7 @@
                 </div>
 
                 <div class="space-y-1">
-                    <label class="block text-xs font-semibold text-stone-500 uppercase tracking-wider">Telegram Bot
+                    <label class="block text-xs font-semibold text-stone-500">Telegram Bot
                         Token <span class="normal-case text-stone-500">(Optional)</span></label>
                     <input type="password" id="wizard-telegram-token"
                         placeholder="From @BotFather (skip if you don't want notifications)"
@@ -1687,7 +1687,7 @@
                      header reads as one line instead of a stack floating under a corner icon. -->
                 <div class="flex items-start justify-between gap-3">
                     <div class="min-w-0">
-                        <span class="text-xs font-bold text-amber-700 uppercase tracking-wider block" id="quiz-source-label">Active
+                        <span class="text-xs font-bold text-amber-700 block" id="quiz-source-label">Active
                             Recall Session</span>
                         <h3 class="text-lg font-bold text-stone-900 leading-snug" id="quiz-source-title">
                             Loading Video Title...
@@ -1763,7 +1763,7 @@
                                 </label>
 
                                 <div class="border-t border-[#e7dfd3] my-1.5"></div>
-                                <p class="px-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-stone-500">
+                                <p class="px-2 pb-1 text-[11px] font-bold text-stone-500">
                                     Answering</p>
                                 <div id="quiz-mode-switch" role="group" aria-label="Answer mode">
                                     <button type="button" data-quiz-mode="mixed" class="quiz-menu-row quiz-mode-btn">
@@ -1814,7 +1814,7 @@
                         <div id="quiz-ai-verdict-box" class="hidden p-3 rounded-xl border flex flex-col space-y-1">
                             <div class="flex items-center justify-between">
                                 <span id="quiz-ai-verdict-label"
-                                    class="quiz-verdict-label text-[9px] font-bold uppercase tracking-wider">AI Evaluation</span>
+                                    class="quiz-verdict-label text-[11px] font-bold">AI Evaluation</span>
                                 <button type="button" id="btn-tts-feedback" aria-label="Read AI feedback aloud"
                                     class="p-1 rounded bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-amber-800 transition"
                                     title="Read AI Feedback Aloud">
@@ -2201,7 +2201,7 @@
             <div class="overflow-y-auto pr-2 space-y-4 flex-grow">
                 <!-- Claims list -->
                 <div class="space-y-3">
-                    <h4 class="text-xs uppercase font-bold text-stone-500 tracking-wider">What has been checked</h4>
+                    <h4 class="text-xs font-bold text-stone-500">What Has Been Checked</h4>
                     <div id="factcheck-claims-container" class="space-y-3">
                         <!-- claims dynamically loaded here -->
                     </div>
@@ -2516,7 +2516,7 @@
                         class="w-full flex-1 p-5 overflow-y-auto hidden bg-stone-50 border-t border-stone-200">
                         <div class="flex items-center justify-between mb-3 border-b border-stone-200 pb-2">
                             <h4
-                                class="font-bold text-stone-900 text-xs uppercase tracking-wider flex items-center space-x-2">
+                                class="font-bold text-stone-900 text-xs flex items-center space-x-2">
                                 <i data-lucide="file-text" class="w-4 h-4 text-amber-600"></i>
                                 <span id="studio-doc-header-title">Source Material</span>
                             </h4>
@@ -2577,7 +2577,7 @@
                         </div>
                         <div id="studio-toolbar-label" class="flex items-center space-x-2 shrink-0">
                             <span
-                                class="text-[10px] text-stone-500 font-semibold uppercase tracking-wider hidden sm:block">Rich
+                                class="text-[11px] text-stone-500 font-semibold hidden sm:block">Rich
                                 Notes Panel</span>
                         </div>
                     </div>
@@ -2612,18 +2612,18 @@
                 <!-- SRS Summary Panel -->
                 <div class="grid grid-cols-2 gap-4 bg-stone-100/60 p-4 rounded-2xl border border-stone-200">
                     <div>
-                        <span class="block text-[10px] uppercase font-bold text-stone-500">Current SRS Stage</span>
+                        <span class="block text-[11px] font-bold text-stone-500">Current SRS Stage</span>
                         <span id="stats-srs-stage" class="text-lg font-extrabold text-amber-400">Stage 0</span>
                     </div>
                     <div>
-                        <span class="block text-[10px] uppercase font-bold text-stone-500">Next Review Scheduled</span>
+                        <span class="block text-[11px] font-bold text-stone-500">Next Review Scheduled</span>
                         <span id="stats-next-review" class="text-xs font-semibold text-stone-500">Not scheduled</span>
                     </div>
                 </div>
 
                 <!-- Attempts Log -->
                 <div class="space-y-3">
-                    <h4 class="text-xs uppercase font-bold text-stone-500 tracking-wider flex items-center space-x-1.5">
+                    <h4 class="text-xs font-bold text-stone-500 flex items-center space-x-1.5">
                         <i data-lucide="history" class="w-3.5 h-3.5 text-amber-400"></i>
                         <span>Quiz Attempts History</span>
                     </h4>
@@ -2657,7 +2657,7 @@
 
         <!-- Minimized Floating Capsule Pill Badge (Clickable) -->
         <button id="import-widget-badge" onclick="toggleImportBacklogDrawer()"
-            class="hidden bg-[#fcfaf6]/95 hover:bg-[#f5efe6] text-stone-800 border border-[#e7dfd3] ring-2 ring-amber-500/10 backdrop-blur-md px-3.5 py-2 rounded-full shadow-xl transition-all duration-300 transform hover:scale-105 active:scale-95 items-center justify-center space-x-2 group cursor-pointer text-xs font-bold">
+            class="hidden bg-[#fcfaf6]/95 hover:bg-[#f5efe6] text-stone-800 border border-[#e7dfd3] ring-2 ring-amber-500/10 backdrop-blur-md px-3.5 py-2 rounded-md shadow-xl transition-all duration-300 transform hover:scale-105 active:scale-95 items-center justify-center space-x-2 group cursor-pointer text-xs font-bold">
             <div id="import-badge-spinner" class="flex items-center shrink-0">
                 <i data-lucide="loader-2" class="w-3.5 h-3.5 text-amber-600 animate-spin"></i>
             </div>
@@ -2666,7 +2666,7 @@
             </div>
             <span id="import-badge-label" class="text-stone-800 font-bold">Importing...</span>
             <span id="import-badge-count"
-                class="bg-amber-100 text-amber-800 border border-amber-300/80 font-extrabold text-[10px] px-1.5 py-0.5 rounded-full shadow-sm">0</span>
+                class="bg-amber-100 text-amber-800 border border-amber-300/80 font-extrabold text-[10px] px-1.5 py-0.5 rounded-md shadow-sm">0</span>
         </button>
     </div>
 

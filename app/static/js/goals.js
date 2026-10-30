@@ -92,7 +92,7 @@ function goalRecsSectionHTML(g) {
                                         <button type="button" data-goal-action="toggle-concepts" class="concepts-toggle flex items-center space-x-1.5 text-xs font-bold text-stone-800 hover:text-amber-700 transition" data-goal-id="${g.id}" aria-expanded="false" aria-controls="concepts-${g.id}">
                                             <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-700 shrink-0"></i>
                                             <span>Concepts</span>
-                                            <span id="concepts-count-${g.id}" class="text-[10px] bg-amber-500/20 text-amber-700 px-1.5 py-0.5 rounded-full font-bold"></span>
+                                            <span id="concepts-count-${g.id}" class="text-[10px] bg-amber-500/20 text-amber-700 px-1.5 py-0.5 rounded-md font-bold"></span>
                                             <i data-lucide="chevron-down" class="concepts-chevron w-3.5 h-3.5 text-stone-400 transition-transform"></i>
                                         </button>
                                         <div id="concepts-${g.id}" class="hidden text-[11px] text-stone-600 leading-relaxed break-words"></div>
@@ -130,7 +130,7 @@ async function loadGoals() {
             starterContainer.innerHTML = starterVideos.length === 0 ? '' : `
                 <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 space-y-3 shadow-sm">
                     <div class="flex items-center justify-between">
-                        <span class="text-[11px] font-bold tracking-wider uppercase text-emerald-700 flex items-center gap-1.5">
+                        <span class="text-[11px] font-bold text-emerald-700 flex items-center gap-1.5">
                             <i data-lucide="sprout" class="w-4 h-4"></i>Starter set
                         </span>
                         <button type="button" data-goal-action="remove-starter" class="p-1 text-stone-400 hover:text-stone-700 transition" title="Remove the starter set" aria-label="Remove the starter set">
@@ -155,7 +155,7 @@ async function loadGoals() {
                             <span class="flex items-center space-x-2.5 font-bold">
                                 <i data-lucide="bookmark" class="w-5 h-5 text-amber-600 fill-amber-500"></i>
                                 <span class="text-stone-800">Study Queue / Watchlist</span>
-                                <span class="text-xs bg-amber-500/20 text-amber-800 px-2 py-0.5 rounded-full font-semibold border border-amber-500/30">${watchlistVideos.length}</span>
+                                <span class="text-xs bg-amber-500/20 text-amber-800 px-2 py-0.5 rounded-md font-semibold border border-amber-500/30">${watchlistVideos.length}</span>
                             </span>
                             <i data-lucide="chevron-down" id="chevron-watchlist" class="w-5 h-5 text-amber-600 transition-transform ${isWatchlistOpen ? 'rotate-180' : ''}"></i>
                         </button>
@@ -186,7 +186,7 @@ async function loadGoals() {
             container.innerHTML = '';
             if (goals.length === 0) {
                 container.innerHTML = `
-                    <div class="text-center py-16 px-6 bg-white rounded-3xl border border-dashed border-amber-500/30 shadow-xl max-w-xl mx-auto my-6 space-y-5">
+                    <div class="text-center py-16 px-6 bg-white rounded-2xl border border-dashed border-amber-500/30 shadow-xl max-w-xl mx-auto my-6 space-y-5">
                         <div class="w-20 h-20 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-3xl flex items-center justify-center mx-auto shadow-inner">
                             <i data-lucide="target" class="w-10 h-10"></i>
                         </div>
@@ -237,7 +237,7 @@ async function loadGoals() {
                             <span class="flex items-center space-x-2.5 font-bold">
                                 <i data-lucide="help-circle" class="w-5 h-5 text-amber-400"></i>
                                 <span class="text-stone-900">Unassociated / Quick Review Material</span>
-                                <span class="text-xs bg-stone-200 text-stone-500 px-2 py-0.5 rounded-full font-semibold">${unassociatedVideos.length}</span>
+                                <span class="text-xs bg-stone-200 text-stone-500 px-2 py-0.5 rounded-md font-semibold">${unassociatedVideos.length}</span>
                             </span>
                             <i data-lucide="chevron-down" id="chevron-unassociated" class="w-5 h-5 text-stone-400 transition-transform ${isUnassocOpen ? 'rotate-180' : ''}"></i>
                         </div>

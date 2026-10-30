@@ -31,7 +31,7 @@ function renderStatsWeek(week) {
         bar.style.height = d.quizzes ? `${Math.max(8, (d.quizzes / maxQuizzes) * 100)}%` : '2px';
         track.appendChild(bar);
         const day = document.createElement('span');
-        day.className = 'text-[10px] uppercase font-bold text-stone-500';
+        day.className = 'text-[11px] font-bold text-stone-500';
         const [y, m, dd] = d.date.split('-').map(Number);
         day.textContent = new Date(y, m - 1, dd).toLocaleDateString(undefined, { weekday: 'short' });
         const xp = document.createElement('span');
@@ -1151,17 +1151,17 @@ function renderAnalyticsHistory() {
             attemptsHTML += `
                 <div class="p-3.5 bg-stone-100 border border-stone-200 rounded-xl space-y-3 shadow-inner">
                     <div class="flex justify-between items-center">
-                        <span class="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Question ${attempt.question_index + 1}</span>
-                        <span class="text-[9px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider ${gradeBadgeClass}">${gradeLabel}</span>
+                        <span class="text-[11px] font-bold text-stone-500">Question ${attempt.question_index + 1}</span>
+                        <span class="text-[11px] font-bold px-2 py-0.5 rounded border ${gradeBadgeClass}">${gradeLabel}</span>
                     </div>
                     <p class="text-xs text-stone-900 font-semibold leading-relaxed">${escapeHtml(attempt.question)}</p>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-0.5 text-[11px] leading-relaxed">
                         <div>
-                            <span class="text-stone-500 block text-[9px] uppercase font-extrabold tracking-wider mb-0.5">Your Guess:</span>
+                            <span class="text-stone-500 block text-[11px] font-extrabold mb-0.5">Your Guess:</span>
                             <p class="text-stone-700 font-mono bg-stone-50 p-2 rounded-lg border border-stone-200 max-h-[100px] overflow-y-auto whitespace-pre-wrap">${attempt.given_answer ? escapeHtml(attempt.given_answer) : '<span class="text-stone-400 italic">No guess provided / flipped</span>'}</p>
                         </div>
                         <div>
-                            <span class="text-emerald-500 block text-[9px] uppercase font-extrabold tracking-wider mb-0.5">AI Correct Answer:</span>
+                            <span class="text-emerald-500 block text-[11px] font-extrabold mb-0.5">AI Correct Answer:</span>
                             <p class="text-emerald-455 font-mono bg-stone-50 p-2 rounded-lg border border-stone-200 max-h-[100px] overflow-y-auto whitespace-pre-wrap">${escapeHtml(attempt.correct_answer)}</p>
                         </div>
                     </div>
@@ -2334,17 +2334,17 @@ function updateBrowserNotificationStatus() {
     if (!statusEl) return;
     if (!('Notification' in window)) {
         statusEl.textContent = 'Not supported';
-        statusEl.className = 'text-[10px] px-2 py-0.5 rounded-full font-mono bg-red-950/80 text-red-400 border border-red-800';
+        statusEl.className = 'text-[10px] px-2 py-0.5 rounded-md font-mono bg-red-950/80 text-red-400 border border-red-800';
     } else if (Notification.permission === 'granted') {
         statusEl.textContent = 'Enabled (Allowed)';
-        statusEl.className = 'text-[10px] px-2 py-0.5 rounded-full font-mono bg-emerald-950/80 text-emerald-400 border border-emerald-800';
+        statusEl.className = 'text-[10px] px-2 py-0.5 rounded-md font-mono bg-emerald-950/80 text-emerald-400 border border-emerald-800';
         subscribeWebPush();
     } else if (Notification.permission === 'denied') {
         statusEl.textContent = 'Blocked';
-        statusEl.className = 'text-[10px] px-2 py-0.5 rounded-full font-mono bg-amber-950/80 text-amber-400 border border-amber-800';
+        statusEl.className = 'text-[10px] px-2 py-0.5 rounded-md font-mono bg-amber-950/80 text-amber-400 border border-amber-800';
     } else {
         statusEl.textContent = 'Not requested';
-        statusEl.className = 'text-[10px] px-2 py-0.5 rounded-full font-mono bg-stone-100 text-stone-500';
+        statusEl.className = 'text-[10px] px-2 py-0.5 rounded-md font-mono bg-stone-100 text-stone-500';
     }
 }
 

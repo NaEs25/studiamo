@@ -5,6 +5,13 @@
 
 /* Design Tokens */
 :root {
+    /* Corner radii from the style guide. Tailwind's rounded-md/lg/xl/2xl/3xl are the same
+       6/8/12/16/24px steps; the rounded-ds-* aliases name them by guide token. */
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+    --radius-2xl: 24px;
     --color-bg:             #f6f1e7;
     --color-surface:        #ffffff;
     --color-surface-2:      #fbf8f2;
@@ -1108,10 +1115,8 @@ html[data-standalone="true"] .app-overlay {
 }
 
 .onboarding-eyebrow {
-    font-size: 0.75rem;
+    font-size: 0.875rem;
     font-weight: 700;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
     color: var(--color-text-faint);
 }
 
@@ -1679,10 +1684,8 @@ button:active:not(:disabled) {
 /* Notes in a group fan out sideways, each covering most of the one before it. */
 .belt-group .belt-doc + .belt-doc { margin-left: -0.75rem; }
 .belt-station-label {
-    font-size: 0.625rem;
+    font-size: 0.6875rem;
     font-weight: 700;
-    letter-spacing: 0.02em;
-    text-transform: uppercase;
     color: #57534e;
     white-space: nowrap;
 }

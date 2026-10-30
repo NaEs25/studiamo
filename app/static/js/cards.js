@@ -143,12 +143,12 @@ function renderCardsSheet() {
 
     const list = document.getElementById('cards-list');
     list.innerHTML = `
-        <p class="text-[11px] font-bold tracking-wider uppercase text-stone-600">Stage (cards in this stage)</p>
+        <p class="text-[11px] font-bold text-stone-600">Stage (Cards in This Stage)</p>
         <div class="flex gap-1.5">${pills}</div>
         <div class="text-xs font-semibold rounded-xl px-3 py-2 border bg-amber-50 border-amber-200 text-amber-900">${escapeHtml(status)}</div>
         ${inRotation.map(c => cardsRowHTML(c)).join('')}
-        ${paused.length ? `<p class="text-[11px] font-bold tracking-wider uppercase text-stone-500 pt-1">Paused at ${rating} stars, back at a higher rating</p>${paused.map(c => cardsRowHTML(c, { paused: true })).join('')}` : ''}
-        ${borrowed.length ? `<p class="text-[11px] font-bold tracking-wider uppercase text-stone-500 pt-1">Borrowed from other stages</p>${borrowed.map(c => cardsRowHTML(c, { paused: false, readOnly: true })).join('')}` : ''}
+        ${paused.length ? `<p class="text-[11px] font-bold text-stone-500 pt-1">Paused at ${rating} stars, back at a higher rating</p>${paused.map(c => cardsRowHTML(c, { paused: true })).join('')}` : ''}
+        ${borrowed.length ? `<p class="text-[11px] font-bold text-stone-500 pt-1">Borrowed From Other Stages</p>${borrowed.map(c => cardsRowHTML(c, { paused: false, readOnly: true })).join('')}` : ''}
         ${cardsAddFormHTML(stage)}`;
 
     document.getElementById('cards-subtitle').innerHTML = `${escapeHtml(cardsState.title || '')} ${cardsStars(rating)}`;

@@ -137,7 +137,7 @@ async function loadDashboard() {
                                 <span class="block truncate font-semibold text-stone-900 hover:text-amber-300 transition max-w-[240px]">${escapeHtml(item.title)}</span>
                             </div>
                             <div class="flex items-center space-x-2 shrink-0">
-                                <span class="text-[10px] bg-amber-500/10 border border-amber-200 text-amber-700 font-bold px-2 py-0.5 rounded-full shrink-0" title="${formattedDate}">
+                                <span class="text-[10px] bg-amber-500/10 border border-amber-200 text-amber-700 font-bold px-2 py-0.5 rounded-ds-sm shrink-0" title="${formattedDate}">
                                     ${relativeStr}
                                 </span>
                             </div>
@@ -343,7 +343,7 @@ async function loadDailyRecommendations() {
         if (refreshBtn) refreshBtn.classList.toggle('hidden', !!(data && data.requires_plan));
         if (data && data.requires_plan) {
             grid.innerHTML = `
-                <div class="col-span-full text-center py-8 px-6 bg-white rounded-3xl border border-dashed border-amber-500/30 shadow-sm space-y-3">
+                <div class="col-span-full text-center py-8 px-6 bg-white rounded-2xl border border-dashed border-amber-500/30 shadow-sm space-y-3">
                     <div class="w-14 h-14 bg-amber-500/10 border border-amber-500/30 text-amber-600 rounded-2xl flex items-center justify-center mx-auto">
                         <i data-lucide="sparkles" class="w-7 h-7"></i>
                     </div>
@@ -406,7 +406,7 @@ async function loadDailyRecommendations() {
                         
                         <!-- Goal Badge (Top-Left), hidden for now; set SHOW_REC_GOAL_BADGE to bring it back. -->
                         ${SHOW_REC_GOAL_BADGE ? `
-                        <span class="absolute top-2 left-2 z-10 bg-amber-500/20 backdrop-blur-xs border border-amber-500/40 text-amber-900 text-[9px] font-extrabold px-2 py-0.5 rounded-md flex items-center space-x-1">
+                        <span class="absolute top-2 left-2 z-10 bg-amber-500/20 backdrop-blur-xs border border-amber-500/40 text-amber-900 text-[9px] font-extrabold px-2 py-0.5 rounded-ds-sm flex items-center space-x-1">
                             <i data-lucide="target" class="w-3 h-3 text-amber-900"></i>
                             <span class="truncate max-w-[120px]">${escapeHtml(rec.goal_title || 'AI Recommendation')}</span>
                         </span>
@@ -414,7 +414,7 @@ async function loadDailyRecommendations() {
 
                         <!-- Draft Badge (Top-Right) -->
                         ${isDraft ? `
-                            <span class="absolute top-2 right-2 z-10 bg-amber-500/20 backdrop-blur-xs border border-amber-500/40 text-amber-900 text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded-md flex items-center space-x-1">
+                            <span class="absolute top-2 right-2 z-10 bg-amber-500/20 backdrop-blur-xs border border-amber-500/40 text-amber-900 text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded-ds-sm flex items-center space-x-1">
                                 <i data-lucide="clock" class="w-2.5 h-2.5 text-amber-900"></i>
                                 <span>Draft Preview</span>
                             </span>
@@ -429,7 +429,7 @@ async function loadDailyRecommendations() {
 
                         <!-- Views Badge (Bottom-Left, Compact) -->
                         ${rec.views && rec.views !== 'N/A' ? `
-                            <span class="absolute bottom-2 left-2 z-10 bg-white/70 text-stone-900/80 text-[10px] font-extrabold px-1.5 py-0.5 rounded-md flex items-center space-x-1">
+                            <span class="absolute bottom-2 left-2 z-10 bg-white/70 text-stone-900/80 text-[10px] font-extrabold px-1.5 py-0.5 rounded-ds-sm flex items-center space-x-1">
                                 <i data-lucide="eye" class="w-3 h-3 text-stone-900/80"></i>
                                 <span>${escapeHtml(rec.views)}</span>
                             </span>
@@ -437,7 +437,7 @@ async function loadDailyRecommendations() {
 
                         <!-- Duration Badge (Bottom-Right, Compact) -->
                         ${rec.duration && rec.duration !== 'N/A' ? `
-                            <span class="absolute bottom-2 right-2 z-10 bg-white/70 text-stone-900/80 text-[10px] font-extrabold px-1.5 py-0.5 rounded-md flex items-center space-x-1">
+                            <span class="absolute bottom-2 right-2 z-10 bg-white/70 text-stone-900/80 text-[10px] font-extrabold px-1.5 py-0.5 rounded-ds-sm flex items-center space-x-1">
                                 <i data-lucide="clock" class="w-3 h-3 text-stone-900/80"></i>
                                 <span>${escapeHtml(rec.duration)}</span>
                             </span>

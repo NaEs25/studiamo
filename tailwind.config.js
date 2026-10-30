@@ -55,6 +55,15 @@ module.exports = {
                 amber: { 600: "#D47200", 700: "#B35208" },
                 stone: { 400: "#908A86", 500: "#746D68" },
             },
+            // Style-guide radius tokens (values live in style.css). A nested element's radius is
+            // its parent's minus the padding between them, never below ds-sm.
+            borderRadius: {
+                'ds-sm': 'var(--radius-sm)',
+                'ds-md': 'var(--radius-md)',
+                'ds-lg': 'var(--radius-lg)',
+                'ds-xl': 'var(--radius-xl)',
+                'ds-2xl': 'var(--radius-2xl)',
+            },
             // font-mono keeps Tailwind's default system monospace stack: it only styles
             // short labels (timestamps, percentages, dates), so no webfont is loaded for it.
             fontFamily: {

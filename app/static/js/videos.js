@@ -531,7 +531,7 @@ function renderFocusStageTabs() {
             class="shrink-0 min-w-[2rem] h-8 px-2 rounded-lg border text-xs font-bold transition ${cls}">${s.stage}</button>`;
     }).join('');
 
-    tabs.innerHTML = `<span class="text-[11px] font-bold uppercase tracking-wider text-stone-500 mr-1.5 shrink-0">Stage</span>${buttons}`;
+    tabs.innerHTML = `<span class="text-[11px] font-bold text-stone-500 mr-1.5 shrink-0">Stage</span>${buttons}`;
 
     tabs.querySelectorAll('[data-stage-tab]').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -1263,7 +1263,7 @@ function renderVideoCard(video, quizzes, goals) {
         : isTemporaryVideo(video)
         ? `<span class="text-[9px] bg-amber-500/15 border border-amber-500/30 text-amber-900 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider flex items-center space-x-1" title="Preview mode: expires in ~24h unless imported"><i data-lucide="clock" class="w-3 h-3 text-amber-700"></i><span>24h Preview</span></span>`
         : isEaten
-        ? `<span class="eaten-badge text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider flex items-center space-x-1"><img src="/static/images/chompy/chompy-icon.png" alt="" class="w-3.5 h-3.5"><span>Eaten by Chompy</span></span><button data-chompy-info class="eaten-info p-0.5" title="What does this mean?" aria-label="What does eaten by Chompy mean?"><i data-lucide="info" class="w-3.5 h-3.5"></i></button>`
+        ? `<span class="eaten-badge text-[11px] px-1.5 py-0.5 rounded font-bold flex items-center space-x-1"><img src="/static/images/chompy/chompy-icon.png" alt="" class="w-3.5 h-3.5"><span>Eaten by Chompy</span></span><button data-chompy-info class="eaten-info p-0.5" title="What does this mean?" aria-label="What does eaten by Chompy mean?"><i data-lucide="info" class="w-3.5 h-3.5"></i></button>`
         : (isPaused
             ? `<span class="text-[9px] bg-stone-100 border border-stone-200 text-stone-600 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider flex items-center space-x-1" title="SRS Review Intervals Paused"><i data-lucide="pause-circle" class="w-3 h-3 text-stone-500"></i><span>${isMastered ? 'Mastered' : `Stage ${srsStage}`} (Paused)</span></span>`
             : `<span class="text-[9px] bg-amber-100 border border-amber-200 text-amber-800 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">${isMastered ? 'Mastered' : `Stage ${srsStage}`}</span>`);
@@ -1299,7 +1299,7 @@ function renderVideoCard(video, quizzes, goals) {
             <div id="details-content-${video.id}" class="hidden space-y-2 pt-0.5 text-xs">
                 ${hasTakeaways ? `
                 <div class="space-y-1">
-                    ${hasNotes ? '<h5 class="font-semibold text-stone-500 text-[10px] uppercase tracking-wider">Key Takeaways</h5>' : ''}
+                    ${hasNotes ? '<h5 class="font-semibold text-stone-500 text-[11px]">Key Takeaways</h5>' : ''}
                     <ul class="list-disc list-inside space-y-1 text-stone-600 pl-1 leading-relaxed">
                         ${validSummaryBullets.map(s => `<li>${s}</li>`).join('')}
                     </ul>
@@ -1308,7 +1308,7 @@ function renderVideoCard(video, quizzes, goals) {
                 
                 ${hasNotes ? `
                 <div class="pt-2 space-y-1">
-                    <h5 class="font-semibold text-stone-500 text-[10px] uppercase tracking-wider">My Notes</h5>
+                    <h5 class="font-semibold text-stone-500 text-[11px]">My Notes</h5>
                     <div class="bg-stone-50 border border-stone-200 p-2.5 rounded-xl text-stone-700 leading-relaxed break-words prose prose-sm prose-stone max-w-none">
                         ${renderMarkdownSafe(video.custom_notes)}
                     </div>
@@ -1763,7 +1763,7 @@ async function showFactCheck(id) {
                     const badgeLabel = claim.severity || 'Disputed';
                     const citationHtml = claim.source_citation ? `
                         <div class="space-y-0.5 border-t border-stone-200/60 pt-2">
-                            <span class="text-[10px] font-bold text-stone-500 uppercase tracking-wider block">Source:</span>
+                            <span class="text-[11px] font-bold text-stone-500 block">Source:</span>
                             <p class="text-[11px] text-stone-500 leading-relaxed">${claim.source_citation}</p>
                         </div>
                     ` : '';
@@ -1771,14 +1771,14 @@ async function showFactCheck(id) {
                     claimsContainer.innerHTML += `
                         <div class="p-4 bg-stone-50 border border-stone-200 rounded-2xl space-y-3 shadow-sm">
                             <div class="flex items-center justify-between">
-                                <span class="text-xs font-bold ${badgeColor} px-2.5 py-0.5 rounded-full uppercase tracking-wider">${badgeLabel}</span>
+                                <span class="text-xs font-bold ${badgeColor} px-2.5 py-0.5 rounded-md">${badgeLabel}</span>
                             </div>
                             <div class="space-y-1">
-                                <span class="text-[10px] font-bold text-stone-500 uppercase tracking-wider block">Claim made in video:</span>
+                                <span class="text-[11px] font-bold text-stone-500 block">Claim made in video:</span>
                                 <p class="text-sm text-stone-900 leading-relaxed font-semibold">"${claim.claim}"</p>
                             </div>
                             <div class="space-y-1 border-t border-stone-200 pt-2.5">
-                                <span class="text-[10px] font-bold text-amber-700 uppercase tracking-wider block">Accepted Factual Consensus:</span>
+                                <span class="text-[11px] font-bold text-amber-700 block">Accepted Factual Consensus:</span>
                                 <p class="text-xs text-stone-600 leading-relaxed">${claim.actual_consensus}</p>
                             </div>
                             ${citationHtml}
@@ -1790,14 +1790,14 @@ async function showFactCheck(id) {
                     claimsContainer.innerHTML += `
                         <div class="p-4 bg-stone-50 border border-stone-200 rounded-2xl space-y-3 shadow-sm">
                             <div class="flex items-center justify-between">
-                                <span class="text-xs font-bold bg-emerald-500/10 text-emerald-700 border border-emerald-500/20 px-2.5 py-0.5 rounded-full uppercase tracking-wider">Verified</span>
+                                <span class="text-xs font-bold bg-emerald-500/10 text-emerald-700 border border-emerald-500/20 px-2.5 py-0.5 rounded-md uppercase tracking-wider">Verified</span>
                             </div>
                             <div class="space-y-1">
-                                <span class="text-[10px] font-bold text-stone-500 uppercase tracking-wider block">Claim made in video:</span>
+                                <span class="text-[11px] font-bold text-stone-500 block">Claim made in video:</span>
                                 <p class="text-sm text-stone-900 leading-relaxed font-semibold">"${claim.claim}"</p>
                             </div>
                             <div class="space-y-1 border-t border-stone-200 pt-2.5">
-                                <span class="text-[10px] font-bold text-emerald-700 uppercase tracking-wider block">Evidence:</span>
+                                <span class="text-[11px] font-bold text-emerald-700 block">Evidence:</span>
                                 <p class="text-xs text-stone-600 leading-relaxed">${claim.evidence}</p>
                             </div>
                         </div>
@@ -2050,17 +2050,17 @@ function renderVideoStatsAttempts(container, attempts) {
             qItemsHTML += `
                 <div class="p-3 bg-stone-50 border border-stone-200 rounded-xl space-y-2 text-xs">
                     <div class="flex justify-between items-center">
-                        <span class="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Question ${(att.question_index ?? 0) + 1}</span>
+                        <span class="text-[11px] font-bold text-stone-500">Question ${(att.question_index ?? 0) + 1}</span>
                         ${gradeBadge}
                     </div>
                     <p class="text-xs text-stone-900 font-semibold leading-relaxed">${escapeHtml(att.question || '')}</p>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] pt-1">
                         <div>
-                            <span class="text-stone-500 block text-[9px] uppercase font-bold tracking-wider mb-0.5">Your Answer:</span>
+                            <span class="text-stone-500 block text-[11px] font-bold mb-0.5">Your Answer:</span>
                             <div class="text-stone-500 font-mono bg-stone-50 p-2 rounded-lg border border-stone-200 break-words whitespace-pre-wrap">${att.given_answer ? escapeHtml(att.given_answer) : '<span class="text-stone-400 italic">No answer recorded</span>'}</div>
                         </div>
                         <div>
-                            <span class="text-emerald-500 block text-[9px] uppercase font-bold tracking-wider mb-0.5">Correct Answer:</span>
+                            <span class="text-emerald-500 block text-[11px] font-bold mb-0.5">Correct Answer:</span>
                             <div class="text-emerald-400 font-mono bg-stone-50 p-2 rounded-lg border border-stone-200 break-words whitespace-pre-wrap">${escapeHtml(att.correct_answer || '')}</div>
                         </div>
                     </div>
