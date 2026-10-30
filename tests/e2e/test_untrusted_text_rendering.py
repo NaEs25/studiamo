@@ -87,19 +87,19 @@ def test_goal_with_quotes_and_line_breaks_opens_in_edit(logged_in_page):
 
     heading = page.get_by_role("heading", name=title)
     heading.wait_for(timeout=15000)
-    card = heading.locator("xpath=ancestor::*[.//button[starts-with(@id, 'btn-goal-menu-')]][1]")
 
     try:
-        card.locator("[id^='btn-goal-menu-']").click()
-        page.locator("#portal-goal-menu").get_by_text("Edit Title", exact=False).click()
+        # The card opens the goal page, whose Edit button opens the dialog.
+        heading.click()
+        page.locator("#goal-page [data-goal-action='edit']").click()
         page.wait_for_selector("#goal-modal-title", state="visible", timeout=10000)
         assert page.input_value("#goal-modal-title") == title
         assert page.input_value("#goal-modal-desc") == description
         page.keyboard.press("Escape")
         page.wait_for_selector("#goal-modal-title", state="hidden", timeout=10000)
     finally:
-        card.locator("[id^='btn-goal-menu-']").click()
-        page.locator("#portal-goal-menu").get_by_text("Permanently Delete", exact=False).click()
+        page.locator("#goal-page [data-goal-action='edit']").click()
+        page.click("#btn-goal-modal-delete")
         assert title in page.inner_text("#delete-goal-modal-msg")
         with page.expect_response(lambda r: "/api/goals/" in r.url and r.request.method == "DELETE", timeout=20000):
             page.get_by_text("Delete Goal & All Linked Materials", exact=False).click()

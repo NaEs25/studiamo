@@ -27,9 +27,10 @@ def test_create_and_delete_goal(logged_in_page):
     goal_heading.wait_for(timeout=15000)
     assert goal_heading.is_visible()
 
-    goal_card = goal_heading.locator("xpath=ancestor::*[.//button[starts-with(@id, 'btn-goal-menu-')]][1]")
-    goal_card.locator("[id^='btn-goal-menu-']").click()
-    page.locator("#portal-goal-menu").get_by_text("Permanently Delete", exact=False).click()
+    # Delete lives in the edit dialog on the goal page, which the card opens.
+    goal_heading.click()
+    page.locator("#goal-page [data-goal-action='edit']").click()
+    page.click("#btn-goal-modal-delete")
 
     with page.expect_response(lambda r: "/api/goals/" in r.url and r.request.method == "DELETE", timeout=20000):
         page.get_by_text("Delete Goal & All Linked Materials", exact=False).click()

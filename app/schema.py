@@ -195,6 +195,20 @@ TABLES_SQL = [
     );
     """,
     """
+    ALTER TABLE goals ADD COLUMN IF NOT EXISTS key_concepts TEXT DEFAULT '';
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS goal_folders (
+        id SERIAL PRIMARY KEY,
+        user_uuid TEXT NOT NULL,
+        goal_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_goal_folders_user_goal ON goal_folders (user_uuid, goal_id);
+    ALTER TABLE goal_folders ENABLE ROW LEVEL SECURITY;
+    """,
+    """
     CREATE TABLE IF NOT EXISTS videos (
         id SERIAL PRIMARY KEY,
         user_uuid TEXT NOT NULL,
@@ -223,6 +237,7 @@ TABLES_SQL = [
     );
     """,
     """
+    ALTER TABLE videos ADD COLUMN IF NOT EXISTS folder_id INTEGER;
     ALTER TABLE videos ADD COLUMN IF NOT EXISTS summary JSONB DEFAULT '[]'::jsonb;
     ALTER TABLE videos ADD COLUMN IF NOT EXISTS outline JSONB DEFAULT '[]'::jsonb;
     ALTER TABLE videos ADD COLUMN IF NOT EXISTS fact_check JSONB DEFAULT '{}'::jsonb;

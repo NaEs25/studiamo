@@ -56,7 +56,9 @@ def test_ai_button_on_the_free_plan_shows_the_upgrade_toast(logged_in_page):
     page = _free_app(logged_in_page)
     page.click("#nav-goals")
     page.wait_for_selector("[data-goal-card='9001']", state="attached", timeout=15000)
-    page.click("#btn-recs-trigger-9001")
+    # The AI button lives on the goal page.
+    page.click("[data-goal-card='9001'] [data-goal-action='open-goal']")
+    page.click("#goal-page #btn-recs-trigger-9001")
     action = page.locator("#app-toast-action")
     action.wait_for(state="visible", timeout=5000)
     assert action.text_content().strip() == "See plans"

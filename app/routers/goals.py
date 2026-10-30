@@ -33,7 +33,7 @@ def get_goals(include_archived: bool = False, username: str = Depends(require_ac
     
         archived_clause = "AND g.is_archived = 1" if include_archived else "AND g.is_archived = 0"
         cursor.execute(f"""
-            SELECT g.id, g.title, g.description, g.order_index, g.created_at, g.is_archived,
+            SELECT g.id, g.title, g.description, g.key_concepts, g.order_index, g.created_at, g.is_archived,
                    CASE WHEN gr.recommendations_json IS NOT NULL AND gr.recommendations_json != '' AND gr.recommendations_json != '{{}}' THEN 1 ELSE 0 END AS has_saved_recommendations
             FROM goals g
             LEFT JOIN goal_recommendations gr ON g.id = gr.goal_id AND g.user_uuid = gr.user_uuid
@@ -65,6 +65,70 @@ def get_goals(include_archived: bool = False, username: str = Depends(require_ac
             goal_item["videos"] = videos_by_goal.get(row["id"], [])
             goals.append(goal_item)
         return goals
+    finally:
+        conn.close()
+
+
+MAX_GOAL_CONCEPTS = 8
+MAX_CONCEPT_CHARS = 60
+
+
+def parse_concepts(raw) -> list:
+    """Turns the comma separated concepts a user typed (or a stored string) into a clean list.
+
+    Splits on commas and line breaks, collapses whitespace, drops blanks and case-insensitive
+    duplicates, caps each concept's length and the number kept. Used on every write, so what is
+    stored is always already normalized.
+    """
+    if isinstance(raw, (list, tuple)):
+        parts = [str(p) for p in raw]
+    else:
+        parts = str(raw or "").replace("\n", ",").split(",")
+    seen = set()
+    concepts = []
+    for part in parts:
+        clean = " ".join(part.split())[:MAX_CONCEPT_CHARS].strip()
+        if clean and clean.casefold() not in seen:
+            seen.add(clean.casefold())
+            concepts.append(clean)
+        if len(concepts) >= MAX_GOAL_CONCEPTS:
+            break
+    return concepts
+
+
+def _save_goal_concepts(cursor, user_uuid: str, goal_id: int, concepts: list) -> None:
+    cursor.execute("UPDATE goals SET key_concepts = %s WHERE id = %s AND user_uuid = %s;", (", ".join(concepts), goal_id, user_uuid))
+
+
+def _store_generated_concepts(goal_id: int, generated, username: str) -> list:
+    """Keeps AI-proposed concepts on a goal that has none yet and returns the clean list.
+
+    The UPDATE only fires while the column is empty, so concepts the user typed in the
+    meantime are never overwritten by a slower generation.
+    """
+    concepts = parse_concepts(generated)
+    if not concepts:
+        return concepts
+    conn = database.get_db_connection(username)
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE goals SET key_concepts = %s WHERE id = %s AND user_uuid = %s AND COALESCE(key_concepts, '') = '';",
+            (", ".join(concepts), goal_id, conn.user_uuid),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+    return concepts
+
+
+def _current_goal_concepts(goal_id: int, username: str) -> list:
+    conn = database.get_db_connection(username)
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT key_concepts FROM goals WHERE id = %s AND user_uuid = %s;", (goal_id, conn.user_uuid))
+        row = cursor.fetchone()
+        return parse_concepts(row.get("key_concepts")) if row else []
     finally:
         conn.close()
 
@@ -131,8 +195,12 @@ def create_goal(title: str = Form(...), description: str = Form(""), username: s
 
 
 @router.post("/goals/{id}/edit")
-def edit_goal(id: int, title: str = Form(...), description: str = Form(""), username: str = Depends(require_account_access)):
-    """Edits a learning goal title and description, cascading video category renames."""
+def edit_goal(id: int, title: str = Form(...), description: str = Form(""), key_concepts: Optional[str] = Form(None), username: str = Depends(require_account_access)):
+    """Edits a learning goal title, description and key concepts, cascading video category renames.
+
+    key_concepts is a comma separated string; omitted leaves the stored concepts untouched, an
+    empty string clears them (they are then generated again the next time recommendations load).
+    """
     conn = database.get_db_connection(username)
     try:
         user_uuid = conn.user_uuid
@@ -149,6 +217,8 @@ def edit_goal(id: int, title: str = Form(...), description: str = Form(""), user
             conn.close()
             raise HTTPException(status_code=404, detail="Goal not found")
         cursor.execute("UPDATE videos SET category = %s WHERE learning_goal_id = %s AND user_uuid = %s;", (title.strip(), id, user_uuid))
+        if key_concepts is not None:
+            _save_goal_concepts(cursor, user_uuid, id, parse_concepts(key_concepts))
 
         conn.commit()
         conn.close()
@@ -242,6 +312,129 @@ def reorder_goal_materials(id: int, ids: str = Form(...), username: str = Depend
         conn.close()
 
 
+MAX_FOLDER_NAME_CHARS = 60
+MAX_FOLDERS_PER_GOAL = 50
+
+
+def _clean_folder_name(name: str) -> str:
+    clean = " ".join((name or "").split())[:MAX_FOLDER_NAME_CHARS].strip()
+    if not clean:
+        raise HTTPException(status_code=400, detail="Give the folder a name.")
+    return clean
+
+
+def _owned_folder(cursor, user_uuid: str, goal_id: int, folder_id: int) -> dict:
+    """The folder row, or 404 unless it is this account's and sits inside this goal."""
+    cursor.execute(
+        "SELECT id, goal_id, name FROM goal_folders WHERE id = %s AND goal_id = %s AND user_uuid = %s;",
+        (folder_id, goal_id, user_uuid),
+    )
+    row = cursor.fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Folder not found")
+    return dict(row)
+
+
+def _assert_folder_name_free(cursor, user_uuid: str, goal_id: int, name: str, exclude_id: int = None) -> None:
+    sql = "SELECT 1 FROM goal_folders WHERE user_uuid = %s AND goal_id = %s AND LOWER(name) = LOWER(%s)"
+    params = [user_uuid, goal_id, name]
+    if exclude_id is not None:
+        sql += " AND id <> %s"
+        params.append(exclude_id)
+    cursor.execute(sql + " LIMIT 1;", tuple(params))
+    if cursor.fetchone():
+        raise HTTPException(status_code=409, detail=f'This goal already has a folder called "{name}".')
+
+
+@router.post("/goals/{id}/folders")
+def create_goal_folder(id: int, name: str = Form(...), username: str = Depends(require_account_access)):
+    """Creates a folder inside a goal. Folders hold materials of that goal, one level deep."""
+    clean = _clean_folder_name(name)
+    conn = database.get_db_connection(username)
+    try:
+        user_uuid = conn.user_uuid
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1 FROM goals WHERE id = %s AND user_uuid = %s;", (id, user_uuid))
+        if cursor.fetchone() is None:
+            raise HTTPException(status_code=404, detail="Goal not found")
+        cursor.execute("SELECT COUNT(*) AS c FROM goal_folders WHERE goal_id = %s AND user_uuid = %s;", (id, user_uuid))
+        if (cursor.fetchone() or {}).get("c", 0) >= MAX_FOLDERS_PER_GOAL:
+            raise HTTPException(status_code=409, detail=f"A goal can have up to {MAX_FOLDERS_PER_GOAL} folders.")
+        _assert_folder_name_free(cursor, user_uuid, id, clean)
+        cursor.execute(
+            "INSERT INTO goal_folders (user_uuid, goal_id, name) VALUES (%s, %s, %s) RETURNING id;",
+            (user_uuid, id, clean),
+        )
+        folder_id = cursor.fetchone()["id"]
+        conn.commit()
+        return {"status": "success", "folder_id": folder_id, "name": clean}
+    finally:
+        conn.close()
+
+
+@router.post("/goals/{id}/folders/{folder_id}/rename")
+def rename_goal_folder(id: int, folder_id: int, name: str = Form(...), username: str = Depends(require_account_access)):
+    clean = _clean_folder_name(name)
+    conn = database.get_db_connection(username)
+    try:
+        user_uuid = conn.user_uuid
+        cursor = conn.cursor()
+        _owned_folder(cursor, user_uuid, id, folder_id)
+        _assert_folder_name_free(cursor, user_uuid, id, clean, exclude_id=folder_id)
+        cursor.execute("UPDATE goal_folders SET name = %s WHERE id = %s AND user_uuid = %s;", (clean, folder_id, user_uuid))
+        conn.commit()
+        return {"status": "success", "name": clean}
+    finally:
+        conn.close()
+
+
+@router.delete("/goals/{id}/folders/{folder_id}")
+def delete_goal_folder(id: int, folder_id: int, username: str = Depends(require_account_access)):
+    """Deletes a folder only. Its materials stay in the goal, outside any folder."""
+    conn = database.get_db_connection(username)
+    try:
+        user_uuid = conn.user_uuid
+        cursor = conn.cursor()
+        _owned_folder(cursor, user_uuid, id, folder_id)
+        cursor.execute("UPDATE videos SET folder_id = NULL WHERE folder_id = %s AND user_uuid = %s;", (folder_id, user_uuid))
+        cursor.execute("DELETE FROM goal_folders WHERE id = %s AND user_uuid = %s;", (folder_id, user_uuid))
+        conn.commit()
+        return {"status": "success"}
+    finally:
+        conn.close()
+
+
+@router.post("/goals/{id}/materials/{video_id}/folder")
+def move_material_to_folder(
+    id: int,
+    video_id: int,
+    folder_id: Optional[int] = Form(None),
+    username: str = Depends(require_account_access),
+):
+    """Moves one of the goal's materials into a folder of the same goal, or out of any folder when
+    folder_id is empty. Both the material and the folder must be this account's and in this goal."""
+    conn = database.get_db_connection(username)
+    try:
+        user_uuid = conn.user_uuid
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT 1 FROM videos WHERE id = %s AND learning_goal_id = %s AND user_uuid = %s;",
+            (video_id, id, user_uuid),
+        )
+        if cursor.fetchone() is None:
+            raise HTTPException(status_code=404, detail="Material not found in this goal")
+        if folder_id:
+            _owned_folder(cursor, user_uuid, id, folder_id)
+        cursor.execute(
+            "UPDATE videos SET folder_id = %s WHERE id = %s AND user_uuid = %s;",
+            (folder_id or None, video_id, user_uuid),
+        )
+        conn.commit()
+        return {"status": "success"}
+    finally:
+        conn.close()
+
+
 @router.delete("/goals/{id}")
 def delete_goal(
     id: int,
@@ -269,8 +462,9 @@ def delete_goal(
                 cursor.execute("DELETE FROM videos WHERE id = %s AND user_uuid = %s;", (v_id, user_uuid))
                 storage.delete_video_document(v_id, username=username)
         else:
-            cursor.execute("UPDATE videos SET learning_goal_id = NULL WHERE learning_goal_id = %s AND user_uuid = %s;", (id, user_uuid))
+            cursor.execute("UPDATE videos SET learning_goal_id = NULL, folder_id = NULL WHERE learning_goal_id = %s AND user_uuid = %s;", (id, user_uuid))
         
+        cursor.execute("DELETE FROM goal_folders WHERE goal_id = %s AND user_uuid = %s;", (id, user_uuid))
         cursor.execute("DELETE FROM goals WHERE id = %s AND user_uuid = %s;", (id, user_uuid))
         conn.commit()
         conn.close()
@@ -307,27 +501,38 @@ async def get_goal_recommendations(id: int, username: str = Depends(require_ai_a
     """Generates AI search queries & scraped YouTube video recommendations for a specific goal."""
     saved = storage.get_saved_goal_recommendations(id, username=username)
     if saved and saved.get("videos"):
+        # Videos imported or dismissed since the blob was cached are no longer worth offering.
+        owned = storage.get_excluded_youtube_ids(username=username)
+        saved["videos"] = [v for v in saved["videos"] if v.get("youtube_id") not in owned]
+    if saved and saved.get("videos"):
+        # The cached blob predates any later edit of the goal's concepts.
+        current = _current_goal_concepts(id, username)
+        if not current:
+            # Recommendations loaded before concepts lived on the goal: adopt the cached ones,
+            # so the Edit dialog shows exactly what the drawer shows.
+            current = _store_generated_concepts(id, saved.get("key_concepts", []), username)
+        saved["key_concepts"] = current or saved.get("key_concepts", [])
         return saved
 
     conn = database.get_db_connection(username)
     try:
         user_uuid = conn.user_uuid
         cursor = conn.cursor()
-        cursor.execute("SELECT title, description FROM goals WHERE id = %s AND user_uuid = %s;", (id, user_uuid))
+        cursor.execute("SELECT title, description, key_concepts FROM goals WHERE id = %s AND user_uuid = %s;", (id, user_uuid))
         row = cursor.fetchone()
         conn.close()
         if not row:
             raise HTTPException(status_code=404, detail="Goal not found")
         
         try:
-            recs = await asyncio.to_thread(ai.generate_goal_recommendations, row["title"], row["description"], username)
+            recs = await asyncio.to_thread(ai.generate_goal_recommendations, row["title"], row["description"], username, parse_concepts(row.get("key_concepts")))
         except ai.UsageLimitExceeded as e:
             raise ai.usage_http_exception(e)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"AI recommendations generation failed: {e}")
 
         queries = recs.get("search_queries", [])
-        key_concepts = recs.get("key_concepts", [])
+        key_concepts = _store_generated_concepts(id, recs.get("key_concepts", []), username) or parse_concepts(recs.get("key_concepts", []))
 
         excluded_yt_ids = storage.get_excluded_youtube_ids(username=username)
 
@@ -373,14 +578,14 @@ async def replace_one_goal_recommendation(
     try:
         user_uuid = conn.user_uuid
         cursor = conn.cursor()
-        cursor.execute("SELECT title, description FROM goals WHERE id = %s AND user_uuid = %s;", (id, user_uuid))
+        cursor.execute("SELECT title, description, key_concepts FROM goals WHERE id = %s AND user_uuid = %s;", (id, user_uuid))
         row = cursor.fetchone()
         conn.close()
         if not row:
             raise HTTPException(status_code=404, detail="Goal not found")
 
         try:
-            recs = await asyncio.to_thread(ai.generate_goal_recommendations, row["title"], row["description"], username)
+            recs = await asyncio.to_thread(ai.generate_goal_recommendations, row["title"], row["description"], username, parse_concepts(row.get("key_concepts")))
         except Exception as e:
             logger.warning(f"Goal recommendations failed for goal {id}, using the title as the search query: {e}")
             recs = {"search_queries": [f"{row['title']} tutorial"]}
@@ -423,21 +628,21 @@ async def reload_all_goal_recommendations(
     try:
         user_uuid = conn.user_uuid
         cursor = conn.cursor()
-        cursor.execute("SELECT title, description FROM goals WHERE id = %s AND user_uuid = %s;", (id, user_uuid))
+        cursor.execute("SELECT title, description, key_concepts FROM goals WHERE id = %s AND user_uuid = %s;", (id, user_uuid))
         row = cursor.fetchone()
         conn.close()
         if not row:
             raise HTTPException(status_code=404, detail="Goal not found")
 
         try:
-            recs = await asyncio.to_thread(ai.generate_goal_recommendations, row["title"], row["description"], username)
+            recs = await asyncio.to_thread(ai.generate_goal_recommendations, row["title"], row["description"], username, parse_concepts(row.get("key_concepts")))
         except ai.UsageLimitExceeded as e:
             raise ai.usage_http_exception(e)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"AI recommendations generation failed: {e}")
 
         queries = recs.get("search_queries", [])
-        key_concepts = recs.get("key_concepts", [])
+        key_concepts = _store_generated_concepts(id, recs.get("key_concepts", []), username) or parse_concepts(recs.get("key_concepts", []))
         excluded_yt_ids = storage.get_excluded_youtube_ids(username=username)
 
         videos = []

@@ -417,13 +417,7 @@
             <div class="fixed inset-x-0 bottom-0 z-30 bg-[#f6f1e7]/50 pointer-events-none">
                 <div class="max-w-4xl mx-auto px-4 pointer-events-auto"
                     style="padding-top: 14px; padding-bottom: calc(4.5rem + var(--safe-bottom));">
-                    <button type="submit" form="import-form" id="btn-import-generate"
-                        class="btn-primary w-full py-3.5 font-extrabold rounded-xl transition-all flex items-center justify-center space-x-2">
-                        <i data-lucide="sparkles" class="w-5 h-5"></i>
-                        <span>Generate quiz</span>
-                        <span id="import-plan-tag" class="plan-badge hidden select-none">Plan</span>
-                    </button>
-                    <div class="grid grid-cols-2 gap-2 mt-2">
+                    <div class="grid grid-cols-2 gap-2">
                         <button type="button" data-import-action="save"
                             class="py-3 bg-white hover:bg-stone-50 border border-stone-200 text-stone-800 font-bold rounded-xl text-xs shadow-sm flex items-center justify-center gap-1.5 transition">
                             <i data-lucide="folder-plus" class="w-4 h-4 text-amber-600"></i><span>Save to goal</span>
@@ -433,6 +427,12 @@
                             <i data-lucide="bookmark" class="w-4 h-4 text-amber-600"></i><span>Add to queue</span>
                         </button>
                     </div>
+                    <button type="submit" form="import-form" id="btn-import-generate"
+                        class="btn-primary mt-2 w-full h-[42px] text-sm font-extrabold rounded-xl transition-all flex items-center justify-center space-x-2">
+                        <i data-lucide="sparkles" class="w-4 h-4"></i>
+                        <span>Generate quiz</span>
+                        <span id="import-plan-tag" class="plan-badge hidden select-none">Plan</span>
+                    </button>
                 </div>
             </div>
         </section>
@@ -453,17 +453,6 @@
                             class="h-full px-2.5 flex items-center hover:bg-stone-100 rounded-lg text-stone-600 hover:text-stone-900 transition"
                             title="Search Goals &amp; Materials">
                             <i data-lucide="search" class="w-4 h-4"></i>
-                        </button>
-                    </div>
-                    <!-- View: today's expanded cards, or one row per goal (goals.js setGoalsView) -->
-                    <div class="flex items-center bg-stone-100 border border-stone-200 rounded-xl p-1 gap-1 h-11" role="group" aria-label="Goals view">
-                        <button type="button" data-goal-action="set-view" data-view="expanded" id="btn-goals-view-expanded"
-                            class="segmented-tab is-active h-full px-2.5 flex items-center rounded-lg" title="Expanded view" aria-pressed="true">
-                            <i data-lucide="rows-3" class="w-4 h-4"></i>
-                        </button>
-                        <button type="button" data-goal-action="set-view" data-view="compact" id="btn-goals-view-compact"
-                            class="segmented-tab h-full px-2.5 flex items-center rounded-lg" title="Titles only" aria-pressed="false">
-                            <i data-lucide="list" class="w-4 h-4"></i>
                         </button>
                     </div>
                     <button type="button" data-goal-action="open-reorder" id="btn-goals-reorder"
@@ -515,9 +504,12 @@
             <div id="goals-watchlist-container" class="space-y-4"></div>
 
             <!-- Goals List Grid -->
-            <div id="goals-container" class="grid gap-6 grid-cols-1 mb-6">
+            <div id="goals-container" class="grid gap-4 grid-cols-1 md:grid-cols-2 mb-6">
                 <!-- Goals dynamically load here -->
             </div>
+
+            <!-- Materials in goals that match a search; click one to open its goal page (goals.js). -->
+            <div id="goals-search-materials" class="hidden space-y-2 mb-6"></div>
 
             <!-- Unassociated / Quick Review Container -->
             <div id="goals-unassociated-container" class="space-y-4"></div>
@@ -1902,6 +1894,22 @@
                         class="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900 placeholder-stone-400"></textarea>
                 </div>
 
+                <!-- Key concepts: edit only. A new goal gets them generated the first time its recommendations load. -->
+                <div id="goal-modal-concepts-wrap" class="hidden space-y-1">
+                    <label for="goal-modal-concepts" class="flex items-center gap-1.5 text-xs font-semibold text-stone-400">
+                        <span>Key Concepts</span>
+                        <button type="button" id="btn-goal-concepts-info" class="text-stone-400 hover:text-amber-700 transition" aria-label="About key concepts" aria-expanded="false" aria-controls="goal-modal-concepts-hint">
+                            <i data-lucide="info" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </label>
+                    <p id="goal-modal-concepts-hint" class="hidden text-[11px] leading-relaxed text-stone-500">
+                        The topics you want to master for this goal, separated by commas. They guide which videos are recommended.
+                    </p>
+                    <input type="text" id="goal-modal-concepts" maxlength="600" autocomplete="off"
+                        placeholder="E.g., Layers, Typography, Color theory"
+                        class="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900 placeholder-stone-400">
+                </div>
+
                 <div class="flex space-x-3">
                     <button type="button" id="btn-close-goal-modal"
                         class="flex-grow py-3 bg-stone-100 hover:bg-stone-200 border border-stone-200 text-stone-700 font-bold rounded-xl transition">
@@ -1911,6 +1919,42 @@
                         class="btn-primary flex-grow py-3 font-bold rounded-xl transition">
                         Save Goal
                     </button>
+                </div>
+
+                <!-- Edit only: the goal's other actions live here rather than on the goal page. -->
+                <div id="goal-modal-more-wrap" class="hidden flex space-x-3 border-t border-stone-200 pt-4">
+                    <button type="button" id="btn-goal-modal-archive"
+                        class="flex-grow py-2.5 bg-white hover:bg-stone-50 border border-stone-200 text-stone-700 font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5">
+                        <i data-lucide="archive" class="w-3.5 h-3.5 text-amber-600"></i>Archive goal
+                    </button>
+                    <button type="button" id="btn-goal-modal-delete"
+                        class="flex-grow py-2.5 bg-white hover:bg-red-50 border border-red-200 text-red-700 font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>Delete goal
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Overlay: New / rename folder inside a goal (goals.js openFolderModal) -->
+    <div id="overlay-folder-modal"
+        class="app-overlay hidden fixed inset-0 bg-stone-950/80 backdrop-blur z-50 flex items-center justify-center p-4">
+        <div class="max-w-sm w-full bg-white border border-stone-200 rounded-3xl p-6 shadow-2xl space-y-5">
+            <h3 class="text-lg font-bold text-stone-900 flex items-center space-x-2">
+                <i data-lucide="folder" class="w-5 h-5 text-amber-600"></i>
+                <span id="folder-modal-heading">New folder</span>
+            </h3>
+            <form id="folder-modal-form" class="space-y-4">
+                <input type="hidden" id="folder-modal-id">
+                <div class="space-y-1">
+                    <label for="folder-modal-name" class="block text-xs font-semibold text-stone-400">Folder name</label>
+                    <input type="text" id="folder-modal-name" required maxlength="60" autocomplete="off"
+                        class="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900">
+                </div>
+                <div class="flex space-x-3">
+                    <button type="button" id="btn-close-folder-modal"
+                        class="flex-grow py-3 bg-stone-100 hover:bg-stone-200 border border-stone-200 text-stone-700 font-bold rounded-xl transition">Cancel</button>
+                    <button type="submit" class="btn-primary flex-grow py-3 font-bold rounded-xl transition">Save</button>
                 </div>
             </form>
         </div>
@@ -2172,7 +2216,7 @@
         <div class="max-w-md w-full bg-white border border-stone-200 rounded-3xl p-6 shadow-2xl space-y-5">
             <h3 class="text-lg font-bold text-stone-900 flex items-center space-x-2">
                 <i data-lucide="edit-3" class="w-5 h-5 text-amber-600"></i>
-                <span>Edit Video Details</span>
+                <span>Edit Material</span>
             </h3>
 
             <form id="edit-video-form" class="space-y-4">
@@ -2203,13 +2247,6 @@
                     <p id="edit-video-rating-label" class="text-xs text-stone-500"></p>
                 </div>
 
-                <div class="space-y-1">
-                    <label class="block text-xs font-semibold text-stone-400">Custom Study Notes</label>
-                    <textarea id="edit-video-notes" rows="3"
-                        placeholder="Add personal remarks, takeaways, guidelines, or snippets here..."
-                        class="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900"></textarea>
-                </div>
-
                 <div class="flex space-x-3 pt-2">
                     <button type="button" id="btn-close-edit-video"
                         class="flex-grow py-3 bg-stone-100 hover:bg-stone-200 border border-stone-200 text-stone-700 font-bold rounded-xl transition">
@@ -2218,6 +2255,17 @@
                     <button type="submit"
                         class="btn-primary flex-grow py-3 font-bold rounded-xl transition">
                         Save Changes
+                    </button>
+                </div>
+
+                <div class="flex space-x-3 border-t border-stone-200 pt-4">
+                    <button type="button" id="btn-edit-video-archive"
+                        class="flex-grow py-2.5 bg-white hover:bg-stone-50 border border-stone-200 text-stone-700 font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5">
+                        <i data-lucide="archive" class="w-3.5 h-3.5 text-amber-600"></i><span id="btn-edit-video-archive-label">Archive</span>
+                    </button>
+                    <button type="button" id="btn-edit-video-delete"
+                        class="flex-grow py-2.5 bg-white hover:bg-red-50 border border-red-200 text-red-700 font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>Delete
                     </button>
                 </div>
             </form>

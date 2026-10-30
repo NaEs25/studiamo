@@ -54,12 +54,11 @@ def cards_page(logged_in_page):
         status=200, content_type="application/json", body="[]"))
     page.route(f"**/api/videos/{NORMAL}/stats", lambda route: route.fulfill(
         status=200, content_type="application/json", body=json.dumps(STATS)))
-    page.add_init_script(f"""
-        localStorage.setItem('goal-materials-open-{GOAL_ID}', 'true');
-        localStorage.setItem('accordion-open-watchlist', 'true');
-    """)
+    page.add_init_script("localStorage.setItem('accordion-open-watchlist', 'true');")
     page.goto("/app")
     page.click("#nav-goals")
+    # The goal's materials are listed on its goal page, not on its card.
+    page.click(f"[data-goal-card='{GOAL_ID}'] [data-goal-action='open-goal']")
     page.wait_for_selector(f"#video-card-{NORMAL}", state="visible", timeout=15000)
     page.evaluate("""() => {
         window.__calls = [];
@@ -137,6 +136,10 @@ def test_preview_and_failed_cards(cards_page):
     with page.expect_request(f"**/api/videos/{FAILED}/retry"):
         failed.locator("[data-video-action='retry']").click()
 
+    # The preview sits in the Study Queue on the goals list, which the goal page hides.
+    page.click("[data-goalpage-action='back']")
+    page.wait_for_selector(f"#video-card-{PREVIEW}", state="visible")
+
     with page.expect_request(f"**/api/videos/{PREVIEW}/watchlist"):
         preview.locator("[data-video-action='toggle-watchlist']").click()
 
@@ -191,3 +194,16 @@ def test_analytics_sessions_fold_out(cards_page):
     toggle.click()
     assert session.is_visible() == was_open
     assert page.locator("#stats-attempts-container [onclick]").count() == 0
+
+
+def test_card_menu_is_short_and_edit_material_holds_archive_and_delete(cards_page):
+    page = cards_page
+    _open_menu(page)
+    menu = page.locator("#video-context-menu-portal")
+    for gone in ("focus", "archive", "delete"):
+        assert menu.locator(f"[data-video-menu-action='{gone}']").count() == 0, gone
+    menu.locator("[data-video-menu-action='edit']").click()
+    page.locator("#overlay-edit-video").wait_for(state="visible", timeout=5000)
+    assert page.locator("#btn-edit-video-archive").is_visible() and page.locator("#btn-edit-video-delete").is_visible()
+    assert page.locator("#edit-video-star-container").is_visible()
+    assert page.locator("#edit-video-notes").count() == 0

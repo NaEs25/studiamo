@@ -1462,9 +1462,6 @@ function toggleVideoMenu(event, id, anchorEl = null) {
         <button data-video-menu-action="cards" class="flex items-center space-x-2.5 w-full text-left px-4 py-2.5 text-xs text-stone-700 hover:bg-stone-50 hover:text-stone-900 transition">
             <i data-lucide="layers" class="w-4 h-4 text-amber-600"></i><span>Edit cards</span>
         </button>
-        <button data-video-menu-action="focus" class="flex items-center space-x-2.5 w-full text-left px-4 py-2.5 text-xs text-stone-700 hover:bg-stone-50 hover:text-stone-900 transition">
-            <i data-lucide="target" class="w-4 h-4 text-amber-600"></i><span>Adjust Learning Focus</span>
-        </button>
         ` : ''}
         ${isImported ? `
         <button data-video-menu-action="factcheck" class="flex items-center space-x-2.5 w-full text-left px-4 py-2.5 text-xs text-stone-700 hover:bg-stone-50 hover:text-stone-900 transition">
@@ -1483,14 +1480,7 @@ function toggleVideoMenu(event, id, anchorEl = null) {
         </button>
         ` : ''}
         <button data-video-menu-action="edit" class="flex items-center space-x-2.5 w-full text-left px-4 py-2.5 text-xs text-stone-700 hover:bg-stone-50 hover:text-stone-900 transition">
-            <i data-lucide="repeat" class="w-4 h-4 text-amber-600"></i><span>Swap Goal / Edit Details</span>
-        </button>
-        <button data-video-menu-action="archive" class="flex items-center space-x-2.5 w-full text-left px-4 py-2.5 text-xs text-stone-700 hover:bg-stone-50 hover:text-stone-900 transition">
-            <i data-lucide="archive" class="w-4 h-4 text-amber-600"></i><span>${isArchived ? 'Send to Active' : 'Archive Video'}</span>
-        </button>
-        <div class="border-t border-[#e7dfd3] my-1"></div>
-        <button data-video-menu-action="delete" class="flex items-center space-x-2.5 w-full text-left px-4 py-2.5 text-xs text-rose-600 hover:bg-rose-50 hover:text-rose-700 transition">
-            <i data-lucide="trash-2" class="w-4 h-4 text-rose-500"></i><span>Permanently Delete</span>
+            <i data-lucide="edit-3" class="w-4 h-4 text-amber-600"></i><span>Edit material</span>
         </button>
     </div>`;
 
@@ -1503,14 +1493,11 @@ function toggleVideoMenu(event, id, anchorEl = null) {
                 closeVideoMenu();
                 switch (item.dataset.videoMenuAction) {
                     case 'cards': openCardsSheet(id); break;
-                    case 'focus': openFocusModal(id); break;
                     case 'factcheck': showFactCheck(id); break;
                     case 'stats': openVideoStatsModal(id); break;
                     case 'pause': pauseVideo(id); break;
                     case 'watchlist': toggleWatchlist(id); break;
                     case 'edit': openEditVideoModal(id); break;
-                    case 'archive': archiveVideo(id); break;
-                    case 'delete': deleteVideo(id); break;
                 }
             });
         }
@@ -1841,9 +1828,6 @@ async function openEditVideoModal(id, category, goalId, rating, notes) {
     const setEditRating = initEditVideoStars();
     if (setEditRating) setEditRating(parseInt(cardData ? (cardData.importance_rating || rating || 3) : (rating || 3)) || 3);
     
-    const notesEl = document.getElementById('edit-video-notes');
-    if (notesEl) notesEl.value = cardData ? (cardData.custom_notes || notes || '') : (notes || '');
-    
     const goalSelect = document.getElementById('edit-video-goal-select') || document.getElementById('edit-video-goal');
     if (goalSelect) {
         let goalsList = window._goalsCache ? Object.values(window._goalsCache) : [];
@@ -1868,6 +1852,9 @@ async function openEditVideoModal(id, category, goalId, rating, notes) {
         goalSelect.value = activeGoalId;
     }
     
+    const archiveLabel = document.getElementById('btn-edit-video-archive-label');
+    if (archiveLabel) archiveLabel.textContent = cardData && cardData.is_archived ? 'Send to active' : 'Archive';
+
     openOverlay('overlay-edit-video', closeEditVideoModal);
 }
 
@@ -1883,6 +1870,17 @@ function initEditVideoEvents() {
     if (btnClose) {
         btnClose.onclick = closeEditVideoModal;
     }
+    // Archive and Delete live in this dialog; it closes first so the confirmation stands alone.
+    [['btn-edit-video-archive', archiveVideo], ['btn-edit-video-delete', deleteVideo]].forEach(([btnId, action]) => {
+        const btn = document.getElementById(btnId);
+        if (!btn) return;
+        btn.onclick = () => {
+            const id = Number(document.getElementById('edit-video-id')?.value);
+            if (!id) return;
+            closeEditVideoModal();
+            action(id);
+        };
+    });
     if (form) {
         form.onsubmit = async (e) => {
             e.preventDefault();
@@ -1892,13 +1890,12 @@ function initEditVideoEvents() {
             const titleEl = document.getElementById('edit-video-title');
             const ratingEl = document.getElementById('edit-video-rating');
             const goalSelect = document.getElementById('edit-video-goal-select') || document.getElementById('edit-video-goal');
-            const notesEl = document.getElementById('edit-video-notes');
             
             const formData = new FormData();
             if (titleEl) formData.append('title', titleEl.value);
             if (ratingEl) formData.append('importance_rating', ratingEl.value);
             if (goalSelect) formData.append('learning_goal_id', goalSelect.value);
-            if (notesEl) formData.append('custom_notes', notesEl.value);
+            // No custom_notes: the notes are written in Study Studio, and an omitted field leaves them as they are.
             
             try {
                 await fetchAPI(`/api/videos/${id}/edit`, { method: 'POST', body: formData });

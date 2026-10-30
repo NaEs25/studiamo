@@ -1512,6 +1512,49 @@ button:active:not(:disabled) {
     border-color: var(--color-primary-border);
 }
 
+/* ── Goal Card ──────────────────────────────────────────── */
+/* A whole goal card, and a material result in goals search, opens the goal
+   page. The shape and padding stay as utilities in goals.js; this carries the resting and
+   hovered states: only the border changes, to the primary token. A focused title button
+   outlines the card too, so keyboard users see the same state. */
+.goal-card {
+    background-color: #fff;
+    border: 1px solid var(--color-border);
+    cursor: pointer;
+    transition: border-color 150ms;
+}
+
+.goal-card:hover,
+.goal-card:focus-within {
+    border-color: var(--color-primary-border);
+}
+
+/* Rearranging on the goal page: a folder under a dragged material lights up as the place it
+   will land. */
+.goalpage-folder.is-drop-target {
+    border-color: var(--color-primary);
+    background-color: var(--color-primary-bg);
+}
+
+/* The count chips on a goal card (goals.js goalStatsHTML): materials, quizzes, and the due
+   count, which takes the primary tokens. */
+.goal-stat {
+    padding: 0.125rem 0.625rem;
+    border: 1px solid var(--color-border);
+    border-radius: 0.5rem;
+    background-color: #fdfaf4;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 700;
+    color: #57534e; /* stone-600 */
+}
+
+.goal-stat-due {
+    background-color: var(--color-primary-bg);
+    border-color: var(--color-primary-border);
+    color: #78350f; /* amber-900 */
+}
+
 /* ── Status Badge Variants ──────────────────────────────── */
 /* The subscription badge in Settings. Same split as .segmented-tab above: the template
    carries the shape (size, padding, radius, tracking) and the script toggles exactly one
@@ -2034,7 +2077,12 @@ button:active:not(:disabled) {
 .stats-week-bar.is-empty { background: #e7dfd3; }
 .streak-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); row-gap: 0.25rem; }
 .streak-cal-cell { height: 2.25rem; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: var(--color-text-muted); }
-.streak-cal-cell.is-active { background: var(--color-primary-bg); color: #78350f; font-weight: 700; }
+.streak-cal-cell.is-active { background: var(--color-ui-yellow); color: #78350f; font-weight: 700; border: 2px solid transparent; }
+/* Busier days (see STREAK_BUSY_QUIZZES in settings.js) get the same border as .btn-primary. A joined
+   band drops the border on the joined side so neighboring days read as one stretch. */
+.streak-cal-cell.is-busy { border-color: #fbbf24; }
+.streak-cal-cell.is-active.join-prev { border-left-width: 0; }
+.streak-cal-cell.is-active.join-next { border-right-width: 0; }
 .streak-cal-cell.is-active:not(.join-prev) { border-top-left-radius: 9999px; border-bottom-left-radius: 9999px; margin-left: 0.25rem; }
 .streak-cal-cell.is-active:not(.join-next) { border-top-right-radius: 9999px; border-bottom-right-radius: 9999px; margin-right: 0.25rem; }
 .streak-cal-cell.is-today { box-shadow: inset 0 0 0 2px var(--color-primary); border-radius: 9999px; }

@@ -553,11 +553,7 @@ class GoalRecommendationsProcessor(IImportTaskProcessor):
             if not goal:
                 raise ImportInputError("Goal not found.")
 
-            cursor.execute("SELECT id, title, youtube_id, custom_notes FROM videos WHERE learning_goal_id = %s AND user_uuid = %s AND status = 'ready';", (goal_id, user_uuid))
-            vids = [dict(r) for r in cursor.fetchall()]
-
-            excluded = storage.get_excluded_youtube_ids(username)
-            recs = ai.generate_goal_recommendations(dict(goal), vids, excluded_yt_ids=excluded, username=username)
+            recs = ai.generate_goal_recommendations(goal["title"], goal["description"], username)
             return {"goal_id": goal_id, "recommendations": recs}
         finally:
             conn.close()

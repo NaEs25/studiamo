@@ -63,10 +63,10 @@ def test_add_to_queue_sends_the_queue_flag(import_page):
 def test_saved_material_offers_generate_and_a_link_offers_open(import_page):
     page = import_page
     page.click("#nav-goals")
-    page.evaluate("localStorage.setItem('goal-materials-open-9001', 'true')")
-    page.reload()
-    page.click("#nav-goals")
-    page.wait_for_selector("#video-card-8200", state="attached")
+    # Materials are listed on the goal page, not on the card.
+    page.wait_for_selector("[data-goal-card='9001']", state="attached")
+    page.click("[data-goal-card='9001'] [data-goal-action='open-goal']")
+    page.wait_for_selector("#goal-page #video-card-8200", state="attached")
     saved = page.locator("#video-card-8200")
     assert "Saved" in saved.text_content()
     assert saved.locator("[data-video-action='generate-saved']").is_visible()

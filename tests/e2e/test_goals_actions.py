@@ -20,13 +20,9 @@ def test_goal_card_buttons(goals_page):
     _record_posts(page, "**/api/goals/*/reorder", calls)
     _record_posts(page, "**/api/goals/*/archive", calls)
 
-    # Materials fold out from the label button and from the chevron icon.
-    materials = page.locator("#goal-materials-content-9001")
-    was_open = materials.is_visible()
-    page.click("[data-goal-card='9001'] button[data-goal-action='toggle-materials']")
-    assert materials.is_visible() != was_open
-    page.click("#goal-materials-chevron-9001")
-    assert materials.is_visible() == was_open
+    # A card carries no buttons of its own: no materials list, options menu, plus or arrow.
+    assert page.locator("[data-goal-card='9001'] button:not([data-goal-action='open-goal'])").count() == 0
+    assert page.locator("#goal-materials-content-9001").count() == 0
 
     # Reorder lives in a sheet now: the first goal's "down" arrow posts, its "up" arrow is
     # disabled, and the cards themselves carry no rank arrows.
@@ -40,17 +36,11 @@ def test_goal_card_buttons(goals_page):
     assert page.locator("#overlay-goal-reorder").is_hidden()
     page.wait_for_timeout(1500)  # the move reloads the goals; let that finish before the next click
 
-    # The options menu opens and its items work.
-    # The menu closes on any scroll, and the second goal's button sits under the fixed nav bar at
-    # this viewport height, so Playwright would scroll right after the menu opens and dismiss it.
-    # Scroll first, and let that settle.
-    page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-    page.wait_for_timeout(400)
-    page.click("#btn-goal-menu-9002")
-    page.locator("#portal-goal-menu [data-goal-menu-action='edit']").click()
+    # Clicking anywhere on a card opens its goal page, where Edit lives.
+    page.click("[data-goal-card='9002'] h3")
+    page.click("#goal-page [data-goal-action='edit']")
     assert page.locator("#overlay-goal-modal").is_visible()
     assert page.input_value("#goal-modal-title") == "Spanish"
-    assert page.locator("#portal-goal-menu").count() == 0
 
 
 def test_accordions_and_archive(goals_page):
@@ -87,7 +77,10 @@ def test_recommendation_cards(goals_page):
     calls = []
     _record_posts(page, "**/api/goals/9001/recommendations/replace_one", calls)
 
-    page.click("#btn-recs-trigger-9001")
+    # The recommendations controls live on the goal page, not on the card.
+    assert page.locator("[data-goal-card='9001'] #btn-recs-trigger-9001").count() == 0
+    page.click("[data-goal-card='9001'] [data-goal-action='open-goal']")
+    page.click("#goal-page #btn-recs-trigger-9001")
     card = page.locator("#rec-card-9001-abc123XYZ_-")
     card.wait_for(timeout=10000)
     # The title travels through data attributes intact, quotes and angle brackets included.
@@ -99,5 +92,22 @@ def test_recommendation_cards(goals_page):
     with page.expect_request("**/api/goals/9001/recommendations/replace_one"):
         card.locator("[data-goal-action='dismiss-rec']").click()
 
-    page.click("[data-goal-card='9001'] [data-goal-action='close-recs']")
+    # The same button hides the drawer again.
+    page.click("#goal-page #btn-recs-trigger-9001")
     assert not page.locator("#recs-9001").is_visible()
+
+
+def test_edit_dialog_holds_archive_and_delete_for_an_existing_goal_only(goals_page):
+    page = goals_page
+    page.click("#btn-add-goal-modal")
+    assert page.locator("#btn-goal-modal-archive").is_hidden()
+    page.click("#btn-close-goal-modal")
+
+    calls = []
+    _record_posts(page, "**/api/goals/*/archive", calls)
+    page.click("[data-goal-card='9001'] [data-goal-action='open-goal']")
+    page.click("#goal-page [data-goal-action='edit']")
+    assert page.locator("#btn-goal-modal-archive").is_visible() and page.locator("#btn-goal-modal-delete").is_visible()
+    page.click("#btn-goal-modal-delete")
+    assert page.locator("#overlay-goal-modal").is_hidden()
+    assert page.locator("#overlay-delete-goal-modal").is_visible()

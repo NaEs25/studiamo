@@ -1284,14 +1284,30 @@ def generate_daily_recommendations(goals: list, force_refresh: bool = False, use
     return recommendations[:6]
 
 
-def generate_goal_recommendations(goal_title: str, goal_description: str = "", username: str = "default_user") -> dict:
-    """Generates key concepts, search queries, and video suggestions for a specific learning goal using Gemini."""
+def generate_goal_recommendations(goal_title: str, goal_description: str = "", username: str = "default_user", key_concepts: list = None) -> dict:
+    """Generates key concepts and search queries for a specific learning goal using Gemini.
+
+    When the user already has key concepts for the goal they steer the search queries and are
+    returned unchanged; otherwise the model proposes 4-5, which the caller stores on the goal.
+    """
     client = get_gemini_client(username=username)
 
-    prompt = f"""
+    concepts_given = [c for c in (key_concepts or []) if c]
+    if concepts_given:
+        prompt = f"""
+    You are an expert tutor. For the following learning goal, output 3-4 search queries to find top
+    YouTube tutorials. Spread the queries across the key concepts the learner listed, so each query
+    targets one or two of them. Also return the key concepts exactly as listed.
+
+    Goal Title: {goal_title}
+    Goal Description: {goal_description or 'No extra description'}
+    Key Concepts: {", ".join(concepts_given)}
+    """
+    else:
+        prompt = f"""
     You are an expert tutor. For the following learning goal, output:
     1. 3-4 search queries to find top YouTube tutorials on this topic.
-    2. 4-5 key concepts to master for this goal.
+    2. 4-5 short key concepts to master for this goal (a few words each).
 
     Goal Title: {goal_title}
     Goal Description: {goal_description or 'No extra description'}
@@ -1315,11 +1331,14 @@ def generate_goal_recommendations(goal_title: str, goal_description: str = "", u
             action_type="goal_recommendations",
             username=username
         )
-        return json.loads(response_text)
+        result = json.loads(response_text)
+        if concepts_given:
+            result["key_concepts"] = concepts_given
+        return result
     except Exception as e:
         logger.warning(f"AI goal recommendations failed: {e}")
         return {
             "search_queries": [f"{goal_title} tutorial", f"learn {goal_title} basics"],
-            "key_concepts": [f"Understand fundamentals of {goal_title}", f"Practical applications of {goal_title}"]
+            "key_concepts": concepts_given or [f"Understand fundamentals of {goal_title}", f"Practical applications of {goal_title}"]
         }
 

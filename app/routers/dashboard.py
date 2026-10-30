@@ -121,7 +121,7 @@ def get_dashboard_data(username: str = Depends(require_account_access)):
 
         # 2. Fetch all learning goals ordered by order_index (non-archived only)
         cursor.execute("""
-            SELECT g.id, g.title, g.description, g.order_index,
+            SELECT g.id, g.title, g.description, g.key_concepts, g.order_index,
                    CASE WHEN gr.recommendations_json IS NOT NULL AND gr.recommendations_json != '' AND gr.recommendations_json != '{}' THEN 1 ELSE 0 END AS has_saved_recommendations
             FROM goals g
             LEFT JOIN goal_recommendations gr ON g.id = gr.goal_id AND g.user_uuid = gr.user_uuid
@@ -132,7 +132,7 @@ def get_dashboard_data(username: str = Depends(require_account_access)):
     
         # 2b. Fetch archived learning goals
         cursor.execute("""
-            SELECT g.id, g.title, g.description, g.order_index,
+            SELECT g.id, g.title, g.description, g.key_concepts, g.order_index,
                    CASE WHEN gr.recommendations_json IS NOT NULL AND gr.recommendations_json != '' AND gr.recommendations_json != '{}' THEN 1 ELSE 0 END AS has_saved_recommendations
             FROM goals g
             LEFT JOIN goal_recommendations gr ON g.id = gr.goal_id AND g.user_uuid = gr.user_uuid
@@ -148,6 +148,9 @@ def get_dashboard_data(username: str = Depends(require_account_access)):
                    v.status, v.status_error, v.is_watchlist, v.custom_notes, v.material_type, v.source_url, v.is_starter,
                    v.last_position_seconds, v.duration_seconds, v.is_temporary, v.expires_at, v.summary,
                    g.title AS goal_title,
+                   -- A folder only counts while it belongs to the material's current goal, so a
+                   -- material moved to another goal never shows up inside a stale folder.
+                   CASE WHEN f.goal_id = v.learning_goal_id THEN v.folder_id END AS folder_id,
                    -- Gates the "Adjust Learning Focus" menu entry. Material imported before topic
                    -- extraction existed has an empty pool and would open an empty overlay.
                    EXISTS (
@@ -157,10 +160,18 @@ def get_dashboard_data(username: str = Depends(require_account_access)):
                    ) AS has_concept_pool
             FROM videos v
             LEFT JOIN goals g ON v.learning_goal_id = g.id AND g.user_uuid = v.user_uuid
+            LEFT JOIN goal_folders f ON v.folder_id = f.id AND f.user_uuid = v.user_uuid
             WHERE v.user_uuid = %s AND v.is_archived = 0
             ORDER BY v.goal_order_index ASC, v.id DESC;
         """, (user_uuid,))
         videos = [dict(r) for r in cursor.fetchall()]
+
+        # 3b. The folders inside each goal; the goal page lists them ahead of the loose materials.
+        cursor.execute(
+            "SELECT id, goal_id, name FROM goal_folders WHERE user_uuid = %s ORDER BY LOWER(name), id;",
+            (user_uuid,),
+        )
+        folders = [dict(r) for r in cursor.fetchall()]
 
         # 4. Fetch archived videos with summary
         # Same card renderer and same context menu as the active list above, so the two column
@@ -240,6 +251,7 @@ def get_dashboard_data(username: str = Depends(require_account_access)):
             "videos": videos,
             "archived": archived,
             "quizzes": quizzes,
+            "folders": folders,
             "chompy": {"eaten_unseen": eaten_unseen},
         }
     finally:

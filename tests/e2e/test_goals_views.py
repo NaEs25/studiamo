@@ -1,7 +1,6 @@
 """
-The goals tab's views and the goal page (goals.js): expanded and titles-only views, the
-plus that opens Import with the goal selected, the three-material limit, and the goal page with
-its own history entry. Runs on the goals_page fixture's fixed dashboard; writes are mocked.
+The goals tab and the goal page (goals.js): the count chips on a card, the goal page's plus that opens Import with the goal selected, and the goal
+page with its own history entry. Runs on the goals_page fixture's fixed dashboard; writes are mocked.
 """
 import json
 
@@ -27,40 +26,77 @@ def many_materials_page(logged_in_page):
     return page
 
 
-def test_titles_only_view_keeps_the_three_controls_and_is_remembered(goals_page):
+def test_goals_sit_two_to_a_row_on_a_desktop_window(goals_page):
     page = goals_page
-    page.click("#btn-goals-view-compact")
-    page.wait_for_selector("[data-goal-card='9001']")
-    assert page.locator("#goal-materials-content-9001").count() == 0
-    controls = page.locator("[data-goal-card='9001'] .bg-stone-100")
-    for action in ("add-material", "open-goal", "menu"):
-        assert controls.locator(f"[data-goal-action='{action}']").count() == 1
-    page.reload()
+    first = page.locator("[data-goal-card='9001']").bounding_box()
+    second = page.locator("[data-goal-card='9002']").bounding_box()
+    assert abs(first["y"] - second["y"]) < 4 and second["x"] > first["x"] + first["width"] - 1
+    page.set_viewport_size({"width": 390, "height": 800})
+    first = page.locator("[data-goal-card='9001']").bounding_box()
+    second = page.locator("[data-goal-card='9002']").bounding_box()
+    assert second["y"] > first["y"] + first["height"] - 1
+
+
+def test_a_paused_material_with_a_quiz_still_counts_but_is_not_due(logged_in_page):
+    page = logged_in_page
+    dashboard = json.loads(json.dumps(GOALS_DASHBOARD))
+    dashboard["videos"][0]["is_paused"] = 1  # paused by Chompy
+    dashboard["quizzes"] = [{"id": 1, "video_id": 8001, "quiz_type": "video", "importance_level": 3,
+                             "mastered": False, "is_due": True}]
+    page.route("**/api/dashboard", lambda route: route.fulfill(
+        status=200, content_type="application/json", body=json.dumps(dashboard)))
+    page.goto("/app")
     page.click("#nav-goals")
-    page.wait_for_selector("[data-goal-card='9001']", state="attached")
-    assert page.locator("#goal-materials-content-9001").count() == 0
-    page.click("#btn-goals-view-expanded")
-    page.wait_for_selector("#goal-materials-content-9001", state="attached")
+    page.wait_for_selector("[data-goal-card='9001']", state="attached", timeout=15000)
+    chips = [c.strip() for c in page.locator("[data-goal-card='9001'] .goal-stat").all_text_contents()]
+    assert chips == ["2 materials", "1 quiz"]
+
+
+def test_goals_tab_has_no_view_toggle(goals_page):
+    page = goals_page
+    assert page.locator("[aria-label='Goals view']").count() == 0
+    assert page.locator("[data-goal-card='9001'] .goal-stat").count() >= 2
 
 
 def test_plus_opens_import_with_that_goal_selected(goals_page):
     page = goals_page
-    page.click("[data-goal-card='9002'] [data-goal-action='add-material']")
+    page.click("[data-goal-card='9002'] [data-goal-action='open-goal']")
+    page.click("#goal-page [data-goal-action='add-material']")
     assert page.locator("#tab-import").is_visible()
     assert page.input_value("#input-goal-selected-id") == "9002"
     assert "bg-amber-500/15" in page.locator(".goal-select-card[data-goal-id='9002']").get_attribute("class")
 
 
-def test_card_lists_three_materials_then_points_at_the_goal_page(many_materials_page):
+def test_card_shows_counts_instead_of_materials(many_materials_page):
     page = many_materials_page
-    page.evaluate("localStorage.setItem('goal-materials-open-9001', 'true')")
-    page.reload()
+    card = page.locator("[data-goal-card='9001']")
+    chips = [c.strip() for c in card.locator(".goal-stat").all_text_contents()]
+    assert chips == ["6 materials", "0 quizzes"]  # no due chip while nothing is due
+    assert card.locator("[id^='video-card-']").count() == 0
+    assert page.locator("[data-goal-card='9002'] .goal-stat").first.text_content().strip() == "2 materials"
+
+
+def test_card_counts_quizzes_and_what_is_due(logged_in_page):
+    page = logged_in_page
+    dashboard = json.loads(json.dumps(GOALS_DASHBOARD))
+    quiz = lambda qid, vid, **kw: {"id": qid, "video_id": vid, "quiz_type": "video", "importance_level": 3,
+                                   "mastered": False, "is_due": False, **kw}
+    dashboard["quizzes"] = [
+        quiz(1, 8001, is_due=True),
+        quiz(2, 8002, mastered=True, is_due=True),   # mastered: counted, never due
+        quiz(3, 8003, is_due=True),
+        quiz(4, 8001, importance_level=5, is_due=True),  # a second quiz on one material: still one
+        quiz(5, 8004, importance_level=5),               # only at another level: still counts
+    ]
+    page.route("**/api/dashboard", lambda route: route.fulfill(
+        status=200, content_type="application/json", body=json.dumps(dashboard)))
+    page.goto("/app")
     page.click("#nav-goals")
-    page.wait_for_selector("[data-goal-card='9001']", state="attached")
-    visible = page.locator("#goal-materials-content-9001 [id^='video-card-']:visible").count()
-    assert visible == 3
-    see_all = page.locator("[data-goal-card='9001'] button:has-text('See all 6 on the goal page')")
-    assert see_all.is_visible()
+    page.wait_for_selector("[data-goal-card='9001']", state="attached", timeout=15000)
+    chips = [c.strip() for c in page.locator("[data-goal-card='9001'] .goal-stat").all_text_contents()]
+    assert chips == ["2 materials", "2 quizzes", "1 due today"]
+    assert page.locator("[data-goal-card='9001'] .goal-stat-due").count() == 1
+    assert [c.strip() for c in page.locator("[data-goal-card='9002'] .goal-stat").all_text_contents()] == ["2 materials", "2 quizzes", "1 due today"]
 
 
 def test_goal_page_opens_lists_everything_and_goes_back(many_materials_page):
@@ -71,7 +107,8 @@ def test_goal_page_opens_lists_everything_and_goes_back(many_materials_page):
     assert page.locator("#goal-page [id^='video-card-']").count() == 6
     page.click("[data-goalpage-action='view-list']")
     assert page.locator("#goal-page [data-goalpage-row]").count() == 6
-    page.click("[data-goalpage-action='toggle-reorder']")
+    page.click("#btn-goalpage-menu")
+    page.click("[data-goalpage-menu-action='rearrange']")
     assert page.locator("#goal-page [data-goalpage-move='up']").count() == 6
     page.click("[data-goalpage-action='back']")
     page.wait_for_selector("#goal-page", state="hidden")
@@ -93,7 +130,8 @@ def test_reordering_materials_posts_the_full_list(many_materials_page):
         sent.append(route.request.post_data), route.fulfill(status=200, content_type="application/json", body='{"status":"success"}')))
     page.click("[data-goal-card='9001'] [data-goal-action='open-goal']")
     page.click("[data-goalpage-action='view-list']")
-    page.click("[data-goalpage-action='toggle-reorder']")
+    page.click("#btn-goalpage-menu")
+    page.click("[data-goalpage-menu-action='rearrange']")
     first = page.locator("[data-goalpage-row]").first.get_attribute("data-goalpage-row")
     page.locator("[data-goalpage-row] [data-goalpage-move='down']").first.click()
     page.wait_for_timeout(400)
@@ -136,12 +174,10 @@ def test_goal_description_is_only_on_the_goal_page(goals_page):
     assert "Pods and deployments" in page.text_content("#goal-page")
 
 
-def test_goal_card_keeps_the_recommendations_below_the_materials(goals_page):
+def test_goal_card_has_no_recommendations_controls(goals_page):
     page = goals_page
-    card = page.locator("[data-goal-card='9001']")
-    recs_y = card.locator("#btn-recs-trigger-9001").bounding_box()["y"]
-    materials_y = card.locator("[data-goal-action='toggle-materials']").first.bounding_box()["y"]
-    assert recs_y > materials_y
+    assert page.locator("[data-goal-card='9001'] #btn-recs-trigger-9001").count() == 0
+    assert page.locator("#btn-recs-trigger-9001").count() == 0
 
 
 def test_goal_page_layout_buttons_and_boxes(goals_page):
@@ -155,10 +191,11 @@ def test_goal_page_layout_buttons_and_boxes(goals_page):
     box = page.locator("#goal-page > div").first
     title_mid = lambda loc: loc.bounding_box()["y"] + loc.bounding_box()["height"] / 2
     title = page.locator("#goal-page h2")
-    # Edit, Archive and Delete share the title line, inside the box with the recommendations.
-    for action in ("edit", "archive", "delete"):
-        button = box.locator(f"[data-goal-action='{action}']")
-        assert abs(title_mid(button) - title_mid(title)) < 12, action
+    # Edit is the one goal button, on the title line, inside the box with the recommendations;
+    # Archive and Delete are in its dialog.
+    button = box.locator("[data-goal-action='edit']")
+    assert abs(title_mid(button) - title_mid(title)) < 12
+    assert page.locator("#goal-page [data-goal-action='archive'], #goal-page [data-goal-action='delete']").count() == 0
     assert box.locator("#btn-recs-trigger-9001").count() == 1
     # Add material is not in that box: it sits below it, on the row of the Detail and List toggle.
     assert box.locator("[data-goal-action='add-material']").count() == 0
@@ -172,13 +209,14 @@ def test_goal_page_layout_buttons_and_boxes(goals_page):
     assert page.input_value("#goal-modal-title") == "Kubernetes Basics"
 
 
-def test_closing_the_goal_page_gives_the_card_its_recommendations_back(goals_page):
+def test_recommendations_controls_exist_only_on_the_open_goal_page(goals_page):
     page = goals_page
     page.click("[data-goal-card='9001'] [data-goal-action='open-goal']")
+    assert page.locator("#btn-recs-trigger-9001").count() == 1
     page.click("[data-goalpage-action='back']")
     page.wait_for_selector("#goal-page", state="hidden")
-    page.wait_for_selector("[data-goal-card='9001'] #btn-recs-trigger-9001", state="attached")
-    assert page.locator("#btn-recs-trigger-9001").count() == 1
+    page.wait_for_selector("[data-goal-card='9001']", state="attached")
+    assert page.locator("#btn-recs-trigger-9001").count() == 0
 
 
 def test_reload_on_a_goal_page_stays_on_it_and_back_returns_to_the_list(goals_page):
@@ -219,9 +257,9 @@ def test_goal_page_edit_sits_on_the_title_line_inside_one_box(goals_page):
     assert box.locator("#btn-recs-trigger-9001").count() == 1 and box.locator("h2").count() == 1
 
 
-def test_goals_header_puts_new_goal_on_the_row_of_the_view_toggle(goals_page):
+def test_goals_header_puts_new_goal_on_the_row_of_the_reorder_button(goals_page):
     page = goals_page
-    toggle = page.locator("#btn-goals-view-expanded").bounding_box()
+    toggle = page.locator("#btn-goals-reorder").bounding_box()
     new_goal = page.locator("#btn-add-goal-modal").bounding_box()
     assert abs((toggle["y"] + toggle["height"] / 2) - (new_goal["y"] + new_goal["height"] / 2)) < 12
     heading = page.locator("#tab-goals h2").first.bounding_box()
@@ -235,9 +273,9 @@ def test_new_goal_button_sits_at_the_far_end_of_the_header_row(goals_page):
     assert abs((new_goal["x"] + new_goal["width"]) - (section["x"] + section["width"])) < 4
 
 
-def test_the_four_header_controls_have_the_same_height(goals_page):
+def test_the_header_controls_have_the_same_height(goals_page):
     page = goals_page
     boxes = [page.locator(sel).bounding_box() for sel in (
-        "#btn-goals-search-toggle >> xpath=..", "[aria-label='Goals view']", "#btn-goals-reorder", "#btn-add-goal-modal")]
+        "#btn-goals-search-toggle >> xpath=..", "#btn-goals-reorder", "#btn-add-goal-modal")]
     heights = [round(b["height"]) for b in boxes]
     assert len(set(heights)) == 1, heights

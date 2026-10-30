@@ -842,6 +842,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (typeof initGoalsSearch === 'function') initGoalsSearch();
     if (typeof initGoalsActions === 'function') initGoalsActions();
     if (typeof initGoalPage === 'function') initGoalPage();
+    if (typeof initFolderModal === 'function') initFolderModal();
     if (typeof initGoalReorderSheet === 'function') initGoalReorderSheet();
     if (typeof initEditVideoEvents === 'function') initEditVideoEvents();
     if (typeof initFocusModalEvents === 'function') initFocusModalEvents();
@@ -885,6 +886,21 @@ function navigateToVideoInGoals(videoId) {
     const deadline = Date.now() + 3000;
     const scrollToCard = () => {
         const cached = (window._videoCardCache && window._videoCardCache[videoId]) || null;
+        // Goal cards no longer list materials: a goal's material lives on its goal page, in
+        // detail view (list view has no cards). Open the page first; the card then renders.
+        if (cached && cached.learning_goal_id && !cached.is_watchlist
+            && typeof openGoalPage === 'function' && window._goalsCache && window._goalsCache[cached.learning_goal_id]) {
+            if (window._openGoalPageId !== cached.learning_goal_id) {
+                try { localStorage.setItem(GOAL_PAGE_VIEW_KEY, 'detail'); } catch (e) { /* storage blocked */ }
+                openGoalPage(cached.learning_goal_id);
+            }
+            // A material inside a folder is only drawn while that folder is the open view.
+            const wantFolder = cached.folder_id || null;
+            if (goalPageState.folderId !== wantFolder) {
+                goalPageState.folderId = wantFolder;
+                renderGoalPage();
+            }
+        }
         const card = document.getElementById(`video-card-${videoId}`);
         if (!cached || !card) {
             if (Date.now() < deadline) setTimeout(scrollToCard, 150);
@@ -900,13 +916,7 @@ function navigateToVideoInGoals(videoId) {
                 localStorage.setItem('accordion-open-watchlist', 'true');
             }
         } else if (cached.learning_goal_id) {
-            const content = document.getElementById(`goal-materials-content-${cached.learning_goal_id}`);
-            const chevron = document.getElementById(`goal-materials-chevron-${cached.learning_goal_id}`);
-            if (content && content.classList.contains('hidden')) {
-                content.classList.remove('hidden');
-                if (chevron) chevron.classList.add('rotate-180');
-                localStorage.setItem(`goal-materials-open-${cached.learning_goal_id}`, 'true');
-            }
+            // Goal cards no longer list materials; the page opened above holds the card.
         } else {
             const content = document.getElementById('content-unassociated');
             const chevron = document.getElementById('chevron-unassociated');
@@ -917,9 +927,6 @@ function navigateToVideoInGoals(videoId) {
             }
         }
 
-        // A goal card lists only its first few materials; a jump to a later one shows it.
-        const extra = card.closest('[data-extra-material]');
-        if (extra) extra.classList.remove('hidden');
         card.scrollIntoView({ behavior: 'smooth', block: 'center' });
         card.classList.add('ring-2', 'ring-amber-500', 'ring-offset-2');
         setTimeout(() => card.classList.remove('ring-2', 'ring-amber-500', 'ring-offset-2'), 2500);

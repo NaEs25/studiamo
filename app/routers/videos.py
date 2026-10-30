@@ -699,7 +699,11 @@ def assign_video_goal(
         user_uuid = conn.user_uuid
         cursor = conn.cursor()
         assert_goal_owned(cursor, user_uuid, learning_goal_id)
-        cursor.execute("UPDATE videos SET learning_goal_id = %s WHERE id = %s AND user_uuid = %s;", (learning_goal_id, id, user_uuid))
+        # folder_id is cleared when the goal changes: a folder belongs to one goal.
+        cursor.execute(
+            "UPDATE videos SET folder_id = CASE WHEN learning_goal_id IS NOT DISTINCT FROM %s THEN folder_id ELSE NULL END, learning_goal_id = %s WHERE id = %s AND user_uuid = %s;",
+            (learning_goal_id, learning_goal_id, id, user_uuid),
+        )
         if cursor.rowcount == 0:
             conn.close()
             raise HTTPException(status_code=404, detail="Video not found")
@@ -812,9 +816,11 @@ def edit_video(
 
         cursor.execute("""
             UPDATE videos 
-            SET title = %s, category = %s, importance_rating = %s, learning_goal_id = %s, custom_notes = %s
+            SET title = %s, category = %s, importance_rating = %s, custom_notes = %s,
+                folder_id = CASE WHEN learning_goal_id IS NOT DISTINCT FROM %s THEN folder_id ELSE NULL END,
+                learning_goal_id = %s
             WHERE id = %s AND user_uuid = %s;
-        """, (new_title, new_category, new_rating, new_goal_id, new_notes, id, user_uuid))
+        """, (new_title, new_category, new_rating, new_notes, new_goal_id, new_goal_id, id, user_uuid))
         conn.commit()
         conn.close()
         return {"status": "success", "title": new_title}
