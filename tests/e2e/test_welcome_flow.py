@@ -188,8 +188,9 @@ def test_full_flow_with_a_link_starts_the_first_quiz(logged_in_page):
     assert _wait_until(page, lambda: backend.calls("reminder_setup"))
     assert backend.calls("reminder_setup")[0]["channel"] == "email"
 
-    assert page.inner_text("#onboarding-eyebrow").lower() == "welcome"
-    assert page.locator("#onboarding-dots .onboarding-dot").count() == 5
+    assert page.inner_text("#onboarding-eyebrow").lower() == "step 1 of 5"
+    assert page.get_attribute("#onboarding-progress", "aria-valuenow") == "20"
+    assert page.locator("#overlay-tab-guide.onboarding-full").count() == 1
     assert page.inner_text("#onboarding-next-btn").strip() == "How do I stop him?"
     assert page.locator("#onboarding-back-btn").is_hidden()
     _next(page)

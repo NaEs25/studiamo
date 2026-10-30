@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Studiamo | Spaced Repetition Active Recall</title>
     <!-- Marks <html> as running installed/standalone, before first paint, so CSS can key off
          one unambiguous attribute (see style.css's Mobile Safe Area section) instead of
@@ -44,7 +44,11 @@
          scrim on top of that for the status icons — which reads as an unwanted fade/blur band
          right under the icons. "default" removes the overlay entirely, so there's nothing left
          to blend or scrim: the status bar is opaque OS chrome, exactly like a normal Safari tab,
-         and the header begins cleanly below it. -->
+         and the header begins cleanly below it. The viewport meta deliberately omits
+         viewport-fit=cover: with it, current iOS draws the page edge to edge under the status
+         bar whatever this value says, reports a nonzero safe-area inset, and layers its own
+         blur over the top of the page. Without it, iOS keeps the page inside the safe area, the
+         insets are zero, and the --safe-top/--safe-bottom padding in style.css adds nothing. -->
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Studiamo">
     <link rel="icon" type="image/png" sizes="192x192" href="/static/images/icon-192.png">
@@ -2741,21 +2745,23 @@
                 </button>
             </div>
 
+            <!-- Welcome flow only (settings.js renderOnboardingStep): how far along, in place of the dots. -->
+            <div id="onboarding-progress" class="onboarding-progress hidden" role="progressbar"
+                aria-labelledby="onboarding-eyebrow" aria-valuemin="0" aria-valuemax="100">
+                <span id="onboarding-progress-fill" class="onboarding-progress-fill"></span>
+            </div>
+
             <div id="onboarding-steps" class="onboarding-scroll">
                 <!-- Welcome 1: the emotional hook. -->
                 <div class="onboarding-step hidden space-y-4" data-step="chompy" data-eyebrow="Welcome">
                     <img src="/static/images/chompy/chompy-hungry.png" alt="Chompy, a small red brain monster"
-                        class="w-32 h-auto mx-auto">
+                        class="onboarding-hero-img">
                     <div class="text-center space-y-2">
                         <h3 class="onboarding-headline">This is Chompy</h3>
-                        <p class="onboarding-body">Chompy eats what you learn. Watch a tutorial today, and a few
-                            days later most of it is gone. That was Chompy.</p>
-                        <p class="onboarding-body onboarding-body-strong">But Chompy can't touch what you practice
-                            remembering.</p>
-                        <div class="flex items-center justify-center gap-2 pt-1">
-                            <img src="/static/images/crystal.png" alt="" width="26" height="26" class="shrink-0">
-                            <p class="onboarding-body text-left">Knowledge you lock in becomes a crystal. Chompy can't eat those.</p>
-                        </div>
+                        <p class="onboarding-body">Chompy eats what you learn. Watch a tutorial today, and most of
+                            it is gone in days.</p>
+                        <p class="onboarding-body onboarding-body-strong">What you practice remembering turns into a
+                            crystal he can't eat.</p>
                     </div>
                 </div>
 
@@ -2766,15 +2772,15 @@
                     <ol class="space-y-3">
                         <li class="flex gap-3 items-center">
                             <span class="onboarding-item-icon bg-sky-500/10 text-sky-600"><i data-lucide="plus-circle" class="w-5 h-5"></i></span>
-                            <p class="onboarding-body text-left">Add a video, a PDF, or your notes.</p>
+                            <p class="onboarding-body text-left">Add a video, a PDF, or notes.</p>
                         </li>
                         <li class="flex gap-3 items-center">
                             <span class="onboarding-item-icon bg-amber-500/10 text-amber-600"><i data-lucide="sparkles" class="w-5 h-5"></i></span>
-                            <p class="onboarding-body text-left">Get a short quiz, written for you.</p>
+                            <p class="onboarding-body text-left">Get a short quiz.</p>
                         </li>
                         <li class="flex gap-3 items-center">
                             <span class="onboarding-item-icon bg-emerald-500/10 text-emerald-600"><i data-lucide="calendar-check" class="w-5 h-5"></i></span>
-                            <p class="onboarding-body text-left">Review on the right day. Each review pushes the next one further out.</p>
+                            <p class="onboarding-body text-left">Review on the right day.</p>
                         </li>
                     </ol>
                     <div class="bg-[#fbf8f2] border border-[#e7dfd3] rounded-xl p-3 space-y-1.5">
@@ -2795,8 +2801,7 @@
                     <input type="text" id="onboarding-goal-input" aria-labelledby="onboarding-goal-heading"
                         placeholder="For example: Video editing in DaVinci Resolve" autocomplete="off"
                         enterkeyhint="next" class="onboarding-input">
-                    <p class="onboarding-note">This becomes your first goal. Goals keep videos and quizzes on the
-                        same topic together.</p>
+                    <p class="onboarding-note">Goals keep your videos and quizzes by topic.</p>
                     <p id="onboarding-goal-error" class="onboarding-error hidden" role="alert"></p>
                 </div>
 
@@ -2806,8 +2811,7 @@
                 <div class="onboarding-step hidden space-y-4" data-step="video" data-eyebrow="Your first quiz">
                     <h3 class="onboarding-headline">Feed it a video</h3>
                     <div id="onboarding-video-pick" class="space-y-4">
-                        <p class="onboarding-body">Pick something you watched recently and want to keep. Studiamo
-                            turns it into your first quiz.</p>
+                        <p class="onboarding-body">Pick something you watched recently. It becomes your first quiz.</p>
                         <!-- Free plan only (settings.js renderVideoStep): this video is the one
                              AI generation the account gets without a plan. -->
                         <div id="onboarding-free-video"
@@ -2830,7 +2834,7 @@
                         <p id="onboarding-video-error" class="onboarding-error hidden" role="alert"></p>
                         <div class="text-center">
                             <button type="button" id="onboarding-skip-video-btn" class="onboarding-text-btn">Skip for now</button>
-                            <p class="onboarding-note">You can always add a video later from Import at the bottom.</p>
+                            <p class="onboarding-note">You can add one later from Import.</p>
                         </div>
                     </div>
                     <!-- In place of the choices once an import has started, e.g. after Back from the
@@ -2944,9 +2948,9 @@
             <!-- Stays at the bottom of the card while the step above it scrolls on short screens. Wraps
                  on the narrowest phones: the dots go above the buttons instead of pushing them past
                  the card's edge. -->
-            <div class="flex flex-wrap items-center justify-between gap-x-2 gap-y-3 pt-1 shrink-0">
+            <div class="onboarding-footer flex flex-wrap items-center justify-between gap-x-2 gap-y-3 pt-1 shrink-0">
                 <div id="onboarding-dots" class="flex items-center gap-1 shrink-0"></div>
-                <div class="flex items-center gap-1 ml-auto">
+                <div class="onboarding-footer-actions flex items-center gap-1 ml-auto">
                     <button type="button" id="onboarding-back-btn" class="hidden onboarding-text-btn">Back</button>
                     <button type="button" id="onboarding-next-btn" class="btn-primary onboarding-cta">
                         <span>Next</span>

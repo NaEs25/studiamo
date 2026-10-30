@@ -1437,6 +1437,14 @@ function _onboardingActiveSteps() {
         .filter(Boolean);
 }
 
+// "Step 2 of 5", then "Almost done" and "Last step" so the end is visibly close.
+function _welcomeProgressLabel(index, total) {
+    const left = total - index - 1;
+    if (left === 0) return 'Last step';
+    if (left === 1) return 'Almost done';
+    return `Step ${index + 1} of ${total}`;
+}
+
 function renderOnboardingStep() {
     const steps = _onboardingActiveSteps();
     if (steps.length === 0) return;
@@ -1449,7 +1457,16 @@ function renderOnboardingStep() {
     step.classList.remove('hidden');
 
     const eyebrow = document.getElementById('onboarding-eyebrow');
-    if (eyebrow) eyebrow.textContent = step.dataset.eyebrow || '';
+    if (eyebrow) eyebrow.textContent = isWelcome ? _welcomeProgressLabel(_onboardingStepIndex, steps.length) : (step.dataset.eyebrow || '');
+
+    const progressEl = document.getElementById('onboarding-progress');
+    if (progressEl) {
+        progressEl.classList.toggle('hidden', !isWelcome);
+        const pct = Math.round(((_onboardingStepIndex + 1) / steps.length) * 100);
+        progressEl.setAttribute('aria-valuenow', String(pct));
+        const fill = document.getElementById('onboarding-progress-fill');
+        if (fill) fill.style.width = `${pct}%`;
+    }
 
     const dotsEl = document.getElementById('onboarding-dots');
     if (dotsEl) {
@@ -1573,6 +1590,8 @@ function _openOnboardingOverlay(flow, startIndex = 0) {
     if (!document.getElementById('overlay-tab-guide')) return;
     _onboardingFlow = flow;
     _onboardingStepIndex = startIndex;
+    // The welcome flow takes the whole screen; the tour and the reminders-only step stay a card.
+    document.getElementById('overlay-tab-guide').classList.toggle('onboarding-full', flow === 'welcome');
     // No close function for the welcome flow: Escape must not end it, and with it on top,
     // Escape cannot reach anything underneath either (core.js).
     openOverlay('overlay-tab-guide', flow === 'welcome' ? null : closeTabGuideModal);

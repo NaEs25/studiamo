@@ -47,12 +47,11 @@
     --color-ui-yellow-rgb:      252 211 77;
     --color-logo-yellow-rgb:    248 190 18;
 
-    /* iOS home-screen PWA: apple-mobile-web-app-status-bar-style=black-translucent
-       (index.html) draws the status bar/home-indicator area over the page, so anything
-       anchored to the true viewport edge needs to add clearance for it. env()'s own
-       0px fallback covers browsers without notch/inset support, so no @supports guard
-       is needed here. Every safe-area rule in this file should read these two tokens
-       rather than calling env() directly, so there is exactly one place this is defined. */
+    /* Safe-area insets. index.html omits viewport-fit=cover, so iOS keeps the page inside the
+       safe area and these resolve to 0; they only take effect if the page is ever drawn edge
+       to edge again. env()'s own 0px fallback covers browsers without inset support, so no
+       @supports guard is needed. Every safe-area rule in this file should read these two
+       tokens rather than calling env() directly, so there is exactly one place this is defined. */
     --safe-top:    env(safe-area-inset-top, 0px);
     --safe-bottom: env(safe-area-inset-bottom, 0px);
 
@@ -1081,22 +1080,6 @@ html[data-standalone="true"] #app-header {
     }
 }
 
-/* Header-colored strip exactly as tall as the iOS status bar, fixed above everything including
-   the blurred modal backdrops. Without it, whatever sits behind the status bar (a backdrop, or
-   scrolled content) shows through iOS's own scrim there as a blurred band. Zero height wherever
-   the safe-area inset is zero, so it is invisible outside an installed iOS app. */
-html[data-standalone="true"] body::before {
-    content: "";
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: var(--safe-top);
-    background-color: #fdfbf7; /* the #app-header background */
-    z-index: 200;
-    pointer-events: none;
-}
-
 /* The Settings "Install as App" card offers nothing to a user already running the installed
    PWA, so it's dropped rather than left showing a redundant install button. */
 html[data-standalone="true"] #pwa-install-card {
@@ -1128,6 +1111,29 @@ html[data-standalone="true"] .app-overlay {
 .onboarding-dot-active {
     width: 18px;
     background-color: var(--color-primary);
+}
+
+/* Welcome flow progress bar, shown in place of the dots. */
+.onboarding-progress {
+    height: 6px;
+    border-radius: 9999px;
+    background-color: #e7e5e4; /* stone-200 */
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.onboarding-progress-fill {
+    display: block;
+    height: 100%;
+    border-radius: 9999px;
+    background-color: var(--color-primary);
+    transition: width 0.3s ease;
+}
+
+.onboarding-hero-img {
+    width: 8rem;
+    height: auto;
+    margin-inline: auto;
 }
 
 .onboarding-eyebrow {
@@ -1183,6 +1189,63 @@ html[data-standalone="true"] .app-overlay {
     overflow: hidden;
 }
 
+/* Welcome flow: the whole screen instead of a card on a dimmed page, so each step has room and
+   the steps read as one sequence. The progress bar replaces the dots, the step is centered
+   in the space between it and the footer, and the primary button spans the width. Specificity
+   (two classes) is what beats the Tailwind utilities on the overlay and card in index.html. */
+.app-overlay.onboarding-full {
+    padding: 0;
+    overflow: hidden;
+    align-items: stretch;
+    background-color: var(--color-bg);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+}
+
+.onboarding-full .onboarding-card {
+    max-width: 32rem;
+    height: 100dvh;
+    max-height: 100dvh;
+    gap: 1.25rem;
+    padding: calc(1.25rem + var(--safe-top)) 1.25rem calc(1.25rem + var(--safe-bottom));
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+}
+
+.onboarding-full .onboarding-scroll {
+    display: flex;
+    flex-direction: column;
+}
+
+/* margin auto centers a short step and, unlike justify-content, still lets a tall one scroll
+   from its top. */
+.onboarding-full .onboarding-step:not(.hidden) {
+    margin-block: auto;
+}
+
+.onboarding-full .onboarding-headline {
+    font-size: 1.875rem;
+}
+
+.onboarding-full .onboarding-body {
+    font-size: 1rem;
+}
+
+.onboarding-full #onboarding-dots {
+    display: none;
+}
+
+.onboarding-full .onboarding-footer-actions {
+    width: 100%;
+}
+
+.onboarding-full #onboarding-next-btn {
+    flex: 1 1 auto;
+    min-height: 52px;
+}
+
 .onboarding-scroll {
     flex: 1 1 auto;
     min-height: 0;
@@ -1197,6 +1260,14 @@ html[data-standalone="true"] .app-overlay {
    steps with tighter type and spacing, so they fit without scrolling. Input text stays 16px,
    below which iOS Safari zooms the page on focus. */
 @media (max-height: 600px) {
+    .onboarding-full .onboarding-headline {
+        font-size: 1.5rem;
+    }
+
+    .onboarding-full .onboarding-body {
+        font-size: 14px;
+    }
+
     .onboarding-card {
         gap: 0.625rem;
         padding: 1rem;
