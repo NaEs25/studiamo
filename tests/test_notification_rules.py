@@ -135,3 +135,33 @@ class TestChompyClock:
         future = datetime(2026, 9, 20, 22, 0)
         assert not chompy.eaten_tonight(future, BERLIN, self.START, now=datetime(2026, 9, 10, 12, 0))
         assert not chompy.should_be_eaten(future, BERLIN, self.START, now=datetime(2026, 9, 10, 12, 0))
+
+
+class TestNoMaterialNudge:
+    """A finished signup with nothing added gets a nudge on day 1 and day 3 only."""
+
+    def nudge(self, **kw):
+        base = dict(onboarded=True, has_material=False, days_since_signup=1)
+        base.update(kw)
+        return state(**base)
+
+    def test_sends_on_the_two_nudge_days(self):
+        for day in (1, 3):
+            assert decide(self.nudge(days_since_signup=day)) == Decision("nudge", "no_material")
+
+    def test_never_on_other_days(self):
+        for day in (0, 2, 4, 30, None):
+            assert decide(self.nudge(days_since_signup=day)) is None
+
+    def test_needs_a_finished_welcome_flow(self):
+        assert decide(self.nudge(onboarded=False)) is None
+
+    def test_silent_once_something_was_added(self):
+        assert decide(self.nudge(has_material=True)) is None
+
+    def test_respects_the_inactivity_switch_and_the_daily_cap(self):
+        assert decide(self.nudge(cat_inactivity=False)) is None
+        assert decide(self.nudge(sent_kinds_today=frozenset({"nudge"}))) is None
+
+    def test_only_at_the_reminder_hour(self):
+        assert decide(self.nudge(local_hour=11)) is None

@@ -787,6 +787,15 @@ def _read_onboarding_progress(cursor, user_uuid, row):
     return {"step": step, "goal": goal, "video": video}
 
 
+def _note_onboarding_step(cursor, user_uuid, step):
+    """Stamps the first time an account reaches a welcome-flow step ("done" for a finished
+    flow). Idempotent, so Back and forward or a resumed tab never moves the first timestamp."""
+    cursor.execute(
+        "INSERT INTO onboarding_step_events (user_uuid, step) VALUES (%s, %s) ON CONFLICT DO NOTHING;",
+        (user_uuid, step),
+    )
+
+
 @router.post("/user/onboarding_progress")
 def save_onboarding_progress(
     step: str = Form(...),
@@ -816,6 +825,8 @@ def save_onboarding_progress(
                WHERE user_uuid = %s AND COALESCE(has_seen_onboarding, 0) = 0;""",
             (step, goal_id, video_id, user_uuid),
         )
+        if cursor.rowcount:
+            _note_onboarding_step(cursor, user_uuid, step)
         conn.commit()
         return {"status": "ok"}
     finally:
@@ -836,6 +847,8 @@ def update_onboarding_status(
         if has_seen_onboarding is not None:
             val = 1 if _parse_bool(has_seen_onboarding) else 0
             cursor.execute("UPDATE user_profile SET has_seen_onboarding = %s WHERE user_uuid = %s;", (val, user_uuid))
+            if val:
+                _note_onboarding_step(cursor, user_uuid, "done")
             # A finished flow keeps no position; an explicit reset starts from the first step.
             cursor.execute(
                 "UPDATE user_profile SET onboarding_step = NULL, onboarding_goal_id = NULL, onboarding_video_id = NULL WHERE user_uuid = %s;",

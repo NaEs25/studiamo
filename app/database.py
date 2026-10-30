@@ -1670,6 +1670,7 @@ _USER_DATA_TABLES_DELETE_ORDER = [
     "tester_access",
     "notification_log",
     "user_activity_days",
+    "onboarding_step_events",
 ]
 
 

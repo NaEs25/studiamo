@@ -46,6 +46,7 @@ def setup(test_username, other_test_username, client_as):
         )
         for conn, goal_id in ((mine, ids[0]), (theirs, ids[1])):
             conn.cursor().execute("DELETE FROM goals WHERE id = %s AND user_uuid = %s;", (goal_id, conn.user_uuid))
+            conn.cursor().execute("DELETE FROM onboarding_step_events WHERE user_uuid = %s;", (conn.user_uuid,))
             conn.commit()
         mine.close()
         theirs.close()
@@ -84,3 +85,17 @@ def test_finished_flow_keeps_no_position_and_ignores_late_saves(setup):
     assert _progress(client) is None
     client.post("/api/user/onboarding_progress", data={"step": "chompy"})
     assert _progress(client) is None
+
+
+def test_funnel_stamps_each_step_once_and_marks_done(setup, test_username):
+    client, own_goal, _ = setup
+    for step in ("chompy", "how", "goal", "how", "chompy"):
+        assert client.post("/api/user/onboarding_progress", data={"step": step}).status_code == 200
+    assert client.post("/api/user/onboarding_status", data={"has_seen_onboarding": "true"}).status_code == 200
+    conn = database.get_db_connection(test_username)
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT step FROM onboarding_step_events WHERE user_uuid = %s;", (conn.user_uuid,))
+        assert sorted(r["step"] for r in cur.fetchall()) == ["chompy", "done", "goal", "how"]
+    finally:
+        conn.close()

@@ -6,7 +6,8 @@ notification_template_stats counts sends and conversions per ID: retire a varian
 active to False instead of deleting it, so its numbers keep meaning what they meant.
 
 kind:  "daily" (the reminder at the user's chosen hour), "save" (the evening warning when a
-       streak or a quiz Chompy would eat is at stake), "welcome_back" (after days away).
+       streak or a quiz Chompy would eat is at stake), "welcome_back" (after days away),
+       "nudge" (a finished signup that has not added anything yet).
 case:  which situation the text is written for, see CASES.
 style: rough tone, used to compare conversion between groups of texts while there is not
        yet enough data to compare single variants.
@@ -24,6 +25,7 @@ CASES = {
     "daily": ("default",),
     "save": ("both", "chompy", "streak"),
     "welcome_back": ("eaten", "plain"),
+    "nudge": ("no_material",),
 }
 
 # Push notifications truncate beyond roughly these lengths on common platforms.
@@ -107,6 +109,12 @@ TEMPLATES = [
              "Pick up where you left off", "One short review is all it takes to get back into it."),
     Template("welcome_plain_03", "welcome_back", "plain", "playful",
              "Ready when you are", "Your quizzes are waiting. A few minutes today gets you back on track."),
+    # Signed up and set a goal, but nothing added yet. Sent at most twice, so the two variants
+    # rotate: the second send gets the one not used first.
+    Template("nudge_01", "nudge", "no_material", "neutral",
+             "Your first quiz is one video away", "Paste a YouTube link in Import and Studiamo writes the quiz."),
+    Template("nudge_02", "nudge", "no_material", "chompy",
+             "Chompy is still hungry", "Nothing to protect yet. Add one video and your first quiz is ready in minutes."),
 ]
 
 

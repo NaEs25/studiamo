@@ -11,6 +11,11 @@ Review reminders: at most two a day per user, each about something that is still
 After WELCOME_BACK_DAYS days without a quiz, the daily slot sends a welcome-back message
 instead, and after the last of those days it stays silent.
 
+An account that finished the welcome flow but never added any material gets a nudge in the
+daily slot on NUDGE_DAYS (days since signup), at most that many and only while it still has
+none. Reaching the end of the flow is what makes the account reachable: its email reminders
+are switched on from the flow's first screen and every message carries an unsubscribe link.
+
 decide() is pure and holds every rule above. The rest gathers its inputs, delivers the chosen
 text on every enabled channel, and records the send in notification_log, which is also what
 makes each slot fire once per local day however often the scheduler ticks.
@@ -34,6 +39,7 @@ SAVE_HOUR = 21
 LATE_REMINDER_HOUR = 20
 MAX_PER_DAY = 2
 WELCOME_BACK_DAYS = (3, 7, 14, 30)
+NUDGE_DAYS = (1, 3)
 CONVERSION_WINDOW_HOURS = 3
 LOG_RETENTION_DAYS = 30
 _PRUNE_INTERVAL_SECONDS = 3600
@@ -52,6 +58,9 @@ class UserState:
     streak_at_risk: bool = False
     days_since_last_quiz: int | None = None
     eaten_while_away: int = 0
+    onboarded: bool = False          # finished the welcome flow
+    has_material: bool = True        # owns at least one video or document
+    days_since_signup: int | None = None
     sent_kinds_today: frozenset = frozenset()
 
 
@@ -83,9 +92,12 @@ def decide(state: UserState):
         return None
     sent = state.sent_kinds_today
 
-    if state.local_hour == state.reminder_hour and not sent & {"daily", "welcome_back", "save"}:
+    if state.local_hour == state.reminder_hour and not sent & {"daily", "welcome_back", "save", "nudge"}:
         if state.cat_inactivity and state.days_since_last_quiz in WELCOME_BACK_DAYS:
             return Decision("welcome_back", "eaten" if state.eaten_while_away else "plain")
+        if (state.cat_inactivity and state.onboarded and not state.has_material
+                and state.days_since_signup in NUDGE_DAYS):
+            return Decision("nudge", "no_material")
         if state.reminder_hour >= LATE_REMINDER_HOUR:
             warning = _save_decision(state)
             if warning:
@@ -120,7 +132,7 @@ _PROFILE_SQL = """
     SELECT user_uuid, notifications_enabled, notify_telegram, notify_push, notify_email,
            notify_cat_quizzes, notify_cat_streak, notify_cat_inactivity,
            preferred_hour, reminder_hour, timezone, base_url, google_email,
-           streak, last_quiz_at
+           streak, last_quiz_at, created_at, has_seen_onboarding
     FROM user_profile WHERE user_uuid = %s LIMIT 1;
 """
 
@@ -179,6 +191,15 @@ def _build_state(cursor, profile, tz, now, clock_start):
             )
             state.eaten_while_away = int(cursor.fetchone()["n"])
 
+    if state.local_hour == reminder_hour:
+        state.onboarded = bool(profile.get("has_seen_onboarding"))
+        signup_day = local_days.local_date(profile.get("created_at"), tz)
+        if signup_day is not None:
+            state.days_since_signup = (today - signup_day).days
+        if state.onboarded and signup_day is not None and state.days_since_signup in NUDGE_DAYS:
+            cursor.execute("SELECT 1 FROM videos WHERE user_uuid = %s LIMIT 1;", (user_uuid,))
+            state.has_material = cursor.fetchone() is not None
+
     cursor.execute(
         "SELECT DISTINCT kind FROM notification_log WHERE user_uuid = %s AND local_day = %s;",
         (user_uuid, today),
@@ -191,21 +212,26 @@ def _build_state(cursor, profile, tz, now, clock_start):
 # Delivery
 # ---------------------------------------------------------------------------------------------
 
-async def _deliver(username, profile, title, body, log_id=None) -> list[str]:
-    """Sends on every enabled channel and returns the ones that went through."""
+async def _deliver(username, profile, title, body, log_id=None) -> tuple[list[str], list[str]]:
+    """Sends on every enabled channel. Returns (channels that went through, channels that were
+    tried and did not)."""
     from app.telegram_bot import notification_app_link, send_telegram_message
     from app.webpush_utils import send_user_web_push
     from app.email_utils import send_notification_email
 
     app_link = notification_app_link(profile.get("base_url"))
     delivered = []
+    failed = []
 
     if profile.get("notify_push"):
         try:
             if await asyncio.to_thread(send_user_web_push, username,
                                        {"title": title, "body": body, "url": "/#review-section", "log_id": log_id}):
                 delivered.append("push")
+            else:
+                failed.append("push")
         except Exception as e:
+            failed.append("push")
             logger.warning(f"Reminder push failed for {username}: {e}")
 
     if profile.get("notify_telegram"):
@@ -214,7 +240,10 @@ async def _deliver(username, profile, title, body, log_id=None) -> list[str]:
             text = f"<b>{html.escape(title)}</b>\n\n{html.escape(body)}\n\n{app_link}"
             if await send_telegram_message(text, username):
                 delivered.append("telegram")
+            else:
+                failed.append("telegram")
         except Exception as e:
+            failed.append("telegram")
             logger.warning(f"Reminder Telegram message failed for {username}: {e}")
 
     if profile.get("notify_email") and profile.get("google_email"):
@@ -222,10 +251,13 @@ async def _deliver(username, profile, title, body, log_id=None) -> list[str]:
             if await asyncio.to_thread(send_notification_email, profile["google_email"], title, title, body, app_link,
                                        "Open Studiamo", f"{app_link}#notifications"):
                 delivered.append("email")
+            else:
+                failed.append("email")
         except Exception as e:
+            failed.append("email")
             logger.warning(f"Reminder email failed for {username}: {e}")
 
-    return delivered
+    return delivered, failed
 
 
 def _record_send(cursor, user_uuid, decision, template_id, local_day) -> int:
@@ -273,9 +305,11 @@ async def _process_user(username, now, clock_start):
         log_id = _record_send(cursor, user_uuid, decision, template.id, local_days.local_today(tz, now))
         conn.commit()
 
-        channels = await _deliver(username, profile, title, body, log_id)
+        channels, failed = await _deliver(username, profile, title, body, log_id)
+        if channels or failed:
+            cursor.execute("UPDATE notification_log SET channels = %s, failed_channels = %s WHERE id = %s;",
+                           (",".join(channels), ",".join(failed), log_id))
         if channels:
-            cursor.execute("UPDATE notification_log SET channels = %s WHERE id = %s;", (",".join(channels), log_id))
             cursor.execute(
                 """INSERT INTO notification_template_stats (template_id, sent) VALUES (%s, 1)
                    ON CONFLICT (template_id) DO UPDATE SET sent = notification_template_stats.sent + 1;""",

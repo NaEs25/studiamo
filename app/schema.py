@@ -673,6 +673,22 @@ TABLES_SQL = [
     ALTER TABLE notification_log ADD COLUMN IF NOT EXISTS clicked_at TIMESTAMPTZ;
     ALTER TABLE notification_template_stats ADD COLUMN IF NOT EXISTS clicked INTEGER NOT NULL DEFAULT 0;
 
+    -- Channels a reminder was attempted on and that did not go through (a rejected email, an
+    -- expired push subscription), next to channels, which lists only the ones that did. Lets
+    -- a send that silently failed be told apart from one that was never attempted.
+    ALTER TABLE notification_log ADD COLUMN IF NOT EXISTS failed_channels TEXT NOT NULL DEFAULT '';
+
+    -- Welcome flow funnel: one row per account per step, stamped the first time the step is
+    -- shown. "done" marks a finished flow, which clears user_profile.onboarding_step and would
+    -- otherwise look the same as never having started. No content, only step names.
+    CREATE TABLE IF NOT EXISTS onboarding_step_events (
+        user_uuid UUID NOT NULL,
+        step      TEXT NOT NULL,
+        reached_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (user_uuid, step)
+    );
+    ALTER TABLE onboarding_step_events ENABLE ROW LEVEL SECURITY;
+
     -- One row per account per UTC day on which the account changed something (see
     -- app/activity.py). No per-action rows. Rows older than ACTIVITY_RETENTION_DAYS are pruned
     -- by the notification scheduler, and the table is part of the account export and deletion.
