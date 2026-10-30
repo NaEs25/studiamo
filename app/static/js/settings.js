@@ -64,6 +64,12 @@ function renderStatsCalendar(data) {
     const lead = (new Date(y, m - 1, 1).getDay() + 6) % 7;
     const key = day => `${data.month}-${String(day).padStart(2, '0')}`;
     const cells = [];
+    // A joined run is bordered as a whole if any day in it is busy, so the border never stops mid-band.
+    let run = [];
+    const endRun = () => {
+        if (run.some(r => busy.has(r.date))) run.forEach(r => r.cell.classList.add('is-busy'));
+        run = [];
+    };
     for (let i = 0; i < lead; i++) cells.push(document.createElement('div'));
     for (let day = 1; day <= daysInMonth; day++) {
         const col = (lead + day - 1) % 7;
@@ -72,13 +78,16 @@ function renderStatsCalendar(data) {
         cell.textContent = day;
         if (active.has(key(day))) {
             cell.classList.add('is-active');
-            if (busy.has(key(day))) cell.classList.add('is-busy');
-            if (col > 0 && active.has(key(day - 1))) cell.classList.add('join-prev');
+            const joinPrev = col > 0 && active.has(key(day - 1));
+            if (!joinPrev) endRun();
+            run.push({ cell, date: key(day) });
+            if (joinPrev) cell.classList.add('join-prev');
             if (col < 6 && active.has(key(day + 1))) cell.classList.add('join-next');
         }
         if (key(day) === data.today) cell.classList.add('is-today');
         cells.push(cell);
     }
+    endRun();
     grid.replaceChildren(...cells);
 
     const prev = document.getElementById('stats-cal-prev');
