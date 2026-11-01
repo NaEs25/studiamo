@@ -86,6 +86,12 @@ The palette is derived from natural warm paper and ink tones paired with rich go
 - **Spacing Rhythm**: 4px / 8px / 12px / 16px / 24px / 32px scale (`gap-4`, `p-5`, `space-y-4`).
 - **Responsive Layout**: Desktop features a side-by-side Study Studio split view (42% video / 58% notes); mobile collapses cleanly into a single-pane vertical workflow.
 
+### Installed app (iOS home-screen PWA)
+- **Pin the header.** The top bar is `position: sticky; top: 0` with a flat, opaque background (the same color as `theme-color`), no shadow, and `padding-top: calc(<normal padding> + env(safe-area-inset-top))`. With `viewport-fit=cover` the page is drawn under the status bar, and iOS fills and fades that zone from whatever sits at the top edge. A header that scrolls away or carries a shadow leaves the zone to iOS's own fade.
+- **Keep the meta tags consistent**: `viewport-fit=cover` in the viewport meta, `apple-mobile-web-app-capable`, `apple-mobile-web-app-status-bar-style` set to `default`, and `theme-color` equal to the header background.
+- **Read the inset through one token** (`--safe-top`, `--safe-bottom` in `style.css`), never `env()` inline. Keep the z-index of the pinned header below the tab bar and modal overlays.
+- **Don't** add a separate strip, overlay, or `body::before` to cover the status bar zone. It does not hide the system fade.
+
 ## Elevation & Depth
 
 Surfaces rely on tonal layering and crisp 1px borders (`#e7dfd3`) rather than heavy dark drop shadows.

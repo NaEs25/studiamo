@@ -47,11 +47,12 @@
     --color-ui-yellow-rgb:      252 211 77;
     --color-logo-yellow-rgb:    248 190 18;
 
-    /* Safe-area insets. index.html omits viewport-fit=cover, so iOS keeps the page inside the
-       safe area and these resolve to 0; they only take effect if the page is ever drawn edge
-       to edge again. env()'s own 0px fallback covers browsers without inset support, so no
-       @supports guard is needed. Every safe-area rule in this file should read these two
-       tokens rather than calling env() directly, so there is exactly one place this is defined. */
+    /* Safe-area insets. index.html sets viewport-fit=cover, so in an installed iOS app the page
+       is drawn under the status bar and home indicator and these hold their sizes; anything
+       anchored to the true viewport edge adds them as clearance. env()'s own 0px fallback
+       covers browsers without inset support, so no @supports guard is needed. Every safe-area
+       rule in this file should read these two tokens rather than calling env() directly, so
+       there is exactly one place this is defined. */
     --safe-top:    env(safe-area-inset-top, 0px);
     --safe-bottom: env(safe-area-inset-bottom, 0px);
 
@@ -1070,7 +1071,14 @@ body[data-app-mode="cloud"] .selfhosted-only {
     padding-bottom: var(--safe-bottom);
 }
 
+/* The header is pinned to the top edge with a flat, opaque background and no shadow, so the
+   status bar zone above it always shows the header color. z-30 keeps it under the tab bar (z-40)
+   and every overlay (z-50). */
 html[data-standalone="true"] #app-header {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    box-shadow: none;
     padding-top: calc(0.625rem + var(--safe-top));
 }
 

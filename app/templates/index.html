@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Studiamo | Spaced Repetition Active Recall</title>
     <!-- Marks <html> as running installed/standalone, before first paint, so CSS can key off
          one unambiguous attribute (see style.css's Mobile Safe Area section) instead of
@@ -35,20 +35,11 @@
     <meta name="theme-color" content="#fdfbf7">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <!-- "default" makes iOS reserve real, opaque space for the status bar in the installed
-         PWA, instead of black-translucent's overlay mode, where the status bar is transparent
-         and content/backgrounds are drawn underneath it. Overlay mode was the source of the
-         whole "content under the status bar" class of bugs: even once a fixed/sticky element's
-         own content is pushed down with safe-area padding, its translucent, blurred background
-         still extends up under the status bar by design, and iOS layers its own legibility
-         scrim on top of that for the status icons — which reads as an unwanted fade/blur band
-         right under the icons. "default" removes the overlay entirely, so there's nothing left
-         to blend or scrim: the status bar is opaque OS chrome, exactly like a normal Safari tab,
-         and the header begins cleanly below it. The viewport meta deliberately omits
-         viewport-fit=cover: with it, current iOS draws the page edge to edge under the status
-         bar whatever this value says, reports a nonzero safe-area inset, and layers its own
-         blur over the top of the page. Without it, iOS keeps the page inside the safe area, the
-         insets are zero, and the --safe-top/--safe-bottom padding in style.css adds nothing. -->
+    <!-- Installed iOS app: viewport-fit=cover draws the page edge to edge under the status bar,
+         and iOS fills and fades that zone from whatever sits at the top edge of the page. The
+         header is therefore pinned there (style.css, html[data-standalone] #app-header) with a
+         flat opaque background and no shadow, and pads itself down by the safe-area inset. A
+         header that scrolls away, or has a shadow, leaves the zone to iOS's own fade. -->
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Studiamo">
     <link rel="icon" type="image/png" sizes="192x192" href="/static/images/icon-192.png">
