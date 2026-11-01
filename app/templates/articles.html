@@ -38,7 +38,7 @@
         <ul class="space-y-4">
             {% for p in pages %}
             <li>
-                <a href="/{{ p.slug }}" class="block bg-paperCard border border-paperBorder rounded-2xl p-5 hover:border-paperBorderStrong transition">
+                <a href="/{{ p.slug }}" class="block bg-paperCard border border-paperBorder rounded-ds-xl p-5 hover:border-paperBorderStrong transition">
                     <h2 class="text-lg font-extrabold text-stoneText leading-snug">{{ p.h1 }}</h2>
                     <p class="text-sm text-stoneMuted mt-1.5 leading-relaxed">{{ p.description }}</p>
                     <time class="block text-xs text-stoneMuted mt-2" datetime="{{ p.published.isoformat() }}">{{ p.published.strftime('%B %-d, %Y') }}</time>

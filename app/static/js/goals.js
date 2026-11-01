@@ -34,7 +34,7 @@ function planTagHTML() {
 }
 
 function goalRankBadgeHTML(rank) {
-    return `<div class="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-700 font-bold text-xs shrink-0">#${rank}</div>`;
+    return `<div class="w-8 h-8 rounded-ds-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-700 font-bold text-xs shrink-0">#${rank}</div>`;
 }
 
 // A goal's quiz counts: one per material that has a quiz, however many quizzes that material
@@ -75,30 +75,30 @@ function goalRecsSectionHTML(g) {
     const recsBtnLabel = (isDrawerOpen || hasSavedRecs) ? 'View AI Recommendations' : 'Get AI Recommendations';
     return `
                             <div data-recs-section class="flex gap-2 pt-1">
-                                <button id="btn-recs-trigger-${g.id}" data-has-saved-recs="${g.has_saved_recommendations ? 1 : 0}" data-goal-action="load-recs" data-goal-id="${g.id}" class="flex-grow py-1.5 px-3 bg-[#fbf8f2] hover:bg-[#f3ebd9] text-stone-800 border border-[#e7dfd3] font-semibold rounded-lg text-xs transition flex items-center justify-center space-x-1.5 shadow-sm">
+                                <button id="btn-recs-trigger-${g.id}" data-has-saved-recs="${g.has_saved_recommendations ? 1 : 0}" data-goal-action="load-recs" data-goal-id="${g.id}" class="flex-grow py-1.5 px-3 bg-[#fbf8f2] hover:bg-[#f3ebd9] text-stone-800 border border-[#e7dfd3] font-semibold rounded-ds-md text-xs transition flex items-center justify-center space-x-1.5 shadow-sm">
                                     <i data-lucide="compass" class="w-3.5 h-3.5 text-stone-600"></i>
                                     <span class="recs-btn-text">${recsBtnLabel}</span>${planTagHTML()}
                                 </button>
                                 
-                                <button disabled class="flex-grow py-1.5 px-3 bg-amber-500/10 text-amber-900/60 border border-amber-500/20 font-semibold rounded-lg text-xs flex items-center justify-center space-x-1.5 cursor-not-allowed opacity-75 shadow-sm">
+                                <button disabled class="flex-grow py-1.5 px-3 bg-amber-500/10 text-amber-900/60 border border-amber-500/20 font-semibold rounded-ds-md text-xs flex items-center justify-center space-x-1.5 cursor-not-allowed opacity-75 shadow-sm">
                                     <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-700/60"></i>
                                     <span>Coming Soon</span>
                                 </button>
                             </div>
                             
-                            <div id="recs-${g.id}" data-recs-section class="${isDrawerOpen ? '' : 'hidden'} p-3.5 bg-[#fbf8f2] border border-[#e7dfd3] rounded-xl space-y-3 shadow-sm">
+                            <div id="recs-${g.id}" data-recs-section class="${isDrawerOpen ? '' : 'hidden'} p-3.5 bg-[#fbf8f2] border border-[#e7dfd3] rounded-ds-lg space-y-3 shadow-sm">
                                 <div class="flex items-start justify-between pb-2 border-b border-[#e7dfd3]/80 gap-2">
                                     <div class="min-w-0 flex-1 space-y-2">
                                         <button type="button" data-goal-action="toggle-concepts" class="concepts-toggle flex items-center space-x-1.5 text-xs font-bold text-stone-800 hover:text-amber-700 transition" data-goal-id="${g.id}" aria-expanded="false" aria-controls="concepts-${g.id}">
                                             <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-700 shrink-0"></i>
                                             <span>Concepts</span>
-                                            <span id="concepts-count-${g.id}" class="text-[10px] bg-amber-500/20 text-amber-700 px-1.5 py-0.5 rounded-md font-bold"></span>
+                                            <span id="concepts-count-${g.id}" class="text-[10px] bg-amber-500/20 text-amber-700 px-1.5 py-0.5 rounded-ds-sm font-bold"></span>
                                             <i data-lucide="chevron-down" class="concepts-chevron w-3.5 h-3.5 text-stone-400 transition-transform"></i>
                                         </button>
                                         <div id="concepts-${g.id}" class="hidden text-[11px] text-stone-600 leading-relaxed break-words"></div>
                                     </div>
                                     <div class="flex items-center space-x-1 shrink-0">
-                                        <button type="button" data-goal-action="reload-recs" data-goal-id="${g.id}" class="p-1.5 bg-stone-100 hover:bg-stone-200/80 text-stone-600 hover:text-amber-800 rounded-lg transition border border-stone-200/80 shadow-sm" title="Reload Recommendations">
+                                        <button type="button" data-goal-action="reload-recs" data-goal-id="${g.id}" class="p-1.5 bg-stone-100 hover:bg-stone-200/80 text-stone-600 hover:text-amber-800 rounded-ds-md transition border border-stone-200/80 shadow-sm" title="Reload Recommendations">
                                             <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
                                         </button>
                                     </div>
@@ -128,7 +128,7 @@ async function loadGoals() {
         const starterContainer = document.getElementById('goals-starter-container');
         if (starterContainer) {
             starterContainer.innerHTML = starterVideos.length === 0 ? '' : `
-                <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 space-y-3 shadow-sm">
+                <div class="bg-emerald-50 border border-emerald-200 rounded-ds-xl p-4 space-y-3 shadow-sm">
                     <div class="flex items-center justify-between">
                         <span class="text-[11px] font-bold text-emerald-700 flex items-center gap-1.5">
                             <i data-lucide="sprout" class="w-4 h-4"></i>Starter set
@@ -150,12 +150,12 @@ async function loadGoals() {
             if (watchlistVideos.length > 0) {
                 const isWatchlistOpen = localStorage.getItem('accordion-open-watchlist') !== 'false';
                 watchlistContainer.innerHTML = `
-                    <div class="bg-[#fbf8f2] border border-[#e7dfd3] rounded-2xl overflow-hidden mb-6 shadow-sm">
+                    <div class="bg-[#fbf8f2] border border-[#e7dfd3] rounded-ds-xl overflow-hidden mb-6 shadow-sm">
                         <button type="button" data-goal-action="toggle-accordion" data-cat="watchlist" class="w-full flex justify-between items-center px-5 py-4 bg-[#f7f2e8] hover:bg-[#f3ebd9] transition text-left">
                             <span class="flex items-center space-x-2.5 font-bold">
                                 <i data-lucide="bookmark" class="w-5 h-5 text-amber-600 fill-amber-500"></i>
                                 <span class="text-stone-800">Study Queue / Watchlist</span>
-                                <span class="text-xs bg-amber-500/20 text-amber-800 px-2 py-0.5 rounded-md font-semibold border border-amber-500/30">${watchlistVideos.length}</span>
+                                <span class="text-xs bg-amber-500/20 text-amber-800 px-2 py-0.5 rounded-ds-sm font-semibold border border-amber-500/30">${watchlistVideos.length}</span>
                             </span>
                             <i data-lucide="chevron-down" id="chevron-watchlist" class="w-5 h-5 text-amber-600 transition-transform ${isWatchlistOpen ? 'rotate-180' : ''}"></i>
                         </button>
@@ -186,8 +186,8 @@ async function loadGoals() {
             container.innerHTML = '';
             if (goals.length === 0) {
                 container.innerHTML = `
-                    <div class="text-center py-16 px-6 bg-white rounded-2xl border border-dashed border-amber-500/30 shadow-xl max-w-xl mx-auto my-6 space-y-5">
-                        <div class="w-20 h-20 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-3xl flex items-center justify-center mx-auto shadow-inner">
+                    <div class="text-center py-16 px-6 bg-white rounded-ds-xl border border-dashed border-amber-500/30 shadow-xl max-w-xl mx-auto my-6 space-y-5">
+                        <div class="w-20 h-20 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-ds-2xl flex items-center justify-center mx-auto shadow-inner">
                             <i data-lucide="target" class="w-10 h-10"></i>
                         </div>
                         <div class="space-y-2">
@@ -197,7 +197,7 @@ async function loadGoals() {
                             </p>
                         </div>
                         <div class="pt-3">
-                            <button type="button" data-goal-action="create-goal" class="btn-primary px-8 py-4 font-extrabold text-sm rounded-2xl transition transform hover:-translate-y-0.5 inline-flex items-center space-x-2">
+                            <button type="button" data-goal-action="create-goal" class="btn-primary px-8 py-4 font-extrabold text-sm rounded-ds-xl transition transform hover:-translate-y-0.5 inline-flex items-center space-x-2">
                                 <i data-lucide="plus-circle" class="w-5 h-5"></i>
                                 <span>+ Create First Goal</span>
                             </button>
@@ -210,7 +210,7 @@ async function loadGoals() {
                     const rankNumber = index + 1;
                     const goalVideos = videos.filter(v => v.learning_goal_id === g.id && v.is_watchlist !== 1);
                     const cardHTML = `
-                        <div data-goal-card="${g.id}" class="goal-card p-5 rounded-2xl space-y-3 relative">
+                        <div data-goal-card="${g.id}" class="goal-card p-5 rounded-ds-xl space-y-3 relative">
                             <div class="flex items-center space-x-3 min-w-0">
                                 ${goalRankBadgeHTML(rankNumber)}
                                 <h3 class="font-bold text-lg text-stone-900 leading-tight"><button type="button" data-goal-action="open-goal" data-goal-id="${g.id}" class="text-left focus:outline-none">${escapeHtml(g.title)}</button></h3>
@@ -232,12 +232,12 @@ async function loadGoals() {
             if (unassociatedVideos.length > 0) {
                 const isUnassocOpen = localStorage.getItem('accordion-open-unassociated') === 'true';
                 unassociatedContainer.innerHTML = `
-                    <div class="bg-white border border-stone-200 rounded-2xl overflow-hidden mt-6 mb-4 shadow-sm">
+                    <div class="bg-white border border-stone-200 rounded-ds-xl overflow-hidden mt-6 mb-4 shadow-sm">
                         <div class="w-full flex justify-between items-center px-5 py-4 bg-stone-100 hover:bg-stone-200 transition text-left cursor-pointer" data-goal-action="toggle-accordion" data-cat="unassociated">
                             <span class="flex items-center space-x-2.5 font-bold">
                                 <i data-lucide="help-circle" class="w-5 h-5 text-amber-400"></i>
                                 <span class="text-stone-900">Unassociated / Quick Review Material</span>
-                                <span class="text-xs bg-stone-200 text-stone-500 px-2 py-0.5 rounded-md font-semibold">${unassociatedVideos.length}</span>
+                                <span class="text-xs bg-stone-200 text-stone-500 px-2 py-0.5 rounded-ds-sm font-semibold">${unassociatedVideos.length}</span>
                             </span>
                             <i data-lucide="chevron-down" id="chevron-unassociated" class="w-5 h-5 text-stone-400 transition-transform ${isUnassocOpen ? 'rotate-180' : ''}"></i>
                         </div>
@@ -278,11 +278,11 @@ async function loadGoals() {
             } else {
                 archivedGoals.forEach(g => {
                     archivedList.innerHTML += `
-                        <div data-archived-goal="${g.id}" class="flex items-center justify-between p-3 bg-stone-50 border border-stone-200 rounded-xl">
+                        <div data-archived-goal="${g.id}" class="flex items-center justify-between p-3 bg-stone-50 border border-stone-200 rounded-ds-lg">
                             <div class="min-w-0">
                                 <span class="block text-xs font-bold text-stone-900">${escapeHtml(g.title)}</span>
                             </div>
-                            <div class="flex items-center space-x-1 shrink-0 ml-4 bg-stone-100 border border-stone-200 rounded-xl p-0.5">
+                            <div class="flex items-center space-x-1 shrink-0 ml-4 bg-stone-100 border border-stone-200 rounded-ds-lg p-0.5">
                                 <button type="button" data-goal-action="archive" data-goal-id="${g.id}" class="p-1 text-stone-400 hover:text-emerald-500 transition" title="Restore Goal to Active">
                                     <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
                                 </button>
@@ -592,12 +592,12 @@ function renderRecommendationCardHTML(v, goalId) {
     const durationStr = v.duration || 'N/A';
     const title = escapeHtml(v.title || '');
     const previewAttrs = `data-goal-action="preview-rec" data-goal-id="${goalId}" data-url="${encodedUrl}" data-title="${title}"`;
-    const iconBtn = 'p-1.5 rounded-lg transition shrink-0';
+    const iconBtn = 'p-1.5 rounded-ds-md transition shrink-0';
 
     return `
-        <div id="rec-card-${goalId}-${ytId}" class="flex items-center gap-2.5 bg-[#fcfaf6] p-2.5 rounded-xl border border-[#e7dfd3] transition hover:border-amber-500/40 hover:bg-white shadow-sm">
+        <div id="rec-card-${goalId}-${ytId}" class="flex items-center gap-2.5 bg-[#fcfaf6] p-2.5 rounded-ds-lg border border-[#e7dfd3] transition hover:border-amber-500/40 hover:bg-white shadow-sm">
             <button type="button" ${previewAttrs} class="relative shrink-0 hover:opacity-80 transition" aria-label="Open in Study Studio: ${title}" title="Open in Study Studio">
-                <img src="${v.thumbnail}" alt="" class="w-16 h-10 object-cover rounded-lg border border-[#e7dfd3] bg-[#f3ebd9]">
+                <img src="${v.thumbnail}" alt="" class="w-16 h-10 object-cover rounded-ds-md border border-[#e7dfd3] bg-[#f3ebd9]">
                 ${durationStr !== 'N/A' ? `<span class="absolute bottom-0.5 right-0.5 bg-stone-900/90 text-amber-300 text-[8px] font-mono px-1 py-0.2 rounded font-bold">${durationStr}</span>` : ''}
             </button>
             <h6 class="min-w-0 flex-1 font-bold text-stone-900 text-xs line-clamp-2 leading-snug" title="${title}">${title}</h6>
@@ -725,7 +725,7 @@ function populateRecommendationDrawer(goalId, data) {
         .split(',').map(c => c.trim()).filter(Boolean);
     const concepts = goalConcepts.length ? goalConcepts : (data.key_concepts || []);
     if (conceptsList && concepts.length) {
-        conceptsList.innerHTML = concepts.map(c => `<span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/10 text-amber-950 border border-amber-500/20 shadow-sm">${escapeHtml(c)}</span>`).join('');
+        conceptsList.innerHTML = concepts.map(c => `<span class="inline-flex items-center px-2 py-0.5 rounded-ds-sm text-[10px] font-bold bg-amber-500/10 text-amber-950 border border-amber-500/20 shadow-sm">${escapeHtml(c)}</span>`).join('');
         const countEl = document.getElementById(`concepts-count-${goalId}`);
         if (countEl) countEl.textContent = concepts.length;
     }
@@ -1031,7 +1031,7 @@ function renderSearchMaterialResults(materials) {
     box.innerHTML = materials.map(v => {
         const goal = (window._goalsCache || {})[v.learning_goal_id];
         return `
-        <div data-goal-action="jump-material" data-video-id="${v.id}" class="goal-card flex items-center gap-3 rounded-xl px-3 py-2.5">
+        <div data-goal-action="jump-material" data-video-id="${v.id}" class="goal-card flex items-center gap-3 rounded-ds-lg px-3 py-2.5">
             <i data-lucide="play-circle" class="w-4 h-4 text-amber-600 shrink-0"></i>
             <button type="button" data-goal-action="jump-material" data-video-id="${v.id}" class="min-w-0 flex-1 text-left focus:outline-none">
                 <span class="block font-bold text-sm text-stone-900 truncate">${escapeHtml(v.title || 'Untitled')}</span>
@@ -1245,12 +1245,12 @@ function renderGoalReorderList() {
     if (!list) return;
     const goals = (window._goalsPageData && window._goalsPageData.goals) || [];
     list.innerHTML = goals.map((g, i) => `
-        <div class="flex items-center gap-3 bg-white border border-stone-200 rounded-xl px-3 py-2.5 shadow-sm" data-reorder-row="${g.id}" draggable="true">
+        <div class="flex items-center gap-3 bg-white border border-stone-200 rounded-ds-lg px-3 py-2.5 shadow-sm" data-reorder-row="${g.id}" draggable="true">
             <i data-lucide="grip-vertical" class="drag-handle w-4 h-4 text-stone-400 cursor-grab shrink-0"></i>
             ${goalRankBadgeHTML(i + 1)}
             <span class="font-bold text-sm text-stone-900 truncate flex-1">${escapeHtml(g.title)}</span>
-            <button type="button" data-reorder-move="up" data-goal-id="${g.id}" ${i === 0 ? 'disabled' : ''} class="p-1.5 bg-stone-100 border border-stone-200 rounded-lg ${i === 0 ? 'text-stone-300' : 'text-stone-600'}" aria-label="Move up"><i data-lucide="arrow-up" class="w-4 h-4"></i></button>
-            <button type="button" data-reorder-move="down" data-goal-id="${g.id}" ${i === goals.length - 1 ? 'disabled' : ''} class="p-1.5 bg-stone-100 border border-stone-200 rounded-lg ${i === goals.length - 1 ? 'text-stone-300' : 'text-stone-600'}" aria-label="Move down"><i data-lucide="arrow-down" class="w-4 h-4"></i></button>
+            <button type="button" data-reorder-move="up" data-goal-id="${g.id}" ${i === 0 ? 'disabled' : ''} class="p-1.5 bg-stone-100 border border-stone-200 rounded-ds-md ${i === 0 ? 'text-stone-300' : 'text-stone-600'}" aria-label="Move up"><i data-lucide="arrow-up" class="w-4 h-4"></i></button>
+            <button type="button" data-reorder-move="down" data-goal-id="${g.id}" ${i === goals.length - 1 ? 'disabled' : ''} class="p-1.5 bg-stone-100 border border-stone-200 rounded-ds-md ${i === goals.length - 1 ? 'text-stone-300' : 'text-stone-600'}" aria-label="Move down"><i data-lucide="arrow-down" class="w-4 h-4"></i></button>
         </div>`).join('') || '<p class="text-xs text-stone-500 py-4 text-center">No goals yet.</p>';
     if (typeof renderIcons === 'function') renderIcons();
 }
@@ -1404,25 +1404,25 @@ function goalPageRowHTML(v, quizzes, editing) {
     let action = '';
     if (editing) {
         const moveTo = goalPageFolders(v.learning_goal_id).length > 0
-            ? `<button type="button" data-goalpage-moveto="${v.id}" class="p-1.5 bg-stone-100 border border-stone-200 rounded-lg text-stone-600" aria-label="Move to a folder" title="Move to a folder"><i data-lucide="folder-input" class="w-4 h-4"></i></button>`
+            ? `<button type="button" data-goalpage-moveto="${v.id}" class="p-1.5 bg-stone-100 border border-stone-200 rounded-ds-md text-stone-600" aria-label="Move to a folder" title="Move to a folder"><i data-lucide="folder-input" class="w-4 h-4"></i></button>`
             : '';
         action = `${moveTo}
-            <button type="button" data-goalpage-move="up" data-video-id="${v.id}" class="p-1.5 bg-stone-100 border border-stone-200 rounded-lg text-stone-600" aria-label="Move up"><i data-lucide="arrow-up" class="w-4 h-4"></i></button>
-            <button type="button" data-goalpage-move="down" data-video-id="${v.id}" class="p-1.5 bg-stone-100 border border-stone-200 rounded-lg text-stone-600" aria-label="Move down"><i data-lucide="arrow-down" class="w-4 h-4"></i></button>`;
+            <button type="button" data-goalpage-move="up" data-video-id="${v.id}" class="p-1.5 bg-stone-100 border border-stone-200 rounded-ds-md text-stone-600" aria-label="Move up"><i data-lucide="arrow-up" class="w-4 h-4"></i></button>
+            <button type="button" data-goalpage-move="down" data-video-id="${v.id}" class="p-1.5 bg-stone-100 border border-stone-200 rounded-ds-md text-stone-600" aria-label="Move down"><i data-lucide="arrow-down" class="w-4 h-4"></i></button>`;
     } else if (v.material_type === 'link') {
-        action = `<button type="button" data-video-action="open-link" data-video-id="${v.id}" class="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 border border-stone-200 rounded-lg text-xs font-extrabold text-stone-600 flex items-center gap-1"><i data-lucide="external-link" class="w-3.5 h-3.5"></i>Open</button>`;
+        action = `<button type="button" data-video-action="open-link" data-video-id="${v.id}" class="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 border border-stone-200 rounded-ds-md text-xs font-extrabold text-stone-600 flex items-center gap-1"><i data-lucide="external-link" class="w-3.5 h-3.5"></i>Open</button>`;
     } else if (v.status === 'saved') {
-        action = `<button type="button" data-video-action="generate-saved" data-video-id="${v.id}" class="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-300 rounded-lg text-xs font-extrabold text-amber-900 flex items-center gap-1"><i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-600"></i>Generate</button>`;
+        action = `<button type="button" data-video-action="generate-saved" data-video-id="${v.id}" class="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-300 rounded-ds-md text-xs font-extrabold text-amber-900 flex items-center gap-1"><i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-600"></i>Generate</button>`;
     } else if (v.status === 'failed') {
-        action = `<button type="button" data-video-action="retry" data-video-id="${v.id}" class="px-3 py-1.5 bg-red-50 border border-red-200 rounded-lg text-xs font-extrabold text-red-600">Retry</button>`;
+        action = `<button type="button" data-video-action="retry" data-video-id="${v.id}" class="px-3 py-1.5 bg-red-50 border border-red-200 rounded-ds-md text-xs font-extrabold text-red-600">Retry</button>`;
     } else if (v.status !== 'processing') {
         const level = v.importance_rating || v.importance_level || 3;
-        action = `<button type="button" data-video-action="study" data-video-id="${v.id}" data-level="${level}" class="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 border border-stone-200 rounded-lg text-xs font-extrabold text-stone-600 flex items-center gap-1"><i data-lucide="brain" class="w-3.5 h-3.5"></i>Quiz</button>`;
+        action = `<button type="button" data-video-action="study" data-video-id="${v.id}" data-level="${level}" class="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 border border-stone-200 rounded-ds-md text-xs font-extrabold text-stone-600 flex items-center gap-1"><i data-lucide="brain" class="w-3.5 h-3.5"></i>Quiz</button>`;
     }
     const titleAction = 'open-studio';
     const metaClass = v.status === 'saved' ? 'text-amber-700' : 'text-stone-500';
     return `
-        <div id="video-card-${v.id}" data-goalpage-row="${v.id}" ${editing ? 'draggable="true"' : ''} class="flex items-center gap-3 bg-white border border-stone-200 rounded-xl px-3 py-2.5 shadow-sm">
+        <div id="video-card-${v.id}" data-goalpage-row="${v.id}" ${editing ? 'draggable="true"' : ''} class="flex items-center gap-3 bg-white border border-stone-200 rounded-ds-lg px-3 py-2.5 shadow-sm">
             ${handle}
             ${renderMediaThumbHTML(v, { sizeClasses: 'w-14 h-9', attrs: `data-video-action="${titleAction}" data-video-id="${v.id}" draggable="false"`, title: escapeHtml(kind.label) })}
             <div class="min-w-0 flex-1">
@@ -1435,7 +1435,7 @@ function goalPageRowHTML(v, quizzes, editing) {
 
 function goalPageFolderRowHTML(f, count, editing) {
     return `
-        <div data-goalpage-folder="${f.id}" class="goalpage-folder flex items-center bg-white border border-stone-200 rounded-xl shadow-sm">
+        <div data-goalpage-folder="${f.id}" class="goalpage-folder flex items-center bg-white border border-stone-200 rounded-ds-lg shadow-sm">
             <button type="button" data-goalpage-action="open-folder" data-folder-id="${f.id}" class="flex items-center gap-3 min-w-0 flex-1 text-left px-3 py-2.5 focus:outline-none">
                 <i data-lucide="folder" class="w-5 h-5 text-amber-600 shrink-0"></i>
                 <span class="min-w-0 flex-1">
@@ -1463,7 +1463,7 @@ function renderGoalPage() {
     const materials = goalPageScopeMaterials(goalId);
     const view = goalPageView();
     const editing = goalPageState.reordering;
-    const seg = (label, on, action) => `<button type="button" data-goalpage-action="${action}" class="px-3 py-1.5 rounded-lg text-xs font-bold ${on ? 'bg-amber-100 border border-amber-300 text-amber-900' : 'text-stone-600'}">${label}</button>`;
+    const seg = (label, on, action) => `<button type="button" data-goalpage-action="${action}" class="px-3 py-1.5 rounded-ds-md text-xs font-bold ${on ? 'bg-amber-100 border border-amber-300 text-amber-900' : 'text-stone-600'}">${label}</button>`;
     const asList = view === 'list' || editing;
     const materialHTML = v => asList ? goalPageRowHTML(v, data.quizzes, editing) : renderVideoCard(v, data.quizzes, data.goals);
     const wrap = html => asList ? `<div class="space-y-2">${html}</div>` : `<div class="space-y-3">${html}</div>`;
@@ -1475,7 +1475,7 @@ function renderGoalPage() {
         body += `<div class="space-y-2">${folders.map(f => goalPageFolderRowHTML(f, allMaterials.filter(v => v.folder_id === f.id).length, editing)).join('')}</div>`;
     }
     if (folder && editing) {
-        body += '<div data-goalpage-folder="0" class="goalpage-folder border-2 border-dashed border-amber-300 rounded-xl px-3 py-3 text-xs font-bold text-amber-800 text-center">Drop a material here to take it out of the folder</div>';
+        body += '<div data-goalpage-folder="0" class="goalpage-folder border-2 border-dashed border-amber-300 rounded-ds-lg px-3 py-3 text-xs font-bold text-amber-800 text-center">Drop a material here to take it out of the folder</div>';
     }
     if (materials.length > 0) {
         body += wrap(materials.map(materialHTML).join(''))
@@ -1490,7 +1490,7 @@ function renderGoalPage() {
         if (inFolders.length > 0) body += `<div data-folder-material class="hidden">${wrap(inFolders.map(materialHTML).join(''))}</div>`;
     }
 
-    const actionBtn = 'px-3 py-2 bg-white hover:bg-stone-50 border border-stone-200 rounded-xl text-xs font-bold text-stone-700 flex items-center gap-1.5 shadow-sm transition';
+    const actionBtn = 'px-3 py-2 bg-white hover:bg-stone-50 border border-stone-200 rounded-ds-lg text-xs font-bold text-stone-700 flex items-center gap-1.5 shadow-sm transition';
     const header = folder ? `
         <button type="button" data-goalpage-action="close-folder" class="flex items-center gap-1.5 text-sm font-bold text-amber-700 hover:text-amber-900 transition">
             <i data-lucide="arrow-left" class="w-4 h-4"></i><span>${escapeHtml(goal.title)}</span>
@@ -1503,7 +1503,7 @@ function renderGoalPage() {
         <button type="button" data-goalpage-action="back" class="flex items-center gap-1.5 text-sm font-bold text-amber-700 hover:text-amber-900 transition">
             <i data-lucide="arrow-left" class="w-4 h-4"></i><span>Goals</span>
         </button>
-        <div class="bg-white border border-stone-200 p-5 rounded-2xl space-y-4 shadow-sm">
+        <div class="bg-white border border-stone-200 p-5 rounded-ds-xl space-y-4 shadow-sm">
             <div class="flex items-center justify-between gap-3">
                 <div class="flex items-center space-x-3 min-w-0">${goalRankBadgeHTML(rank)}<h2 class="text-2xl font-bold tracking-tight leading-tight">${escapeHtml(goal.title)}</h2></div>
                 <div class="flex items-center gap-2 shrink-0">
@@ -1518,13 +1518,13 @@ function renderGoalPage() {
     page.innerHTML = `
         ${header}
         <div class="flex items-center justify-between gap-2">
-            <div class="flex gap-1 p-1 bg-stone-100 border border-stone-200 rounded-xl">${seg('Detail', view === 'detail' && !editing, 'view-detail')}${seg('List', view === 'list' || editing, 'view-list')}</div>
+            <div class="flex gap-1 p-1 bg-stone-100 border border-stone-200 rounded-ds-lg">${seg('Detail', view === 'detail' && !editing, 'view-detail')}${seg('List', view === 'list' || editing, 'view-list')}</div>
             <div class="flex items-center gap-2">
-                ${allMaterials.length > 0 && !editing ? `<button type="button" data-goalpage-action="toggle-search" aria-pressed="${goalPageState.searchOpen}" class="p-2.5 border rounded-xl shadow-sm transition ${goalPageState.searchOpen ? 'bg-amber-100 border-amber-300 text-amber-900' : 'bg-white border-stone-200 text-stone-700 hover:bg-stone-50'}" title="Search this goal's materials" aria-label="Search this goal's materials"><i data-lucide="search" class="w-4 h-4"></i></button>` : ''}
+                ${allMaterials.length > 0 && !editing ? `<button type="button" data-goalpage-action="toggle-search" aria-pressed="${goalPageState.searchOpen}" class="p-2.5 border rounded-ds-lg shadow-sm transition ${goalPageState.searchOpen ? 'bg-amber-100 border-amber-300 text-amber-900' : 'bg-white border-stone-200 text-stone-700 hover:bg-stone-50'}" title="Search this goal's materials" aria-label="Search this goal's materials"><i data-lucide="search" class="w-4 h-4"></i></button>` : ''}
                 ${editing
-                    ? '<button type="button" data-goalpage-action="toggle-reorder" class="btn-primary px-4 py-2 rounded-xl text-xs font-extrabold">Done</button>'
-                    : '<button type="button" id="btn-goalpage-menu" data-goalpage-action="menu" class="p-2.5 bg-white border border-stone-200 rounded-xl text-stone-700 hover:bg-stone-50 shadow-sm transition" title="More options" aria-label="More options" aria-haspopup="menu"><i data-lucide="more-vertical" class="w-4 h-4"></i></button>'}
-                <button type="button" data-goal-action="add-material" data-goal-id="${goalId}" class="btn-primary px-3 py-2 rounded-xl text-xs font-extrabold flex items-center gap-1.5 whitespace-nowrap"><i data-lucide="plus" class="w-3.5 h-3.5"></i>Add material</button>
+                    ? '<button type="button" data-goalpage-action="toggle-reorder" class="btn-primary px-4 py-2 rounded-ds-lg text-xs font-extrabold">Done</button>'
+                    : '<button type="button" id="btn-goalpage-menu" data-goalpage-action="menu" class="p-2.5 bg-white border border-stone-200 rounded-ds-lg text-stone-700 hover:bg-stone-50 shadow-sm transition" title="More options" aria-label="More options" aria-haspopup="menu"><i data-lucide="more-vertical" class="w-4 h-4"></i></button>'}
+                <button type="button" data-goal-action="add-material" data-goal-id="${goalId}" class="btn-primary px-3 py-2 rounded-ds-lg text-xs font-extrabold flex items-center gap-1.5 whitespace-nowrap"><i data-lucide="plus" class="w-3.5 h-3.5"></i>Add material</button>
             </div>
         </div>
         <div id="goalpage-search-bar" class="${goalPageState.searchOpen && !editing ? '' : 'hidden'}" role="search">
@@ -1532,8 +1532,8 @@ function renderGoalPage() {
             <div class="relative">
                 <i data-lucide="search" class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400 pointer-events-none"></i>
                 <input type="search" id="goalpage-search-input" value="${escapeHtml(goalPageState.query)}" placeholder="Search this goal's materials" autocomplete="off" enterkeyhint="search" maxlength="100"
-                    class="goals-search-input w-full pl-10 pr-10 py-2.5 bg-[#fcfaf6] border border-[#e7dfd3] rounded-xl text-sm text-stone-900 focus:outline-none focus:border-amber-500 transition">
-                <button type="button" data-goalpage-action="clear-search" id="btn-goalpage-search-clear" aria-label="Clear search" class="hidden absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition">
+                    class="goals-search-input w-full pl-10 pr-10 py-2.5 bg-[#fcfaf6] border border-[#e7dfd3] rounded-ds-lg text-sm text-stone-900 focus:outline-none focus:border-amber-500 transition">
+                <button type="button" data-goalpage-action="clear-search" id="btn-goalpage-search-clear" aria-label="Clear search" class="hidden absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-ds-md text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition">
                     <i data-lucide="x" class="w-4 h-4"></i>
                 </button>
             </div>

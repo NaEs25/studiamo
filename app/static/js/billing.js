@@ -591,13 +591,13 @@ function _renderSubscriptionAction(actionEl, { hasSubscription, isTester, tester
     const DISCOUNT_NOTE = _discountNoteMarkup(discountCode);
     const SUBSCRIBE_BTN = `
         <button type="button" data-action="checkout"
-            class="btn-primary w-full py-2.5 px-4 rounded-xl text-xs font-extrabold transition flex items-center justify-center space-x-2">
+            class="btn-primary w-full py-2.5 px-4 rounded-ds-lg text-xs font-extrabold transition flex items-center justify-center space-x-2">
             <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
             <span>Continue with a subscription</span>
         </button>`;
     const EXPORT_BTN = `
         <a href="/api/user/export"
-            class="w-full py-2.5 px-4 bg-stone-100 hover:bg-stone-200 border border-[#e7dfd3] rounded-xl text-xs font-bold text-stone-700 transition flex items-center justify-center space-x-2">
+            class="w-full py-2.5 px-4 bg-stone-100 hover:bg-stone-200 border border-[#e7dfd3] rounded-ds-lg text-xs font-bold text-stone-700 transition flex items-center justify-center space-x-2">
             <i data-lucide="download" class="w-3.5 h-3.5"></i>
             <span>Download my data</span>
         </a>`;
@@ -605,7 +605,7 @@ function _renderSubscriptionAction(actionEl, { hasSubscription, isTester, tester
     if (hasSubscription) {
         actionEl.innerHTML = `
             <button type="button" data-action="billing-portal"
-                class="w-full py-2.5 px-4 bg-stone-100 hover:bg-stone-200 border border-[#e7dfd3] rounded-xl text-xs font-bold text-stone-700 transition flex items-center justify-center space-x-2">
+                class="w-full py-2.5 px-4 bg-stone-100 hover:bg-stone-200 border border-[#e7dfd3] rounded-ds-lg text-xs font-bold text-stone-700 transition flex items-center justify-center space-x-2">
                 <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
                 <span>Manage subscription</span>
             </button>`;
@@ -623,7 +623,7 @@ function _renderSubscriptionAction(actionEl, { hasSubscription, isTester, tester
     } else {
         actionEl.innerHTML = `
             <button type="button" data-action="checkout"
-                class="btn-primary w-full py-2.5 px-4 rounded-xl text-xs font-extrabold transition flex items-center justify-center space-x-2">
+                class="btn-primary w-full py-2.5 px-4 rounded-ds-lg text-xs font-extrabold transition flex items-center justify-center space-x-2">
                 <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
                 <span>Subscribe ($7.99 / month)</span>
             </button>`;
@@ -748,7 +748,7 @@ function openTesterNotice(kind, tester) {
     document.getElementById('tester-notice-title').textContent = spec.title;
     document.getElementById('tester-notice-icon').setAttribute('data-lucide', spec.icon);
     document.getElementById('tester-notice-icon-wrap').className =
-        'w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 ' + spec.iconWrap;
+        'w-10 h-10 rounded-ds-xl flex items-center justify-center flex-shrink-0 ' + spec.iconWrap;
     document.getElementById('tester-notice-body').innerHTML =
         spec.body(tester).map(p => `<p>${p}</p>`).join('');
     document.getElementById('tester-notice-primary-label').textContent = spec.primary;

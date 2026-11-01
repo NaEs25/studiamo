@@ -399,11 +399,11 @@ class ImportBacklogManager {
             let mediaPreviewHTML = '';
             if (thumbUrl && !thumbUrl.includes('document-icon') && !thumbUrl.includes('notes-icon')) {
                 mediaPreviewHTML = `
-                    <img src="${thumbUrl}" class="w-9 h-7 object-cover rounded-md border border-[#e7dfd3] bg-stone-100 shrink-0 shadow-sm" onerror="this.onerror=null;this.parentElement.innerHTML='<div class=\\'p-1.5 bg-amber-500/10 border border-amber-500/20 rounded-md shrink-0 text-amber-700\\'><i data-lucide=\\'${iconLucide}\\' class=\\'w-3.5 h-3.5\\'></i></div>';">
+                    <img src="${thumbUrl}" class="w-9 h-7 object-cover rounded-ds-sm border border-[#e7dfd3] bg-stone-100 shrink-0 shadow-sm" onerror="this.onerror=null;this.parentElement.innerHTML='<div class=\\'p-1.5 bg-amber-500/10 border border-amber-500/20 rounded-ds-sm shrink-0 text-amber-700\\'><i data-lucide=\\'${iconLucide}\\' class=\\'w-3.5 h-3.5\\'></i></div>';">
                 `;
             } else {
                 mediaPreviewHTML = `
-                    <div class="p-1.5 bg-amber-500/10 border border-amber-500/20 rounded-md shrink-0 text-amber-700">
+                    <div class="p-1.5 bg-amber-500/10 border border-amber-500/20 rounded-ds-sm shrink-0 text-amber-700">
                         <i data-lucide="${iconLucide}" class="w-3.5 h-3.5"></i>
                     </div>
                 `;
@@ -443,7 +443,7 @@ class ImportBacklogManager {
                 statusTextHTML = '';
                 if (task.video_id) {
                     actionBtnHTML = `
-                        <button onclick="openTaskStudioAndDismiss('${task.id}', ${task.video_id})" class="text-[10px] bg-[#fbbf24] hover:bg-[#f59e0b] text-[#78350f] font-extrabold px-3 py-1 rounded-lg transition flex items-center space-x-1 shadow-sm cursor-pointer">
+                        <button onclick="openTaskStudioAndDismiss('${task.id}', ${task.video_id})" class="text-[10px] bg-[#fbbf24] hover:bg-[#f59e0b] text-[#78350f] font-extrabold px-3 py-1 rounded-ds-md transition flex items-center space-x-1 shadow-sm cursor-pointer">
                             <span>Open</span>
                             <i data-lucide="arrow-right" class="w-2.5 h-2.5"></i>
                         </button>
@@ -451,13 +451,13 @@ class ImportBacklogManager {
                 }
             } else if (task.status === 'failed') {
                 actionBtnHTML = `
-                    <button onclick="retryImportTask('${task.id}')" class="text-[10px] bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-bold px-2.5 py-1 rounded-lg transition flex items-center space-x-1 cursor-pointer">
+                    <button onclick="retryImportTask('${task.id}')" class="text-[10px] bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-bold px-2.5 py-1 rounded-ds-md transition flex items-center space-x-1 cursor-pointer">
                         <i data-lucide="rotate-cw" class="w-2.5 h-2.5"></i>
                         <span>Retry</span>
                     </button>
                 `;
                 statusTextHTML = `
-                    <div class="text-[10px] bg-red-50 text-red-700 p-2 rounded-lg border border-red-200 mt-1">
+                    <div class="text-[10px] bg-red-50 text-red-700 p-2 rounded-ds-md border border-red-200 mt-1">
                         <p class="font-bold text-red-800">Import Failed</p>
                         <p class="text-[10px] text-red-600 break-words leading-tight whitespace-normal mt-0.5">${escapeHtml(task.error_message) || 'Error occurred during processing.'}</p>
                     </div>
@@ -466,15 +466,15 @@ class ImportBacklogManager {
 
             const isActiveImport = task.status === 'pending' || task.status === 'processing';
             const closeBtnHTML = isActiveImport
-                ? `<button onclick="requestCancelImportTask('${task.id}')" class="p-1 hover:bg-red-50 text-stone-400 hover:text-red-600 rounded-md transition cursor-pointer" title="Cancel import">
+                ? `<button onclick="requestCancelImportTask('${task.id}')" class="p-1 hover:bg-red-50 text-stone-400 hover:text-red-600 rounded-ds-sm transition cursor-pointer" title="Cancel import">
                         <i data-lucide="x" class="w-3.5 h-3.5"></i>
                     </button>`
-                : `<button onclick="dismissImportTask('${task.id}')" class="p-1 hover:bg-stone-100 text-stone-400 hover:text-stone-700 rounded-md transition cursor-pointer" title="Dismiss">
+                : `<button onclick="dismissImportTask('${task.id}')" class="p-1 hover:bg-stone-100 text-stone-400 hover:text-stone-700 rounded-ds-sm transition cursor-pointer" title="Dismiss">
                         <i data-lucide="x" class="w-3.5 h-3.5"></i>
                     </button>`;
 
             return `
-                <div class="bg-white border border-[#e7dfd3] p-2.5 rounded-xl flex flex-col space-y-1 shadow-sm text-stone-900 group">
+                <div class="bg-white border border-[#e7dfd3] p-2.5 rounded-ds-lg flex flex-col space-y-1 shadow-sm text-stone-900 group">
                     <div class="flex items-center justify-between space-x-2">
                         <div class="flex items-center space-x-2 min-w-0 flex-grow">
                             ${mediaPreviewHTML}
@@ -544,7 +544,7 @@ async function requestCancelImportTask(taskId) {
         title: "Cancel Import?",
         message: "This will stop the import and remove it from your list. Progress made so far will be lost.",
         confirmText: "Cancel Import",
-        confirmClass: "bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-xs shadow-sm transition",
+        confirmClass: "bg-red-600 hover:bg-red-700 text-white font-bold rounded-ds-lg text-xs shadow-sm transition",
         icon: "x-circle"
     });
     if (confirmed) {
@@ -621,7 +621,7 @@ function toggleContextMenuPortal(portalId, forId, anchorEl, contentHtml, { extra
     const portal = document.createElement('div');
     portal.id = portalId;
     portal.dataset.forId = String(forId);
-    portal.className = `fixed rounded-xl bg-white shadow-2xl z-[9999] overflow-hidden ${extraClasses}`;
+    portal.className = `fixed rounded-ds-lg bg-white shadow-2xl z-[9999] overflow-hidden ${extraClasses}`;
     portal.innerHTML = contentHtml;
     document.body.appendChild(portal);
 
@@ -673,7 +673,7 @@ function renderMediaThumbHTML(video, opts) {
 
     if (video && video.youtube_id && video.thumbnail_url) {
         return `<img src="${video.thumbnail_url}" ${clickAttr}
-                class="${sizeClasses} object-cover rounded-lg border border-[#e7dfd3] bg-stone-100 shrink-0 cursor-pointer hover:opacity-80 transition"
+                class="${sizeClasses} object-cover rounded-ds-md border border-[#e7dfd3] bg-stone-100 shrink-0 cursor-pointer hover:opacity-80 transition"
                 onerror="this.src='/static/images/notes-icon.svg'"
                 title="${title}">`;
     }
@@ -682,7 +682,7 @@ function renderMediaThumbHTML(video, opts) {
     const isLinkMaterial = video && video.material_type === 'link';
     const iconLucide = isLinkMaterial ? 'globe' : (isPdfDoc ? 'file-text' : 'file-edit');
     return `<div ${clickAttr}
-            class="${sizeClasses} flex items-center justify-center rounded-lg border border-amber-500/20 bg-amber-500/10 text-amber-700 shrink-0 cursor-pointer hover:opacity-80 transition"
+            class="${sizeClasses} flex items-center justify-center rounded-ds-md border border-amber-500/20 bg-amber-500/10 text-amber-700 shrink-0 cursor-pointer hover:opacity-80 transition"
             title="${title}"><i data-lucide="${iconLucide}" class="w-5 h-5"></i></div>`;
 }
 

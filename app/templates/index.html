@@ -76,7 +76,7 @@
                  countdown with nothing to count down to is noise. Clicking opens Settings,
                  where the date and the subscribe button are. -->
             <button type="button" id="tester-pill" onclick="switchTab('settings')"
-                class="hidden cloud-only items-center space-x-1.5 px-3 py-1.5 rounded-md text-xs font-semibold border border-transparent transition hover:opacity-90 active:scale-[0.98]"
+                class="hidden cloud-only items-center space-x-1.5 px-3 py-1.5 rounded-ds-sm text-xs font-semibold border border-transparent transition hover:opacity-90 active:scale-[0.98]"
                 title="Your tester access, see Settings for details">
                 <i data-lucide="flask-conical" class="w-4 h-4"></i>
                 <span id="tester-pill-label">Tester</span>
@@ -101,7 +101,7 @@
             </button>
             <!-- Bugs Pill -->
             <a href="/bugs"
-                class="cloud-only flex items-center space-x-1.5 px-3 py-2 bg-red-50 hover:bg-red-100 border border-red-200 text-red-800 hover:text-red-900 text-xs font-bold rounded-xl transition min-h-[44px] active:scale-[0.98]"
+                class="cloud-only flex items-center space-x-1.5 px-3 py-2 bg-red-50 hover:bg-red-100 border border-red-200 text-red-800 hover:text-red-900 text-xs font-bold rounded-ds-lg transition min-h-[44px] active:scale-[0.98]"
                 title="Report a bug or request a feature" aria-label="Report a bug or request a feature">
                 <i data-lucide="bug" class="w-4 h-4 text-red-600"></i>
                 <span class="hidden sm:inline">Bugs</span>
@@ -125,9 +125,9 @@
 
             <!-- Zero Goals Empty State for Home Page -->
             <div id="dashboard-empty-goals"
-                class="hidden text-center py-14 px-6 bg-white border border-amber-500/30 rounded-3xl space-y-5 shadow-2xl max-w-xl mx-auto my-6">
+                class="hidden text-center py-14 px-6 bg-white border border-amber-500/30 rounded-ds-2xl space-y-5 shadow-2xl max-w-xl mx-auto my-6">
                 <div
-                    class="w-16 h-16 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
+                    class="w-16 h-16 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-ds-xl flex items-center justify-center mx-auto shadow-inner">
                     <i data-lucide="target" class="w-8 h-8"></i>
                 </div>
                 <div class="space-y-2">
@@ -139,7 +139,7 @@
                 </div>
                 <div class="pt-2">
                     <button type="button" onclick="switchTab('goals')"
-                        class="btn-primary px-6 py-3 font-extrabold text-xs rounded-xl transition transform hover:-translate-y-0.5 inline-flex items-center space-x-2">
+                        class="btn-primary px-6 py-3 font-extrabold text-xs rounded-ds-lg transition transform hover:-translate-y-0.5 inline-flex items-center space-x-2">
                         <i data-lucide="target" class="w-4 h-4"></i>
                         <span>Go to Goals Page</span>
                     </button>
@@ -152,7 +152,7 @@
                 <div class="belt-card home-skeleton-belt animate-pulse"></div>
                 <div class="space-y-3 mb-6">
                     <div class="h-5 flex items-center"><div class="h-3.5 w-48 bg-stone-200 rounded animate-pulse"></div></div>
-                    <div class="home-skeleton-due-card bg-white border border-stone-200 rounded-2xl animate-pulse"></div>
+                    <div class="home-skeleton-due-card bg-white border border-stone-200 rounded-ds-xl animate-pulse"></div>
                 </div>
             </div>
 
@@ -177,7 +177,7 @@
                         <h3 class="text-sm sm:text-base font-bold text-stone-900 truncate">Daily Video Recommendations</h3>
                     </div>
                     <button id="btn-refresh-daily-recs" onclick="refreshDailyRecommendations()" aria-label="Refresh 6 daily recommended videos"
-                        class="px-3 sm:px-3.5 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-900 border border-amber-500/30 font-bold rounded-xl text-xs transition flex items-center justify-center sm:space-x-1.5 shadow-sm whitespace-nowrap min-h-[44px] min-w-[44px] shrink-0 active:scale-[0.98]">
+                        class="px-3 sm:px-3.5 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-900 border border-amber-500/30 font-bold rounded-ds-lg text-xs transition flex items-center justify-center sm:space-x-1.5 shadow-sm whitespace-nowrap min-h-[44px] min-w-[44px] shrink-0 active:scale-[0.98]">
                         <i data-lucide="refresh-cw" id="icon-refresh-daily-recs"
                             class="w-3.5 h-3.5 text-amber-600 shrink-0"></i>
                         <span class="hidden sm:inline">Refresh 6 Videos</span>
@@ -186,35 +186,35 @@
 
                 <div id="daily-recommendations-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
                     <!-- Skeleton Loaders during initial fetch -->
-                    <div class="animate-pulse bg-white border border-stone-200 rounded-2xl p-4 space-y-3 shadow-sm">
+                    <div class="animate-pulse bg-white border border-stone-200 rounded-ds-xl p-4 space-y-3 shadow-sm">
                         <div class="flex space-x-3 items-start">
-                            <div class="w-20 h-12 bg-stone-200 rounded-lg shrink-0"></div>
+                            <div class="w-20 h-12 bg-stone-200 rounded-ds-md shrink-0"></div>
                             <div class="flex-1 space-y-2">
                                 <div class="h-3 bg-amber-100 w-1/2 rounded"></div>
                                 <div class="h-3 bg-stone-200 w-3/4 rounded"></div>
                             </div>
                         </div>
-                        <div class="h-8 bg-stone-100 rounded-lg w-full"></div>
+                        <div class="h-8 bg-stone-100 rounded-ds-md w-full"></div>
                     </div>
-                    <div class="animate-pulse bg-white border border-stone-200 rounded-2xl p-4 space-y-3 shadow-sm hidden sm:block">
+                    <div class="animate-pulse bg-white border border-stone-200 rounded-ds-xl p-4 space-y-3 shadow-sm hidden sm:block">
                         <div class="flex space-x-3 items-start">
-                            <div class="w-20 h-12 bg-stone-200 rounded-lg shrink-0"></div>
+                            <div class="w-20 h-12 bg-stone-200 rounded-ds-md shrink-0"></div>
                             <div class="flex-1 space-y-2">
                                 <div class="h-3 bg-amber-100 w-1/2 rounded"></div>
                                 <div class="h-3 bg-stone-200 w-3/4 rounded"></div>
                             </div>
                         </div>
-                        <div class="h-8 bg-stone-100 rounded-lg w-full"></div>
+                        <div class="h-8 bg-stone-100 rounded-ds-md w-full"></div>
                     </div>
-                    <div class="animate-pulse bg-white border border-stone-200 rounded-2xl p-4 space-y-3 shadow-sm hidden lg:block">
+                    <div class="animate-pulse bg-white border border-stone-200 rounded-ds-xl p-4 space-y-3 shadow-sm hidden lg:block">
                         <div class="flex space-x-3 items-start">
-                            <div class="w-20 h-12 bg-stone-200 rounded-lg shrink-0"></div>
+                            <div class="w-20 h-12 bg-stone-200 rounded-ds-md shrink-0"></div>
                             <div class="flex-1 space-y-2">
                                 <div class="h-3 bg-amber-100 w-1/2 rounded"></div>
                                 <div class="h-3 bg-stone-200 w-3/4 rounded"></div>
                             </div>
                         </div>
-                        <div class="h-8 bg-stone-100 rounded-lg w-full"></div>
+                        <div class="h-8 bg-stone-100 rounded-ds-md w-full"></div>
                     </div>
                 </div>
             </div>
@@ -227,12 +227,12 @@
                     class="w-full text-sm font-bold text-stone-600 flex items-center space-x-1.5 hover:text-stone-900 transition">
                     <i data-lucide="calendar" class="w-4 h-4 text-amber-600"></i>
                     <span>Upcoming Review Schedule</span>
-                    <span id="upcoming-quizzes-count" class="text-[10px] bg-stone-200 text-stone-700 px-1.5 py-0.5 rounded-md normal-case tracking-normal hidden"></span>
+                    <span id="upcoming-quizzes-count" class="text-[10px] bg-stone-200 text-stone-700 px-1.5 py-0.5 rounded-ds-sm normal-case tracking-normal hidden"></span>
                     <i data-lucide="chevron-down" id="upcoming-quizzes-chevron" class="w-4 h-4 text-stone-400 transition-transform ml-auto"></i>
                 </button>
                 <div id="upcoming-quizzes-list" class="space-y-2 hidden">
                     <!-- Skeleton Loaders during initial fetch -->
-                    <div class="animate-pulse bg-white border border-stone-200 rounded-xl p-3.5 flex items-center justify-between shadow-sm">
+                    <div class="animate-pulse bg-white border border-stone-200 rounded-ds-lg p-3.5 flex items-center justify-between shadow-sm">
                         <div class="space-y-2 flex-1">
                             <div class="h-3.5 bg-stone-200 w-1/3 rounded"></div>
                             <div class="h-2.5 bg-stone-100 w-1/4 rounded"></div>
@@ -252,9 +252,9 @@
             </div>
 
             <!-- Form Type Selector -->
-            <div class="grid grid-cols-4 gap-2 p-1 bg-stone-100 border border-stone-200 rounded-xl">
+            <div class="grid grid-cols-4 gap-2 p-1 bg-stone-100 border border-stone-200 rounded-ds-lg">
                 <button id="import-btn-youtube"
-                    class="segmented-tab is-active py-2.5 rounded-lg flex items-center justify-center space-x-1.5">
+                    class="segmented-tab is-active py-2.5 rounded-ds-md flex items-center justify-center space-x-1.5">
                     <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
                         <path
                             d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2 31.6 31.6 0 0 0 0 12a31.6 31.6 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1A31.6 31.6 0 0 0 24 12a31.6 31.6 0 0 0-.5-5.8zM9.7 15.5V8.5l6.3 3.5-6.3 3.5z" />
@@ -262,17 +262,17 @@
                     <span>YouTube</span>
                 </button>
                 <button id="import-btn-document"
-                    class="segmented-tab py-2.5 rounded-lg flex items-center justify-center space-x-1.5">
+                    class="segmented-tab py-2.5 rounded-ds-md flex items-center justify-center space-x-1.5">
                     <i data-lucide="file-text" class="w-4 h-4"></i>
                     <span>File</span>
                 </button>
                 <button id="import-btn-notes"
-                    class="segmented-tab py-2.5 rounded-lg flex items-center justify-center space-x-1.5">
+                    class="segmented-tab py-2.5 rounded-ds-md flex items-center justify-center space-x-1.5">
                     <i data-lucide="edit-3" class="w-4 h-4"></i>
                     <span>Notes</span>
                 </button>
                 <button id="import-btn-link"
-                    class="segmented-tab py-2.5 rounded-lg flex items-center justify-center space-x-1.5">
+                    class="segmented-tab py-2.5 rounded-ds-md flex items-center justify-center space-x-1.5">
                     <i data-lucide="link" class="w-4 h-4"></i>
                     <span>Link</span>
                 </button>
@@ -281,7 +281,7 @@
             <!-- Input Cards -->
             <form id="import-form" class="space-y-6">
                 <!-- 1. YouTube Panel -->
-                <div id="panel-youtube" class="bg-white p-6 rounded-2xl border border-stone-200 space-y-4">
+                <div id="panel-youtube" class="bg-white p-6 rounded-ds-xl border border-stone-200 space-y-4">
                     <label class="block text-sm font-semibold text-stone-700">YouTube Video Link</label>
                     <div class="relative">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -289,15 +289,15 @@
                         </div>
                         <input type="url" id="input-youtube-url"
                             placeholder="https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-                            class="w-full bg-stone-50 border border-stone-200 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900 placeholder-stone-400">
+                            class="w-full bg-stone-50 border border-stone-200 rounded-ds-lg pl-10 pr-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900 placeholder-stone-400">
                     </div>
                 </div>
 
                 <!-- 2. Document Panel -->
-                <div id="panel-document" class="hidden bg-white p-6 rounded-2xl border border-stone-200 space-y-4">
+                <div id="panel-document" class="hidden bg-white p-6 rounded-ds-xl border border-stone-200 space-y-4">
                     <label class="block text-sm font-semibold text-stone-700">Upload PDF or Text File</label>
                     <div id="drop-zone"
-                        class="border-2 border-dashed border-stone-200 hover:border-amber-300 rounded-2xl p-8 text-center cursor-pointer transition bg-stone-100/40">
+                        class="border-2 border-dashed border-stone-200 hover:border-amber-300 rounded-ds-xl p-8 text-center cursor-pointer transition bg-stone-100/40">
                         <i data-lucide="upload-cloud" class="w-10 h-10 text-amber-600 mx-auto mb-3"></i>
                         <p class="text-sm font-medium text-stone-700">Drag & Drop your file here or <span
                                 class="text-amber-600 hover:underline">browse</span></p>
@@ -306,7 +306,7 @@
                         <input type="file" id="input-file-upload" accept=".pdf,.txt" class="hidden">
                     </div>
                     <div id="selected-file-info"
-                        class="hidden flex items-center justify-between p-3 bg-stone-50 border border-stone-200 rounded-xl">
+                        class="hidden flex items-center justify-between p-3 bg-stone-50 border border-stone-200 rounded-ds-lg">
                         <div class="flex items-center space-x-2 text-sm">
                             <i data-lucide="file" class="w-4 h-4 text-amber-600"></i>
                             <span id="selected-file-name" class="font-medium text-stone-900">document.pdf</span>
@@ -319,36 +319,36 @@
                 </div>
 
                 <!-- 3. Paste Notes Panel -->
-                <div id="panel-notes" class="hidden bg-white p-6 rounded-2xl border border-stone-200 space-y-4">
+                <div id="panel-notes" class="hidden bg-white p-6 rounded-ds-xl border border-stone-200 space-y-4">
                     <label class="block text-sm font-semibold text-stone-700">Document/Notes Title</label>
                     <input type="text" id="input-notes-title" placeholder="E.g., Docker Cheat Sheet"
-                        class="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900">
+                        class="w-full bg-stone-50 border border-stone-200 rounded-ds-lg px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900">
 
                     <label class="block text-sm font-semibold text-stone-700">Paste Text Content</label>
                     <textarea id="input-notes-text" rows="8"
                         placeholder="Paste your study guide, textbook paragraphs, or meeting minutes..."
-                        class="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900 placeholder-stone-400"></textarea>
+                        class="w-full bg-stone-50 border border-stone-200 rounded-ds-lg px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900 placeholder-stone-400"></textarea>
                 </div>
 
                 <!-- 4. Link Panel: reference material only. No quiz and no AI, so on this tab only
                      the two save actions below are shown (videos.js initImportTab). -->
-                <div id="panel-link" class="hidden bg-white p-6 rounded-2xl border border-stone-200 space-y-4">
+                <div id="panel-link" class="hidden bg-white p-6 rounded-ds-xl border border-stone-200 space-y-4">
                     <label class="block text-sm font-semibold text-stone-700" for="input-link-url">Website or paper link</label>
                     <div class="relative">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <i data-lucide="globe" class="w-5 h-5 text-stone-400"></i>
                         </div>
                         <input type="text" inputmode="url" autocapitalize="off" autocomplete="off" id="input-link-url" placeholder="example.com/page"
-                            class="w-full bg-stone-50 border border-stone-200 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900 placeholder-stone-400">
+                            class="w-full bg-stone-50 border border-stone-200 rounded-ds-lg pl-10 pr-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900 placeholder-stone-400">
                     </div>
                     <label class="block text-sm font-semibold text-stone-700" for="input-link-title">Title <span class="font-normal text-stone-400">(optional)</span></label>
                     <input type="text" id="input-link-title" maxlength="200" placeholder="Shown on the card instead of the address"
-                        class="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900 placeholder-stone-400">
+                        class="w-full bg-stone-50 border border-stone-200 rounded-ds-lg px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900 placeholder-stone-400">
                     <p class="text-xs text-stone-500">Links are reference material: no quiz and no AI. You can open them from the goal and keep notes next to them.</p>
                 </div>
 
                 <!-- Shared Settings (Importance Stars, Goal Cards) -->
-                <div class="bg-white p-6 rounded-2xl border border-stone-200 space-y-6">
+                <div class="bg-white p-6 rounded-ds-xl border border-stone-200 space-y-6">
                     <!-- Importance Rating Star Selector (hidden on the Link tab: a link has no quiz) -->
                     <div id="import-importance-block">
                         <div class="flex justify-between items-center mb-2">
@@ -363,7 +363,7 @@
                         {% set star_container_id = 'importance-star-container' %}
                         {% include 'partials/_star_selector.html' %}
                         <div id="importance-desc-box"
-                            class="hidden bg-stone-100/60 p-3 rounded-xl border border-stone-200 text-xs text-stone-400 space-y-1">
+                            class="hidden bg-stone-100/60 p-3 rounded-ds-lg border border-stone-200 text-xs text-stone-400 space-y-1">
                             <div class="flex items-center justify-between font-medium">
                                 <span id="importance-desc-title" class="text-stone-900 font-semibold">Standard Study (3
                                     Stars)</span>
@@ -389,7 +389,7 @@
                             <!-- Populated dynamically via JS -->
                         </div>
                         <div id="new-goal-inline-fields"
-                            class="hidden mt-3 p-4 bg-stone-50 border border-amber-300 rounded-xl space-y-3">
+                            class="hidden mt-3 p-4 bg-stone-50 border border-amber-300 rounded-ds-lg space-y-3">
                             <h5
                                 class="text-xs font-bold text-amber-600 flex items-center space-x-1.5">
                                 <i data-lucide="target" class="w-4 h-4"></i>
@@ -397,10 +397,10 @@
                             </h5>
                             <input type="text" id="input-new-goal-title"
                                 placeholder="New Goal Title (e.g. Master System Design)"
-                                class="w-full bg-white border border-stone-300 rounded-lg px-3.5 py-2 text-xs text-stone-900 focus:outline-none focus:border-amber-500 font-medium">
+                                class="w-full bg-white border border-stone-300 rounded-ds-md px-3.5 py-2 text-xs text-stone-900 focus:outline-none focus:border-amber-500 font-medium">
                             <textarea id="input-new-goal-desc" rows="2"
                                 placeholder="Optional brief description of key topics..."
-                                class="w-full bg-white border border-stone-300 rounded-lg px-3.5 py-2 text-xs text-stone-900 focus:outline-none focus:border-amber-500 font-medium"></textarea>
+                                class="w-full bg-white border border-stone-300 rounded-ds-md px-3.5 py-2 text-xs text-stone-900 focus:outline-none focus:border-amber-500 font-medium"></textarea>
                         </div>
                     </div>
                 </div>
@@ -414,16 +414,16 @@
                     style="padding-top: 14px; padding-bottom: calc(4.5rem + var(--safe-bottom));">
                     <div class="grid grid-cols-2 gap-2">
                         <button type="button" data-import-action="save"
-                            class="py-3 bg-white hover:bg-stone-50 border border-stone-200 text-stone-800 font-bold rounded-xl text-xs shadow-sm flex items-center justify-center gap-1.5 transition">
+                            class="py-3 bg-white hover:bg-stone-50 border border-stone-200 text-stone-800 font-bold rounded-ds-lg text-xs shadow-sm flex items-center justify-center gap-1.5 transition">
                             <i data-lucide="folder-plus" class="w-4 h-4 text-amber-600"></i><span>Save to goal</span>
                         </button>
                         <button type="button" data-import-action="queue"
-                            class="py-3 bg-white hover:bg-stone-50 border border-stone-200 text-stone-800 font-bold rounded-xl text-xs shadow-sm flex items-center justify-center gap-1.5 transition">
+                            class="py-3 bg-white hover:bg-stone-50 border border-stone-200 text-stone-800 font-bold rounded-ds-lg text-xs shadow-sm flex items-center justify-center gap-1.5 transition">
                             <i data-lucide="bookmark" class="w-4 h-4 text-amber-600"></i><span>Add to queue</span>
                         </button>
                     </div>
                     <button type="submit" form="import-form" id="btn-import-generate"
-                        class="btn-primary mt-2 w-full h-[42px] text-sm font-extrabold rounded-xl transition-all flex items-center justify-center space-x-2">
+                        class="btn-primary mt-2 w-full h-[42px] text-sm font-extrabold rounded-ds-lg transition-all flex items-center justify-center space-x-2">
                         <i data-lucide="sparkles" class="w-4 h-4"></i>
                         <span>Generate quiz</span>
                         <span id="import-plan-tag" class="plan-badge hidden select-none">Plan</span>
@@ -442,21 +442,21 @@
                 </div>
                 <!-- One row under the title: search, view, reorder, and New Goal at the far end. -->
                 <div class="flex items-center gap-2">
-                    <div class="flex items-center bg-stone-100 border border-stone-200 rounded-xl p-1 h-11">
+                    <div class="flex items-center bg-stone-100 border border-stone-200 rounded-ds-lg p-1 h-11">
                         <button type="button" id="btn-goals-search-toggle" aria-controls="goals-search-bar"
                             aria-expanded="false"
-                            class="h-full px-2.5 flex items-center hover:bg-stone-100 rounded-lg text-stone-600 hover:text-stone-900 transition"
+                            class="h-full px-2.5 flex items-center hover:bg-stone-100 rounded-ds-md text-stone-600 hover:text-stone-900 transition"
                             title="Search Goals &amp; Materials">
                             <i data-lucide="search" class="w-4 h-4"></i>
                         </button>
                     </div>
                     <button type="button" data-goal-action="open-reorder" id="btn-goals-reorder"
-                        class="h-11 w-11 bg-stone-100 hover:bg-stone-200 border border-stone-200 rounded-xl text-stone-700 flex items-center justify-center transition"
+                        class="h-11 w-11 bg-stone-100 hover:bg-stone-200 border border-stone-200 rounded-ds-lg text-stone-700 flex items-center justify-center transition"
                         title="Reorder goals" aria-label="Reorder goals">
                         <i data-lucide="settings" class="w-4 h-4"></i>
                     </button>
                     <button id="btn-add-goal-modal"
-                        class="btn-primary ml-auto h-11 px-3 sm:px-4 font-extrabold rounded-xl text-xs sm:text-sm flex items-center space-x-1 transition shrink-0">
+                        class="btn-primary ml-auto h-11 px-3 sm:px-4 font-extrabold rounded-ds-lg text-xs sm:text-sm flex items-center space-x-1 transition shrink-0">
                         <i data-lucide="plus" class="w-4 h-4 stroke-[3]"></i>
                         <span class="hidden sm:inline">New Goal</span>
                         <span class="sm:hidden font-bold">Goal</span>
@@ -472,16 +472,16 @@
                         class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400 pointer-events-none"></i>
                     <input type="search" id="goals-search-input" placeholder="Search goals and materials"
                         autocomplete="off" enterkeyhint="search" maxlength="100"
-                        class="goals-search-input w-full pl-10 pr-10 py-2.5 bg-[#fcfaf6] border border-[#e7dfd3] rounded-xl text-sm text-stone-900 focus:outline-none focus:border-amber-500 transition">
+                        class="goals-search-input w-full pl-10 pr-10 py-2.5 bg-[#fcfaf6] border border-[#e7dfd3] rounded-ds-lg text-sm text-stone-900 focus:outline-none focus:border-amber-500 transition">
                     <button type="button" id="btn-goals-search-clear" aria-label="Clear search"
-                        class="hidden absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition">
+                        class="hidden absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-ds-md text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition">
                         <i data-lucide="x" class="w-4 h-4"></i>
                     </button>
                 </div>
                 <p id="goals-search-status" class="text-xs text-stone-500 mt-2 pl-1" aria-live="polite"></p>
             </div>
 
-            <div id="goals-search-empty" class="hidden text-center py-12 px-6 bg-white rounded-2xl border border-dashed border-stone-300">
+            <div id="goals-search-empty" class="hidden text-center py-12 px-6 bg-white rounded-ds-xl border border-dashed border-stone-300">
                 <i data-lucide="search-x" class="w-8 h-8 text-stone-300 mx-auto"></i>
                 <p class="text-sm font-bold text-stone-700 mt-3">Nothing matches your search</p>
                 <p class="text-xs text-stone-500 mt-1">Search looks at goal names, descriptions, and material titles, archived ones included.</p>
@@ -510,7 +510,7 @@
 
             <!-- Collapsible Archived Goals & Videos Section -->
             <div id="goals-archived-section"
-                class="hidden bg-white p-5 rounded-2xl border border-stone-200 space-y-4 mt-6">
+                class="hidden bg-white p-5 rounded-ds-xl border border-stone-200 space-y-4 mt-6">
                 <button onclick="toggleArchivedGoals()" class="w-full flex justify-between items-center text-left">
                     <h3 class="font-bold text-base flex items-center space-x-2 text-stone-500">
                         <i data-lucide="archive" class="w-5 h-5 text-amber-500"></i>
@@ -518,10 +518,10 @@
                     </h3>
                     <div class="flex items-center space-x-2">
                         <span id="archived-goals-count"
-                            class="text-xs bg-stone-100 text-stone-400 px-2.5 py-1 rounded-md font-bold">0
+                            class="text-xs bg-stone-100 text-stone-400 px-2.5 py-1 rounded-ds-sm font-bold">0
                             Goals</span>
                         <span id="archived-videos-count"
-                            class="text-xs bg-stone-100 text-amber-600 px-2.5 py-1 rounded-md font-bold">0
+                            class="text-xs bg-stone-100 text-amber-600 px-2.5 py-1 rounded-ds-sm font-bold">0
                             Videos</span>
                         <i data-lucide="chevron-down" id="archived-goals-chevron"
                             class="w-5 h-5 text-stone-400 transition-transform"></i>
@@ -555,7 +555,7 @@
             <!-- Main Stats Card -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <!-- Crystals Card (level in the data) -->
-                <div class="bg-[#fbf8f2] p-5 rounded-2xl border border-[#e7dfd3] space-y-3 shadow-sm">
+                <div class="bg-[#fbf8f2] p-5 rounded-ds-xl border border-[#e7dfd3] space-y-3 shadow-sm">
                     <span class="text-xs font-bold text-amber-700">Knowledge Crystals</span>
                     <div class="flex items-center space-x-2">
                         <img src="/static/images/crystal.png" alt="" class="w-9 h-9 shrink-0">
@@ -577,7 +577,7 @@
                 </div>
 
                 <!-- Streak Card -->
-                <div class="bg-[#fbf8f2] p-5 rounded-2xl border border-[#e7dfd3] space-y-3 shadow-sm">
+                <div class="bg-[#fbf8f2] p-5 rounded-ds-xl border border-[#e7dfd3] space-y-3 shadow-sm">
                     <span class="text-xs font-bold text-amber-700">Consistency Streak</span>
                     <div class="flex items-center space-x-2">
                         <img src="/static/images/streak-flame.png" alt="" class="w-9 h-9 shrink-0">
@@ -588,7 +588,7 @@
                 </div>
 
                 <!-- Right / Wrong Ratio -->
-                <div class="bg-[#fbf8f2] p-5 rounded-2xl border border-[#e7dfd3] space-y-3 shadow-sm">
+                <div class="bg-[#fbf8f2] p-5 rounded-ds-xl border border-[#e7dfd3] space-y-3 shadow-sm">
                     <span class="text-xs font-bold text-emerald-700">Right / Wrong Ratio</span>
                     <div class="flex items-center space-x-2">
                         <i data-lucide="target" class="w-9 h-9 text-emerald-600 shrink-0"></i>
@@ -599,14 +599,14 @@
             </div>
 
             <!-- Weekly Leaderboard -->
-            <div class="bg-white p-5 rounded-2xl border border-stone-200 space-y-4">
+            <div class="bg-white p-5 rounded-ds-xl border border-stone-200 space-y-4">
                 <div class="flex items-center justify-between">
                     <h3 class="font-bold text-base flex items-center space-x-2">
                         <i data-lucide="users" class="w-5 h-5 text-amber-400"></i>
                         <span>Weekly Leaderboard</span>
                     </h3>
                     <span
-                        class="text-[11px] text-stone-400 font-medium bg-stone-100 px-2.5 py-1 rounded-lg border border-stone-200">Resets
+                        class="text-[11px] text-stone-400 font-medium bg-stone-100 px-2.5 py-1 rounded-ds-md border border-stone-200">Resets
                         Mondays</span>
                 </div>
                 <div id="leaderboard-container" class="space-y-2">
@@ -619,7 +619,7 @@
             {% include 'partials/_stats_week.html' %}
 
             <!-- Badges Unlocked -->
-            <div class="bg-white p-5 rounded-2xl border border-stone-200 space-y-4">
+            <div class="bg-white p-5 rounded-ds-xl border border-stone-200 space-y-4">
                 <h3 class="font-bold text-base flex items-center space-x-2">
                     <i data-lucide="award" class="w-5 h-5 text-amber-600"></i>
                     <span>Achievements & Badges</span>
@@ -630,7 +630,7 @@
             </div>
 
             <!-- In-Depth Analytics panel -->
-            <div class="bg-white p-5 rounded-2xl border border-stone-200 space-y-4 shadow-sm">
+            <div class="bg-white p-5 rounded-ds-xl border border-stone-200 space-y-4 shadow-sm">
                 <button type="button" onclick="toggleInDepthStats()"
                     class="w-full flex justify-between items-center text-left focus:outline-none">
                     <h3 class="font-bold text-base flex items-center space-x-2">
@@ -643,22 +643,22 @@
 
                 <div id="indepth-stats-content" class="hidden space-y-4 pt-3 border-t border-stone-200">
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div class="p-3 bg-[#fbf8f2] border border-[#e7dfd3] rounded-xl text-center shadow-sm">
+                        <div class="p-3 bg-[#fbf8f2] border border-[#e7dfd3] rounded-ds-lg text-center shadow-sm">
                             <span class="text-[11px] font-bold text-stone-600 block">Total
                                 Attempts</span>
                             <span id="analytics-total-attempts" class="text-xl font-extrabold text-stone-900">0</span>
                         </div>
-                        <div class="p-3 bg-[#fbf8f2] border border-[#e7dfd3] rounded-xl text-center shadow-sm">
+                        <div class="p-3 bg-[#fbf8f2] border border-[#e7dfd3] rounded-ds-lg text-center shadow-sm">
                             <span
                                 class="text-[11px] font-bold text-emerald-700 block">Remembered</span>
                             <span id="analytics-remembered" class="text-xl font-extrabold text-emerald-700">0</span>
                         </div>
-                        <div class="p-3 bg-[#fbf8f2] border border-[#e7dfd3] rounded-xl text-center shadow-sm">
+                        <div class="p-3 bg-[#fbf8f2] border border-[#e7dfd3] rounded-ds-lg text-center shadow-sm">
                             <span
                                 class="text-[11px] font-bold text-red-700 block">Forgotten</span>
                             <span id="analytics-forgot" class="text-xl font-extrabold text-red-700">0</span>
                         </div>
-                        <div class="p-3 bg-[#fbf8f2] border border-[#e7dfd3] rounded-xl text-center shadow-sm">
+                        <div class="p-3 bg-[#fbf8f2] border border-[#e7dfd3] rounded-ds-lg text-center shadow-sm">
                             <span class="text-[11px] font-bold text-amber-800 block">Accuracy
                                 Rate</span>
                             <span id="analytics-accuracy" class="text-xl font-extrabold text-amber-800">0%</span>
@@ -671,17 +671,17 @@
 
                         <!-- Search/Sort controls -->
                         <div
-                            class="flex flex-col sm:flex-row gap-2.5 items-center justify-between bg-[#fbf8f2] p-3 border border-[#e7dfd3] rounded-xl">
+                            class="flex flex-col sm:flex-row gap-2.5 items-center justify-between bg-[#fbf8f2] p-3 border border-[#e7dfd3] rounded-ds-lg">
                             <div class="relative w-full sm:w-64">
                                 <i data-lucide="search" class="absolute left-3 top-2.5 w-3.5 h-3.5 text-stone-400"></i>
                                 <input type="text" id="analytics-search-input" onkeyup="filterAnalyticsHistory()"
                                     placeholder="Filter by video title or question..."
-                                    class="w-full pl-8 pr-3 py-1.5 bg-[#fcfaf6] border border-[#e7dfd3] rounded-lg text-xs text-stone-900 focus:outline-none focus:border-amber-500 transition">
+                                    class="w-full pl-8 pr-3 py-1.5 bg-[#fcfaf6] border border-[#e7dfd3] rounded-ds-md text-xs text-stone-900 focus:outline-none focus:border-amber-500 transition">
                             </div>
                             <div class="flex items-center space-x-2.5 w-full sm:w-auto justify-end">
                                 <span class="text-[11px] font-bold text-stone-600">Sort:</span>
                                 <select id="analytics-sort-select" onchange="renderAnalyticsHistory()"
-                                    class="bg-[#fcfaf6] border border-[#e7dfd3] rounded-lg text-xs text-stone-900 px-2 py-1.5 focus:outline-none focus:border-amber-500 transition">
+                                    class="bg-[#fcfaf6] border border-[#e7dfd3] rounded-ds-md text-xs text-stone-900 px-2 py-1.5 focus:outline-none focus:border-amber-500 transition">
                                     <option value="time-desc">Time (Newest First)</option>
                                     <option value="time-asc">Time (Oldest First)</option>
                                     <option value="title-asc">Video / Title (A-Z)</option>
@@ -699,7 +699,7 @@
             </div>
 
             <!-- AI Usage Log Details (Self-Hosted Only, cloud accounts see the low-balance warning instead) -->
-            <div class="selfhosted-only bg-white p-5 rounded-2xl border border-stone-200 space-y-4 shadow-sm">
+            <div class="selfhosted-only bg-white p-5 rounded-ds-xl border border-stone-200 space-y-4 shadow-sm">
                 <button type="button" onclick="toggleApiLogs()"
                     class="w-full flex justify-between items-center text-left focus:outline-none cursor-pointer">
                     <h3 class="font-bold text-base flex items-center space-x-2">
@@ -708,13 +708,13 @@
                     </h3>
                     <div class="flex items-center space-x-3">
                         <span id="stats-total-calls"
-                            class="text-xs bg-[#f3ebd9] text-stone-700 border border-[#dfd5c5] px-2.5 py-1 rounded-md font-bold">0
+                            class="text-xs bg-[#f3ebd9] text-stone-700 border border-[#dfd5c5] px-2.5 py-1 rounded-ds-sm font-bold">0
                             Requests</span>
                         <i data-lucide="chevron-down" id="api-logs-chevron"
                             class="w-5 h-5 text-stone-500 transition-transform"></i>
                     </div>
                 </button>
-                <div id="api-logs-wrapper" class="overflow-x-auto rounded-xl border border-stone-200 hidden">
+                <div id="api-logs-wrapper" class="overflow-x-auto rounded-ds-lg border border-stone-200 hidden">
                     <table class="w-full text-left border-collapse text-sm">
                         <thead>
                             <tr class="bg-[#fbf8f2] border-b border-stone-200 text-stone-700 font-bold">
@@ -740,12 +740,12 @@
             <!-- Help & Feature Guides Buttons -->
             <div class="flex items-center justify-center space-x-2">
                 <button type="button" onclick="openTabGuideModal(event)"
-                    class="px-3.5 py-2 bg-[#fbf8f2] hover:bg-[#f3ebd9] border border-[#e7dfd3] hover:border-amber-500/50 text-stone-800 text-xs font-bold rounded-xl transition flex items-center space-x-1.5 shadow-sm">
+                    class="px-3.5 py-2 bg-[#fbf8f2] hover:bg-[#f3ebd9] border border-[#e7dfd3] hover:border-amber-500/50 text-stone-800 text-xs font-bold rounded-ds-lg transition flex items-center space-x-1.5 shadow-sm">
                     <i data-lucide="compass" class="w-3.5 h-3.5 text-amber-600"></i>
                     <span>Welcome Guide</span>
                 </button>
                 <button type="button" onclick="openUpdatesModal(event)"
-                    class="px-3.5 py-2 bg-[#fbf8f2] hover:bg-[#f3ebd9] border border-[#e7dfd3] hover:border-amber-500/50 text-stone-800 text-xs font-bold rounded-xl transition flex items-center space-x-1.5 shadow-sm">
+                    class="px-3.5 py-2 bg-[#fbf8f2] hover:bg-[#f3ebd9] border border-[#e7dfd3] hover:border-amber-500/50 text-stone-800 text-xs font-bold rounded-ds-lg transition flex items-center space-x-1.5 shadow-sm">
                     <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-600"></i>
                     <span>What's New</span>
                 </button>
@@ -753,14 +753,14 @@
 
 
             <!-- Profile Card -->
-            <div class="bg-white p-6 rounded-2xl border border-stone-200 space-y-4">
+            <div class="bg-white p-6 rounded-ds-xl border border-stone-200 space-y-4">
                 <h3 class="font-bold text-base flex items-center justify-between border-b border-stone-200 pb-3">
                     <span class="flex items-center space-x-2">
                         <i data-lucide="user-circle" class="w-5 h-5 text-amber-600"></i>
                         <span>My Profile</span>
                     </span>
                     <button type="button" onclick="logoutUser()"
-                        class="flex items-center space-x-1.5 px-3 py-1.5 hover:bg-red-50 text-stone-600 hover:text-red-600 rounded-lg transition border border-stone-200 hover:border-red-200 text-xs font-bold active:scale-[0.98]"
+                        class="flex items-center space-x-1.5 px-3 py-1.5 hover:bg-red-50 text-stone-600 hover:text-red-600 rounded-ds-md transition border border-stone-200 hover:border-red-200 text-xs font-bold active:scale-[0.98]"
                         title="Log Out" aria-label="Log Out">
                         <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
                         <span>Sign Out</span>
@@ -770,7 +770,7 @@
                     <div class="space-y-1">
                         <label class="block text-sm font-semibold text-stone-800">Username</label>
                         <input type="text" id="profile-username" placeholder="Your login username" minlength="3" maxlength="30"
-                            class="w-full bg-[#fcfaf6] border border-[#e7dfd3] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900">
+                            class="w-full bg-[#fcfaf6] border border-[#e7dfd3] rounded-ds-lg px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900">
                     </div>
                     <div class="space-y-1">
                         <div class="flex items-center justify-between">
@@ -783,7 +783,7 @@
                             </label>
                         </div>
                         <input type="text" id="profile-display-name" placeholder="How you appear on leaderboard" minlength="2" maxlength="30"
-                            class="w-full bg-[#fcfaf6] border border-[#e7dfd3] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900">
+                            class="w-full bg-[#fcfaf6] border border-[#e7dfd3] rounded-ds-lg px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900">
                     </div>
                     <div class="selfhosted-only pt-2 border-t border-[#e7dfd3] flex items-center justify-between">
                         <div>
@@ -791,7 +791,7 @@
                             <p class="text-xs text-stone-500">Manage your local login password</p>
                         </div>
                         <button type="button" onclick="openChangePasswordModal()"
-                            class="px-4 py-2 bg-white hover:bg-stone-50 border border-[#e7dfd3] rounded-xl text-xs font-bold text-stone-800 shadow-sm flex items-center space-x-1.5 transition">
+                            class="px-4 py-2 bg-white hover:bg-stone-50 border border-[#e7dfd3] rounded-ds-lg text-xs font-bold text-stone-800 shadow-sm flex items-center space-x-1.5 transition">
                             <i data-lucide="key" class="w-3.5 h-3.5 text-amber-700"></i>
                             <span>Change Password</span>
                         </button>
@@ -801,16 +801,16 @@
                     <div id="profile-google-link-box" class="cloud-only space-y-1">
                         <label class="block text-sm font-semibold text-stone-800">Google SSO Authentication</label>
                         <div id="google-linked-badge"
-                            class="hidden p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-xs font-semibold text-emerald-800 flex items-center justify-between">
+                            class="hidden p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-ds-lg text-xs font-semibold text-emerald-800 flex items-center justify-between">
                             <span class="flex items-center space-x-2">
                                 <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600"></i>
                                 <span id="google-linked-email">Linked to Google Account</span>
                             </span>
                             <span
-                                class="text-[10px] uppercase font-bold tracking-wider text-emerald-700 bg-emerald-500/20 px-2 py-0.5 rounded-md">Linked</span>
+                                class="text-[10px] uppercase font-bold tracking-wider text-emerald-700 bg-emerald-500/20 px-2 py-0.5 rounded-ds-sm">Linked</span>
                         </div>
                         <a id="btn-link-google-acc" href="/auth/google?link=true"
-                            class="hidden w-full py-2.5 px-4 bg-white hover:bg-stone-50 border border-[#e7dfd3] rounded-xl text-xs font-bold text-stone-800 shadow-sm flex items-center justify-center space-x-2 transition">
+                            class="hidden w-full py-2.5 px-4 bg-white hover:bg-stone-50 border border-[#e7dfd3] rounded-ds-lg text-xs font-bold text-stone-800 shadow-sm flex items-center justify-center space-x-2 transition">
                             <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24">
                                 <path fill="#4285F4"
                                     d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -825,14 +825,14 @@
                         </a>
                     </div>
                     <button type="submit"
-                        class="btn-primary px-5 py-2.5 font-extrabold rounded-xl text-sm transition">
+                        class="btn-primary px-5 py-2.5 font-extrabold rounded-ds-lg text-sm transition">
                         Save Profile
                     </button>
                 </form>
             </div>
 
             <!-- Subscription Card (Cloud Only) -->
-            <div class="cloud-only bg-white p-6 rounded-2xl border border-stone-200 space-y-4">
+            <div class="cloud-only bg-white p-6 rounded-ds-xl border border-stone-200 space-y-4">
                 <h3 class="font-bold text-base flex items-center space-x-2 border-b border-stone-200 pb-3">
                     <i data-lucide="credit-card" class="w-5 h-5 text-amber-600"></i>
                     <span>Subscription</span>
@@ -841,13 +841,13 @@
                      for most tester states, and centering pinned the badge halfway down
                      the block instead of beside the line it labels. -->
                 <div id="subscription-status-box"
-                    class="p-3.5 bg-[#fcfaf6] border border-[#e7dfd3] rounded-xl text-xs font-semibold text-stone-700 flex items-start justify-between gap-3">
+                    class="p-3.5 bg-[#fcfaf6] border border-[#e7dfd3] rounded-ds-lg text-xs font-semibold text-stone-700 flex items-start justify-between gap-3">
                     <span id="subscription-status-text" class="leading-relaxed">Checking status…</span>
                     <span id="subscription-status-badge"
-                        class="flex-shrink-0 mt-px text-[11px] font-bold px-2 py-0.5 rounded-md whitespace-nowrap"></span>
+                        class="flex-shrink-0 mt-px text-[11px] font-bold px-2 py-0.5 rounded-ds-sm whitespace-nowrap"></span>
                 </div>
                 <div id="ai-usage-warning"
-                    class="hidden p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs font-semibold text-amber-800 items-start space-x-2">
+                    class="hidden p-3 bg-amber-50 border border-amber-200 rounded-ds-lg text-xs font-semibold text-amber-800 items-start space-x-2">
                     <i data-lucide="alert-triangle" class="w-4 h-4 flex-shrink-0 mt-0.5"></i>
                     <span id="ai-usage-warning-text"></span>
                 </div>
@@ -865,7 +865,7 @@
 
             <form id="settings-form" class="space-y-6">
                 <!-- 1. API Credentials Card (Self-Hosted Only) -->
-                <div class="selfhosted-only bg-white p-6 rounded-2xl border border-stone-200 space-y-4 shadow-sm">
+                <div class="selfhosted-only bg-white p-6 rounded-ds-xl border border-stone-200 space-y-4 shadow-sm">
                     <h3 class="font-bold text-base flex items-center space-x-2 border-b border-stone-200 pb-3">
                         <i data-lucide="key" class="w-5 h-5 text-amber-600"></i>
                         <span>AI &amp; API Credentials</span>
@@ -877,7 +877,7 @@
                             <div class="relative">
                                 <input type="password" id="settings-gemini-key"
                                     placeholder="Enter key to update (current shown as ****)"
-                                    class="w-full bg-[#fcfaf6] border border-[#e7dfd3] rounded-xl px-4 py-3 pr-12 text-sm focus:outline-none focus:border-amber-500 text-stone-900">
+                                    class="w-full bg-[#fcfaf6] border border-[#e7dfd3] rounded-ds-lg px-4 py-3 pr-12 text-sm focus:outline-none focus:border-amber-500 text-stone-900">
                                 <button type="button" onclick="togglePwdVisibility('settings-gemini-key', this)"
                                     class="absolute right-3 top-3.5 text-stone-400 hover:text-stone-700 transition">
                                     <i data-lucide="eye" class="w-4 h-4"></i>
@@ -890,7 +890,7 @@
 
                 <!-- 2. Notifications Card. Open by default; collapsing it only hides the content, every
                      field stays in the settings form. -->
-                <details id="notifications" open class="group/notif bg-white p-6 rounded-2xl border border-stone-200 space-y-4 shadow-sm scroll-mt-4">
+                <details id="notifications" open class="group/notif bg-white p-6 rounded-ds-xl border border-stone-200 space-y-4 shadow-sm scroll-mt-4">
                     <summary class="flex items-center justify-between cursor-pointer select-none border-stone-200 group-open/notif:border-b group-open/notif:pb-3">
                         <h3 class="font-bold text-base flex items-center space-x-2">
                             <i data-lucide="bell" class="w-5 h-5 text-emerald-600"></i>
@@ -899,7 +899,7 @@
                         <i data-lucide="chevron-down" class="w-5 h-5 text-stone-500 transition-transform duration-200 group-open/notif:rotate-180"></i>
                     </summary>
 
-                    <div class="flex items-start space-x-3 bg-[#fbf8f2] p-3 rounded-xl border border-[#e7dfd3]">
+                    <div class="flex items-start space-x-3 bg-[#fbf8f2] p-3 rounded-ds-lg border border-[#e7dfd3]">
                         <img src="/static/images/chompy/chompy-icon.png" alt="" class="w-8 h-8 shrink-0" loading="lazy">
                         <p class="text-xs text-stone-600 leading-snug">Spaced repetition only works if you review on the
                             day a quiz is due. Reminders tell you when that is, and warn you before Chompy eats a quiz
@@ -909,7 +909,7 @@
                     <div id="notifications-panel-content" class="space-y-4">
                         <!-- Notification Types (categories, apply across all enabled channels). Collapsed
                              by default; the checkboxes stay in the form either way. -->
-                        <details class="group bg-[#fbf8f2] p-4 rounded-xl border border-[#e7dfd3]">
+                        <details class="group bg-[#fbf8f2] p-4 rounded-ds-lg border border-[#e7dfd3]">
                             <summary class="flex items-center justify-between cursor-pointer select-none">
                                 <span class="text-sm font-semibold text-amber-900 flex items-center space-x-2">
                                     <i data-lucide="list-checks" class="w-4 h-4 text-amber-600"></i>
@@ -937,7 +937,7 @@
                         </details>
 
                         <!-- Channel: Telegram -->
-                        <div class="bg-[#fbf8f2] p-4 rounded-xl border border-[#e7dfd3] space-y-3">
+                        <div class="bg-[#fbf8f2] p-4 rounded-ds-lg border border-[#e7dfd3] space-y-3">
                             <div class="flex items-center justify-between">
                                 <label class="text-sm font-semibold text-amber-900 flex items-center space-x-2">
                                     <i data-lucide="send" class="w-4 h-4 text-amber-900"></i>
@@ -963,7 +963,7 @@
                                             class="text-emerald-700 font-bold hover:underline hidden">Test</button>
                                     </div>
                                     <button type="button" id="btn-connect-telegram" onclick="connectTelegram()"
-                                        class="w-full py-2.5 px-4 bg-[#fbbf24] hover:bg-[#f59e0b] text-[#78350f] rounded-xl text-xs font-bold flex items-center justify-center space-x-2 transition">
+                                        class="w-full py-2.5 px-4 bg-[#fbbf24] hover:bg-[#f59e0b] text-[#78350f] rounded-ds-lg text-xs font-bold flex items-center justify-center space-x-2 transition">
                                         <i data-lucide="send" class="w-3.5 h-3.5"></i>
                                         <span>Connect Telegram</span>
                                     </button>
@@ -977,7 +977,7 @@
                                         <div class="relative">
                                             <input type="password" id="settings-telegram-token"
                                                 placeholder="Enter token to update (or leave blank)"
-                                                class="w-full bg-[#fcfaf6] border border-[#e7dfd3] rounded-xl px-4 py-3 pr-12 text-sm focus:outline-none focus:border-amber-500 text-stone-900">
+                                                class="w-full bg-[#fcfaf6] border border-[#e7dfd3] rounded-ds-lg px-4 py-3 pr-12 text-sm focus:outline-none focus:border-amber-500 text-stone-900">
                                             <button type="button"
                                                 onclick="togglePwdVisibility('settings-telegram-token', this)"
                                                 class="absolute right-3 top-3.5 text-stone-400 hover:text-stone-700 transition">
@@ -1005,14 +1005,14 @@
                                         </div>
                                         <input type="text" id="settings-telegram-chat"
                                             placeholder="Your numerical Chat ID (e.g. 123456789)"
-                                            class="w-full bg-[#fcfaf6] border border-[#e7dfd3] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900">
+                                            class="w-full bg-[#fcfaf6] border border-[#e7dfd3] rounded-ds-lg px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900">
                                     </div>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Channel: Browser Push -->
-                        <div class="bg-[#fbf8f2] p-4 rounded-xl border border-[#e7dfd3] space-y-3">
+                        <div class="bg-[#fbf8f2] p-4 rounded-ds-lg border border-[#e7dfd3] space-y-3">
                             <div class="flex items-center justify-between">
                                 <label class="text-sm font-semibold text-amber-900 flex items-center space-x-2">
                                     <i data-lucide="bell" class="w-4 h-4 text-amber-900"></i>
@@ -1031,22 +1031,22 @@
                                     <span class="text-stone-600 text-[11px]">Browser notifications on this
                                         device:</span>
                                     <span id="browser-notif-status"
-                                        class="text-[10px] px-2 py-0.5 rounded-md font-mono bg-[#f3ebd9] text-stone-700 border border-[#dfd5c5]">Checking
+                                        class="text-[10px] px-2 py-0.5 rounded-ds-sm font-mono bg-[#f3ebd9] text-stone-700 border border-[#dfd5c5]">Checking
                                         browser...</span>
                                 </div>
                                 <div class="grid grid-cols-2 gap-2">
                                     <button type="button" onclick="requestBrowserNotificationPermission()"
-                                        class="py-2 px-3 bg-white border border-[#e7dfd3] rounded-xl text-xs font-semibold text-stone-800 hover:border-amber-500/50 transition">Request
+                                        class="py-2 px-3 bg-white border border-[#e7dfd3] rounded-ds-lg text-xs font-semibold text-stone-800 hover:border-amber-500/50 transition">Request
                                         Permission</button>
                                     <button type="button" id="btn-test-push" onclick="testPushNotification()"
-                                        class="py-2 px-3 bg-white border border-[#e7dfd3] rounded-xl text-xs font-bold text-emerald-700 hover:border-emerald-500/50 transition">Send
+                                        class="py-2 px-3 bg-white border border-[#e7dfd3] rounded-ds-lg text-xs font-bold text-emerald-700 hover:border-emerald-500/50 transition">Send
                                         Test Push</button>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Channel: Email (cloud only) -->
-                        <div class="cloud-only bg-[#fbf8f2] p-4 rounded-xl border border-[#e7dfd3] space-y-3">
+                        <div class="cloud-only bg-[#fbf8f2] p-4 rounded-ds-lg border border-[#e7dfd3] space-y-3">
                             <div class="flex items-center justify-between">
                                 <label class="text-sm font-semibold text-amber-900 flex items-center space-x-2">
                                     <i data-lucide="mail" class="w-4 h-4 text-amber-900"></i>
@@ -1065,7 +1065,7 @@
                                 <p class="text-xs text-stone-600">Notifications go to: <span
                                         id="notify-email-address" class="font-semibold text-stone-800">-</span></p>
                                 <button type="button" id="btn-test-email" onclick="testEmailNotification()"
-                                    class="w-full py-2 px-3 bg-white border border-[#e7dfd3] rounded-xl text-xs font-bold text-emerald-700 hover:border-emerald-500/50 transition">Send
+                                    class="w-full py-2 px-3 bg-white border border-[#e7dfd3] rounded-ds-lg text-xs font-bold text-emerald-700 hover:border-emerald-500/50 transition">Send
                                     Test Email</button>
                             </div>
                         </div>
@@ -1075,13 +1075,13 @@
                                 <label class="block text-sm font-semibold text-stone-800">Server base URL (Local
                                     IP)</label>
                                 <input type="url" id="settings-base-url" placeholder="http://192.168.1.50:5004"
-                                    class="w-full bg-[#fcfaf6] border border-[#e7dfd3] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900">
+                                    class="w-full bg-[#fcfaf6] border border-[#e7dfd3] rounded-ds-lg px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900">
                             </div>
 
                             <div class="space-y-1">
                                 <label for="settings-reminder-hour" class="block text-sm font-semibold text-stone-800">Daily reminder time</label>
                                 <select id="settings-reminder-hour"
-                                    class="w-full bg-[#fcfaf6] border border-[#e7dfd3] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900 font-medium">
+                                    class="w-full bg-[#fcfaf6] border border-[#e7dfd3] rounded-ds-lg px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900 font-medium">
                                     <option value="0">00:00</option>
                                     <option value="1">01:00</option>
                                     <option value="2">02:00</option>
@@ -1114,7 +1114,7 @@
                             <div class="space-y-1">
                                 <label for="settings-timezone" class="block text-sm font-semibold text-stone-800">Time zone</label>
                                 <select id="settings-timezone"
-                                    class="w-full bg-[#fcfaf6] border border-[#e7dfd3] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900 font-medium">
+                                    class="w-full bg-[#fcfaf6] border border-[#e7dfd3] rounded-ds-lg px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900 font-medium">
                                 </select>
                                 <p id="settings-timezone-hint" class="text-[10px] text-stone-500 pl-1 hidden"></p>
                             </div>
@@ -1124,7 +1124,7 @@
                 </details>
 
                 <!-- 3. Voice Engine Card -->
-                <div class="bg-white p-4 rounded-2xl border border-stone-200 space-y-3 shadow-sm">
+                <div class="bg-white p-4 rounded-ds-xl border border-stone-200 space-y-3 shadow-sm">
                     <div class="flex items-center justify-between">
                         <h3 class="font-bold text-sm flex items-center space-x-2">
                             <i data-lucide="volume-2" class="w-4 h-4 text-amber-600"></i>
@@ -1132,13 +1132,13 @@
                         </h3>
                         <!-- Inline toggle: Browser (default) / Edge TTS (manual opt-in) -->
                         <div id="voice-engine-toggle"
-                            class="flex items-center bg-[#f3ebd9] rounded-xl p-1 border border-[#dfd5c5] gap-1">
+                            class="flex items-center bg-[#f3ebd9] rounded-ds-lg p-1 border border-[#dfd5c5] gap-1">
                             <button type="button" id="voice-card-browser" onclick="setVoiceEngine('browser')"
-                                class="segmented-tab is-active px-3 py-1 rounded-lg">
+                                class="segmented-tab is-active px-3 py-1 rounded-ds-md">
                                 <i data-lucide="zap" class="w-3 h-3 inline mr-1 -mt-0.5"></i>Browser
                             </button>
                             <button type="button" id="voice-card-gemini" onclick="setVoiceEngine('gemini')"
-                                class="segmented-tab px-3 py-1 rounded-lg">
+                                class="segmented-tab px-3 py-1 rounded-ds-md">
                                 <i data-lucide="cloud" class="w-3 h-3 inline mr-1 -mt-0.5"></i>Edge TTS
                             </button>
                         </div>
@@ -1161,7 +1161,7 @@
 
                     <!-- Test button -->
                     <button type="button" id="btn-test-voice" onclick="testVoiceSample(this)"
-                        class="w-full py-2 flex items-center justify-center space-x-1.5 text-xs font-bold text-amber-900 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 rounded-xl transition-all duration-200 disabled:opacity-50 shadow-sm">
+                        class="w-full py-2 flex items-center justify-center space-x-1.5 text-xs font-bold text-amber-900 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 rounded-ds-lg transition-all duration-200 disabled:opacity-50 shadow-sm">
                         <i data-lucide="play-circle" class="w-3.5 h-3.5 text-amber-700"></i>
                         <span>Test Voice Sample</span>
                     </button>
@@ -1171,18 +1171,18 @@
                      running installed/standalone (data-standalone on <html>, set before first
                      paint) - see style.css's Mobile Safe Area section for the other consumer of
                      that attribute. -->
-                <div id="pwa-install-card" class="bg-white p-6 rounded-2xl border border-stone-200 space-y-4 shadow-sm">
+                <div id="pwa-install-card" class="bg-white p-6 rounded-ds-xl border border-stone-200 space-y-4 shadow-sm">
                     <h3 class="font-bold text-base flex items-center space-x-2 border-b border-stone-200 pb-3">
                         <i data-lucide="smartphone" class="w-5 h-5 text-amber-600"></i>
                         <span>Install as App</span>
                     </h3>
 
                     <div
-                        class="bg-amber-500/10 p-4 rounded-xl border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        class="bg-amber-500/10 p-4 rounded-ds-lg border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                         <p class="text-xs text-stone-600">Add Studiamo to your home screen for quick access and
                             notifications, on mobile or desktop.</p>
                         <button type="button" id="pwa-install-btn" onclick="triggerPWAInstall()"
-                            class="btn-primary px-4 py-2.5 font-bold text-xs rounded-xl transition flex items-center space-x-2 shrink-0">
+                            class="btn-primary px-4 py-2.5 font-bold text-xs rounded-ds-lg transition flex items-center space-x-2 shrink-0">
                             <i data-lucide="download" class="w-4 h-4"></i>
                             <span>Install</span>
                         </button>
@@ -1190,7 +1190,7 @@
                 </div>
 
                 <!-- 5. Spaced Repetition (SRS) & Study Configuration Card -->
-                <div class="bg-white p-6 rounded-2xl border border-stone-200 shadow-sm transition">
+                <div class="bg-white p-6 rounded-ds-xl border border-stone-200 shadow-sm transition">
                     <button type="button" onclick="toggleSrsConfigPanel()"
                         class="w-full flex items-center justify-between font-bold text-base text-left group cursor-pointer focus:outline-none select-none pb-1">
                         <div class="flex items-center space-x-2">
@@ -1224,7 +1224,7 @@
                             </div>
                             <p class="text-xs text-stone-400">Set how many recall questions AI generates for each video
                                 star rating:</p>
-                            <p id="star-count-info-box" class="hidden text-xs text-amber-800 bg-amber-500/10 border border-amber-500/20 rounded-lg p-2.5 leading-relaxed">
+                            <p id="star-count-info-box" class="hidden text-xs text-amber-800 bg-amber-500/10 border border-amber-500/20 rounded-ds-md p-2.5 leading-relaxed">
                                 15 questions per quiz is the current maximum, regardless of what you set here. Changes
                                 only apply to videos imported from now on, quizzes already generated for existing
                                 videos keep their current question count.
@@ -1233,27 +1233,27 @@
                                 <div class="text-center">
                                     <label class="block text-xs font-bold text-amber-700 mb-1">1 Star</label>
                                     <input type="number" min="1" max="15" id="star-count-1" placeholder="2"
-                                        class="w-full bg-stone-50 border border-stone-200 rounded-lg p-2 text-center text-sm font-bold focus:outline-none focus:border-amber-500 text-stone-900">
+                                        class="w-full bg-stone-50 border border-stone-200 rounded-ds-md p-2 text-center text-sm font-bold focus:outline-none focus:border-amber-500 text-stone-900">
                                 </div>
                                 <div class="text-center">
                                     <label class="block text-xs font-bold text-amber-700 mb-1">2 Stars</label>
                                     <input type="number" min="1" max="15" id="star-count-2" placeholder="3"
-                                        class="w-full bg-stone-50 border border-stone-200 rounded-lg p-2 text-center text-sm font-bold focus:outline-none focus:border-amber-500 text-stone-900">
+                                        class="w-full bg-stone-50 border border-stone-200 rounded-ds-md p-2 text-center text-sm font-bold focus:outline-none focus:border-amber-500 text-stone-900">
                                 </div>
                                 <div class="text-center">
                                     <label class="block text-xs font-bold text-amber-700 mb-1">3 Stars</label>
                                     <input type="number" min="1" max="15" id="star-count-3" placeholder="5"
-                                        class="w-full bg-stone-50 border border-stone-200 rounded-lg p-2 text-center text-sm font-bold focus:outline-none focus:border-amber-500 text-stone-900">
+                                        class="w-full bg-stone-50 border border-stone-200 rounded-ds-md p-2 text-center text-sm font-bold focus:outline-none focus:border-amber-500 text-stone-900">
                                 </div>
                                 <div class="text-center">
                                     <label class="block text-xs font-bold text-amber-700 mb-1">4 Stars</label>
                                     <input type="number" min="1" max="15" id="star-count-4" placeholder="8"
-                                        class="w-full bg-stone-50 border border-stone-200 rounded-lg p-2 text-center text-sm font-bold focus:outline-none focus:border-amber-500 text-stone-900">
+                                        class="w-full bg-stone-50 border border-stone-200 rounded-ds-md p-2 text-center text-sm font-bold focus:outline-none focus:border-amber-500 text-stone-900">
                                 </div>
                                 <div class="text-center">
                                     <label class="block text-xs font-bold text-amber-700 mb-1">5 Stars</label>
                                     <input type="number" min="1" max="15" id="star-count-5" placeholder="12"
-                                        class="w-full bg-stone-50 border border-stone-200 rounded-lg p-2 text-center text-sm font-bold focus:outline-none focus:border-amber-500 text-stone-900">
+                                        class="w-full bg-stone-50 border border-stone-200 rounded-ds-md p-2 text-center text-sm font-bold focus:outline-none focus:border-amber-500 text-stone-900">
                                 </div>
                             </div>
                         </div>
@@ -1267,31 +1267,31 @@
                                     <label class="block text-[11px] font-bold text-stone-500 mb-1">Stage
                                         1</label>
                                     <input type="number" id="srs-stage-1" placeholder="1"
-                                        class="w-full bg-stone-50 border border-stone-200 rounded-lg p-2 text-center text-sm font-bold focus:outline-none focus:border-amber-500">
+                                        class="w-full bg-stone-50 border border-stone-200 rounded-ds-md p-2 text-center text-sm font-bold focus:outline-none focus:border-amber-500">
                                 </div>
                                 <div class="text-center">
                                     <label class="block text-[11px] font-bold text-stone-500 mb-1">Stage
                                         2</label>
                                     <input type="number" id="srs-stage-2" placeholder="3"
-                                        class="w-full bg-stone-50 border border-stone-200 rounded-lg p-2 text-center text-sm font-bold focus:outline-none focus:border-amber-500">
+                                        class="w-full bg-stone-50 border border-stone-200 rounded-ds-md p-2 text-center text-sm font-bold focus:outline-none focus:border-amber-500">
                                 </div>
                                 <div class="text-center">
                                     <label class="block text-[11px] font-bold text-stone-500 mb-1">Stage
                                         3</label>
                                     <input type="number" id="srs-stage-3" placeholder="7"
-                                        class="w-full bg-stone-50 border border-stone-200 rounded-lg p-2 text-center text-sm font-bold focus:outline-none focus:border-amber-500">
+                                        class="w-full bg-stone-50 border border-stone-200 rounded-ds-md p-2 text-center text-sm font-bold focus:outline-none focus:border-amber-500">
                                 </div>
                                 <div class="text-center">
                                     <label class="block text-[11px] font-bold text-stone-500 mb-1">Stage
                                         4</label>
                                     <input type="number" id="srs-stage-4" placeholder="14"
-                                        class="w-full bg-stone-50 border border-stone-200 rounded-lg p-2 text-center text-sm font-bold focus:outline-none focus:border-amber-500">
+                                        class="w-full bg-stone-50 border border-stone-200 rounded-ds-md p-2 text-center text-sm font-bold focus:outline-none focus:border-amber-500">
                                 </div>
                                 <div class="text-center">
                                     <label class="block text-[11px] font-bold text-stone-500 mb-1">Stage
                                         5</label>
                                     <input type="number" id="srs-stage-5" placeholder="30"
-                                        class="w-full bg-stone-50 border border-stone-200 rounded-lg p-2 text-center text-sm font-bold focus:outline-none focus:border-amber-500">
+                                        class="w-full bg-stone-50 border border-stone-200 rounded-ds-md p-2 text-center text-sm font-bold focus:outline-none focus:border-amber-500">
                                 </div>
                             </div>
                         </div>
@@ -1316,7 +1316,7 @@
                                         Interval (Days)</label>
                                     <input type="number" min="1" max="365" id="srs-stage-5-repeat-interval"
                                         placeholder="30"
-                                        class="w-full bg-stone-50 border border-stone-200 rounded-lg p-2 text-center text-sm font-bold focus:outline-none focus:border-amber-500 text-stone-900">
+                                        class="w-full bg-stone-50 border border-stone-200 rounded-ds-md p-2 text-center text-sm font-bold focus:outline-none focus:border-amber-500 text-stone-900">
                                 </div>
                             </div>
                         </div>
@@ -1340,27 +1340,27 @@
                                     <div class="text-center">
                                         <label class="block text-xs font-bold text-amber-700 mb-1">1 Star Max</label>
                                         <input type="number" min="1" max="5" id="srs-cap-1" placeholder="2"
-                                            class="w-full bg-stone-50 border border-stone-200 rounded-lg p-2 text-center text-sm font-bold focus:outline-none focus:border-amber-500 text-stone-900">
+                                            class="w-full bg-stone-50 border border-stone-200 rounded-ds-md p-2 text-center text-sm font-bold focus:outline-none focus:border-amber-500 text-stone-900">
                                     </div>
                                     <div class="text-center">
                                         <label class="block text-xs font-bold text-amber-700 mb-1">2 Stars Max</label>
                                         <input type="number" min="1" max="5" id="srs-cap-2" placeholder="3"
-                                            class="w-full bg-stone-50 border border-stone-200 rounded-lg p-2 text-center text-sm font-bold focus:outline-none focus:border-amber-500 text-stone-900">
+                                            class="w-full bg-stone-50 border border-stone-200 rounded-ds-md p-2 text-center text-sm font-bold focus:outline-none focus:border-amber-500 text-stone-900">
                                     </div>
                                     <div class="text-center">
                                         <label class="block text-xs font-bold text-amber-700 mb-1">3 Stars Max</label>
                                         <input type="number" min="1" max="5" id="srs-cap-3" placeholder="4"
-                                            class="w-full bg-stone-50 border border-stone-200 rounded-lg p-2 text-center text-sm font-bold focus:outline-none focus:border-amber-500 text-stone-900">
+                                            class="w-full bg-stone-50 border border-stone-200 rounded-ds-md p-2 text-center text-sm font-bold focus:outline-none focus:border-amber-500 text-stone-900">
                                     </div>
                                     <div class="text-center">
                                         <label class="block text-xs font-bold text-amber-700 mb-1">4 Stars Max</label>
                                         <input type="number" min="1" max="5" id="srs-cap-4" placeholder="5"
-                                            class="w-full bg-stone-50 border border-stone-200 rounded-lg p-2 text-center text-sm font-bold focus:outline-none focus:border-amber-500 text-stone-900">
+                                            class="w-full bg-stone-50 border border-stone-200 rounded-ds-md p-2 text-center text-sm font-bold focus:outline-none focus:border-amber-500 text-stone-900">
                                     </div>
                                     <div class="text-center">
                                         <label class="block text-xs font-bold text-amber-700 mb-1">5 Stars Max</label>
                                         <input type="number" min="1" max="5" id="srs-cap-5" placeholder="5"
-                                            class="w-full bg-stone-50 border border-stone-200 rounded-lg p-2 text-center text-sm font-bold focus:outline-none focus:border-amber-500 text-stone-900">
+                                            class="w-full bg-stone-50 border border-stone-200 rounded-ds-md p-2 text-center text-sm font-bold focus:outline-none focus:border-amber-500 text-stone-900">
                                     </div>
                                 </div>
                             </div>
@@ -1376,31 +1376,31 @@
                                     <label class="block text-xs font-bold text-amber-700 mb-1">1 Star</label>
                                     <input type="number" step="0.1" min="0.1" max="10.0" id="srs-mult-1"
                                         placeholder="4.0"
-                                        class="w-full bg-stone-50 border border-stone-200 rounded-lg p-2 text-center text-sm font-bold focus:outline-none focus:border-amber-500 text-stone-900">
+                                        class="w-full bg-stone-50 border border-stone-200 rounded-ds-md p-2 text-center text-sm font-bold focus:outline-none focus:border-amber-500 text-stone-900">
                                 </div>
                                 <div class="text-center">
                                     <label class="block text-xs font-bold text-amber-700 mb-1">2 Stars</label>
                                     <input type="number" step="0.1" min="0.1" max="10.0" id="srs-mult-2"
                                         placeholder="2.5"
-                                        class="w-full bg-stone-50 border border-stone-200 rounded-lg p-2 text-center text-sm font-bold focus:outline-none focus:border-amber-500 text-stone-900">
+                                        class="w-full bg-stone-50 border border-stone-200 rounded-ds-md p-2 text-center text-sm font-bold focus:outline-none focus:border-amber-500 text-stone-900">
                                 </div>
                                 <div class="text-center">
                                     <label class="block text-xs font-bold text-amber-700 mb-1">3 Stars</label>
                                     <input type="number" step="0.1" min="0.1" max="10.0" id="srs-mult-3"
                                         placeholder="1.5"
-                                        class="w-full bg-stone-50 border border-stone-200 rounded-lg p-2 text-center text-sm font-bold focus:outline-none focus:border-amber-500 text-stone-900">
+                                        class="w-full bg-stone-50 border border-stone-200 rounded-ds-md p-2 text-center text-sm font-bold focus:outline-none focus:border-amber-500 text-stone-900">
                                 </div>
                                 <div class="text-center">
                                     <label class="block text-xs font-bold text-amber-700 mb-1">4 Stars</label>
                                     <input type="number" step="0.1" min="0.1" max="10.0" id="srs-mult-4"
                                         placeholder="1.0"
-                                        class="w-full bg-stone-50 border border-stone-200 rounded-lg p-2 text-center text-sm font-bold focus:outline-none focus:border-amber-500 text-stone-900">
+                                        class="w-full bg-stone-50 border border-stone-200 rounded-ds-md p-2 text-center text-sm font-bold focus:outline-none focus:border-amber-500 text-stone-900">
                                 </div>
                                 <div class="text-center">
                                     <label class="block text-xs font-bold text-amber-700 mb-1">5 Stars</label>
                                     <input type="number" step="0.1" min="0.1" max="10.0" id="srs-mult-5"
                                         placeholder="0.7"
-                                        class="w-full bg-stone-50 border border-stone-200 rounded-lg p-2 text-center text-sm font-bold focus:outline-none focus:border-amber-500 text-stone-900">
+                                        class="w-full bg-stone-50 border border-stone-200 rounded-ds-md p-2 text-center text-sm font-bold focus:outline-none focus:border-amber-500 text-stone-900">
                                 </div>
                             </div>
                         </div>
@@ -1419,10 +1419,10 @@
                             <div class="flex items-center space-x-2">
                                 <h4 class="text-xs font-bold text-stone-500">Active Recall
                                     Grouping Mode</h4>
-                                <span class="text-[10px] font-bold uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-0.5">Coming Soon</span>
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-200 rounded-ds-sm px-2 py-0.5">Coming Soon</span>
                             </div>
                             <select id="settings-review-mode" disabled
-                                class="w-full bg-stone-100 border border-stone-200 rounded-xl px-4 py-3 text-sm text-stone-400 font-medium opacity-70 cursor-not-allowed">
+                                class="w-full bg-stone-100 border border-stone-200 rounded-ds-lg px-4 py-3 text-sm text-stone-400 font-medium opacity-70 cursor-not-allowed">
                                 <option value="video">Per Video Material (Standard)</option>
                                 <option value="goal">Per Goal (Grouped across goal materials)</option>
                             </select>
@@ -1435,7 +1435,7 @@
             </form>
 
             <!-- Backup & Restore section -->
-            <div class="bg-white p-6 rounded-2xl border border-stone-200 space-y-4">
+            <div class="bg-white p-6 rounded-ds-xl border border-stone-200 space-y-4">
                 <h3 class="font-bold text-base flex items-center space-x-2 border-b border-stone-200 pb-3">
                     <i data-lucide="download" class="w-5 h-5 text-emerald-400"></i>
                     <span>Backup & Portability (ZIP format)</span>
@@ -1448,7 +1448,7 @@
                         </p>
                     </div>
                     <a href="/api/user/export"
-                        class="px-5 py-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-bold rounded-xl text-center text-xs transition">
+                        class="px-5 py-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-bold rounded-ds-lg text-center text-xs transition">
                         Download ZIP
                     </a>
                 </div>
@@ -1456,7 +1456,7 @@
             </div>
 
             <!-- Danger Zone -->
-            <div class="bg-white p-6 rounded-2xl border border-red-200 space-y-4">
+            <div class="bg-white p-6 rounded-ds-xl border border-red-200 space-y-4">
                 <h3 class="font-bold text-base flex items-center space-x-2 border-b border-red-100 pb-3">
                     <i data-lucide="alert-triangle" class="w-5 h-5 text-red-500"></i>
                     <span>Danger Zone</span>
@@ -1468,14 +1468,14 @@
                             quizzes, and uploaded files. This cannot be undone.</p>
                     </div>
                     <button type="button" onclick="openDeleteAccountStep1()"
-                        class="px-5 py-2.5 btn-danger font-bold rounded-xl text-center text-xs transition whitespace-nowrap">
+                        class="px-5 py-2.5 btn-danger font-bold rounded-ds-lg text-center text-xs transition whitespace-nowrap">
                         Delete My Account
                     </button>
                 </div>
             </div>
 
             <!-- Credits -->
-            <div class="bg-white p-6 rounded-2xl border border-stone-200 space-y-4">
+            <div class="bg-white p-6 rounded-ds-xl border border-stone-200 space-y-4">
                 <h3 class="font-bold text-base flex items-center space-x-2 border-b border-stone-200 pb-3">
                     <i data-lucide="info" class="w-5 h-5 text-amber-600"></i>
                     <span>Credits</span>
@@ -1533,13 +1533,13 @@
     <div id="app-toast-indicator" role="status" aria-live="polite"
         class="fixed bottom-24 left-1/2 -translate-x-1/2 z-[100] w-max max-w-[min(28rem,calc(100vw-2rem))] pointer-events-none transition-all duration-300 opacity-0 transform translate-y-2">
         <div id="app-toast-pill"
-            class="px-4 py-2 rounded-2xl text-xs font-bold text-left shadow-2xl border flex items-start space-x-2 bg-stone-900 text-stone-100 border-stone-700 ring-2 ring-stone-500/20">
+            class="px-4 py-2 rounded-ds-xl text-xs font-bold text-left shadow-2xl border flex items-start space-x-2 bg-stone-900 text-stone-100 border-stone-700 ring-2 ring-stone-500/20">
             <span id="app-toast-icon" class="flex items-center shrink-0 h-4"></span>
             <span id="app-toast-text">Notification</span>
             <!-- Optional action (showToast's 4th argument), e.g. "See plans". Hidden for every
                  other toast. -->
             <button type="button" id="app-toast-action" data-toast-action
-                class="hidden btn-primary -my-1 ml-2 px-3 py-1.5 rounded-xl text-xs font-extrabold shrink-0"></button>
+                class="hidden btn-primary -my-1 ml-2 px-3 py-1.5 rounded-ds-lg text-xs font-extrabold shrink-0"></button>
         </div>
     </div>
 
@@ -1547,10 +1547,10 @@
     <div id="app-confirm-overlay"
         class="hidden fixed inset-0 bg-stone-950/80 backdrop-blur-sm z-[110] flex items-center justify-center p-4 transition-all duration-200 opacity-0">
         <div id="app-confirm-box"
-            class="max-w-md w-full bg-[#fcfaf6] border border-[#e7dfd3] rounded-2xl p-6 shadow-2xl space-y-5 transform transition-all duration-200 scale-95 opacity-0">
+            class="max-w-md w-full bg-[#fcfaf6] border border-[#e7dfd3] rounded-ds-xl p-6 shadow-2xl space-y-5 transform transition-all duration-200 scale-95 opacity-0">
             <div class="flex items-start space-x-3.5">
                 <div id="app-confirm-icon-wrapper"
-                    class="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 shrink-0">
+                    class="p-2.5 rounded-ds-lg bg-amber-500/10 border border-amber-500/20 text-amber-700 shrink-0">
                     <span id="app-confirm-icon" class="flex items-center justify-center"></span>
                 </div>
                 <div class="min-w-0 flex-grow space-y-1">
@@ -1562,9 +1562,9 @@
             </div>
             <div class="flex items-center justify-end space-x-2.5 pt-3 border-t border-[#e7dfd3]">
                 <button id="app-confirm-btn-cancel" type="button"
-                    class="px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 font-semibold rounded-xl text-xs transition">Cancel</button>
+                    class="px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 font-semibold rounded-ds-lg text-xs transition">Cancel</button>
                 <button id="app-confirm-btn-ok" type="button"
-                    class="px-4 py-2 bg-[#fbbf24] hover:bg-[#f59e0b] text-[#78350f] font-bold rounded-xl text-xs shadow-sm transition">Confirm</button>
+                    class="px-4 py-2 bg-[#fbbf24] hover:bg-[#f59e0b] text-[#78350f] font-bold rounded-ds-lg text-xs shadow-sm transition">Confirm</button>
             </div>
         </div>
     </div>
@@ -1573,21 +1573,21 @@
     <div id="app-prompt-overlay"
         class="hidden fixed inset-0 bg-stone-950/80 backdrop-blur-sm z-[110] flex items-center justify-center p-4 transition-all duration-200 opacity-0">
         <form id="app-prompt-form"
-            class="max-w-md w-full bg-[#fcfaf6] border border-[#e7dfd3] rounded-2xl p-6 shadow-2xl space-y-4 transform transition-all duration-200 scale-95 opacity-0">
+            class="max-w-md w-full bg-[#fcfaf6] border border-[#e7dfd3] rounded-ds-xl p-6 shadow-2xl space-y-4 transform transition-all duration-200 scale-95 opacity-0">
             <div class="space-y-1.5">
                 <h4 id="app-prompt-title" class="font-bold text-base text-stone-900 leading-snug">Input Required</h4>
                 <p id="app-prompt-message" class="text-xs text-stone-600 leading-relaxed">Please enter a value:</p>
             </div>
             <div>
                 <input id="app-prompt-input" type="text"
-                    class="w-full bg-white border border-[#e7dfd3] rounded-xl px-3.5 py-2.5 text-xs text-stone-900 focus:outline-none focus:border-amber-500 font-medium"
+                    class="w-full bg-white border border-[#e7dfd3] rounded-ds-lg px-3.5 py-2.5 text-xs text-stone-900 focus:outline-none focus:border-amber-500 font-medium"
                     placeholder="">
             </div>
             <div class="flex items-center justify-end space-x-2.5 pt-2 border-t border-[#e7dfd3]">
                 <button id="app-prompt-btn-cancel" type="button"
-                    class="px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 font-semibold rounded-xl text-xs transition">Cancel</button>
+                    class="px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 font-semibold rounded-ds-lg text-xs transition">Cancel</button>
                 <button id="app-prompt-btn-ok" type="submit"
-                    class="px-4 py-2 bg-[#fbbf24] hover:bg-[#f59e0b] text-[#78350f] font-bold rounded-xl text-xs shadow-sm transition">Submit</button>
+                    class="px-4 py-2 bg-[#fbbf24] hover:bg-[#f59e0b] text-[#78350f] font-bold rounded-ds-lg text-xs shadow-sm transition">Submit</button>
             </div>
         </form>
     </div>
@@ -1597,7 +1597,7 @@
     <!-- Overlay 1: Setup Splash wizard -->
     <div id="overlay-wizard"
         class="app-overlay hidden fixed inset-0 bg-stone-950/95 backdrop-blur z-50 overflow-y-auto flex items-center justify-center p-4">
-        <div class="max-w-md w-full bg-white border border-stone-200 rounded-3xl p-6 md:p-8 shadow-2xl space-y-6">
+        <div class="max-w-md w-full bg-white border border-stone-200 rounded-ds-2xl p-6 md:p-8 shadow-2xl space-y-6">
             <div class="text-center space-y-2">
                 <img src="/static/images/logo-icon-112.png"
                     class="brand-logo w-12 h-12 mx-auto" alt="Studiamo Logo" />
@@ -1606,7 +1606,7 @@
             </div>
 
             <!-- Profile switcher row -->
-            <div class="flex items-center space-x-3 p-3 bg-[#fbf8f2] border border-[#e7dfd3] rounded-2xl">
+            <div class="flex items-center space-x-3 p-3 bg-[#fbf8f2] border border-[#e7dfd3] rounded-ds-xl">
                 <i data-lucide="user-circle" class="w-4 h-4 text-amber-600 shrink-0"></i>
                 <select id="wizard-user-switcher" onchange="wizardSwitchProfile(this.value)"
                     class="flex-grow bg-transparent border-0 text-sm text-stone-800 font-semibold focus:outline-none cursor-pointer">
@@ -1621,14 +1621,14 @@
                 <div class="space-y-1">
                     <label class="block text-xs font-semibold text-stone-500">Username</label>
                     <input type="text" id="wizard-username" placeholder="Choose or enter your username (e.g., alex)"
-                        class="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900 font-medium">
+                        class="w-full bg-stone-50 border border-stone-200 rounded-ds-lg px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900 font-medium">
                 </div>
 
                 <div class="space-y-1">
                     <label class="block text-xs font-semibold text-stone-500">Password</label>
                     <div class="relative">
                         <input type="password" id="wizard-password" placeholder="Choose a profile password"
-                            class="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 pr-12 text-sm focus:outline-none focus:border-amber-500 text-stone-900 font-medium">
+                            class="w-full bg-stone-50 border border-stone-200 rounded-ds-lg px-4 py-3 pr-12 text-sm focus:outline-none focus:border-amber-500 text-stone-900 font-medium">
                         <button type="button" onclick="togglePwdVisibility('wizard-password', this)"
                             class="absolute right-3 top-3.5 text-stone-400 hover:text-stone-900 transition">
                             <i data-lucide="eye" class="w-4 h-4"></i>
@@ -1641,7 +1641,7 @@
                         API Key</label>
                     <input type="password" id="wizard-gemini-key" required
                         placeholder="Paste key (starts with AIzaSy...)"
-                        class="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900">
+                        class="w-full bg-stone-50 border border-stone-200 rounded-ds-lg px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900">
                 </div>
 
                 <div class="space-y-1">
@@ -1649,13 +1649,13 @@
                         Token <span class="normal-case text-stone-500">(Optional)</span></label>
                     <input type="password" id="wizard-telegram-token"
                         placeholder="From @BotFather (skip if you don't want notifications)"
-                        class="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900">
+                        class="w-full bg-stone-50 border border-stone-200 rounded-ds-lg px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900">
                     <p class="text-[10px] text-stone-400 leading-tight">Create a bot via BotFather, get the token, and
                         start the bot on your Telegram app.</p>
                 </div>
 
                 <button type="submit"
-                    class="btn-primary w-full py-3.5 font-bold rounded-xl transition duration-200">
+                    class="btn-primary w-full py-3.5 font-bold rounded-ds-lg transition duration-200">
                     Complete Setup
                 </button>
             </form>
@@ -1705,7 +1705,7 @@
             </div>
 
             <!-- Quiz Main Card (Flat Layout) -->
-            <div class="w-full bg-white border border-stone-300 rounded-3xl px-6 pb-6 pt-4 md:px-8 md:pb-8 md:pt-5 flex flex-col shadow-2xl relative"
+            <div class="w-full bg-white border border-stone-300 rounded-ds-2xl px-6 pb-6 pt-4 md:px-8 md:pb-8 md:pt-5 flex flex-col shadow-2xl relative"
                 id="quiz-card">
                 <!-- Front side (Question & Guess box) -->
                 <div id="quiz-card-front" class="space-y-5 flex flex-col justify-between">
@@ -1723,7 +1723,7 @@
                             <!-- Session options, out of the way rather than filling the header
                                  with controls most learners set once. -->
                             <div id="quiz-settings-menu"
-                                class="hidden absolute right-0 top-full mt-2 z-30 w-60 rounded-2xl bg-white border border-[#e7dfd3] shadow-2xl p-2">
+                                class="hidden absolute right-0 top-full mt-2 z-30 w-60 rounded-ds-xl bg-white border border-[#e7dfd3] shadow-2xl p-2">
                                 <!-- Was its own icon button beside the question text; folded in here so the
                                      question row only ever has the one icon. Still #btn-tts-question, so
                                      quiz.js's wireReadButton() and the auto-read call need no changes - only
@@ -1792,11 +1792,11 @@
                         <label for="quiz-guess-input" class="block text-xs font-semibold text-stone-600">Type your recall guess (helps solidify
                             memory):</label>
                         <textarea id="quiz-guess-input" rows="3" placeholder="I think this means..."
-                            class="w-full bg-stone-50 border border-stone-300 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900 placeholder-stone-400"></textarea>
+                            class="w-full bg-stone-50 border border-stone-300 rounded-ds-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900 placeholder-stone-400"></textarea>
                     </div>
 
                     <button id="btn-show-answer"
-                        class="btn-primary w-full py-3.5 font-extrabold rounded-2xl transition active:scale-[0.98]">
+                        class="btn-primary w-full py-3.5 font-extrabold rounded-ds-xl transition active:scale-[0.98]">
                         Show Correct Answer
                     </button>
                 </div>
@@ -1805,7 +1805,7 @@
                 <div id="quiz-card-back" class="hidden space-y-5 flex flex-col justify-between">
                     <div class="space-y-4">
                         <!-- AI Evaluation feedback verdict box -->
-                        <div id="quiz-ai-verdict-box" class="hidden p-3 rounded-xl border flex flex-col space-y-1">
+                        <div id="quiz-ai-verdict-box" class="hidden p-3 rounded-ds-lg border flex flex-col space-y-1">
                             <div class="flex items-center justify-between">
                                 <span id="quiz-ai-verdict-label"
                                     class="quiz-verdict-label text-[11px] font-bold">AI Evaluation</span>
@@ -1846,13 +1846,13 @@
                     <div class="border-t border-stone-200 pt-3">
                         <div class="grid grid-cols-2 gap-3">
                             <button id="btn-grade-forgot" aria-label="Grade as Forgot"
-                                class="py-3 px-3 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 font-bold text-sm whitespace-nowrap rounded-2xl transition flex items-center justify-center gap-1.5 active:scale-[0.98] shadow-sm">
+                                class="py-3 px-3 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 font-bold text-sm whitespace-nowrap rounded-ds-xl transition flex items-center justify-center gap-1.5 active:scale-[0.98] shadow-sm">
                                 <i data-lucide="x-circle" class="w-4 h-4 shrink-0"></i>
                                 <span>I Forgot</span>
                                 <span class="quiz-key-hint">1</span>
                             </button>
                             <button id="btn-grade-remembered" aria-label="Grade as Remembered"
-                                class="py-3 px-3 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 font-bold text-sm whitespace-nowrap rounded-2xl transition flex items-center justify-center gap-1.5 active:scale-[0.98] shadow-sm">
+                                class="py-3 px-3 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 font-bold text-sm whitespace-nowrap rounded-ds-xl transition flex items-center justify-center gap-1.5 active:scale-[0.98] shadow-sm">
                                 <i data-lucide="check-circle" class="w-4 h-4 shrink-0"></i>
                                 <span>I Remembered</span>
                                 <span class="quiz-key-hint">2</span>
@@ -1867,7 +1867,7 @@
     <!-- Overlay 3: Add Goal Dialog Modal -->
     <div id="overlay-goal-modal"
         class="app-overlay hidden fixed inset-0 bg-stone-950/80 backdrop-blur z-50 flex items-center justify-center p-4">
-        <div class="max-w-md w-full bg-white border border-stone-200 rounded-3xl p-6 shadow-2xl space-y-5">
+        <div class="max-w-md w-full bg-white border border-stone-200 rounded-ds-2xl p-6 shadow-2xl space-y-5">
             <h3 class="text-lg font-bold text-stone-900 flex items-center space-x-2">
                 <i data-lucide="target" class="w-5 h-5 text-amber-600"></i>
                 <span>Add Learning Goal</span>
@@ -1878,14 +1878,14 @@
                 <div class="space-y-1">
                     <label class="block text-xs font-semibold text-stone-400">Goal Title / Topic</label>
                     <input type="text" id="goal-modal-title" required placeholder="E.g., Docker & Containers"
-                        class="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900">
+                        class="w-full bg-stone-50 border border-stone-200 rounded-ds-lg px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900">
                 </div>
 
                 <div class="space-y-1">
                     <label class="block text-xs font-semibold text-stone-400">Description / Focus Areas</label>
                     <textarea id="goal-modal-desc" rows="4"
                         placeholder="Explain what you want to learn, key milestones, or specific guidelines..."
-                        class="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900 placeholder-stone-400"></textarea>
+                        class="w-full bg-stone-50 border border-stone-200 rounded-ds-lg px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900 placeholder-stone-400"></textarea>
                 </div>
 
                 <!-- Key concepts: edit only. A new goal gets them generated the first time its recommendations load. -->
@@ -1901,16 +1901,16 @@
                     </p>
                     <input type="text" id="goal-modal-concepts" maxlength="600" autocomplete="off"
                         placeholder="E.g., Layers, Typography, Color theory"
-                        class="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900 placeholder-stone-400">
+                        class="w-full bg-stone-50 border border-stone-200 rounded-ds-lg px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900 placeholder-stone-400">
                 </div>
 
                 <div class="flex space-x-3">
                     <button type="button" id="btn-close-goal-modal"
-                        class="flex-grow py-3 bg-stone-100 hover:bg-stone-200 border border-stone-200 text-stone-700 font-bold rounded-xl transition">
+                        class="flex-grow py-3 bg-stone-100 hover:bg-stone-200 border border-stone-200 text-stone-700 font-bold rounded-ds-lg transition">
                         Cancel
                     </button>
                     <button type="submit"
-                        class="btn-primary flex-grow py-3 font-bold rounded-xl transition">
+                        class="btn-primary flex-grow py-3 font-bold rounded-ds-lg transition">
                         Save Goal
                     </button>
                 </div>
@@ -1918,11 +1918,11 @@
                 <!-- Edit only: the goal's other actions live here rather than on the goal page. -->
                 <div id="goal-modal-more-wrap" class="hidden flex space-x-3 border-t border-stone-200 pt-4">
                     <button type="button" id="btn-goal-modal-archive"
-                        class="flex-grow py-2.5 bg-white hover:bg-stone-50 border border-stone-200 text-stone-700 font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5">
+                        class="flex-grow py-2.5 bg-white hover:bg-stone-50 border border-stone-200 text-stone-700 font-bold rounded-ds-lg text-xs transition flex items-center justify-center gap-1.5">
                         <i data-lucide="archive" class="w-3.5 h-3.5 text-amber-600"></i>Archive goal
                     </button>
                     <button type="button" id="btn-goal-modal-delete"
-                        class="flex-grow py-2.5 bg-white hover:bg-red-50 border border-red-200 text-red-700 font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5">
+                        class="flex-grow py-2.5 bg-white hover:bg-red-50 border border-red-200 text-red-700 font-bold rounded-ds-lg text-xs transition flex items-center justify-center gap-1.5">
                         <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>Delete goal
                     </button>
                 </div>
@@ -1933,7 +1933,7 @@
     <!-- Overlay: New / rename folder inside a goal (goals.js openFolderModal) -->
     <div id="overlay-folder-modal"
         class="app-overlay hidden fixed inset-0 bg-stone-950/80 backdrop-blur z-50 flex items-center justify-center p-4">
-        <div class="max-w-sm w-full bg-white border border-stone-200 rounded-3xl p-6 shadow-2xl space-y-5">
+        <div class="max-w-sm w-full bg-white border border-stone-200 rounded-ds-2xl p-6 shadow-2xl space-y-5">
             <h3 class="text-lg font-bold text-stone-900 flex items-center space-x-2">
                 <i data-lucide="folder" class="w-5 h-5 text-amber-600"></i>
                 <span id="folder-modal-heading">New folder</span>
@@ -1943,12 +1943,12 @@
                 <div class="space-y-1">
                     <label for="folder-modal-name" class="block text-xs font-semibold text-stone-400">Folder name</label>
                     <input type="text" id="folder-modal-name" required maxlength="60" autocomplete="off"
-                        class="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900">
+                        class="w-full bg-stone-50 border border-stone-200 rounded-ds-lg px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900">
                 </div>
                 <div class="flex space-x-3">
                     <button type="button" id="btn-close-folder-modal"
-                        class="flex-grow py-3 bg-stone-100 hover:bg-stone-200 border border-stone-200 text-stone-700 font-bold rounded-xl transition">Cancel</button>
-                    <button type="submit" class="btn-primary flex-grow py-3 font-bold rounded-xl transition">Save</button>
+                        class="flex-grow py-3 bg-stone-100 hover:bg-stone-200 border border-stone-200 text-stone-700 font-bold rounded-ds-lg transition">Cancel</button>
+                    <button type="submit" class="btn-primary flex-grow py-3 font-bold rounded-ds-lg transition">Save</button>
                 </div>
             </form>
         </div>
@@ -1957,7 +1957,7 @@
     <!-- Overlay: Delete Goal Confirmation Modal -->
     <div id="overlay-delete-goal-modal"
         class="app-overlay hidden fixed inset-0 bg-stone-950/80 backdrop-blur z-50 flex items-center justify-center p-4">
-        <div class="max-w-md w-full bg-white border border-stone-200 rounded-3xl p-6 shadow-2xl space-y-5">
+        <div class="max-w-md w-full bg-white border border-stone-200 rounded-ds-2xl p-6 shadow-2xl space-y-5">
             <div class="flex justify-between items-center border-b border-stone-200 pb-3">
                 <h3 class="text-lg font-bold text-stone-900 flex items-center space-x-2">
                     <i data-lucide="trash-2" class="w-5 h-5 text-red-400"></i>
@@ -1974,12 +1974,12 @@
 
             <div class="space-y-3 pt-2">
                 <button type="button" onclick="confirmDeleteGoal(false)"
-                    class="w-full py-3 px-4 bg-stone-100 hover:bg-stone-200 border border-stone-200 text-stone-900 font-bold rounded-xl text-xs transition flex items-center justify-between">
+                    class="w-full py-3 px-4 bg-stone-100 hover:bg-stone-200 border border-stone-200 text-stone-900 font-bold rounded-ds-lg text-xs transition flex items-center justify-between">
                     <span>Unassociate Videos (Keep in Quick Review)</span>
                     <i data-lucide="arrow-right" class="w-4 h-4 text-amber-600"></i>
                 </button>
                 <button type="button" onclick="confirmDeleteGoal(true)"
-                    class="w-full py-3 px-4 btn-danger font-bold rounded-xl text-xs transition flex items-center justify-between">
+                    class="w-full py-3 px-4 btn-danger font-bold rounded-ds-lg text-xs transition flex items-center justify-between">
                     <span>Delete Goal &amp; All Linked Materials</span>
                     <i data-lucide="trash-2" class="w-4 h-4"></i>
                 </button>
@@ -1995,7 +1995,7 @@
     <!-- Overlay: Delete Account : Step 1 of 2 (offer a data export first) -->
     <div id="overlay-delete-account-step1"
         class="app-overlay hidden fixed inset-0 bg-stone-950/80 backdrop-blur z-[var(--z-overlay-account-delete)] flex items-center justify-center p-4">
-        <div class="max-w-md w-full bg-white border border-stone-200 rounded-3xl p-6 shadow-2xl space-y-5">
+        <div class="max-w-md w-full bg-white border border-stone-200 rounded-ds-2xl p-6 shadow-2xl space-y-5">
             <div class="flex justify-between items-center border-b border-stone-200 pb-3">
                 <h3 class="text-lg font-bold text-stone-900 flex items-center space-x-2">
                     <i data-lucide="download" class="w-5 h-5 text-amber-600"></i>
@@ -2017,24 +2017,24 @@
             </p>
 
             <a href="/api/user/export" onclick="markExportDownloaded()"
-                class="w-full py-3 px-4 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-700 font-bold rounded-xl text-xs transition flex items-center justify-between">
+                class="w-full py-3 px-4 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-700 font-bold rounded-ds-lg text-xs transition flex items-center justify-between">
                 <span>Download My Data (ZIP)</span>
                 <i data-lucide="download" class="w-4 h-4 text-emerald-600"></i>
             </a>
 
             <div id="delete-account-export-note"
-                class="hidden p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-semibold text-emerald-800 items-start space-x-2">
+                class="hidden p-3 bg-emerald-50 border border-emerald-200 rounded-ds-lg text-xs font-semibold text-emerald-800 items-start space-x-2">
                 <i data-lucide="check-circle-2" class="w-4 h-4 flex-shrink-0 mt-0.5"></i>
                 <span>Download started. Check it saved correctly before continuing.</span>
             </div>
 
             <div class="flex flex-col sm:flex-row gap-2.5 pt-3 border-t border-stone-200">
                 <button type="button" onclick="closeDeleteAccountModals()"
-                    class="flex-1 py-2.5 px-4 bg-stone-100 hover:bg-stone-200 border border-stone-200 text-stone-800 font-bold rounded-xl text-xs transition">
+                    class="flex-1 py-2.5 px-4 bg-stone-100 hover:bg-stone-200 border border-stone-200 text-stone-800 font-bold rounded-ds-lg text-xs transition">
                     Cancel &mdash; Keep My Account
                 </button>
                 <button type="button" onclick="openDeleteAccountStep2()"
-                    class="flex-1 py-2.5 px-4 btn-danger font-bold rounded-xl text-xs transition">
+                    class="flex-1 py-2.5 px-4 btn-danger font-bold rounded-ds-lg text-xs transition">
                     Continue to Delete
                 </button>
             </div>
@@ -2044,7 +2044,7 @@
     <!-- Overlay: Delete Account : Step 2 of 2 (permanence warning + typed confirmation) -->
     <div id="overlay-delete-account-step2"
         class="app-overlay hidden fixed inset-0 bg-stone-950/80 backdrop-blur z-[var(--z-overlay-account-delete)] flex items-center justify-center p-4">
-        <div class="max-w-md w-full bg-white border border-red-200 rounded-3xl p-6 shadow-2xl space-y-5">
+        <div class="max-w-md w-full bg-white border border-red-200 rounded-ds-2xl p-6 shadow-2xl space-y-5">
             <div class="flex justify-between items-center border-b border-red-100 pb-3">
                 <h3 class="text-lg font-bold text-stone-900 flex items-center space-x-2">
                     <i data-lucide="alert-triangle" class="w-5 h-5 text-red-500"></i>
@@ -2056,7 +2056,7 @@
                 </button>
             </div>
 
-            <div class="p-4 bg-red-50 border border-red-200 rounded-xl space-y-2">
+            <div class="p-4 bg-red-50 border border-red-200 rounded-ds-lg space-y-2">
                 <p class="text-sm font-bold text-red-800">This cannot be undone.</p>
                 <p class="text-xs text-red-700 leading-relaxed">
                     Your profile, every learning goal, video, quiz, streak, and uploaded file will be permanently
@@ -2072,17 +2072,17 @@
                 <input type="text" id="delete-account-confirm-input" autocomplete="off" spellcheck="false"
                     placeholder="Your username"
                     oninput="validateDeleteAccountConfirm()"
-                    class="w-full bg-[#fcfaf6] border border-[#e7dfd3] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-red-500 text-stone-900 font-mono">
+                    class="w-full bg-[#fcfaf6] border border-[#e7dfd3] rounded-ds-lg px-4 py-3 text-sm focus:outline-none focus:border-red-500 text-stone-900 font-mono">
             </div>
 
             <div class="flex flex-col sm:flex-row gap-2.5 pt-3 border-t border-stone-200">
                 <button type="button" onclick="closeDeleteAccountModals()"
-                    class="flex-1 py-2.5 px-4 bg-stone-100 hover:bg-stone-200 border border-stone-200 text-stone-800 font-bold rounded-xl text-xs transition">
+                    class="flex-1 py-2.5 px-4 bg-stone-100 hover:bg-stone-200 border border-stone-200 text-stone-800 font-bold rounded-ds-lg text-xs transition">
                     Cancel &mdash; Keep My Account
                 </button>
                 <button type="button" id="btn-confirm-delete-account" disabled
                     onclick="confirmDeleteAccount()"
-                    class="flex-1 py-2.5 px-4 bg-stone-100 border border-stone-200 text-stone-400 font-bold rounded-xl text-xs transition cursor-not-allowed">
+                    class="flex-1 py-2.5 px-4 bg-stone-100 border border-stone-200 text-stone-400 font-bold rounded-ds-lg text-xs transition cursor-not-allowed">
                     Permanently Delete
                 </button>
             </div>
@@ -2092,12 +2092,12 @@
     <!-- Reorder goals: a sheet with the goals in priority order (goals.js openGoalReorder). -->
     <div id="overlay-goal-reorder" role="dialog" aria-modal="true" aria-labelledby="goal-reorder-title"
         class="app-overlay hidden fixed inset-0 bg-stone-950/70 backdrop-blur-md z-50 flex items-end sm:items-center justify-center sm:p-4">
-        <div class="bg-white border border-[#e7dfd3] rounded-t-3xl sm:rounded-3xl w-full max-w-lg shadow-2xl flex flex-col max-h-[88vh]">
+        <div class="bg-white border border-[#e7dfd3] rounded-t-ds-2xl sm:rounded-ds-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[88vh]">
             <div class="flex items-center justify-between p-5 pb-3 border-b border-[#e7dfd3] shrink-0">
                 <h3 id="goal-reorder-title" class="text-base font-extrabold text-stone-900 flex items-center space-x-2">
                     <i data-lucide="menu" class="w-4 h-4 text-amber-600 shrink-0"></i><span>Reorder goals</span>
                 </h3>
-                <button type="button" id="btn-goal-reorder-done" class="btn-primary px-4 py-2 rounded-xl text-xs font-extrabold">Done</button>
+                <button type="button" id="btn-goal-reorder-done" class="btn-primary px-4 py-2 rounded-ds-lg text-xs font-extrabold">Done</button>
             </div>
             <div class="px-5 pt-3 text-xs text-stone-500"><span class="drag-hint">Drag a goal by its handle, or use the arrows.</span><span class="touch-hint">Use the arrows to move a goal.</span> #1 is your top priority.</div>
             <div id="goal-reorder-list" class="px-5 py-3 space-y-2 overflow-y-auto grow"></div>
@@ -2108,7 +2108,7 @@
          cards a quiz serves and which are paused, with add, edit and remove. Full screen on phones. -->
     <div id="overlay-cards" role="dialog" aria-modal="true" aria-labelledby="cards-title"
         class="app-overlay hidden fixed inset-0 bg-stone-950/70 backdrop-blur-md z-50 flex items-stretch sm:items-center justify-center sm:p-4">
-        <div class="bg-white border border-[#e7dfd3] sm:rounded-3xl w-full sm:max-w-lg shadow-2xl flex flex-col sm:max-h-[88vh]">
+        <div class="bg-white border border-[#e7dfd3] sm:rounded-ds-2xl w-full sm:max-w-lg shadow-2xl flex flex-col sm:max-h-[88vh]">
             <div class="flex items-start justify-between p-5 pb-3 border-b border-[#e7dfd3] shrink-0">
                 <div class="min-w-0 pr-3">
                     <h3 id="cards-title" class="text-base font-extrabold text-stone-900 flex items-center space-x-2">
@@ -2117,14 +2117,14 @@
                     <p id="cards-subtitle" class="text-xs text-stone-500 mt-0.5 flex items-center gap-1.5 flex-wrap"></p>
                 </div>
                 <button type="button" id="btn-cards-close" aria-label="Close"
-                    class="p-2 rounded-lg text-stone-500 hover:text-stone-900 hover:bg-stone-100 transition shrink-0">
+                    class="p-2 rounded-ds-md text-stone-500 hover:text-stone-900 hover:bg-stone-100 transition shrink-0">
                     <i data-lucide="x" class="w-4 h-4"></i>
                 </button>
             </div>
             <div class="px-5 pt-3 shrink-0">
-                <div class="flex gap-1 p-1 bg-stone-100 border border-stone-200 rounded-xl w-max">
-                    <span class="px-4 py-1.5 rounded-lg text-xs font-bold bg-amber-100 border border-amber-300 text-amber-900">Cards</span>
-                    <button type="button" id="btn-cards-focus" class="px-4 py-1.5 rounded-lg text-xs font-bold text-stone-600 hover:text-stone-900">Focus topics</button>
+                <div class="flex gap-1 p-1 bg-stone-100 border border-stone-200 rounded-ds-lg w-max">
+                    <span class="px-4 py-1.5 rounded-ds-md text-xs font-bold bg-amber-100 border border-amber-300 text-amber-900">Cards</span>
+                    <button type="button" id="btn-cards-focus" class="px-4 py-1.5 rounded-ds-md text-xs font-bold text-stone-600 hover:text-stone-900">Focus topics</button>
                 </div>
             </div>
             <div id="cards-list" class="px-5 py-3 space-y-3 overflow-y-auto grow"></div>
@@ -2135,7 +2135,7 @@
          Content is rendered client-side from GET /api/videos/{id}/concept-pool. -->
     <div id="overlay-focus" role="dialog" aria-modal="true" aria-labelledby="focus-modal-title"
         class="app-overlay hidden fixed inset-0 bg-stone-950/70 backdrop-blur-md z-50 flex items-center justify-center p-4">
-        <div class="bg-white border border-[#e7dfd3] rounded-3xl w-full max-w-lg shadow-2xl flex flex-col max-h-[88vh]">
+        <div class="bg-white border border-[#e7dfd3] rounded-ds-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[88vh]">
 
             <div class="flex items-start justify-between p-5 pb-3 border-b border-[#e7dfd3] shrink-0">
                 <div class="min-w-0 pr-3">
@@ -2146,7 +2146,7 @@
                     <p id="focus-modal-subtitle" class="text-xs text-stone-500 mt-0.5 truncate"></p>
                 </div>
                 <button id="btn-close-focus" aria-label="Close"
-                    class="p-2 rounded-lg text-stone-500 hover:text-stone-900 hover:bg-stone-100 transition shrink-0">
+                    class="p-2 rounded-ds-md text-stone-500 hover:text-stone-900 hover:bg-stone-100 transition shrink-0">
                     <i data-lucide="x" class="w-4 h-4"></i>
                 </button>
             </div>
@@ -2159,14 +2159,14 @@
             </div>
 
             <div class="p-4 border-t border-[#e7dfd3] space-y-3 shrink-0">
-                <div id="focus-status" class="text-xs font-semibold rounded-xl px-3 py-2 border"></div>
+                <div id="focus-status" class="text-xs font-semibold rounded-ds-lg px-3 py-2 border"></div>
                 <div class="flex items-center gap-2">
                     <button id="btn-focus-reset"
-                        class="flex-1 py-2.5 bg-stone-100 hover:bg-stone-200 border border-stone-200 text-stone-700 font-bold rounded-xl text-xs transition">
+                        class="flex-1 py-2.5 bg-stone-100 hover:bg-stone-200 border border-stone-200 text-stone-700 font-bold rounded-ds-lg text-xs transition">
                         Restore AI recommendation
                     </button>
                     <button id="btn-focus-save"
-                        class="btn-primary flex-1 py-2.5 font-extrabold rounded-xl text-xs transition active:scale-[0.98]">
+                        class="btn-primary flex-1 py-2.5 font-extrabold rounded-ds-lg text-xs transition active:scale-[0.98]">
                         Save focus
                     </button>
                 </div>
@@ -2178,7 +2178,7 @@
     <div id="overlay-factcheck"
         class="app-overlay hidden fixed inset-0 bg-stone-950/80 backdrop-blur z-50 flex items-center justify-center p-4">
         <div
-            class="max-w-2xl w-full bg-white border border-stone-200 rounded-3xl p-6 shadow-2xl space-y-5 flex flex-col max-h-[85vh]">
+            class="max-w-2xl w-full bg-white border border-stone-200 rounded-ds-2xl p-6 shadow-2xl space-y-5 flex flex-col max-h-[85vh]">
             <div class="flex justify-between items-center border-b border-stone-200 pb-3">
                 <h3 class="text-lg font-bold text-stone-900 flex items-center space-x-2">
                     <i data-lucide="shield-check" class="w-5 h-5 text-emerald-400"></i>
@@ -2207,7 +2207,7 @@
     <!-- Overlay 5: Edit Video Details Modal -->
     <div id="overlay-edit-video"
         class="app-overlay hidden fixed inset-0 bg-stone-950/80 backdrop-blur z-50 flex items-center justify-center p-4">
-        <div class="max-w-md w-full bg-white border border-stone-200 rounded-3xl p-6 shadow-2xl space-y-5">
+        <div class="max-w-md w-full bg-white border border-stone-200 rounded-ds-2xl p-6 shadow-2xl space-y-5">
             <h3 class="text-lg font-bold text-stone-900 flex items-center space-x-2">
                 <i data-lucide="edit-3" class="w-5 h-5 text-amber-600"></i>
                 <span>Edit Material</span>
@@ -2219,7 +2219,7 @@
                 <div class="space-y-1">
                     <label class="block text-xs font-semibold text-stone-400">Material Title</label>
                     <input type="text" id="edit-video-title"
-                        class="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900"
+                        class="w-full bg-stone-50 border border-stone-200 rounded-ds-lg px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900"
                         placeholder="Title of video or document">
                 </div>
 
@@ -2227,7 +2227,7 @@
                     <label class="block text-xs font-semibold text-stone-400">Associated Learning Goal (Swap
                         Goal)</label>
                     <select id="edit-video-goal-select"
-                        class="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-700">
+                        class="w-full bg-stone-50 border border-stone-200 rounded-ds-lg px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-700">
                         <option value="0">-- Unassociated / Quick Review Material --</option>
                         <!-- goal options dynamically loaded -->
                     </select>
@@ -2243,22 +2243,22 @@
 
                 <div class="flex space-x-3 pt-2">
                     <button type="button" id="btn-close-edit-video"
-                        class="flex-grow py-3 bg-stone-100 hover:bg-stone-200 border border-stone-200 text-stone-700 font-bold rounded-xl transition">
+                        class="flex-grow py-3 bg-stone-100 hover:bg-stone-200 border border-stone-200 text-stone-700 font-bold rounded-ds-lg transition">
                         Cancel
                     </button>
                     <button type="submit"
-                        class="btn-primary flex-grow py-3 font-bold rounded-xl transition">
+                        class="btn-primary flex-grow py-3 font-bold rounded-ds-lg transition">
                         Save Changes
                     </button>
                 </div>
 
                 <div class="flex space-x-3 border-t border-stone-200 pt-4">
                     <button type="button" id="btn-edit-video-archive"
-                        class="flex-grow py-2.5 bg-white hover:bg-stone-50 border border-stone-200 text-stone-700 font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5">
+                        class="flex-grow py-2.5 bg-white hover:bg-stone-50 border border-stone-200 text-stone-700 font-bold rounded-ds-lg text-xs transition flex items-center justify-center gap-1.5">
                         <i data-lucide="archive" class="w-3.5 h-3.5 text-amber-600"></i><span id="btn-edit-video-archive-label">Archive</span>
                     </button>
                     <button type="button" id="btn-edit-video-delete"
-                        class="flex-grow py-2.5 bg-white hover:bg-red-50 border border-red-200 text-red-700 font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5">
+                        class="flex-grow py-2.5 bg-white hover:bg-red-50 border border-red-200 text-red-700 font-bold rounded-ds-lg text-xs transition flex items-center justify-center gap-1.5">
                         <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>Delete
                     </button>
                 </div>
@@ -2269,7 +2269,7 @@
     <!-- Overlay 6: Create User Profile Modal -->
     <div id="overlay-create-user"
         class="app-overlay hidden fixed inset-0 bg-stone-950/80 backdrop-blur z-50 flex items-center justify-center p-4">
-        <div class="max-w-sm w-full bg-white border border-stone-200 rounded-3xl p-6 shadow-2xl space-y-5">
+        <div class="max-w-sm w-full bg-white border border-stone-200 rounded-ds-2xl p-6 shadow-2xl space-y-5">
             <h3 class="text-lg font-bold text-stone-900 flex items-center space-x-2">
                 <i data-lucide="user-plus" class="w-5 h-5 text-amber-600"></i>
                 <span>Create User Profile</span>
@@ -2279,7 +2279,7 @@
                 <div class="space-y-1">
                     <label class="block text-xs font-semibold text-stone-400">Username (alphanumeric/dashes)</label>
                     <input type="text" id="create-username" required placeholder="E.g., alex, sarah"
-                        class="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900">
+                        class="w-full bg-stone-50 border border-stone-200 rounded-ds-lg px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900">
                 </div>
 
                 <div class="space-y-1">
@@ -2287,23 +2287,23 @@
                             class="text-amber-400 font-bold">*Required</span></label>
                     <input type="password" id="create-gemini-key" required
                         placeholder="Paste key (starts with AIzaSy...)"
-                        class="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900">
+                        class="w-full bg-stone-50 border border-stone-200 rounded-ds-lg px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900">
                 </div>
 
                 <div class="space-y-1">
                     <label class="block text-xs font-semibold text-stone-400">Password <span
                             class="text-amber-400 font-bold">*Required</span></label>
                     <input type="password" id="create-user-password" required placeholder="Choose a password"
-                        class="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900">
+                        class="w-full bg-stone-50 border border-stone-200 rounded-ds-lg px-4 py-3 text-sm focus:outline-none focus:border-amber-500 text-stone-900">
                 </div>
 
                 <div class="flex space-x-3 pt-2">
                     <button type="button" onclick="closeCreateUserModal()"
-                        class="flex-grow py-3 bg-stone-100 hover:bg-stone-200 border border-stone-200 text-stone-700 font-bold rounded-xl transition">
+                        class="flex-grow py-3 bg-stone-100 hover:bg-stone-200 border border-stone-200 text-stone-700 font-bold rounded-ds-lg transition">
                         Cancel
                     </button>
                     <button type="submit"
-                        class="btn-primary flex-grow py-3 font-bold rounded-xl transition">
+                        class="btn-primary flex-grow py-3 font-bold rounded-ds-lg transition">
                         Create Profile
                     </button>
                 </div>
@@ -2319,7 +2319,7 @@
     <div id="overlay-change-password-modal"
         class="app-overlay fixed inset-0 bg-stone-950/60 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4"
         role="dialog" aria-modal="true" aria-labelledby="change-password-modal-title">
-        <div class="bg-paperCard border border-paperBorder rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
+        <div class="bg-paperCard border border-paperBorder rounded-ds-xl p-6 max-w-md w-full shadow-2xl space-y-4">
             <div class="flex items-center justify-between border-b border-paperBorder pb-3">
                 <h3 id="change-password-modal-title" class="font-extrabold text-stoneText text-base flex items-center space-x-2">
                     <i data-lucide="key" class="w-4 h-4 text-amberPrimary"></i>
@@ -2337,7 +2337,7 @@
                     <div class="relative">
                         <input type="password" id="modal-current-password" required
                             placeholder="Enter your current password"
-                            class="w-full bg-[#fcfaf6] border border-[#e7dfd3] rounded-xl px-4 py-2.5 pr-10 text-sm focus:outline-none focus:border-amberPrimary text-stoneText">
+                            class="w-full bg-[#fcfaf6] border border-[#e7dfd3] rounded-ds-lg px-4 py-2.5 pr-10 text-sm focus:outline-none focus:border-amberPrimary text-stoneText">
                         <button type="button" onclick="togglePwdVisibility('modal-current-password', this)"
                             class="absolute right-3 top-3 text-stone-400 hover:text-stone-700 transition">
                             <i data-lucide="eye" class="w-4 h-4"></i>
@@ -2350,7 +2350,7 @@
                     <div class="relative">
                         <input type="password" id="modal-new-password" required minlength="4"
                             placeholder="Enter new password"
-                            class="w-full bg-[#fcfaf6] border border-[#e7dfd3] rounded-xl px-4 py-2.5 pr-10 text-sm focus:outline-none focus:border-amberPrimary text-stoneText">
+                            class="w-full bg-[#fcfaf6] border border-[#e7dfd3] rounded-ds-lg px-4 py-2.5 pr-10 text-sm focus:outline-none focus:border-amberPrimary text-stoneText">
                         <button type="button" onclick="togglePwdVisibility('modal-new-password', this)"
                             class="absolute right-3 top-3 text-stone-400 hover:text-stone-700 transition">
                             <i data-lucide="eye" class="w-4 h-4"></i>
@@ -2363,7 +2363,7 @@
                     <div class="relative">
                         <input type="password" id="modal-confirm-password" required minlength="4"
                             placeholder="Re-enter new password"
-                            class="w-full bg-[#fcfaf6] border border-[#e7dfd3] rounded-xl px-4 py-2.5 pr-10 text-sm focus:outline-none focus:border-amberPrimary text-stoneText">
+                            class="w-full bg-[#fcfaf6] border border-[#e7dfd3] rounded-ds-lg px-4 py-2.5 pr-10 text-sm focus:outline-none focus:border-amberPrimary text-stoneText">
                         <button type="button" onclick="togglePwdVisibility('modal-confirm-password', this)"
                             class="absolute right-3 top-3 text-stone-400 hover:text-stone-700 transition">
                             <i data-lucide="eye" class="w-4 h-4"></i>
@@ -2371,15 +2371,15 @@
                     </div>
                 </div>
 
-                <div id="change-pwd-error" class="hidden p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-xs text-red-700 font-semibold"></div>
+                <div id="change-pwd-error" class="hidden p-3 bg-red-500/10 border border-red-500/20 rounded-ds-lg text-xs text-red-700 font-semibold"></div>
 
                 <div class="flex items-center space-x-2 pt-2">
                     <button type="button" onclick="closeChangePasswordModal()"
-                        class="w-1/2 py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-xs rounded-xl transition">
+                        class="w-1/2 py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-xs rounded-ds-lg transition">
                         Cancel
                     </button>
                     <button type="submit" id="btn-submit-change-pwd"
-                        class="w-1/2 btn-primary py-2.5 font-bold text-xs rounded-xl transition">
+                        class="w-1/2 btn-primary py-2.5 font-bold text-xs rounded-ds-lg transition">
                         Update Password
                     </button>
                 </div>
@@ -2391,7 +2391,7 @@
     <div id="overlay-study-studio" role="dialog" aria-modal="true" aria-labelledby="studio-video-title"
         class="app-overlay hidden fixed inset-0 bg-stone-950/80 backdrop-blur-md z-50 flex items-center justify-center p-0 sm:p-4">
         <div
-            class="bg-white border border-stone-200 rounded-none sm:rounded-3xl shadow-2xl flex flex-col w-full h-full sm:w-[90vw] sm:h-[85vh] sm:max-w-[1400px] sm:max-h-[90vh] overflow-hidden resize select-none studio-resizable-modal">
+            class="bg-white border border-stone-200 rounded-none sm:rounded-ds-2xl shadow-2xl flex flex-col w-full h-full sm:w-[90vw] sm:h-[85vh] sm:max-w-[1400px] sm:max-h-[90vh] overflow-hidden resize select-none studio-resizable-modal">
 
             <!-- Studio Header -->
             <div id="studio-header"
@@ -2399,12 +2399,12 @@
                 <span id="studio-video-title" class="sr-only"></span>
                 <div class="flex items-center space-x-1 sm:space-x-3 shrink-0">
                     <button onclick="minimizeStudio()"
-                        class="p-2 hover:bg-stone-100 text-stone-400 hover:text-amber-400 rounded-xl transition"
+                        class="p-2 hover:bg-stone-100 text-stone-400 hover:text-amber-400 rounded-ds-lg transition"
                         title="Minimize to corner (keeps playing)">
                         <i data-lucide="picture-in-picture-2" class="w-4 h-4 sm:w-5 sm:h-5"></i>
                     </button>
                     <button onclick="closeStudyStudio()"
-                        class="p-2 hover:bg-stone-100 text-stone-400 hover:text-stone-900 rounded-xl transition"
+                        class="p-2 hover:bg-stone-100 text-stone-400 hover:text-stone-900 rounded-ds-lg transition"
                         title="Close Studio">
                         <i data-lucide="x" class="w-4 h-4 sm:w-5 sm:h-5"></i>
                     </button>
@@ -2428,13 +2428,13 @@
                     <div id="studio-video-controls" class="hidden shrink-0 border-b border-stone-200 bg-stone-50">
                         <div class="hidden sm:flex items-center justify-center space-x-3 px-4 py-2">
                             <button onclick="studioTogglePlay()"
-                                class="p-2 text-stone-700 hover:text-stone-900 bg-white hover:bg-stone-100 border border-stone-200 rounded-lg transition"
+                                class="p-2 text-stone-700 hover:text-stone-900 bg-white hover:bg-stone-100 border border-stone-200 rounded-ds-md transition"
                                 title="Play/Pause">
                                 <i data-lucide="play" class="w-4 h-4" id="studio-icon-play"></i>
                                 <i data-lucide="pause" class="w-4 h-4 hidden" id="studio-icon-pause"></i>
                             </button>
                             <select id="studio-speed" onchange="studioSetSpeed(this.value)"
-                                class="text-xs bg-white text-stone-700 border border-stone-200 rounded-lg px-2 py-1.5 cursor-pointer">
+                                class="text-xs bg-white text-stone-700 border border-stone-200 rounded-ds-md px-2 py-1.5 cursor-pointer">
                                 <option value="0.75">0.75×</option>
                                 <option value="1" selected>1×</option>
                                 <option value="1.25">1.25×</option>
@@ -2442,17 +2442,17 @@
                                 <option value="2">2×</option>
                             </select>
                             <button onclick="studioSeek(-10)"
-                                class="p-2 text-stone-500 hover:text-stone-900 bg-white hover:bg-stone-100 border border-stone-200 rounded-lg transition"
+                                class="p-2 text-stone-500 hover:text-stone-900 bg-white hover:bg-stone-100 border border-stone-200 rounded-ds-md transition"
                                 title="-10s">
                                 <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
                             </button>
                             <button onclick="studioSeek(10)"
-                                class="p-2 text-stone-500 hover:text-stone-900 bg-white hover:bg-stone-100 border border-stone-200 rounded-lg transition"
+                                class="p-2 text-stone-500 hover:text-stone-900 bg-white hover:bg-stone-100 border border-stone-200 rounded-ds-md transition"
                                 title="+10s">
                                 <i data-lucide="rotate-cw" class="w-4 h-4"></i>
                             </button>
                             <button onclick="studioToggleCaptions()" id="studio-btn-captions"
-                                class="p-2 text-stone-500 hover:text-stone-900 bg-white hover:bg-stone-100 border border-stone-200 rounded-lg transition"
+                                class="p-2 text-stone-500 hover:text-stone-900 bg-white hover:bg-stone-100 border border-stone-200 rounded-ds-md transition"
                                 title="Toggle Captions (CC)">
                                 <i data-lucide="captions" class="w-4 h-4"></i>
                             </button>
@@ -2590,7 +2590,7 @@
     <div id="overlay-video-stats"
         class="app-overlay hidden fixed inset-0 bg-stone-950/80 backdrop-blur z-50 flex items-center justify-center p-4">
         <div
-            class="max-w-lg w-full bg-white border border-stone-200 rounded-3xl p-6 shadow-2xl space-y-5 max-h-[85vh] flex flex-col">
+            class="max-w-lg w-full bg-white border border-stone-200 rounded-ds-2xl p-6 shadow-2xl space-y-5 max-h-[85vh] flex flex-col">
             <div class="flex justify-between items-center border-b border-stone-200 pb-3 shrink-0">
                 <h3 class="text-lg font-bold text-stone-900 flex items-center space-x-2">
                     <i data-lucide="bar-chart-2" class="w-5 h-5 text-amber-400"></i>
@@ -2604,7 +2604,7 @@
 
             <div class="overflow-y-auto space-y-5 pr-1 flex-grow">
                 <!-- SRS Summary Panel -->
-                <div class="grid grid-cols-2 gap-4 bg-stone-100/60 p-4 rounded-2xl border border-stone-200">
+                <div class="grid grid-cols-2 gap-4 bg-stone-100/60 p-4 rounded-ds-xl border border-stone-200">
                     <div>
                         <span class="block text-[11px] font-bold text-stone-500">Current SRS Stage</span>
                         <span id="stats-srs-stage" class="text-lg font-extrabold text-amber-400">Stage 0</span>
@@ -2635,7 +2635,7 @@
         class="fixed bottom-[calc(4rem+var(--safe-bottom))] right-4 sm:right-6 z-50 flex flex-col items-end">
         <!-- Expanded Backlog Drawer Panel -->
         <div id="import-widget-panel"
-            class="relative hidden w-80 sm:w-96 bg-[#fcfaf6]/95 text-stone-900 border border-[#e7dfd3] backdrop-blur-xl shadow-2xl rounded-2xl p-3 mb-3 transition-all duration-300">
+            class="relative hidden w-80 sm:w-96 bg-[#fcfaf6]/95 text-stone-900 border border-[#e7dfd3] backdrop-blur-xl shadow-2xl rounded-ds-xl p-3 mb-3 transition-all duration-300">
             <!-- Floating Circular Minimize Button -->
             <button onclick="toggleImportBacklogDrawer(false)"
                 class="absolute -top-2.5 -right-2.5 bg-white hover:bg-stone-100 text-stone-500 hover:text-stone-800 border border-[#e7dfd3] shadow-md rounded-full p-1.5 transition flex items-center justify-center cursor-pointer z-10"
@@ -2651,7 +2651,7 @@
 
         <!-- Minimized Floating Capsule Pill Badge (Clickable) -->
         <button id="import-widget-badge" onclick="toggleImportBacklogDrawer()"
-            class="hidden bg-[#fcfaf6]/95 hover:bg-[#f5efe6] text-stone-800 border border-[#e7dfd3] ring-2 ring-amber-500/10 backdrop-blur-md px-3.5 py-2 rounded-md shadow-xl transition-all duration-300 transform hover:scale-105 active:scale-95 items-center justify-center space-x-2 group cursor-pointer text-xs font-bold">
+            class="hidden bg-[#fcfaf6]/95 hover:bg-[#f5efe6] text-stone-800 border border-[#e7dfd3] ring-2 ring-amber-500/10 backdrop-blur-md px-3.5 py-2 rounded-ds-sm shadow-xl transition-all duration-300 transform hover:scale-105 active:scale-95 items-center justify-center space-x-2 group cursor-pointer text-xs font-bold">
             <div id="import-badge-spinner" class="flex items-center shrink-0">
                 <i data-lucide="loader-2" class="w-3.5 h-3.5 text-amber-600 animate-spin"></i>
             </div>
@@ -2660,13 +2660,13 @@
             </div>
             <span id="import-badge-label" class="text-stone-800 font-bold">Importing...</span>
             <span id="import-badge-count"
-                class="bg-amber-100 text-amber-800 border border-amber-300/80 font-extrabold text-[10px] px-1.5 py-0.5 rounded-md shadow-sm">0</span>
+                class="bg-amber-100 text-amber-800 border border-amber-300/80 font-extrabold text-[10px] px-1.5 py-0.5 rounded-ds-sm shadow-sm">0</span>
         </button>
     </div>
 
     <!-- Floating Mini-Player Widget -->
     <div id="studio-mini-player"
-        class="hidden fixed bottom-4 right-4 w-72 bg-white border border-stone-200 rounded-2xl shadow-2xl overflow-hidden z-[200] select-none flex flex-col"
+        class="hidden fixed bottom-4 right-4 w-72 bg-white border border-stone-200 rounded-ds-xl shadow-2xl overflow-hidden z-[200] select-none flex flex-col"
         style="touch-action:none;">
         <!-- Drag Handle + Controls -->
         <div id="mini-player-drag-handle"
@@ -2688,13 +2688,13 @@
         <!-- Mini Controls -->
         <div class="shrink-0 flex items-center justify-center space-x-3 px-3 py-2 bg-stone-100 border-t border-stone-200">
             <button onclick="studioTogglePlay()" id="mini-btn-play"
-                class="p-1.5 text-stone-700 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 rounded-lg transition"
+                class="p-1.5 text-stone-700 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 rounded-ds-md transition"
                 title="Play/Pause">
                 <i data-lucide="play" class="w-4 h-4" id="mini-icon-play"></i>
                 <i data-lucide="pause" class="w-4 h-4 hidden" id="mini-icon-pause"></i>
             </button>
             <select id="mini-speed" onchange="studioSetSpeed(this.value)"
-                class="text-[11px] bg-stone-100 text-stone-700 border border-stone-200 rounded-lg px-1.5 py-1 cursor-pointer">
+                class="text-[11px] bg-stone-100 text-stone-700 border border-stone-200 rounded-ds-md px-1.5 py-1 cursor-pointer">
                 <option value="0.75">0.75×</option>
                 <option value="1" selected>1×</option>
                 <option value="1.25">1.25×</option>
@@ -2702,17 +2702,17 @@
                 <option value="2">2×</option>
             </select>
             <button onclick="studioSeek(-10)"
-                class="p-1.5 text-stone-400 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 rounded-lg transition"
+                class="p-1.5 text-stone-400 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 rounded-ds-md transition"
                 title="-10s">
                 <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
             </button>
             <button onclick="studioSeek(10)"
-                class="p-1.5 text-stone-400 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 rounded-lg transition"
+                class="p-1.5 text-stone-400 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 rounded-ds-md transition"
                 title="+10s">
                 <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
             </button>
             <button onclick="studioToggleCaptions()" id="mini-btn-captions"
-                class="p-1.5 text-stone-400 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 rounded-lg transition"
+                class="p-1.5 text-stone-400 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 rounded-ds-md transition"
                 title="Toggle Captions (CC)">
                 <i data-lucide="captions" class="w-3.5 h-3.5"></i>
             </button>
@@ -2727,11 +2727,11 @@
     <div id="overlay-tab-guide"
         class="app-overlay hidden fixed inset-0 bg-stone-950/85 backdrop-blur z-50 flex items-center justify-center p-4 overflow-y-auto">
         <div role="dialog" aria-modal="true" aria-labelledby="onboarding-eyebrow"
-            class="onboarding-card max-w-md w-full bg-white border border-amber-500/30 rounded-2xl p-5 shadow-2xl">
+            class="onboarding-card max-w-md w-full bg-white border border-amber-500/30 rounded-ds-xl p-5 shadow-2xl">
             <div class="flex items-center justify-between min-h-[24px] shrink-0">
                 <span id="onboarding-eyebrow" class="onboarding-eyebrow">Welcome</span>
                 <button type="button" id="onboarding-close-btn" aria-label="Close"
-                    class="hidden flex w-11 h-11 -my-2.5 -mr-2.5 items-center justify-center rounded-xl text-stone-400 hover:text-stone-900 hover:bg-stone-100 transition">
+                    class="hidden flex w-11 h-11 -my-2.5 -mr-2.5 items-center justify-center rounded-ds-lg text-stone-400 hover:text-stone-900 hover:bg-stone-100 transition">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
@@ -2774,7 +2774,7 @@
                             <p class="onboarding-body text-left">Review on the right day.</p>
                         </li>
                     </ol>
-                    <div class="bg-[#fbf8f2] border border-[#e7dfd3] rounded-xl p-3 space-y-1.5">
+                    <div class="bg-[#fbf8f2] border border-[#e7dfd3] rounded-ds-lg p-3 space-y-1.5">
                         <p class="onboarding-note">Time between reviews</p>
                         <div class="flex items-center justify-between gap-0.5 text-sm text-stone-700 whitespace-nowrap">
                             <span>1 day</span><i data-lucide="chevron-right" class="w-3 h-3 text-stone-300 shrink-0"></i>
@@ -2806,7 +2806,7 @@
                         <!-- Free plan only (settings.js renderVideoStep): this video is the one
                              AI generation the account gets without a plan. -->
                         <div id="onboarding-free-video"
-                            class="hidden flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-xl p-3">
+                            class="hidden flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-ds-lg p-3">
                             <i data-lucide="gift" class="w-5 h-5 text-emerald-600 shrink-0"></i>
                             <p class="text-sm text-emerald-900 font-semibold">Your first video is included, free.</p>
                         </div>
@@ -2831,7 +2831,7 @@
                     <!-- In place of the choices once an import has started, e.g. after Back from the
                          next step, so the same video cannot be sent twice. -->
                     <div id="onboarding-video-started"
-                        class="hidden flex items-start gap-3 bg-emerald-50 border border-emerald-200 rounded-xl p-3">
+                        class="hidden flex items-start gap-3 bg-emerald-50 border border-emerald-200 rounded-ds-lg p-3">
                         <i data-lucide="check-circle" class="w-5 h-5 text-emerald-600 shrink-0 mt-0.5"></i>
                         <p id="onboarding-video-started-text" class="text-[15px] leading-relaxed text-emerald-900">Your
                             first quiz is being made.</p>
@@ -2859,7 +2859,7 @@
                         </div>
                     </div>
                     <button type="button" id="onboarding-reminder-push-btn"
-                        class="hidden btn-primary w-full min-h-[48px] font-extrabold text-sm rounded-xl transition flex items-center justify-center gap-2">
+                        class="hidden btn-primary w-full min-h-[48px] font-extrabold text-sm rounded-ds-lg transition flex items-center justify-center gap-2">
                         <i data-lucide="bell-ring" class="w-4 h-4"></i>
                         <span>Turn on push reminders</span>
                     </button>
@@ -2875,7 +2875,7 @@
                         <p id="onboarding-reminder-status" class="onboarding-note flex-1 pt-0.5"></p>
                         <button type="button" id="onboarding-reminder-info-btn" aria-expanded="false"
                             aria-controls="onboarding-reminder-info" aria-label="About reminders"
-                            class="w-11 h-11 -my-2.5 flex items-center justify-center rounded-xl text-amber-700 hover:bg-amber-50 transition shrink-0">
+                            class="w-11 h-11 -my-2.5 flex items-center justify-center rounded-ds-lg text-amber-700 hover:bg-amber-50 transition shrink-0">
                             <i data-lucide="info" class="w-4 h-4"></i>
                         </button>
                     </div>
@@ -2890,7 +2890,7 @@
 
                 <!-- Tab tour, from Settings' "Welcome Guide" button: one tab per step. -->
                 <div class="onboarding-step hidden flex items-center gap-3 py-1" data-step="tour-home" data-eyebrow="App tour">
-                    <div class="p-3 bg-amber-500/10 text-amber-600 rounded-xl shrink-0">
+                    <div class="p-3 bg-amber-500/10 text-amber-600 rounded-ds-lg shrink-0">
                         <i data-lucide="home" class="w-6 h-6"></i>
                     </div>
                     <div>
@@ -2899,7 +2899,7 @@
                     </div>
                 </div>
                 <div class="onboarding-step hidden flex items-center gap-3 py-1" data-step="tour-goals" data-eyebrow="App tour">
-                    <div class="p-3 bg-violet-500/10 text-violet-600 rounded-xl shrink-0">
+                    <div class="p-3 bg-violet-500/10 text-violet-600 rounded-ds-lg shrink-0">
                         <i data-lucide="target" class="w-6 h-6"></i>
                     </div>
                     <div>
@@ -2908,7 +2908,7 @@
                     </div>
                 </div>
                 <div class="onboarding-step hidden flex items-center gap-3 py-1" data-step="tour-import" data-eyebrow="App tour">
-                    <div class="p-3 bg-sky-500/10 text-sky-600 rounded-xl shrink-0">
+                    <div class="p-3 bg-sky-500/10 text-sky-600 rounded-ds-lg shrink-0">
                         <i data-lucide="plus-circle" class="w-6 h-6"></i>
                     </div>
                     <div>
@@ -2917,7 +2917,7 @@
                     </div>
                 </div>
                 <div class="onboarding-step hidden flex items-center gap-3 py-1" data-step="tour-stats" data-eyebrow="App tour">
-                    <div class="p-3 bg-emerald-500/10 text-emerald-600 rounded-xl shrink-0">
+                    <div class="p-3 bg-emerald-500/10 text-emerald-600 rounded-ds-lg shrink-0">
                         <i data-lucide="trophy" class="w-6 h-6"></i>
                     </div>
                     <div>
@@ -2926,7 +2926,7 @@
                     </div>
                 </div>
                 <div class="onboarding-step hidden flex items-center gap-3 py-1" data-step="tour-settings" data-eyebrow="App tour">
-                    <div class="p-3 bg-stone-500/10 text-stone-600 rounded-xl shrink-0">
+                    <div class="p-3 bg-stone-500/10 text-stone-600 rounded-ds-lg shrink-0">
                         <i data-lucide="settings" class="w-6 h-6"></i>
                     </div>
                     <div>
@@ -2961,11 +2961,11 @@
     <div id="overlay-updates-modal"
         class="app-overlay hidden fixed inset-0 bg-stone-950/85 backdrop-blur z-50 flex items-center justify-center p-4 overflow-y-auto">
         <div
-            class="max-w-lg w-full bg-white border border-amber-500/30 rounded-2xl p-4 sm:p-5 shadow-2xl space-y-3.5 max-h-[85vh] overflow-y-auto">
+            class="max-w-lg w-full bg-white border border-amber-500/30 rounded-ds-xl p-4 sm:p-5 shadow-2xl space-y-3.5 max-h-[85vh] overflow-y-auto">
             <div class="flex items-center justify-between border-b border-stone-200 pb-2.5">
                 <div class="flex items-center space-x-2.5">
                     <div
-                        class="w-8 h-8 bg-amber-500/10 border border-amber-500/30 text-amber-600 rounded-lg flex items-center justify-center">
+                        class="w-8 h-8 bg-amber-500/10 border border-amber-500/30 text-amber-600 rounded-ds-md flex items-center justify-center">
                         <i data-lucide="sparkles" class="w-4 h-4"></i>
                     </div>
                     <div>
@@ -2980,7 +2980,7 @@
             </div>
 
             <div class="space-y-2">
-                <div class="p-2.5 sm:p-3 bg-stone-50 border border-stone-200 rounded-xl space-y-0.5">
+                <div class="p-2.5 sm:p-3 bg-stone-50 border border-stone-200 rounded-ds-lg space-y-0.5">
                     <h4 class="font-bold text-xs text-sky-600 flex items-center space-x-1.5">
                         <i data-lucide="picture-in-picture-2" class="w-3.5 h-3.5"></i>
                         <span>Study Studio Mini-Player</span>
@@ -2989,7 +2989,7 @@
                         mini-player while you browse the rest of the app.</p>
                 </div>
 
-                <div class="p-2.5 sm:p-3 bg-stone-50 border border-stone-200 rounded-xl space-y-0.5">
+                <div class="p-2.5 sm:p-3 bg-stone-50 border border-stone-200 rounded-ds-lg space-y-0.5">
                     <h4 class="font-bold text-xs text-violet-600 flex items-center space-x-1.5">
                         <i data-lucide="video" class="w-3.5 h-3.5"></i>
                         <span>Daily AI Video Recommendations</span>
@@ -2998,7 +2998,7 @@
                         you've set, right on your Home tab.</p>
                 </div>
 
-                <div class="p-2.5 sm:p-3 bg-stone-50 border border-stone-200 rounded-xl space-y-0.5">
+                <div class="p-2.5 sm:p-3 bg-stone-50 border border-stone-200 rounded-ds-lg space-y-0.5">
                     <h4 class="font-bold text-xs text-red-700 flex items-center space-x-1.5">
                         <img src="/static/images/chompy/chompy-icon.png" alt="" class="w-3.5 h-3.5">
                         <span>Meet Chompy</span>
@@ -3010,7 +3010,7 @@
 
             <div class="pt-1">
                 <button type="button" onclick="dismissUpdates(event)"
-                    class="btn-primary w-full py-2.5 font-extrabold text-xs rounded-xl transition flex items-center justify-center space-x-1.5">
+                    class="btn-primary w-full py-2.5 font-extrabold text-xs rounded-ds-lg transition flex items-center justify-center space-x-1.5">
                     <span>Awesome! Dismiss</span>
                     <i data-lucide="check" class="w-3.5 h-3.5"></i>
                 </button>
@@ -3030,12 +3030,12 @@
          so it is not shown again. -->
     <div id="overlay-tester-notice"
         class="app-overlay hidden fixed inset-0 bg-stone-950/85 backdrop-blur z-50 flex items-center justify-center p-4 overflow-y-auto">
-        <div class="max-w-lg w-full bg-white border border-stone-200 rounded-3xl p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+        <div class="max-w-lg w-full bg-white border border-stone-200 rounded-ds-2xl p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
 
             <div class="flex items-start justify-between gap-3">
                 <div class="flex items-center space-x-2.5">
                     <div id="tester-notice-icon-wrap"
-                        class="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0">
+                        class="w-10 h-10 rounded-ds-xl flex items-center justify-center flex-shrink-0">
                         <i id="tester-notice-icon" data-lucide="flask-conical" class="w-5 h-5"></i>
                     </div>
                     <h3 id="tester-notice-title" class="text-lg font-extrabold text-stone-900 tracking-tight"></h3>
@@ -3051,7 +3051,7 @@
 
             <div class="space-y-2 pt-1">
                 <button type="button" id="tester-notice-primary"
-                    class="btn-primary w-full py-3 font-extrabold rounded-xl transition flex items-center justify-center space-x-2">
+                    class="btn-primary w-full py-3 font-extrabold rounded-ds-lg transition flex items-center justify-center space-x-2">
                     <span id="tester-notice-primary-label">Start studying</span>
                 </button>
                 <button type="button" onclick="closeTesterNotice()"
@@ -3075,18 +3075,18 @@
         <!-- max-h + overflow so a tall step cannot run off the viewport. The overlay has no
              close button by design, so anything pushed past the bottom edge is unreachable
              rather than merely awkward. -->
-        <div class="relative max-w-md w-full bg-white border border-stone-200 rounded-3xl p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+        <div class="relative max-w-md w-full bg-white border border-stone-200 rounded-ds-2xl p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
             <!-- Only for an account on the free plan (billing.js _applyPlanPickerMode), for whom
                  this overlay is a plan picker rather than a wall. -->
             <button type="button" id="paywall-close" onclick="closePaywall()" aria-label="Close"
-                class="hidden absolute top-3 right-3 w-11 h-11 flex items-center justify-center rounded-xl text-stone-400 hover:text-stone-900 hover:bg-stone-100 transition">
+                class="hidden absolute top-3 right-3 w-11 h-11 flex items-center justify-center rounded-ds-lg text-stone-400 hover:text-stone-900 hover:bg-stone-100 transition">
                 <i data-lucide="x" class="w-5 h-5"></i>
             </button>
 
             <!-- Step 1: full price. The only price shown until it is declined. -->
             <div id="paywall-step-standard" class="space-y-5">
                 <div class="space-y-2">
-                    <div class="w-11 h-11 rounded-2xl bg-amber-100 flex items-center justify-center">
+                    <div class="w-11 h-11 rounded-ds-xl bg-amber-100 flex items-center justify-center">
                         <i data-lucide="sparkles" class="w-5 h-5 text-amber-600"></i>
                     </div>
                     <!-- No trial is offered, so this heading must not imply one was used up.
@@ -3106,14 +3106,14 @@
                     </p>
                 </div>
 
-                <div class="bg-[#fcfaf6] border border-[#e7dfd3] rounded-2xl p-4 flex items-baseline space-x-1.5">
+                <div class="bg-[#fcfaf6] border border-[#e7dfd3] rounded-ds-xl p-4 flex items-baseline space-x-1.5">
                     <span class="text-3xl font-extrabold text-stone-900">$7.99</span>
                     <span class="text-sm font-semibold text-stone-500">/ month</span>
                 </div>
 
                 <div class="space-y-2">
                     <button type="button" onclick="startCheckout()"
-                        class="btn-primary w-full py-3 font-extrabold rounded-xl transition flex items-center justify-center space-x-2">
+                        class="btn-primary w-full py-3 font-extrabold rounded-ds-lg transition flex items-center justify-center space-x-2">
                         <span>Subscribe</span>
                         <i data-lucide="arrow-right" class="w-4 h-4"></i>
                     </button>
@@ -3128,7 +3128,7 @@
                  and never reachable via a URL parameter. -->
             <div id="paywall-step-beta" class="hidden space-y-5">
                 <div class="space-y-2">
-                    <div class="w-11 h-11 rounded-2xl bg-emerald-100 flex items-center justify-center">
+                    <div class="w-11 h-11 rounded-ds-xl bg-emerald-100 flex items-center justify-center">
                         <i data-lucide="gift" class="w-5 h-5 text-emerald-600"></i>
                     </div>
                     <h3 class="text-xl font-extrabold text-stone-900">Wait, you're an early user</h3>
@@ -3143,7 +3143,7 @@
                         {% include "partials/_beta_offer.html" %}
                     {% endwith %}
                     <button type="button" onclick="startCheckout(true)"
-                        class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl transition shadow-lg flex items-center justify-center space-x-2">
+                        class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-ds-lg transition shadow-lg flex items-center justify-center space-x-2">
                         <span>Continue to checkout</span>
                         <i data-lucide="arrow-right" class="w-4 h-4"></i>
                     </button>
@@ -3161,7 +3161,7 @@
                  still open. Chosen in initPaywall() and notifyPaymentRequired(). -->
             <div id="paywall-step-tester-expired" class="hidden space-y-4">
                 <div class="space-y-2">
-                    <div class="w-11 h-11 rounded-2xl bg-emerald-100 flex items-center justify-center">
+                    <div class="w-11 h-11 rounded-ds-xl bg-emerald-100 flex items-center justify-center">
                         <i data-lucide="heart-handshake" class="w-5 h-5 text-emerald-600"></i>
                     </div>
                     <h3 class="text-xl font-extrabold text-stone-900">Your tester access has ended</h3>
@@ -3180,7 +3180,7 @@
                         {% include "partials/_beta_offer.html" %}
                     {% endwith %}
                     <button type="button" onclick="startCheckout(true)"
-                        class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl transition shadow-lg flex items-center justify-center space-x-2">
+                        class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-ds-lg transition shadow-lg flex items-center justify-center space-x-2">
                         <span>Continue with a subscription</span>
                         <i data-lucide="arrow-right" class="w-4 h-4"></i>
                     </button>
@@ -3191,7 +3191,7 @@
                          lets someone with no access left still download their own data.
                          Do not move that route behind the paid gate. -->
                     <a href="/api/user/export" id="tester-expired-export"
-                        class="w-full py-3 bg-stone-100 hover:bg-stone-200 border border-[#e7dfd3] rounded-xl text-sm font-bold text-stone-700 transition flex items-center justify-center space-x-2">
+                        class="w-full py-3 bg-stone-100 hover:bg-stone-200 border border-[#e7dfd3] rounded-ds-lg text-sm font-bold text-stone-700 transition flex items-center justify-center space-x-2">
                         <i data-lucide="download" class="w-4 h-4"></i>
                         <span>Download my data</span>
                     </a>
@@ -3213,11 +3213,11 @@
                     </label>
                     <textarea id="tester-feedback-input" rows="3" maxlength="4000"
                         placeholder="Anything that got in your way, or that you expected and did not find."
-                        class="w-full p-3 bg-[#fcfaf6] border border-[#e7dfd3] rounded-xl text-xs text-stone-700 placeholder:text-stone-400 focus:outline-none focus:border-amber-400 resize-none"></textarea>
+                        class="w-full p-3 bg-[#fcfaf6] border border-[#e7dfd3] rounded-ds-lg text-xs text-stone-700 placeholder:text-stone-400 focus:outline-none focus:border-amber-400 resize-none"></textarea>
                     <div class="flex items-center justify-between gap-2">
                         <p id="tester-feedback-status" class="text-[11px] text-stone-400"></p>
                         <button type="button" id="tester-feedback-send"
-                            class="px-4 py-2 bg-stone-100 hover:bg-stone-200 border border-[#e7dfd3] rounded-xl text-xs font-bold text-stone-700 transition flex-shrink-0">
+                            class="px-4 py-2 bg-stone-100 hover:bg-stone-200 border border-[#e7dfd3] rounded-ds-lg text-xs font-bold text-stone-700 transition flex-shrink-0">
                             Send
                         </button>
                     </div>
@@ -3227,7 +3227,7 @@
             <!-- Returning from Lemon Squeezy: the webhook may land a moment after the
                  redirect, so the user waits here rather than seeing the paywall again. -->
             <div id="paywall-step-activating" class="hidden space-y-4 text-center py-4">
-                <div class="w-11 h-11 rounded-2xl bg-emerald-100 flex items-center justify-center mx-auto">
+                <div class="w-11 h-11 rounded-ds-xl bg-emerald-100 flex items-center justify-center mx-auto">
                     <i data-lucide="loader-2" class="w-5 h-5 text-emerald-600 animate-spin"></i>
                 </div>
                 <h3 class="text-lg font-extrabold text-stone-900">Activating your subscription…</h3>
@@ -3238,7 +3238,7 @@
 
             <!-- Activation poll timed out. Never leaves someone who just paid staring at a paywall. -->
             <div id="paywall-step-pending" class="hidden space-y-4 py-2">
-                <div class="w-11 h-11 rounded-2xl bg-amber-100 flex items-center justify-center">
+                <div class="w-11 h-11 rounded-ds-xl bg-amber-100 flex items-center justify-center">
                     <i data-lucide="clock" class="w-5 h-5 text-amber-600"></i>
                 </div>
                 <h3 class="text-lg font-extrabold text-stone-900">Almost there</h3>
@@ -3249,7 +3249,7 @@
                     and we'll sort it out straight away.
                 </p>
                 <button type="button" onclick="window.location.reload()"
-                    class="btn-primary w-full py-3 font-extrabold rounded-xl transition">
+                    class="btn-primary w-full py-3 font-extrabold rounded-ds-lg transition">
                     Reload
                 </button>
             </div>

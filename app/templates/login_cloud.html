@@ -31,7 +31,7 @@
 
     <!-- Main Content Container -->
     <main class="my-auto py-12 px-4 w-full">
-        <div class="max-w-md mx-auto bg-paperCard border border-paperBorder shadow-xl rounded-3xl p-7 sm:p-9 space-y-7">
+        <div class="max-w-md mx-auto bg-paperCard border border-paperBorder shadow-xl rounded-ds-xl p-7 sm:p-9 space-y-7">
             
             <div class="text-center space-y-2">
                 <img src="/static/images/logo-icon-112.png" class="brand-logo w-14 h-14 mx-auto mb-3" alt="Studiamo Logo" />
@@ -40,14 +40,14 @@
             </div>
 
             <!-- Capacity Banner (shown via JS when at capacity) -->
-            <div id="capacity-banner" class="hidden p-3.5 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-800 leading-relaxed">
+            <div id="capacity-banner" class="hidden p-3.5 bg-amber-500/10 border border-amber-500/20 rounded-ds-lg text-xs text-amber-800 leading-relaxed">
                 Note: We are currently at capacity. <strong>Existing users can still sign in normally.</strong> New users will be placed on a waitlist and emailed when a spot opens up.
             </div>
 
             <!-- Primary Google SSO Action -->
             <div class="space-y-4 pt-2">
                 <a href="/auth/google"
-                    class="w-full py-3.5 px-4 bg-white hover:bg-stone-50 border border-paperBorder rounded-2xl shadow-sm text-sm font-extrabold text-stoneText flex items-center justify-center space-x-3 transition duration-200 transform hover:-translate-y-0.5 hover:shadow-md cursor-pointer">
+                    class="w-full py-3.5 px-4 bg-white hover:bg-stone-50 border border-paperBorder rounded-ds-xl shadow-sm text-sm font-extrabold text-stoneText flex items-center justify-center space-x-3 transition duration-200 transform hover:-translate-y-0.5 hover:shadow-md cursor-pointer">
                     <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24">
                         <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                         <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -62,7 +62,7 @@
             </div>
 
             <!-- Error Banner -->
-            <div id="error-banner" class="hidden p-3.5 bg-red-500/10 border border-red-500/20 rounded-xl text-xs text-red-700 font-semibold text-center"></div>
+            <div id="error-banner" class="hidden p-3.5 bg-red-500/10 border border-red-500/20 rounded-ds-lg text-xs text-red-700 font-semibold text-center"></div>
 
         </div>
     </main>

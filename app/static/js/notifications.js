@@ -46,7 +46,7 @@ function showToast(text, type = 'saved', duration = null, action = null) {
     }
 
     let iconHtml = '';
-    let pillClasses = 'px-4 py-2 rounded-2xl text-xs font-bold text-left shadow-2xl border flex items-start space-x-2 ';
+    let pillClasses = 'px-4 py-2 rounded-ds-xl text-xs font-bold text-left shadow-2xl border flex items-start space-x-2 ';
     let defaultDuration = 2500;
 
     if (type === 'saving' || type === 'loading') {
@@ -203,7 +203,7 @@ function showConfirm(options = {}) {
             message = 'Are you sure you want to proceed?',
             confirmText = 'Confirm',
             cancelText = 'Cancel',
-            confirmClass = 'bg-[#fbbf24] hover:bg-[#f59e0b] text-[#78350f] font-bold rounded-xl text-xs shadow-sm transition',
+            confirmClass = 'bg-[#fbbf24] hover:bg-[#f59e0b] text-[#78350f] font-bold rounded-ds-lg text-xs shadow-sm transition',
             icon = 'alert-triangle',
             // For a notice with a single OK button, where there is nothing to cancel.
             hideCancel = false
@@ -225,9 +225,9 @@ function showConfirm(options = {}) {
         }
         if (iconWrapper) {
             if (confirmClass.includes('red')) {
-                iconWrapper.className = 'p-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 shrink-0';
+                iconWrapper.className = 'p-2.5 rounded-ds-lg bg-red-500/10 border border-red-500/20 text-red-600 shrink-0';
             } else {
-                iconWrapper.className = 'p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 shrink-0';
+                iconWrapper.className = 'p-2.5 rounded-ds-lg bg-amber-500/10 border border-amber-500/20 text-amber-700 shrink-0';
             }
         }
 

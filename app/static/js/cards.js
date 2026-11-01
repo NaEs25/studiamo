@@ -10,7 +10,7 @@
 
 let cardsState = null;
 
-const CARDS_FIELD_CLASS = 'w-full bg-[#fcfaf6] border border-[#e7dfd3] rounded-lg px-3 py-2 text-sm text-stone-900 focus:outline-none focus:border-amber-500';
+const CARDS_FIELD_CLASS = 'w-full bg-[#fcfaf6] border border-[#e7dfd3] rounded-ds-md px-3 py-2 text-sm text-stone-900 focus:outline-none focus:border-amber-500';
 const CARDS_STAGE_LABELS = ['Immediate', '1 day', '3 days', '7 days', '14-30 days'];
 
 function cardsAllCards() {
@@ -55,10 +55,10 @@ function cardsRowHTML(c, { paused = false, readOnly = false } = {}) {
     if (editing) return cardsEditFormHTML(c);
     const busy = cardsState.busy;
     const controls = readOnly ? `<span class="text-[10px] text-stone-400 shrink-0">stage ${c.stage}</span>` : `
-        <button type="button" data-cards-edit="${escapeHtml(c.id)}" ${busy ? 'disabled' : ''} class="p-1.5 text-stone-500 hover:text-stone-900 hover:bg-stone-100 rounded-lg transition disabled:opacity-40" aria-label="Edit this card"><i data-lucide="pencil" class="w-4 h-4"></i></button>
-        <button type="button" data-cards-remove="${escapeHtml(c.id)}" ${busy ? 'disabled' : ''} class="p-1.5 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition disabled:opacity-40" aria-label="Remove this card"><i data-lucide="x" class="w-4 h-4"></i></button>`;
+        <button type="button" data-cards-edit="${escapeHtml(c.id)}" ${busy ? 'disabled' : ''} class="p-1.5 text-stone-500 hover:text-stone-900 hover:bg-stone-100 rounded-ds-md transition disabled:opacity-40" aria-label="Edit this card"><i data-lucide="pencil" class="w-4 h-4"></i></button>
+        <button type="button" data-cards-remove="${escapeHtml(c.id)}" ${busy ? 'disabled' : ''} class="p-1.5 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded-ds-md transition disabled:opacity-40" aria-label="Remove this card"><i data-lucide="x" class="w-4 h-4"></i></button>`;
     return `
-        <div class="flex items-center gap-2 border rounded-xl px-3 py-2.5 ${paused ? 'bg-stone-50 border-dashed border-stone-300 opacity-60' : 'bg-white border-stone-200 shadow-sm'}">
+        <div class="flex items-center gap-2 border rounded-ds-lg px-3 py-2.5 ${paused ? 'bg-stone-50 border-dashed border-stone-300 opacity-60' : 'bg-white border-stone-200 shadow-sm'}">
             <div class="min-w-0 flex-1">
                 <p class="text-sm font-bold text-stone-900 break-words">${escapeHtml(c.question)}</p>
                 <p class="text-[11px] text-stone-500">${escapeHtml(cardsKindLabel(c))}</p>
@@ -84,11 +84,11 @@ function cardsEditFormHTML(c) {
                 <textarea data-cards-field="answer" rows="3" maxlength="1000" class="${CARDS_FIELD_CLASS}" placeholder="Back">${escapeHtml(d.answer)}</textarea>`;
     }
     return `
-        <div class="border border-amber-300 bg-amber-50/40 rounded-xl p-3 space-y-2">
+        <div class="border border-amber-300 bg-amber-50/40 rounded-ds-lg p-3 space-y-2">
             ${body}
             <div class="flex items-center gap-2">
-                <button type="button" data-cards-save ${busy} class="btn-primary px-4 py-2 rounded-xl text-xs font-extrabold disabled:opacity-60">Save</button>
-                <button type="button" data-cards-cancel ${busy} class="px-3 py-2 rounded-xl text-xs font-bold text-stone-600 hover:bg-stone-100">Cancel</button>
+                <button type="button" data-cards-save ${busy} class="btn-primary px-4 py-2 rounded-ds-lg text-xs font-extrabold disabled:opacity-60">Save</button>
+                <button type="button" data-cards-cancel ${busy} class="px-3 py-2 rounded-ds-lg text-xs font-bold text-stone-600 hover:bg-stone-100">Cancel</button>
             </div>
         </div>`;
 }
@@ -99,18 +99,18 @@ function cardsAddFormHTML(stageIndex) {
         const d = ed.draft;
         const busy = cardsState.busy ? 'disabled' : '';
         return `
-            <div class="border border-amber-300 bg-amber-50/40 rounded-xl p-3 space-y-2">
+            <div class="border border-amber-300 bg-amber-50/40 rounded-ds-lg p-3 space-y-2">
                 <p class="text-xs font-extrabold text-stone-800">New card, stage ${stageIndex}</p>
                 <textarea data-cards-field="question" rows="2" maxlength="500" class="${CARDS_FIELD_CLASS}" placeholder="Front: the question">${escapeHtml(d.question)}</textarea>
                 <textarea data-cards-field="answer" rows="3" maxlength="1000" class="${CARDS_FIELD_CLASS}" placeholder="Back: the answer">${escapeHtml(d.answer)}</textarea>
                 <input type="text" data-cards-field="topic" maxlength="60" value="${escapeHtml(d.topic)}" class="${CARDS_FIELD_CLASS}" placeholder="Topic (optional)">
                 <div class="flex items-center gap-2">
-                    <button type="button" data-cards-save ${busy} class="btn-primary px-4 py-2 rounded-xl text-xs font-extrabold disabled:opacity-60">Add card</button>
-                    <button type="button" data-cards-cancel ${busy} class="px-3 py-2 rounded-xl text-xs font-bold text-stone-600 hover:bg-stone-100">Cancel</button>
+                    <button type="button" data-cards-save ${busy} class="btn-primary px-4 py-2 rounded-ds-lg text-xs font-extrabold disabled:opacity-60">Add card</button>
+                    <button type="button" data-cards-cancel ${busy} class="px-3 py-2 rounded-ds-lg text-xs font-bold text-stone-600 hover:bg-stone-100">Cancel</button>
                 </div>
             </div>`;
     }
-    return `<button type="button" data-cards-add class="w-full py-2.5 border border-dashed border-amber-500/40 hover:bg-amber-500/5 text-amber-700 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition"><i data-lucide="plus" class="w-3.5 h-3.5"></i>Add card to stage ${stageIndex}</button>`;
+    return `<button type="button" data-cards-add class="w-full py-2.5 border border-dashed border-amber-500/40 hover:bg-amber-500/5 text-amber-700 font-bold rounded-ds-lg text-xs flex items-center justify-center gap-1.5 transition"><i data-lucide="plus" class="w-3.5 h-3.5"></i>Add card to stage ${stageIndex}</button>`;
 }
 
 function renderCardsSheet() {
@@ -124,7 +124,7 @@ function renderCardsSheet() {
         const short = target > 0 && count < target;
         const cls = active ? 'bg-amber-100 border-amber-300 text-amber-900 font-extrabold'
             : (short ? 'bg-red-50 border-red-200 text-red-700 font-bold' : 'bg-white border-stone-200 text-stone-700 font-bold');
-        return `<button type="button" data-cards-stage="${s}" aria-pressed="${active}" title="${escapeHtml(CARDS_STAGE_LABELS[s])}" class="flex-1 py-2 rounded-xl border text-xs ${cls}">${s}<span class="font-normal opacity-75"> · ${count}</span></button>`;
+        return `<button type="button" data-cards-stage="${s}" aria-pressed="${active}" title="${escapeHtml(CARDS_STAGE_LABELS[s])}" class="flex-1 py-2 rounded-ds-lg border text-xs ${cls}">${s}<span class="font-normal opacity-75"> · ${count}</span></button>`;
     }).join('');
 
     const { inRotation, paused, borrowed } = cardsForStage(stage);
@@ -145,7 +145,7 @@ function renderCardsSheet() {
     list.innerHTML = `
         <p class="text-[11px] font-bold text-stone-600">Stage (Cards in This Stage)</p>
         <div class="flex gap-1.5">${pills}</div>
-        <div class="text-xs font-semibold rounded-xl px-3 py-2 border bg-amber-50 border-amber-200 text-amber-900">${escapeHtml(status)}</div>
+        <div class="text-xs font-semibold rounded-ds-lg px-3 py-2 border bg-amber-50 border-amber-200 text-amber-900">${escapeHtml(status)}</div>
         ${inRotation.map(c => cardsRowHTML(c)).join('')}
         ${paused.length ? `<p class="text-[11px] font-bold text-stone-500 pt-1">Paused at ${rating} stars, back at a higher rating</p>${paused.map(c => cardsRowHTML(c, { paused: true })).join('')}` : ''}
         ${borrowed.length ? `<p class="text-[11px] font-bold text-stone-500 pt-1">Borrowed From Other Stages</p>${borrowed.map(c => cardsRowHTML(c, { paused: false, readOnly: true })).join('')}` : ''}

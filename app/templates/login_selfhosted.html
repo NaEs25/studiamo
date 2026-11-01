@@ -32,7 +32,7 @@
 
     <!-- Container -->
     <main class="my-auto py-12 px-4 w-full">
-        <div class="max-w-lg mx-auto bg-paperCard border border-paperBorder shadow-xl rounded-3xl p-6 sm:p-8 space-y-8">
+        <div class="max-w-lg mx-auto bg-paperCard border border-paperBorder shadow-xl rounded-ds-xl p-6 sm:p-8 space-y-8">
             
             <div class="text-center space-y-2">
                 <img src="/static/images/logo-icon-112.png" class="brand-logo w-14 h-14 mx-auto mb-3" alt="Studiamo Logo" />
@@ -46,7 +46,7 @@
                 <div class="relative">
                     <i data-lucide="search" class="w-4 h-4 text-stone-400 absolute left-3.5 top-3 pointer-events-none"></i>
                     <input type="text" id="profile-search" autocomplete="off" placeholder="Type your username..."
-                        class="w-full bg-[#fbf8f2] border border-[#e7dfd3] rounded-xl pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:border-amberPrimary text-stoneText placeholder-stone-400 transition"
+                        class="w-full bg-[#fbf8f2] border border-[#e7dfd3] rounded-ds-lg pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:border-amberPrimary text-stoneText placeholder-stone-400 transition"
                         oninput="handleSearch(this.value)">
                 </div>
                 <div id="users-container" class="space-y-3">
@@ -62,7 +62,7 @@
             </div>
 
             <!-- Create New Profile Form -->
-            <div class="space-y-4 bg-[#f3ebd9] p-5 rounded-2xl border border-paperBorder shadow-sm">
+            <div class="space-y-4 bg-[#f3ebd9] p-5 rounded-ds-xl border border-paperBorder shadow-sm">
                 <h3 class="text-sm font-bold text-stoneText flex items-center space-x-2">
                     <i data-lucide="user-plus" class="w-4 h-4 text-amberPrimary"></i>
                     <span>Create Local Profile</span>
@@ -72,27 +72,27 @@
                     <div>
                         <label class="block text-xs font-semibold text-stoneText mb-1">Username</label>
                         <input type="text" id="new-username" required placeholder="E.g., sarah, alex"
-                            class="w-full bg-[#fcfaf6] border border-[#e7dfd3] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-amberPrimary text-stoneText placeholder-stone-400">
+                            class="w-full bg-[#fcfaf6] border border-[#e7dfd3] rounded-ds-lg px-4 py-2.5 text-sm focus:outline-none focus:border-amberPrimary text-stoneText placeholder-stone-400">
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-stoneText mb-1">Google AI Studio API Key (BYOK) <span class="text-amberPrimary font-bold">*Required</span></label>
                         <input type="password" id="new-gemini-key" required placeholder="Paste key (starts with AIzaSy...)"
-                            class="w-full bg-[#fcfaf6] border border-[#e7dfd3] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-amberPrimary text-stoneText placeholder-stone-400">
+                            class="w-full bg-[#fcfaf6] border border-[#e7dfd3] rounded-ds-lg px-4 py-2.5 text-sm focus:outline-none focus:border-amberPrimary text-stoneText placeholder-stone-400">
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-stoneText mb-1">Password <span class="text-amberPrimary font-bold">*Required</span></label>
                         <input type="password" id="new-password" required placeholder="Choose a password"
-                            class="w-full bg-[#fcfaf6] border border-[#e7dfd3] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-amberPrimary text-stoneText placeholder-stone-400">
+                            class="w-full bg-[#fcfaf6] border border-[#e7dfd3] rounded-ds-lg px-4 py-2.5 text-sm focus:outline-none focus:border-amberPrimary text-stoneText placeholder-stone-400">
                     </div>
                     <button type="submit" id="btn-create-profile"
-                        class="btn-primary w-full py-3 font-extrabold text-sm rounded-xl transition transform hover:-translate-y-0.5">
+                        class="btn-primary w-full py-3 font-extrabold text-sm rounded-ds-lg transition transform hover:-translate-y-0.5">
                         Create &amp; Start Studying
                     </button>
                 </form>
             </div>
 
             <!-- Error Banner -->
-            <div id="error-banner" class="hidden p-3.5 bg-red-500/10 border border-red-500/20 rounded-xl text-xs text-red-700 font-semibold text-center"></div>
+            <div id="error-banner" class="hidden p-3.5 bg-red-500/10 border border-red-500/20 rounded-ds-lg text-xs text-red-700 font-semibold text-center"></div>
 
         </div>
     </main>
@@ -139,9 +139,9 @@
                     }
 
                     container.innerHTML = users.map(u => `
-                        <div onclick="selectUser('${u}')" class="p-3 bg-[#fbf8f2] border border-[#e7dfd3] hover:border-amberPrimary/50 rounded-xl flex items-center justify-between cursor-pointer transition group shadow-sm hover:shadow">
+                        <div onclick="selectUser('${u}')" class="p-3 bg-[#fbf8f2] border border-[#e7dfd3] hover:border-amberPrimary/50 rounded-ds-lg flex items-center justify-between cursor-pointer transition group shadow-sm hover:shadow">
                             <div class="flex items-center space-x-3">
-                                <div class="w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-900 font-bold flex items-center justify-center text-xs">
+                                <div class="w-8 h-8 rounded-ds-md bg-amber-500/15 border border-amber-500/30 text-amber-900 font-bold flex items-center justify-center text-xs">
                                     ${u.substring(0, 2).toUpperCase()}
                                 </div>
                                 <span class="text-sm font-extrabold text-stoneText group-hover:text-amberPrimary transition">${u}</span>

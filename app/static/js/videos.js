@@ -147,9 +147,9 @@ window.renderGoalBoxes = function(goals) {
     let activeGoalId = selectedInput ? selectedInput.value : '';
 
     let html = `
-        <div class="goal-select-card group border cursor-pointer rounded-xl p-3 flex items-center justify-between transition-all ${activeGoalId === '' ? 'border-amber-500 bg-amber-500/15 ring-1 ring-amber-500/30' : 'border-[#e7dfd3] bg-[#fcfaf6] hover:border-amber-500/40'}" data-goal-id="">
+        <div class="goal-select-card group border cursor-pointer rounded-ds-lg p-3 flex items-center justify-between transition-all ${activeGoalId === '' ? 'border-amber-500 bg-amber-500/15 ring-1 ring-amber-500/30' : 'border-[#e7dfd3] bg-[#fcfaf6] hover:border-amber-500/40'}" data-goal-id="">
             <div class="flex items-center space-x-2.5 overflow-hidden">
-                <div class="w-7 h-7 rounded-lg bg-[#f3ebd9] flex items-center justify-center text-amber-700 shrink-0">
+                <div class="w-7 h-7 rounded-ds-md bg-[#f3ebd9] flex items-center justify-center text-amber-700 shrink-0">
                     <i data-lucide="inbox" class="w-4 h-4"></i>
                 </div>
                 <div class="truncate">
@@ -167,9 +167,9 @@ window.renderGoalBoxes = function(goals) {
         goals.forEach((g, idx) => {
             const isSelected = activeGoalId === String(g.id);
             html += `
-                <div class="goal-select-card group border cursor-pointer rounded-xl p-3 flex items-center justify-between transition-all ${isSelected ? 'border-amber-500 bg-amber-500/15 ring-1 ring-amber-500/30' : 'border-[#e7dfd3] bg-[#fcfaf6] hover:border-amber-500/40'}" data-goal-id="${g.id}">
+                <div class="goal-select-card group border cursor-pointer rounded-ds-lg p-3 flex items-center justify-between transition-all ${isSelected ? 'border-amber-500 bg-amber-500/15 ring-1 ring-amber-500/30' : 'border-[#e7dfd3] bg-[#fcfaf6] hover:border-amber-500/40'}" data-goal-id="${g.id}">
                     <div class="flex items-center space-x-2.5 overflow-hidden">
-                        <div class="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-600 font-bold text-[10px] flex items-center justify-center shrink-0">
+                        <div class="w-7 h-7 rounded-ds-md bg-amber-500/10 border border-amber-500/20 text-amber-600 font-bold text-[10px] flex items-center justify-center shrink-0">
                             #${idx + 1}
                         </div>
                         <div class="truncate">
@@ -187,9 +187,9 @@ window.renderGoalBoxes = function(goals) {
 
     const isNewSelected = activeGoalId === 'new';
     html += `
-        <div class="goal-select-card group border cursor-pointer rounded-xl p-3 flex items-center justify-between transition-all ${isNewSelected ? 'border-amber-500 bg-amber-500/15 ring-1 ring-amber-500/30' : 'border-dashed border-[#e7dfd3] bg-[#fcfaf6] hover:border-amber-500/50'}" data-goal-id="new">
+        <div class="goal-select-card group border cursor-pointer rounded-ds-lg p-3 flex items-center justify-between transition-all ${isNewSelected ? 'border-amber-500 bg-amber-500/15 ring-1 ring-amber-500/30' : 'border-dashed border-[#e7dfd3] bg-[#fcfaf6] hover:border-amber-500/50'}" data-goal-id="new">
             <div class="flex items-center space-x-2.5 overflow-hidden">
-                <div class="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-800 flex items-center justify-center shrink-0">
+                <div class="w-7 h-7 rounded-ds-md bg-amber-500/20 text-amber-800 flex items-center justify-center shrink-0">
                     <i data-lucide="plus" class="w-4 h-4"></i>
                 </div>
                 <div class="truncate">
@@ -528,7 +528,7 @@ function renderFocusStageTabs() {
             : 'bg-white border-[#e7dfd3] text-stone-600 hover:bg-stone-50';
         return `<button type="button" data-stage-tab="${s.stage}" title="${escapeHtml(s.label)}"
             aria-label="Stage ${s.stage}: ${escapeHtml(s.label)}" aria-pressed="${active}"
-            class="shrink-0 min-w-[2rem] h-8 px-2 rounded-lg border text-xs font-bold transition ${cls}">${s.stage}</button>`;
+            class="shrink-0 min-w-[2rem] h-8 px-2 rounded-ds-md border text-xs font-bold transition ${cls}">${s.stage}</button>`;
     }).join('');
 
     tabs.innerHTML = `<span class="text-[11px] font-bold text-stone-500 mr-1.5 shrink-0">Stage</span>${buttons}`;
@@ -553,7 +553,7 @@ function currentFocusStage() {
 // honest about it.
 const FOCUS_CARD_COOLDOWN_MS = 1000;
 
-const FOCUS_FIELD_CLASS = 'w-full bg-[#fcfaf6] border border-[#e7dfd3] rounded-lg px-2.5 py-1.5 text-xs text-stone-900 focus:outline-none focus:border-amber-500';
+const FOCUS_FIELD_CLASS = 'w-full bg-[#fcfaf6] border border-[#e7dfd3] rounded-ds-md px-2.5 py-1.5 text-xs text-stone-900 focus:outline-none focus:border-amber-500';
 
 function focusTopicKey(stageIndex, topic) {
     return `${stageIndex}|${topic}`;
@@ -563,7 +563,7 @@ function focusSpinnerHTML() {
     return '<span class="inline-block animate-spin rounded-full h-3.5 w-3.5 border-2 border-amber-600 border-t-transparent" role="status" aria-label="Working"></span>';
 }
 
-const FOCUS_ICON_BUTTON = 'p-1 rounded-lg transition shrink-0 disabled:opacity-40 disabled:cursor-not-allowed';
+const FOCUS_ICON_BUTTON = 'p-1 rounded-ds-md transition shrink-0 disabled:opacity-40 disabled:cursor-not-allowed';
 
 // The one inline editor open at a time: adding a question, editing one, or renaming a topic.
 //   { kind: 'add' | 'edit' | 'rename', stage, topic, cardId, draft: { topic, question, answer } }
@@ -579,11 +579,11 @@ function renderFocusEditorButtons(kind) {
     return `
         <div class="flex items-center gap-2">
             <button type="button" data-editor-submit ${busy ? 'disabled' : ''}
-                class="btn-primary px-3 py-1.5 font-extrabold rounded-lg text-[11px] transition flex items-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed">
+                class="btn-primary px-3 py-1.5 font-extrabold rounded-ds-md text-[11px] transition flex items-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed">
                 ${focusState.busyTarget === kind ? focusSpinnerHTML() : ''}<span>${label}</span>
             </button>
             <button type="button" data-editor-cancel ${busy ? 'disabled' : ''}
-                class="px-3 py-1.5 rounded-lg text-[11px] font-bold text-stone-600 hover:bg-stone-100 transition disabled:opacity-40">
+                class="px-3 py-1.5 rounded-ds-md text-[11px] font-bold text-stone-600 hover:bg-stone-100 transition disabled:opacity-40">
                 Cancel
             </button>
         </div>`;
@@ -683,7 +683,7 @@ function renderFocusTopicHeader(t, i, expanded) {
                     <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
                 </button>
                 <button type="button" data-topic-toggle="${i}" aria-expanded="${expanded}"
-                    class="flex items-center gap-1 text-[10px] text-stone-500 font-medium rounded-lg px-1.5 py-1 hover:bg-stone-100 transition">
+                    class="flex items-center gap-1 text-[10px] text-stone-500 font-medium rounded-ds-md px-1.5 py-1 hover:bg-stone-100 transition">
                     <span>${t.count} ${t.count === 1 ? 'question' : 'questions'}</span>
                     <i data-lucide="chevron-down" class="w-3.5 h-3.5 transition-transform ${expanded ? 'rotate-180' : ''}"></i>
                 </button>
@@ -704,7 +704,7 @@ function renderFocusTopics() {
                 <div class="pt-1.5">${renderFocusAddControl(stage.stage, t.topic)}</div>
             </div>` : '';
         return `
-        <div class="rounded-xl border border-[#e7dfd3]">
+        <div class="rounded-ds-lg border border-[#e7dfd3]">
             ${renderFocusTopicHeader(t, i, expanded)}
             ${body}
         </div>`;
@@ -1044,7 +1044,7 @@ function renderFocusStatus() {
         cls = 'bg-emerald-50 border-emerald-200 text-emerald-800';
         text = `${selected} questions selected. The ${target} best-fitting will be used each session.`;
     }
-    // Swaps only the tint, leaving the box's shape (text-xs font-semibold rounded-xl px-3
+    // Swaps only the tint, leaving the box's shape (text-xs font-semibold rounded-ds-lg px-3
     // py-2 border) on the element where the template put it. Rewriting .className here
     // meant that shape was declared twice and only one copy was ever applied.
     el.classList.remove(
@@ -1199,14 +1199,14 @@ function renderVideoCard(video, quizzes, goals) {
         isPreviewState = true;
         // The primary action on a preview: it takes the room, and Watch & Notes shrinks to an icon.
         actionControlsHTML = `
-            <button data-video-action="import-preview" data-video-id="${video.id}" class="btn-primary w-full py-2 font-extrabold rounded-xl text-xs transition flex items-center justify-center space-x-1.5 min-h-[38px]">
+            <button data-video-action="import-preview" data-video-id="${video.id}" class="btn-primary w-full py-2 font-extrabold rounded-ds-lg text-xs transition flex items-center justify-center space-x-1.5 min-h-[38px]">
                  <i data-lucide="plus-circle" class="w-3.5 h-3.5 shrink-0"></i>
                  <span class="leading-tight">Import to Goal</span>
             </button>
         `;
     } else if (isLinkMaterial) {
         actionControlsHTML = `
-            <button data-video-action="open-link" data-video-id="${video.id}" class="w-full px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900 font-extrabold rounded-xl border border-stone-200 text-xs transition flex items-center justify-center space-x-2 min-h-[38px]" title="Open ${escapeHtml(video.source_url || 'link')} in a new tab">
+            <button data-video-action="open-link" data-video-id="${video.id}" class="w-full px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900 font-extrabold rounded-ds-lg border border-stone-200 text-xs transition flex items-center justify-center space-x-2 min-h-[38px]" title="Open ${escapeHtml(video.source_url || 'link')} in a new tab">
                  <i data-lucide="external-link" class="w-3.5 h-3.5 shrink-0"></i>
                  <span class="leading-tight">Open link</span>
             </button>
@@ -1214,21 +1214,21 @@ function renderVideoCard(video, quizzes, goals) {
     } else if (isSaved) {
         isNormalState = true;
         actionControlsHTML = `
-            <button data-video-action="generate-saved" data-video-id="${video.id}" class="w-full px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 font-extrabold rounded-xl border border-amber-300 text-xs transition flex items-center justify-center space-x-1.5 h-[38px]" title="Create a summary and quiz from this material">
+            <button data-video-action="generate-saved" data-video-id="${video.id}" class="w-full px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 font-extrabold rounded-ds-lg border border-amber-300 text-xs transition flex items-center justify-center space-x-1.5 h-[38px]" title="Create a summary and quiz from this material">
                  <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-600"></i>
                  <span>Generate quiz</span>
             </button>
         `;
     } else if (video.status === 'processing') {
         actionControlsHTML = `
-            <div class="w-full py-2 bg-amber-100 border border-amber-300 text-amber-900 font-bold rounded-xl text-xs flex items-center justify-center space-x-2 h-[38px]">
+            <div class="w-full py-2 bg-amber-100 border border-amber-300 text-amber-900 font-bold rounded-ds-lg text-xs flex items-center justify-center space-x-2 h-[38px]">
                 <div class="animate-spin rounded-full h-4 w-4 border-2 border-amber-600 border-t-transparent"></div>
                 <span>Importing...</span>
             </div>
         `;
     } else if (video.status === 'failed') {
         actionControlsHTML = `
-            <button data-video-action="retry" data-video-id="${video.id}" class="w-full py-2 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 font-bold rounded-xl text-xs transition flex items-center justify-center space-x-1.5 h-[38px]" title="Retry Video Import: ${escapeHtml(video.status_error) || 'Import Failed'}">
+            <button data-video-action="retry" data-video-id="${video.id}" class="w-full py-2 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 font-bold rounded-ds-lg text-xs transition flex items-center justify-center space-x-1.5 h-[38px]" title="Retry Video Import: ${escapeHtml(video.status_error) || 'Import Failed'}">
                  <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
                  <span>Retry</span>
             </button>
@@ -1237,7 +1237,7 @@ function renderVideoCard(video, quizzes, goals) {
         isEatenState = true;
         const levelToUse = video.importance_rating || video.importance_level || 3;
         actionControlsHTML = `
-            <button data-win-back="${video.id}" data-level="${levelToUse}" class="btn-win-back w-full px-3 py-2 font-extrabold rounded-xl text-xs transition flex items-center justify-center gap-2 h-[38px]" title="Finish this quiz to put it back on your review schedule">
+            <button data-win-back="${video.id}" data-level="${levelToUse}" class="btn-win-back w-full px-3 py-2 font-extrabold rounded-ds-lg text-xs transition flex items-center justify-center gap-2 h-[38px]" title="Finish this quiz to put it back on your review schedule">
                  <i data-lucide="swords" class="hidden sm:block w-3.5 h-3.5 shrink-0"></i>
                  <span class="whitespace-nowrap">Win it back</span>
             </button>
@@ -1246,7 +1246,7 @@ function renderVideoCard(video, quizzes, goals) {
         isNormalState = true;
         const levelToUse = video.importance_rating || video.importance_level || 3;
         actionControlsHTML = `
-            <button data-video-action="study" data-video-id="${video.id}" data-level="${levelToUse}" class="w-full px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900 font-extrabold rounded-xl border border-stone-200 text-xs transition flex items-center justify-center space-x-2 h-[38px]">
+            <button data-video-action="study" data-video-id="${video.id}" data-level="${levelToUse}" class="w-full px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900 font-extrabold rounded-ds-lg border border-stone-200 text-xs transition flex items-center justify-center space-x-2 h-[38px]">
                  <i data-lucide="brain" class="w-3.5 h-3.5"></i>
                  <span>Quiz</span>
             </button>
@@ -1272,7 +1272,7 @@ function renderVideoCard(video, quizzes, goals) {
     const isWatchlist = video.is_watchlist === 1 || video.is_watchlist === true;
 
     const failedNoticeHTML = video.status === 'failed' ? `
-        <div class="p-2.5 bg-red-50 border border-red-100 rounded-xl flex items-start space-x-2 text-xs text-red-700" title="${escapeHtml(video.status_error) || 'Unknown Error'}">
+        <div class="p-2.5 bg-red-50 border border-red-100 rounded-ds-lg flex items-start space-x-2 text-xs text-red-700" title="${escapeHtml(video.status_error) || 'Unknown Error'}">
             <i data-lucide="alert-triangle" class="w-4 h-4 shrink-0 text-red-500 mt-0.5"></i>
             <div class="min-w-0 flex-1">
                 <p class="font-semibold text-red-800 text-xs">Import Failed</p>
@@ -1309,7 +1309,7 @@ function renderVideoCard(video, quizzes, goals) {
                 ${hasNotes ? `
                 <div class="pt-2 space-y-1">
                     <h5 class="font-semibold text-stone-500 text-[11px]">My Notes</h5>
-                    <div class="bg-stone-50 border border-stone-200 p-2.5 rounded-xl text-stone-700 leading-relaxed break-words prose prose-sm prose-stone max-w-none">
+                    <div class="bg-stone-50 border border-stone-200 p-2.5 rounded-ds-lg text-stone-700 leading-relaxed break-words prose prose-sm prose-stone max-w-none">
                         ${renderMarkdownSafe(video.custom_notes)}
                     </div>
                 </div>
@@ -1330,38 +1330,38 @@ function renderVideoCard(video, quizzes, goals) {
     // A link has one action (open it), so it gets the single-action layout and no Watch & Notes.
 
     const watchNotesButtonHTML = isPreviewState ? `
-        <button data-video-action="watch-notes" data-video-id="${video.id}" class="p-2 bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900 rounded-xl border border-stone-200 transition flex items-center justify-center h-[38px] w-[38px] shrink-0" title="Watch &amp; Notes: watch the video and take notes side by side" aria-label="Watch and take notes">
+        <button data-video-action="watch-notes" data-video-id="${video.id}" class="p-2 bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900 rounded-ds-lg border border-stone-200 transition flex items-center justify-center h-[38px] w-[38px] shrink-0" title="Watch &amp; Notes: watch the video and take notes side by side" aria-label="Watch and take notes">
             <i data-lucide="book-open" class="w-4 h-4"></i>
         </button>
     ` : isNormalState ? `
-        <button data-video-action="watch-notes" data-video-id="${video.id}" class="btn-primary w-full py-2 font-extrabold rounded-xl text-xs transition flex items-center justify-center space-x-2 min-h-[38px]" title="Watch the video and take notes side by side">
+        <button data-video-action="watch-notes" data-video-id="${video.id}" class="btn-primary w-full py-2 font-extrabold rounded-ds-lg text-xs transition flex items-center justify-center space-x-2 min-h-[38px]" title="Watch the video and take notes side by side">
             <i data-lucide="book-open" class="w-3.5 h-3.5 shrink-0"></i>
             <span class="leading-tight">Watch &amp; Notes</span>
         </button>
     ` : isEatenState ? `
-        <button data-open-studio="${video.id}" class="w-full px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900 font-extrabold rounded-xl border border-stone-200 text-xs transition flex items-center justify-center gap-2 min-h-[38px]" title="Open Study Studio: watch the video and take notes side by side">
+        <button data-open-studio="${video.id}" class="w-full px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900 font-extrabold rounded-ds-lg border border-stone-200 text-xs transition flex items-center justify-center gap-2 min-h-[38px]" title="Open Study Studio: watch the video and take notes side by side">
             <i data-lucide="book-open" class="hidden sm:block w-3.5 h-3.5 shrink-0"></i>
             <span class="leading-tight whitespace-nowrap">Watch &amp; Notes</span>
         </button>
     ` : `
-        <button data-video-action="watch-notes" data-video-id="${video.id}" class="${isLinkMaterial ? 'btn-primary w-full py-2 ' : 'px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900 border border-stone-200 '}font-extrabold rounded-xl text-xs transition flex items-center justify-center space-x-2 min-h-[38px] shrink-0" title="${isLinkMaterial ? 'Open the Study Studio: the page and your notes side by side' : 'Open Study Studio: watch the video and take notes side by side'}">
+        <button data-video-action="watch-notes" data-video-id="${video.id}" class="${isLinkMaterial ? 'btn-primary w-full py-2 ' : 'px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900 border border-stone-200 '}font-extrabold rounded-ds-lg text-xs transition flex items-center justify-center space-x-2 min-h-[38px] shrink-0" title="${isLinkMaterial ? 'Open the Study Studio: the page and your notes side by side' : 'Open Study Studio: watch the video and take notes side by side'}">
             <i data-lucide="${isLinkMaterial ? 'book-open' : 'book-open'}" class="w-3.5 h-3.5 shrink-0"></i>
             <span class="leading-tight">${isLinkMaterial ? 'Study Studio' : 'Watch &amp; Notes'}</span>
         </button>
     `;
 
     const bookmarkButtonHTML = isWatchlist ? `
-        <button data-video-action="toggle-watchlist" data-video-id="${video.id}" class="p-2 bg-amber-50 hover:bg-amber-100 text-amber-600 hover:text-amber-700 rounded-xl border border-amber-200 transition flex items-center justify-center h-[38px] w-[38px] shrink-0" title="Remove from Study Queue">
+        <button data-video-action="toggle-watchlist" data-video-id="${video.id}" class="p-2 bg-amber-50 hover:bg-amber-100 text-amber-600 hover:text-amber-700 rounded-ds-lg border border-amber-200 transition flex items-center justify-center h-[38px] w-[38px] shrink-0" title="Remove from Study Queue">
             <i data-lucide="bookmark" class="w-4 h-4 fill-amber-500 text-amber-500"></i>
         </button>
     ` : '';
 
     const trailingButtonHTML = isTemp ? `
-        <button data-video-action="discard-preview" data-video-id="${video.id}" class="p-2 bg-stone-100 hover:bg-red-100 text-stone-500 hover:text-red-700 rounded-xl border border-stone-200 transition flex items-center justify-center h-[38px] w-[38px] shrink-0" title="Discard Preview">
+        <button data-video-action="discard-preview" data-video-id="${video.id}" class="p-2 bg-stone-100 hover:bg-red-100 text-stone-500 hover:text-red-700 rounded-ds-lg border border-stone-200 transition flex items-center justify-center h-[38px] w-[38px] shrink-0" title="Discard Preview">
             <i data-lucide="x" class="w-4 h-4"></i>
         </button>
     ` : `
-        <button data-video-action="menu" data-video-id="${video.id}" data-menuid="${video.id}" class="p-2 bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900 rounded-xl border border-stone-200 transition flex items-center justify-center h-[38px] w-[38px] shrink-0" title="Material Options">
+        <button data-video-action="menu" data-video-id="${video.id}" data-menuid="${video.id}" class="p-2 bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900 rounded-ds-lg border border-stone-200 transition flex items-center justify-center h-[38px] w-[38px] shrink-0" title="Material Options">
             <i data-lucide="more-vertical" class="w-4 h-4"></i>
         </button>
     `;
@@ -1400,7 +1400,7 @@ function renderVideoCard(video, quizzes, goals) {
     const actionRowMarginClass = hasDetails ? 'mt-2' : 'mt-3';
 
     return `
-        <div id="video-card-${video.id}" class="${isEaten ? 'eaten-card' : 'bg-white border border-[#e7dfd3]'} rounded-2xl p-4 flex flex-col justify-between shadow-sm relative">
+        <div id="video-card-${video.id}" class="${isEaten ? 'eaten-card' : 'bg-white border border-[#e7dfd3]'} rounded-ds-xl p-4 flex flex-col justify-between shadow-sm relative">
             <div class="flex space-x-3 items-start">
                 ${mediaPreviewHTML}
                 <div class="min-w-0 flex-grow">
@@ -1565,7 +1565,7 @@ async function discardPreviewVideo(id) {
         title: "Discard Draft Preview?",
         message: promptMessage,
         confirmText: "Discard Draft",
-        confirmClass: "bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-xs shadow-sm transition",
+        confirmClass: "bg-red-600 hover:bg-red-700 text-white font-bold rounded-ds-lg text-xs shadow-sm transition",
         icon: "trash-2"
     });
 
@@ -1608,7 +1608,7 @@ async function deleteVideo(id) {
         title: "Delete Material?",
         message: "Are you sure you want to permanently delete this video? All historical quiz data will be deleted.",
         confirmText: "Delete Material",
-        confirmClass: "bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-xs shadow-sm transition",
+        confirmClass: "bg-red-600 hover:bg-red-700 text-white font-bold rounded-ds-lg text-xs shadow-sm transition",
         icon: "trash-2"
     });
     if (confirmed) {
@@ -1660,7 +1660,7 @@ async function retryVideoImport(id) {
     const actionBtnContainer = document.getElementById(`action-btn-container-${id}`);
     if (actionBtnContainer) {
         actionBtnContainer.innerHTML = `
-            <div class="w-full py-2 bg-amber-100 border border-amber-300 text-amber-900 font-bold rounded-xl text-xs flex items-center justify-center space-x-2 h-[38px] opacity-90">
+            <div class="w-full py-2 bg-amber-100 border border-amber-300 text-amber-900 font-bold rounded-ds-lg text-xs flex items-center justify-center space-x-2 h-[38px] opacity-90">
                 <div class="animate-spin rounded-full h-4 w-4 border-2 border-amber-600 border-t-transparent"></div>
                 <span>Importing...</span>
             </div>
@@ -1748,7 +1748,7 @@ async function showFactCheck(id) {
 
             if (disputed.length === 0 && verified.length === 0) {
                 claimsContainer.innerHTML = `
-                    <div class="text-center py-8 text-stone-500 bg-stone-50 border border-dashed border-stone-200 rounded-2xl">
+                    <div class="text-center py-8 text-stone-500 bg-stone-50 border border-dashed border-stone-200 rounded-ds-xl">
                         <i data-lucide="shield-check" class="w-8 h-8 text-emerald-500 mx-auto mb-2"></i>
                         <p class="text-sm font-semibold text-stone-700">No Specific Claims Flagged</p>
                         <p class="text-xs text-stone-400 mt-1 max-w-sm mx-auto">No distinct factual contradictions or verified key claims were extracted for this content.</p>
@@ -1769,9 +1769,9 @@ async function showFactCheck(id) {
                     ` : '';
 
                     claimsContainer.innerHTML += `
-                        <div class="p-4 bg-stone-50 border border-stone-200 rounded-2xl space-y-3 shadow-sm">
+                        <div class="p-4 bg-stone-50 border border-stone-200 rounded-ds-xl space-y-3 shadow-sm">
                             <div class="flex items-center justify-between">
-                                <span class="text-xs font-bold ${badgeColor} px-2.5 py-0.5 rounded-md">${badgeLabel}</span>
+                                <span class="text-xs font-bold ${badgeColor} px-2.5 py-0.5 rounded-ds-sm">${badgeLabel}</span>
                             </div>
                             <div class="space-y-1">
                                 <span class="text-[11px] font-bold text-stone-500 block">Claim made in video:</span>
@@ -1788,9 +1788,9 @@ async function showFactCheck(id) {
 
                 verified.forEach(claim => {
                     claimsContainer.innerHTML += `
-                        <div class="p-4 bg-stone-50 border border-stone-200 rounded-2xl space-y-3 shadow-sm">
+                        <div class="p-4 bg-stone-50 border border-stone-200 rounded-ds-xl space-y-3 shadow-sm">
                             <div class="flex items-center justify-between">
-                                <span class="text-xs font-bold bg-emerald-500/10 text-emerald-700 border border-emerald-500/20 px-2.5 py-0.5 rounded-md uppercase tracking-wider">Verified</span>
+                                <span class="text-xs font-bold bg-emerald-500/10 text-emerald-700 border border-emerald-500/20 px-2.5 py-0.5 rounded-ds-sm uppercase tracking-wider">Verified</span>
                             </div>
                             <div class="space-y-1">
                                 <span class="text-[11px] font-bold text-stone-500 block">Claim made in video:</span>
@@ -1981,7 +1981,7 @@ function renderVideoStatsAttempts(container, attempts) {
     if (!container) return;
     if (!attempts || attempts.length === 0) {
         container.innerHTML = `
-            <div class="text-center py-8 bg-stone-50 rounded-2xl border border-dashed border-stone-200 space-y-2">
+            <div class="text-center py-8 bg-stone-50 rounded-ds-xl border border-dashed border-stone-200 space-y-2">
                 <i data-lucide="history" class="w-8 h-8 text-stone-400 mx-auto"></i>
                 <p class="text-xs font-semibold text-stone-500">No Quiz Attempts Yet</p>
                 <p class="text-[10px] text-stone-500 max-w-xs mx-auto">Study this material to complete active recall practice and track your history here.</p>
@@ -2048,7 +2048,7 @@ function renderVideoStatsAttempts(container, attempts) {
                 : `<span class="text-[9px] font-bold px-2 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 uppercase tracking-wider">Fail (+3 XP)</span>`;
                 
             qItemsHTML += `
-                <div class="p-3 bg-stone-50 border border-stone-200 rounded-xl space-y-2 text-xs">
+                <div class="p-3 bg-stone-50 border border-stone-200 rounded-ds-lg space-y-2 text-xs">
                     <div class="flex justify-between items-center">
                         <span class="text-[11px] font-bold text-stone-500">Question ${(att.question_index ?? 0) + 1}</span>
                         ${gradeBadge}
@@ -2057,15 +2057,15 @@ function renderVideoStatsAttempts(container, attempts) {
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] pt-1">
                         <div>
                             <span class="text-stone-500 block text-[11px] font-bold mb-0.5">Your Answer:</span>
-                            <div class="text-stone-500 font-mono bg-stone-50 p-2 rounded-lg border border-stone-200 break-words whitespace-pre-wrap">${att.given_answer ? escapeHtml(att.given_answer) : '<span class="text-stone-400 italic">No answer recorded</span>'}</div>
+                            <div class="text-stone-500 font-mono bg-stone-50 p-2 rounded-ds-md border border-stone-200 break-words whitespace-pre-wrap">${att.given_answer ? escapeHtml(att.given_answer) : '<span class="text-stone-400 italic">No answer recorded</span>'}</div>
                         </div>
                         <div>
                             <span class="text-emerald-500 block text-[11px] font-bold mb-0.5">Correct Answer:</span>
-                            <div class="text-emerald-400 font-mono bg-stone-50 p-2 rounded-lg border border-stone-200 break-words whitespace-pre-wrap">${escapeHtml(att.correct_answer || '')}</div>
+                            <div class="text-emerald-400 font-mono bg-stone-50 p-2 rounded-ds-md border border-stone-200 break-words whitespace-pre-wrap">${escapeHtml(att.correct_answer || '')}</div>
                         </div>
                     </div>
                     ${att.explanation ? `
-                        <div class="text-[11px] text-stone-500 bg-stone-50 p-2 rounded-lg border border-stone-200">
+                        <div class="text-[11px] text-stone-500 bg-stone-50 p-2 rounded-ds-md border border-stone-200">
                             <span class="font-bold text-amber-700">Explanation:</span> ${escapeHtml(att.explanation)}
                         </div>
                     ` : ''}
@@ -2074,7 +2074,7 @@ function renderVideoStatsAttempts(container, attempts) {
         });
         
         container.innerHTML += `
-            <div class="bg-stone-50 border border-stone-200 rounded-xl overflow-hidden shadow-sm">
+            <div class="bg-stone-50 border border-stone-200 rounded-ds-lg overflow-hidden shadow-sm">
                 <button type="button" data-vstat-session="${session.id}" class="w-full p-3 flex justify-between items-center text-left hover:bg-stone-100 transition focus:outline-none">
                     <div class="min-w-0 flex-grow pr-2 space-y-1">
                         <div class="flex items-center space-x-2">

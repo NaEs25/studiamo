@@ -30,10 +30,10 @@
 
     <!-- Main Content Container -->
     <main class="my-auto py-12 px-4 w-full">
-        <div class="max-w-md mx-auto bg-paperCard border border-paperBorder shadow-xl rounded-3xl p-7 sm:p-9 space-y-6">
+        <div class="max-w-md mx-auto bg-paperCard border border-paperBorder shadow-xl rounded-ds-xl p-7 sm:p-9 space-y-6">
 
             <div class="text-center space-y-2">
-                <div class="w-14 h-14 rounded-2xl bg-amber-100 text-amberPrimary flex items-center justify-center mx-auto mb-1">
+                <div class="w-14 h-14 rounded-ds-xl bg-amber-100 text-amberPrimary flex items-center justify-center mx-auto mb-1">
                     <i data-lucide="clock" class="w-7 h-7"></i>
                 </div>
                 <h1 class="text-2xl font-extrabold text-stoneText tracking-tight">You're on the waitlist</h1>
@@ -45,10 +45,10 @@
 
             <div id="loading-state" class="text-center text-xs text-stoneMuted py-4">Loading your referral info…</div>
 
-            <div id="error-state" class="hidden text-center text-xs text-red-700 bg-red-500/10 border border-red-500/20 rounded-xl p-3.5"></div>
+            <div id="error-state" class="hidden text-center text-xs text-red-700 bg-red-500/10 border border-red-500/20 rounded-ds-lg p-3.5"></div>
 
             <div id="ready-state" class="hidden space-y-6">
-                <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-center">
+                <div class="bg-amber-50 border border-amber-200 rounded-ds-xl p-4 text-center">
                     <p class="text-sm font-bold text-stoneText">
                         You've referred <span id="referral-count">0</span> of 5 friends
                     </p>
@@ -58,9 +58,9 @@
                     <label class="text-[11px] font-bold text-stoneMuted">Your Referral Link</label>
                     <div class="flex items-center gap-2">
                         <input id="referral-link" type="text" readonly
-                            class="flex-1 min-w-0 text-xs font-medium bg-stone-50 border border-paperBorder rounded-xl px-3 py-2.5 text-stoneText truncate" />
+                            class="flex-1 min-w-0 text-xs font-medium bg-stone-50 border border-paperBorder rounded-ds-lg px-3 py-2.5 text-stoneText truncate" />
                         <button id="copy-link-btn"
-                            class="shrink-0 btn-primary py-2.5 px-3.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
+                            class="shrink-0 btn-primary py-2.5 px-3.5 rounded-ds-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
                             <i data-lucide="copy" class="w-3.5 h-3.5"></i>
                             <span id="copy-link-label">Copy</span>
                         </button>
@@ -70,9 +70,9 @@
                 <div class="space-y-2">
                     <label class="text-[11px] font-bold text-stoneMuted">Share Message</label>
                     <div class="flex items-start gap-2">
-                        <p id="share-message" class="flex-1 text-xs text-stoneMuted bg-stone-50 border border-paperBorder rounded-xl px-3 py-2.5 leading-relaxed"></p>
+                        <p id="share-message" class="flex-1 text-xs text-stoneMuted bg-stone-50 border border-paperBorder rounded-ds-lg px-3 py-2.5 leading-relaxed"></p>
                         <button id="copy-message-btn"
-                            class="shrink-0 py-2.5 px-3.5 bg-white hover:bg-stone-50 border border-paperBorder text-stoneText rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
+                            class="shrink-0 py-2.5 px-3.5 bg-white hover:bg-stone-50 border border-paperBorder text-stoneText rounded-ds-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
                             <i data-lucide="copy" class="w-3.5 h-3.5"></i>
                             <span id="copy-message-label">Copy</span>
                         </button>

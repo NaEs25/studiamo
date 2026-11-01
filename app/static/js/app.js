@@ -131,7 +131,7 @@ async function loadDashboard() {
                         title: 'View Video in Goals'
                     });
                     return `
-                        <div class="flex justify-between items-center bg-stone-100 border border-stone-200 rounded-xl p-3 text-xs gap-3">
+                        <div class="flex justify-between items-center bg-stone-100 border border-stone-200 rounded-ds-lg p-3 text-xs gap-3">
                             <div class="flex items-center space-x-3 min-w-0 ${vidId ? 'cursor-pointer' : ''}" ${clickAction}>
                                 ${thumbHTML}
                                 <span class="block truncate font-semibold text-stone-900 hover:text-amber-300 transition max-w-[240px]">${escapeHtml(item.title)}</span>
@@ -343,13 +343,13 @@ async function loadDailyRecommendations() {
         if (refreshBtn) refreshBtn.classList.toggle('hidden', !!(data && data.requires_plan));
         if (data && data.requires_plan) {
             grid.innerHTML = `
-                <div class="col-span-full text-center py-8 px-6 bg-white rounded-2xl border border-dashed border-amber-500/30 shadow-sm space-y-3">
-                    <div class="w-14 h-14 bg-amber-500/10 border border-amber-500/30 text-amber-600 rounded-2xl flex items-center justify-center mx-auto">
+                <div class="col-span-full text-center py-8 px-6 bg-white rounded-ds-xl border border-dashed border-amber-500/30 shadow-sm space-y-3">
+                    <div class="w-14 h-14 bg-amber-500/10 border border-amber-500/30 text-amber-600 rounded-ds-xl flex items-center justify-center mx-auto">
                         <i data-lucide="sparkles" class="w-7 h-7"></i>
                     </div>
                     <h3 class="text-lg font-extrabold text-stone-900 tracking-tight">Video picks show up here</h3>
                     <p class="text-xs text-stone-500 max-w-xs mx-auto leading-relaxed">Every day Studiamo suggests videos that fit your learning goals. Included with every plan.</p>
-                    <button type="button" data-open-plans class="btn-primary px-6 py-2.5 font-extrabold text-xs rounded-xl inline-flex items-center space-x-2">
+                    <button type="button" data-open-plans class="btn-primary px-6 py-2.5 font-extrabold text-xs rounded-ds-lg inline-flex items-center space-x-2">
                         <span>See plans</span>
                         <i data-lucide="arrow-right" class="w-4 h-4"></i>
                     </button>
@@ -367,7 +367,7 @@ async function loadDailyRecommendations() {
                 ? 'To enable recommendations, add a YouTube Data API v3 key (see the self-hosting setup guide for details).'
                 : 'Create learning goals to receive curated daily video tutorials tailored to your study path.';
             grid.innerHTML = `
-                <div class="col-span-full p-8 text-center bg-white border border-stone-200 rounded-2xl shadow-sm">
+                <div class="col-span-full p-8 text-center bg-white border border-stone-200 rounded-ds-xl shadow-sm">
                     <i data-lucide="sparkles" class="w-8 h-8 text-amber-500 mx-auto mb-2"></i>
                     <h4 class="font-bold text-sm text-stone-900">Daily AI Recommendations</h4>
                     <p class="text-xs text-stone-500 mt-1">${message}</p>
@@ -394,7 +394,7 @@ async function loadDailyRecommendations() {
             }
 
             return `
-                <div class="bg-white border border-stone-200/90 rounded-2xl overflow-hidden flex flex-col hover:border-amber-400 hover:shadow-md transition-all duration-200 relative group select-none"
+                <div class="bg-white border border-stone-200/90 rounded-ds-xl overflow-hidden flex flex-col hover:border-amber-400 hover:shadow-md transition-all duration-200 relative group select-none"
                      data-rec-yt="${escapeHtml(ytId)}" data-rec-title="${escapeHtml(rec.title || '')}"
                      data-rec-goal="${escapeHtml(rec.goal_id || '')}" data-rec-pos="${lastPos}">
                     <!-- Inline Playable Media Wrapper -->
@@ -467,20 +467,20 @@ async function loadDailyRecommendations() {
                         <!-- Action Bar -->
                         <div id="rec-actions-${escapeHtml(ytId)}" class="hidden flex items-center space-x-2">
                             ${isQueued ? `
-                                <button id="btn-queue-${escapeHtml(ytId)}" data-rec-action="view-queue" data-rec-video="${escapeHtml(draftVideoId)}" class="btn-primary flex-grow py-2 px-3 font-extrabold rounded-xl text-xs transition flex items-center justify-center space-x-1.5 active:scale-[0.98]">
+                                <button id="btn-queue-${escapeHtml(ytId)}" data-rec-action="view-queue" data-rec-video="${escapeHtml(draftVideoId)}" class="btn-primary flex-grow py-2 px-3 font-extrabold rounded-ds-lg text-xs transition flex items-center justify-center space-x-1.5 active:scale-[0.98]">
                                     <i data-lucide="bookmark" class="w-3.5 h-3.5 fill-current"></i>
                                     <span>View in Queue</span>
                                 </button>
                             ` : `
-                                <button id="btn-queue-${escapeHtml(ytId)}" data-rec-action="queue" class="btn-primary flex-grow py-2 px-3 font-extrabold rounded-xl text-xs transition flex items-center justify-center space-x-1.5 active:scale-[0.98]">
+                                <button id="btn-queue-${escapeHtml(ytId)}" data-rec-action="queue" class="btn-primary flex-grow py-2 px-3 font-extrabold rounded-ds-lg text-xs transition flex items-center justify-center space-x-1.5 active:scale-[0.98]">
                                     <i data-lucide="bookmark" class="w-3.5 h-3.5"></i>
                                     <span>Add to Queue</span>
                                 </button>
                             `}
-                            <button data-rec-action="studio" class="p-2 bg-stone-100 hover:bg-amber-100 text-stone-700 hover:text-amber-900 border border-stone-200 rounded-xl transition flex items-center justify-center min-w-[38px] h-[38px] shadow-sm" title="Open Study Studio (Notes)">
+                            <button data-rec-action="studio" class="p-2 bg-stone-100 hover:bg-amber-100 text-stone-700 hover:text-amber-900 border border-stone-200 rounded-ds-lg transition flex items-center justify-center min-w-[38px] h-[38px] shadow-sm" title="Open Study Studio (Notes)">
                                 <i data-lucide="book-open" class="w-4 h-4"></i>
                             </button>
-                            <button data-rec-action="dismiss" class="p-2 bg-stone-100 hover:bg-red-100 text-stone-500 hover:text-red-700 border border-stone-200 rounded-xl transition flex items-center justify-center min-w-[38px] h-[38px] shadow-sm" title="Dismiss">
+                            <button data-rec-action="dismiss" class="p-2 bg-stone-100 hover:bg-red-100 text-stone-500 hover:text-red-700 border border-stone-200 rounded-ds-lg transition flex items-center justify-center min-w-[38px] h-[38px] shadow-sm" title="Dismiss">
                                 <i data-lucide="x" class="w-4 h-4"></i>
                             </button>
                         </div>
@@ -606,7 +606,7 @@ async function dismissRecommendation(recId) {
                 title: 'Remove this video?',
                 message: 'You have notes on this video. Removing it deletes the notes too.',
                 confirmText: 'Remove',
-                confirmClass: 'bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-xs shadow-sm transition',
+                confirmClass: 'bg-red-600 hover:bg-red-700 text-white font-bold rounded-ds-lg text-xs shadow-sm transition',
                 icon: 'trash-2'
             });
             if (!confirmed) return;
@@ -1230,7 +1230,7 @@ function renderDueCard(item) {
     const thumbHTML = renderMediaThumbHTML(item.video, { sizeClasses: 'w-12 h-8', title: 'View Video in Goals' });
 
     return `
-        <div class="due-card due-card-${station} rounded-xl p-3 flex flex-col justify-between space-y-2.5 shadow-sm">
+        <div class="due-card due-card-${station} rounded-ds-lg p-3 flex flex-col justify-between space-y-2.5 shadow-sm">
             <div class="flex space-x-2.5 items-center min-w-0">
                 <a href="${titleAction}" class="shrink-0">${thumbHTML}</a>
                 <div class="min-w-0 flex-grow">
@@ -1239,12 +1239,12 @@ function renderDueCard(item) {
                 </div>
             </div>
             <div class="flex items-center space-x-2 pt-1">
-                <button type="button" data-start-quiz="${q.id}" data-video="${videoId}" data-level="${level}" class="${startClass} flex-grow py-1.5 font-extrabold rounded-lg text-xs transition flex items-center justify-center space-x-1 h-[32px]">
+                <button type="button" data-start-quiz="${q.id}" data-video="${videoId}" data-level="${level}" class="${startClass} flex-grow py-1.5 font-extrabold rounded-ds-md text-xs transition flex items-center justify-center space-x-1 h-[32px]">
                     <i data-lucide="play" class="w-3 h-3"></i>
                     <span>${startLabel}</span>
                 </button>
                 ${station === 'today' ? `
-                <button type="button" data-plus-day="${q.id}" class="py-1.5 px-2.5 bg-[#f3ebd9] hover:bg-[#e7dfd3] border border-[#e7dfd3] text-stone-700 hover:text-stone-900 font-semibold rounded-lg text-xs transition flex items-center justify-center space-x-1 h-[32px]" title="Move to tomorrow" aria-label="Move this quiz to tomorrow">
+                <button type="button" data-plus-day="${q.id}" class="py-1.5 px-2.5 bg-[#f3ebd9] hover:bg-[#e7dfd3] border border-[#e7dfd3] text-stone-700 hover:text-stone-900 font-semibold rounded-ds-md text-xs transition flex items-center justify-center space-x-1 h-[32px]" title="Move to tomorrow" aria-label="Move this quiz to tomorrow">
                     <i data-lucide="calendar-plus" class="w-3.5 h-3.5 text-amber-700"></i>
                     <span>+1 Day</span>
                 </button>` : ''}

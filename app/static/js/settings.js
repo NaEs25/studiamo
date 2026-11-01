@@ -214,8 +214,8 @@ async function loadStats() {
                 const opacityClass = isUnlocked ? 'opacity-100 border-amber-200 bg-amber-500/5' : 'opacity-40 filter grayscale border-stone-200';
                 
                 badgesGrid.innerHTML += `
-                    <div class="flex items-center space-x-3 p-3 bg-stone-50 border rounded-xl transition hover:border-stone-200 ${opacityClass}">
-                        <div class="p-2 rounded-lg border ${detail.color} shrink-0">
+                    <div class="flex items-center space-x-3 p-3 bg-stone-50 border rounded-ds-lg transition hover:border-stone-200 ${opacityClass}">
+                        <div class="p-2 rounded-ds-md border ${detail.color} shrink-0">
                             <i data-lucide="${detail.icon}" class="w-5 h-5"></i>
                         </div>
                         <div class="min-w-0 flex-grow">
@@ -239,7 +239,7 @@ async function loadStats() {
                     const rank = entry.rank !== undefined ? entry.rank : (idx + 1);
                     if (lastRank > 0 && rank > lastRank + 1) {
                         lbContainer.innerHTML += `
-                            <div class="flex items-center justify-center py-1 px-3 bg-stone-100 border border-dashed border-stone-200 rounded-xl my-1">
+                            <div class="flex items-center justify-center py-1 px-3 bg-stone-100 border border-dashed border-stone-200 rounded-ds-lg my-1">
                                 <span class="text-[11px] font-semibold text-stone-500 tracking-widest">• • •</span>
                             </div>
                         `;
@@ -252,7 +252,7 @@ async function loadStats() {
                     const weeklyXpText = `${entry.weekly_xp || 0} XP`;
 
                     lbContainer.innerHTML += `
-                        <div class="flex items-center justify-between p-3 ${isMe ? 'bg-amber-500/15 border border-amber-500/40' : 'bg-[#fbf8f2] border border-[#e7dfd3]'} rounded-xl transition hover:border-amber-500/40">
+                        <div class="flex items-center justify-between p-3 ${isMe ? 'bg-amber-500/15 border border-amber-500/40' : 'bg-[#fbf8f2] border border-[#e7dfd3]'} rounded-ds-lg transition hover:border-amber-500/40">
                             <div class="flex items-center space-x-3 min-w-0">
                                 <span class="font-bold text-xs w-6 text-center shrink-0 ${rank <= 3 ? 'text-amber-800 font-extrabold' : 'text-stone-500'}">${medal}</span>
                                 <div class="w-8 h-8 rounded-full ${isMe ? 'bg-amber-500/25 text-amber-900 border border-amber-500/40' : 'bg-[#f3ebd9] text-stone-700 border border-[#dfd5c5]'} flex items-center justify-center font-bold text-xs shrink-0">${initials}</div>
@@ -1149,7 +1149,7 @@ function renderAnalyticsHistory() {
                 : 'bg-red-500/10 text-red-400 border border-red-500/20';
                 
             attemptsHTML += `
-                <div class="p-3.5 bg-stone-100 border border-stone-200 rounded-xl space-y-3 shadow-inner">
+                <div class="p-3.5 bg-stone-100 border border-stone-200 rounded-ds-lg space-y-3 shadow-inner">
                     <div class="flex justify-between items-center">
                         <span class="text-[11px] font-bold text-stone-500">Question ${attempt.question_index + 1}</span>
                         <span class="text-[11px] font-bold px-2 py-0.5 rounded border ${gradeBadgeClass}">${gradeLabel}</span>
@@ -1158,11 +1158,11 @@ function renderAnalyticsHistory() {
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-0.5 text-[11px] leading-relaxed">
                         <div>
                             <span class="text-stone-500 block text-[11px] font-extrabold mb-0.5">Your Guess:</span>
-                            <p class="text-stone-700 font-mono bg-stone-50 p-2 rounded-lg border border-stone-200 max-h-[100px] overflow-y-auto whitespace-pre-wrap">${attempt.given_answer ? escapeHtml(attempt.given_answer) : '<span class="text-stone-400 italic">No guess provided / flipped</span>'}</p>
+                            <p class="text-stone-700 font-mono bg-stone-50 p-2 rounded-ds-md border border-stone-200 max-h-[100px] overflow-y-auto whitespace-pre-wrap">${attempt.given_answer ? escapeHtml(attempt.given_answer) : '<span class="text-stone-400 italic">No guess provided / flipped</span>'}</p>
                         </div>
                         <div>
                             <span class="text-emerald-500 block text-[11px] font-extrabold mb-0.5">AI Correct Answer:</span>
-                            <p class="text-emerald-455 font-mono bg-stone-50 p-2 rounded-lg border border-stone-200 max-h-[100px] overflow-y-auto whitespace-pre-wrap">${escapeHtml(attempt.correct_answer)}</p>
+                            <p class="text-emerald-455 font-mono bg-stone-50 p-2 rounded-ds-md border border-stone-200 max-h-[100px] overflow-y-auto whitespace-pre-wrap">${escapeHtml(attempt.correct_answer)}</p>
                         </div>
                     </div>
                 </div>
@@ -1170,7 +1170,7 @@ function renderAnalyticsHistory() {
         });
         
         container.innerHTML += `
-            <div class="bg-stone-100 border border-stone-200 rounded-xl overflow-hidden shadow-sm">
+            <div class="bg-stone-100 border border-stone-200 rounded-ds-lg overflow-hidden shadow-sm">
                 <button type="button" onclick="toggleAnalyticsSession(${session.id})" class="w-full p-3.5 flex justify-between items-center text-left hover:bg-stone-100 transition focus:outline-none">
                     <div class="min-w-0 flex-grow pr-3 space-y-1">
                         <div class="flex flex-wrap items-center gap-1.5">
@@ -1823,7 +1823,7 @@ function _welcomeSuggestionCard(v, i) {
     return `
         <button type="button" class="onboarding-suggestion" data-welcome-suggestion="${i}">
             <img src="${escapeHtml(thumb)}" alt="" loading="lazy"
-                class="w-20 h-12 object-cover rounded-lg bg-[#f3ebd9] shrink-0">
+                class="w-20 h-12 object-cover rounded-ds-md bg-[#f3ebd9] shrink-0">
             <span class="min-w-0 flex-1">
                 <span class="block text-sm font-bold text-stone-900 leading-snug line-clamp-2">${escapeHtml(v.title || '')}</span>
                 ${meta ? `<span class="block text-xs text-stone-500 truncate mt-0.5">${escapeHtml(meta)}</span>` : ''}
@@ -2353,17 +2353,17 @@ function updateBrowserNotificationStatus() {
     if (!statusEl) return;
     if (!('Notification' in window)) {
         statusEl.textContent = 'Not supported';
-        statusEl.className = 'text-[10px] px-2 py-0.5 rounded-md font-mono bg-red-950/80 text-red-400 border border-red-800';
+        statusEl.className = 'text-[10px] px-2 py-0.5 rounded-ds-sm font-mono bg-red-950/80 text-red-400 border border-red-800';
     } else if (Notification.permission === 'granted') {
         statusEl.textContent = 'Enabled (Allowed)';
-        statusEl.className = 'text-[10px] px-2 py-0.5 rounded-md font-mono bg-emerald-950/80 text-emerald-400 border border-emerald-800';
+        statusEl.className = 'text-[10px] px-2 py-0.5 rounded-ds-sm font-mono bg-emerald-950/80 text-emerald-400 border border-emerald-800';
         subscribeWebPush();
     } else if (Notification.permission === 'denied') {
         statusEl.textContent = 'Blocked';
-        statusEl.className = 'text-[10px] px-2 py-0.5 rounded-md font-mono bg-amber-950/80 text-amber-400 border border-amber-800';
+        statusEl.className = 'text-[10px] px-2 py-0.5 rounded-ds-sm font-mono bg-amber-950/80 text-amber-400 border border-amber-800';
     } else {
         statusEl.textContent = 'Not requested';
-        statusEl.className = 'text-[10px] px-2 py-0.5 rounded-md font-mono bg-stone-100 text-stone-500';
+        statusEl.className = 'text-[10px] px-2 py-0.5 rounded-ds-sm font-mono bg-stone-100 text-stone-500';
     }
 }
 
@@ -2545,8 +2545,8 @@ function validateDeleteAccountConfirm() {
 
     btn.disabled = !matches;
     btn.className = matches
-        ? 'flex-1 py-2.5 px-4 bg-red-600 hover:bg-red-700 border border-red-600 text-white font-bold rounded-xl text-xs transition'
-        : 'flex-1 py-2.5 px-4 bg-stone-100 border border-stone-200 text-stone-400 font-bold rounded-xl text-xs transition cursor-not-allowed';
+        ? 'flex-1 py-2.5 px-4 bg-red-600 hover:bg-red-700 border border-red-600 text-white font-bold rounded-ds-lg text-xs transition'
+        : 'flex-1 py-2.5 px-4 bg-stone-100 border border-stone-200 text-stone-400 font-bold rounded-ds-lg text-xs transition cursor-not-allowed';
 }
 
 async function confirmDeleteAccount() {
@@ -2558,7 +2558,7 @@ async function confirmDeleteAccount() {
     if (btn) {
         btn.disabled = true;
         btn.textContent = 'Deleting…';
-        btn.className = 'flex-1 py-2.5 px-4 bg-red-600 text-white font-bold rounded-xl text-xs opacity-75 cursor-wait';
+        btn.className = 'flex-1 py-2.5 px-4 bg-red-600 text-white font-bold rounded-ds-lg text-xs opacity-75 cursor-wait';
     }
 
     const fd = new FormData();
