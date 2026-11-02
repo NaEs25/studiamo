@@ -5,13 +5,15 @@
 
 /* Design Tokens */
 :root {
-    /* Corner radii from the style guide. Tailwind's rounded-md/lg/xl/2xl/3xl are the same
-       6/8/12/16/24px steps; the rounded-ds-* aliases name them by guide token. */
+    /* Corner radii from the style guide. One radius for every surface and control (cards,
+       dialogs, buttons, inputs, tabs), as in macOS 27; --radius-sm is for small chips and
+       overlay labels. The rounded-ds-* utilities map to these names. */
+    --radius: 12px;
     --radius-sm: 6px;
-    --radius-md: 8px;
-    --radius-lg: 12px;
-    --radius-xl: 16px;
-    --radius-2xl: 24px;
+    --radius-md: var(--radius);
+    --radius-lg: var(--radius);
+    --radius-xl: var(--radius);
+    --radius-2xl: var(--radius);
     --color-bg:             #f6f1e7;
     --color-surface:        #ffffff;
     --color-surface-2:      #fbf8f2;
@@ -605,7 +607,7 @@ option {
     gap: 0.75rem;
     width: 100%;
     padding: 0.45rem 0.55rem;
-    border-radius: 10px;
+    border-radius: var(--radius);
     font-size: 0.75rem;
     font-weight: 600;
     color: var(--color-text-main);
@@ -631,7 +633,7 @@ option {
     gap: 0.6rem;
     width: 100%;
     padding: 0.7rem 0.9rem;
-    border-radius: 14px;
+    border-radius: var(--radius);
     border: 1px solid var(--color-border-strong);
     background-color: var(--color-surface-2);
     color: var(--color-text-main);
@@ -699,7 +701,7 @@ option {
     font-size: 10px;
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     padding: 0.1rem 0.35rem;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     background-color: rgb(0 0 0 / 0.06);
     opacity: 0.75;
 }
@@ -758,7 +760,7 @@ option {
     justify-content: center;
     width: 2rem;
     height: 2rem;
-    border-radius: 10px;
+    border-radius: var(--radius);
     border: 1px solid var(--color-border-strong);
     background-color: var(--color-surface-2);
     color: var(--color-text-muted);
@@ -1771,7 +1773,7 @@ button:active:not(:disabled) {
 .belt-card {
     background: var(--color-surface);
     border: 1px solid var(--color-border);
-    border-radius: 1.25rem;
+    border-radius: var(--radius);
     padding: 0.875rem 1rem;
     box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
@@ -1867,7 +1869,7 @@ button:active:not(:disabled) {
     z-index: 1;
     background: #ffffff;
     border: 2px solid #292524;
-    border-radius: 0.875rem;
+    border-radius: var(--radius);
     padding: 0.2rem 0.55rem;
     font-size: 0.6875rem;
     line-height: 1.25;
