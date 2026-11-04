@@ -1459,10 +1459,6 @@ html[data-standalone="true"] .app-overlay {
 }
 
 /* A goal-based video suggestion on the welcome flow's video step: the whole card is the button. */
-.onboarding-suggestion.hidden {
-    display: none;
-}
-
 .onboarding-suggestion {
     display: flex;
     align-items: center;
