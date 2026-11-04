@@ -592,6 +592,48 @@ async def get_goal_recommendations(id: int, username: str = Depends(require_ai_a
         conn.close()
 
 
+WELCOME_SUGGESTION_COUNT = 3
+
+
+@router.get("/goals/{id}/welcome-suggestions")
+async def get_welcome_suggestions(id: int, username: str = Depends(require_account_access)):
+    """Video suggestions for the goal the welcome flow just created, open to every plan.
+
+    A plain YouTube search on the goal's title: no AI call, so it costs search quota and no AI
+    budget, and answers in about a second where the goal card's AI-written searches take
+    several. Only the goal the unfinished welcome flow created qualifies
+    (user_profile.onboarding_goal_id, cleared when the flow ends), so this cannot be used later
+    as a free search endpoint. Nothing is stored: the goal's own recommendations still come
+    from the AI path on the goals tab.
+    """
+    conn = database.get_db_connection(username)
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT p.onboarding_step, g.title FROM user_profile p "
+            "JOIN goals g ON g.id = p.onboarding_goal_id AND g.user_uuid = p.user_uuid::text "
+            "WHERE p.user_uuid = %s AND g.id = %s AND g.is_archived = 0;",
+            (conn.user_uuid, id),
+        )
+        row = cursor.fetchone()
+    finally:
+        conn.close()
+    if not row or not row.get("onboarding_step"):
+        raise HTTPException(status_code=404, detail="Goal not found")
+
+    excluded = storage.get_excluded_youtube_ids(username=username)
+    candidates = await asyncio.to_thread(youtube.search_youtube_recommendations, f"{row['title']} tutorial", 8)
+    videos, seen = [], set()
+    for v in candidates:
+        yt_id = v.get("youtube_id")
+        if yt_id and yt_id not in excluded and yt_id not in seen and youtube.is_valid_duration(v.get("duration")):
+            seen.add(yt_id)
+            videos.append(v)
+        if len(videos) >= WELCOME_SUGGESTION_COUNT:
+            break
+    return {"videos": videos, "youtube_api_key_missing": not youtube.is_configured()}
+
+
 @router.post("/goals/{id}/recommendations/replace_one")
 async def replace_one_goal_recommendation(
     id: int,

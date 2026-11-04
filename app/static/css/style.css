@@ -1185,6 +1185,13 @@ html[data-standalone="true"] .app-overlay {
 .onboarding-error {
     font-size: 0.875rem;
     line-height: 1.4;
+.onboarding-or {
+    text-align: center;
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--color-text);
+}
+
     font-weight: 600;
     color: #b91c1c; /* red-700 */
 }

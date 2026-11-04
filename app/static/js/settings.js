@@ -1489,9 +1489,12 @@ function renderOnboardingStep() {
         nextBtn.classList.toggle('onboarding-cta-final', final);
     }
     _syncOnboardingNext();
-    if (isWelcome) _saveOnboardingProgress(name);
+    const progressSaved = isWelcome ? _saveOnboardingProgress(name) : null;
 
-    if (name === 'video') renderVideoStep();
+    if (name === 'video') {
+        renderVideoStep();
+        _prefetchWelcomeSuggestions(progressSaved);
+    }
     if (name === 'reminders') {
         renderReminderStep();
         _watchWelcomeImport();
@@ -1504,13 +1507,13 @@ function renderOnboardingStep() {
 
 // Remembers the welcome flow's position server-side, so a closed tab, a browser switch or the
 // Open in Safari link resumes here instead of at the start. Best effort: a failed save only
-// means a later resume starts one step earlier.
+// means a later resume starts one step earlier. Returns the request, so a caller can wait for it.
 function _saveOnboardingProgress(step) {
     const fd = new FormData();
     fd.append('step', step);
     if (_welcomeGoal) fd.append('goal_id', _welcomeGoal.id);
     if (_welcomeImport) fd.append('video_id', _welcomeImport.videoId);
-    fetchAPI('/api/user/onboarding_progress', { method: 'POST', body: fd }).catch(() => {});
+    return fetchAPI('/api/user/onboarding_progress', { method: 'POST', body: fd }).catch(() => {});
 }
 
 // The video step's Next stays grey until there is a link to send or an import already started.
@@ -1569,6 +1572,7 @@ function openWelcomeFlow(progress = null) {
     _welcomeGoal = progress?.goal ? { id: progress.goal.id, title: progress.goal.title } : null;
     _welcomeImport = progress?.video ? { videoId: progress.video.id, title: progress.video.title } : null;
     _welcomeSuggestions = [];
+    _welcomeSuggestionsFetch = null;
     const goalInput = document.getElementById('onboarding-goal-input');
     if (goalInput) goalInput.value = _welcomeGoal ? _welcomeGoal.title : '';
     _openOnboardingOverlay('welcome', Math.max(0, ONBOARDING_FLOWS.welcome.indexOf(progress?.step)));
@@ -1730,11 +1734,11 @@ function renderVideoStep() {
     }
     // Left out where the server has no YouTube key: the call would spend AI budget on search
     // queries and then find no videos to show.
-    // Also left out on the free plan: the suggestions come from an AI call.
-    const free = typeof isFreePlan === 'function' && isFreePlan();
-    const available = !!(_onboardingStatusCache && _onboardingStatusCache.suggestions_available) && !free;
-    document.getElementById('onboarding-suggest-btn')
-        ?.classList.toggle('hidden', !available || _welcomeSuggestions.length > 0);
+    // Offered on every plan: the free plan gets a plain title search with no AI call.
+    const available = !!(_onboardingStatusCache && _onboardingStatusCache.suggestions_available);
+    const showSuggest = available && _welcomeSuggestions.length === 0;
+    document.getElementById('onboarding-suggest-btn')?.classList.toggle('hidden', !showSuggest);
+    document.getElementById('onboarding-or')?.classList.toggle('hidden', !showSuggest);
     // The free plan's one generation is this video: say so before the link is pasted.
     document.getElementById('onboarding-free-video')
         ?.classList.toggle('hidden', !(typeof freeVideoAvailable === 'function' && freeVideoAvailable()));
@@ -1776,7 +1780,33 @@ function _setSuggestionsMessage(message) {
     list.classList.remove('hidden');
 }
 
-// The same suggestions the goal's card offers on the goals tab, and cached with them there.
+// The suggestions are a title search on the server, so they are fetched as soon as the video step
+// opens and the button usually just reveals them. The fetch is keyed by goal id and title: going
+// Back and renaming the goal starts a new one. It resolves to the videos, or null on failure.
+let _welcomeSuggestionsFetch = null;   // { id, title, promise }
+
+function _fetchWelcomeSuggestions(goal, after) {
+    const promise = Promise.resolve(after)
+        .then(() => fetchAPI(`/api/goals/${goal.id}/welcome-suggestions`))
+        .then(data => (data && Array.isArray(data.videos)) ? data.videos : [])
+        .catch(err => {
+            console.warn('Loading goal suggestions failed:', err);
+            return null;
+        });
+    _welcomeSuggestionsFetch = { id: goal.id, title: goal.title, promise };
+    return promise;
+}
+
+// after: the progress save that tells the server which goal the flow created, which the route
+// checks, so the search must not start before it lands.
+function _prefetchWelcomeSuggestions(after) {
+    if (!_welcomeGoal || _welcomeSuggestions.length > 0) return;
+    if (!(_onboardingStatusCache && _onboardingStatusCache.suggestions_available)) return;
+    const f = _welcomeSuggestionsFetch;
+    if (f && f.id === _welcomeGoal.id && f.title === _welcomeGoal.title) return;
+    _fetchWelcomeSuggestions(_welcomeGoal, after);
+}
+
 async function loadWelcomeSuggestions() {
     if (!_welcomeGoal) return;
     const btn = document.getElementById('onboarding-suggest-btn');
@@ -1785,15 +1815,13 @@ async function loadWelcomeSuggestions() {
     if (btn) btn.disabled = true;
     if (label) label.textContent = 'Finding videos...';
 
-    let videos = null;
-    try {
-        const data = await fetchAPI(`/api/goals/${_welcomeGoal.id}/recommendations`);
-        videos = (data && Array.isArray(data.videos)) ? data.videos : [];
-    } catch (err) {
-        console.warn('Loading goal suggestions failed:', err);
-    }
+    const f = _welcomeSuggestionsFetch;
+    const reuse = f && f.id === _welcomeGoal.id && f.title === _welcomeGoal.title;
+    let videos = await (reuse ? f.promise : _fetchWelcomeSuggestions(_welcomeGoal));
+    // A failed prefetch is not final: the button tries once more.
+    if (videos === null && reuse) videos = await _fetchWelcomeSuggestions(_welcomeGoal);
     if (btn) btn.disabled = false;
-    if (label) label.textContent = 'Get suggestions for this goal';
+    if (label) label.textContent = 'Get video recommendations';
 
     if (videos === null) {
         _setSuggestionsMessage("Suggestions aren't available right now. Paste a link instead, or skip for now.");
@@ -1804,8 +1832,9 @@ async function loadWelcomeSuggestions() {
         _setSuggestionsMessage('No suggestions came up for this goal. Paste a link instead, or skip for now.');
         return;
     }
-    _welcomeSuggestions = videos.slice(0, 4);
+    _welcomeSuggestions = videos.slice(0, 3);
     btn?.classList.add('hidden');
+    document.getElementById('onboarding-or')?.classList.add('hidden');
     const list = document.getElementById('onboarding-suggestions');
     if (list) {
         list.innerHTML = _welcomeSuggestions.map(_welcomeSuggestionCard).join('');
