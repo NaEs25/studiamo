@@ -7,9 +7,12 @@
 :root {
     /* Corner radii from the style guide. One radius for every surface and control (cards,
        dialogs, buttons, inputs, tabs), as in macOS 27; --radius-sm is for small chips and
-       overlay labels. The rounded-ds-* utilities map to these names. */
+       overlay labels, and --radius-inset is for a control inside a padded track. The
+       rounded-ds-* utilities map to these names. */
     --radius: 12px;
     --radius-sm: 6px;
+    /* The corner of a control sitting inside a 4px-padded track (segmented toggles): the track radius minus that padding, so the two curves run parallel. */
+    --radius-inset: calc(var(--radius) - 4px);
     --radius-md: var(--radius);
     --radius-lg: var(--radius);
     --radius-xl: var(--radius);
@@ -1182,9 +1185,6 @@ html[data-standalone="true"] .app-overlay {
     color: var(--color-text-muted);
 }
 
-.onboarding-error {
-    font-size: 0.875rem;
-    line-height: 1.4;
 .onboarding-or {
     text-align: center;
     font-size: 1rem;
@@ -1192,6 +1192,9 @@ html[data-standalone="true"] .app-overlay {
     color: var(--color-text);
 }
 
+.onboarding-error {
+    font-size: 0.875rem;
+    line-height: 1.4;
     font-weight: 600;
     color: #b91c1c; /* red-700 */
 }
@@ -1597,16 +1600,21 @@ button:active:not(:disabled) {
 
 
 /* ── Segmented Toggle ───────────────────────────────────── */
-/* Pill group where exactly one option is active: the import type selector (YouTube /
+/* Group where exactly one option is active: the import type selector (YouTube /
    Document / Notes) and the voice-engine toggle (Browser / Edge TTS). Both used to spell the
    active and inactive utility chains out in the template and again in the script that
    switches between them, so each variant lived in four places at once and the script
    overwrote whatever the markup declared. The markup now carries .segmented-tab and the
-   script toggles .is-active on top of it, nothing else. Padding, radius and inner layout
-   stay as per-instance Tailwind utilities, same split as .btn-primary above.
+   script toggles .is-active on top of it, nothing else. The corner is the inset radius (the
+   track's radius minus its padding, see --radius-inset); padding and inner layout
+   stay as per-instance Tailwind utilities, same split as .btn-primary above. A toggle built in
+   script without .segmented-tab uses .radius-inset for the same corner.
    The transparent border on the inactive state is deliberate: only the active option used to
    carry a border, so switching tabs moved every button by 2px. */
+.radius-inset { border-radius: var(--radius-inset); }
+
 .segmented-tab {
+    border-radius: var(--radius-inset);
     border: 1px solid transparent;
     font-size: 0.75rem;
     line-height: 1rem;
@@ -1663,7 +1671,7 @@ button:active:not(:disabled) {
 .goal-stat {
     padding: 0.125rem 0.625rem;
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-sm);
     background-color: #fdfaf4;
     font-size: 0.75rem;
     line-height: 1rem;

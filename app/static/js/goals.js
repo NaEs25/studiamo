@@ -1463,7 +1463,7 @@ function renderGoalPage() {
     const materials = goalPageScopeMaterials(goalId);
     const view = goalPageView();
     const editing = goalPageState.reordering;
-    const seg = (label, on, action) => `<button type="button" data-goalpage-action="${action}" class="px-3 py-1.5 rounded-ds-md text-xs font-bold ${on ? 'bg-amber-100 border border-amber-300 text-amber-900' : 'text-stone-600'}">${label}</button>`;
+    const seg = (label, on, action) => `<button type="button" data-goalpage-action="${action}" class="px-3 py-1.5 radius-inset text-xs font-bold ${on ? 'bg-amber-100 border border-amber-300 text-amber-900' : 'text-stone-600'}">${label}</button>`;
     const asList = view === 'list' || editing;
     const materialHTML = v => asList ? goalPageRowHTML(v, data.quizzes, editing) : renderVideoCard(v, data.quizzes, data.goals);
     const wrap = html => asList ? `<div class="space-y-2">${html}</div>` : `<div class="space-y-3">${html}</div>`;
