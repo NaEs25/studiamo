@@ -1550,6 +1550,9 @@ async function onboardingNext(e) {
     const steps = _onboardingActiveSteps();
     const name = steps[_onboardingStepIndex] && steps[_onboardingStepIndex].dataset.step;
     if (name === 'goal' && !(await _withOnboardingBusy(_saveWelcomeGoal))) return;
+    // The search starts now, while the video step opens. It needs the progress save first: the
+    // route only serves the goal the server has recorded for this flow.
+    if (name === 'goal') _prefetchWelcomeSuggestions(_saveOnboardingProgress('video'));
     if (name === 'video' && !(await _withOnboardingBusy(_submitWelcomeVideoLink))) return;
     if (_onboardingStepIndex >= steps.length - 1) {
         finishOnboarding();
@@ -1784,6 +1787,7 @@ function _setSuggestionsMessage(message) {
 // opens and the button usually just reveals them. The fetch is keyed by goal id and title: going
 // Back and renaming the goal starts a new one. It resolves to the videos, or null on failure.
 let _welcomeSuggestionsFetch = null;   // { id, title, promise }
+const WELCOME_SUGGESTIONS_SHOWN = 3;   // the rest wait behind "More videos"
 
 function _fetchWelcomeSuggestions(goal, after) {
     const promise = Promise.resolve(after)
@@ -1832,12 +1836,13 @@ async function loadWelcomeSuggestions() {
         _setSuggestionsMessage('No suggestions came up for this goal. Paste a link instead, or skip for now.');
         return;
     }
-    _welcomeSuggestions = videos.slice(0, 3);
+    _welcomeSuggestions = videos.slice(0, 8);
     btn?.classList.add('hidden');
     document.getElementById('onboarding-or')?.classList.add('hidden');
     const list = document.getElementById('onboarding-suggestions');
     if (list) {
-        list.innerHTML = _welcomeSuggestions.map(_welcomeSuggestionCard).join('');
+        list.innerHTML = _welcomeSuggestions.map(_welcomeSuggestionCard).join('') + (_welcomeSuggestions.length > WELCOME_SUGGESTIONS_SHOWN
+            ? '<button type="button" class="onboarding-text-btn w-full" data-welcome-more>More videos</button>' : '');
         list.classList.remove('hidden');
     }
     if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -1846,11 +1851,12 @@ async function loadWelcomeSuggestions() {
 // Titles and channel names come from YouTube, so they are escaped; the card only carries its
 // index into _welcomeSuggestions.
 function _welcomeSuggestionCard(v, i) {
+    const extra = i >= WELCOME_SUGGESTIONS_SHOWN;
     const meta = [v.channel, (v.duration && v.duration !== 'N/A') ? v.duration : '']
         .filter(Boolean).join(' · ');
     const thumb = v.thumbnail || `https://img.youtube.com/vi/${encodeURIComponent(v.youtube_id || '')}/mqdefault.jpg`;
     return `
-        <button type="button" class="onboarding-suggestion" data-welcome-suggestion="${i}">
+        <button type="button" class="onboarding-suggestion${extra ? ' hidden' : ''}" data-welcome-suggestion="${i}">
             <img src="${escapeHtml(thumb)}" alt="" loading="lazy"
                 class="w-20 h-12 object-cover rounded-ds-md bg-[#f3ebd9] shrink-0">
             <span class="min-w-0 flex-1">
@@ -2086,6 +2092,11 @@ function initOnboarding() {
     document.getElementById('onboarding-steps')?.addEventListener('click', (e) => {
         const suggestion = e.target.closest('[data-welcome-suggestion]');
         if (suggestion) pickWelcomeSuggestion(Number(suggestion.dataset.welcomeSuggestion));
+        const more = e.target.closest('[data-welcome-more]');
+        if (more) {
+            document.querySelectorAll('#onboarding-suggestions .onboarding-suggestion.hidden').forEach(c => c.classList.remove('hidden'));
+            more.remove();
+        }
     });
 }
 

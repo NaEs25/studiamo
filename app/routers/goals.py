@@ -592,7 +592,7 @@ async def get_goal_recommendations(id: int, username: str = Depends(require_ai_a
         conn.close()
 
 
-WELCOME_SUGGESTION_COUNT = 3
+WELCOME_SUGGESTION_COUNT = 8
 
 
 @router.get("/goals/{id}/welcome-suggestions")
@@ -622,7 +622,7 @@ async def get_welcome_suggestions(id: int, username: str = Depends(require_accou
         raise HTTPException(status_code=404, detail="Goal not found")
 
     excluded = storage.get_excluded_youtube_ids(username=username)
-    candidates = await asyncio.to_thread(youtube.search_youtube_recommendations, f"{row['title']} tutorial", 8)
+    candidates = await asyncio.to_thread(youtube.search_youtube_recommendations, f"{row['title']} tutorial", 15)
     videos, seen = [], set()
     for v in candidates:
         yt_id = v.get("youtube_id")
