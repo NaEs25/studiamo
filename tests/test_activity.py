@@ -1,14 +1,15 @@
 """
-Activity tracking (app/activity.py) and push click counting (notifications.mark_clicked), run
+Activity tracking (app/activity.py) and reminder click counting (push and email), run
 against the shared staging database as the test accounts. Every row and profile value a test
 touches is put back afterwards.
 """
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from types import SimpleNamespace
 
 import pytest
 
-from app import activity, database, notifications
+from app import activity, database, email_utils, notifications
 
 TEMPLATE_ID = "test-click-template"
 
@@ -79,26 +80,40 @@ def test_a_failed_write_does_not_raise_and_retries_next_time(account, test_usern
     assert test_username not in activity._last_write
 
 
-@pytest.fixture
-def push_log(test_username, other_test_username):
-    """A push reminder row for the test account and a stats row for its template."""
-    conn = database.get_db_connection(test_username)
+@contextmanager
+def _reminder_row(username, channels):
+    """A sent reminder row for the account and a stats row for its template, removed after."""
+    conn = database.get_db_connection(username)
     cursor = conn.cursor()
     user_uuid = conn.user_uuid
     cursor.execute(
         """INSERT INTO notification_log (user_uuid, kind, template_id, channels, local_day)
-           VALUES (%s, 'daily', %s, 'push', CURRENT_DATE) RETURNING id;""",
-        (user_uuid, TEMPLATE_ID),
+           VALUES (%s, 'daily', %s, %s, CURRENT_DATE) RETURNING id;""",
+        (user_uuid, TEMPLATE_ID, channels),
     )
     log_id = cursor.fetchone()["id"]
     cursor.execute("INSERT INTO notification_template_stats (template_id, sent) VALUES (%s, 1) ON CONFLICT DO NOTHING;",
                    (TEMPLATE_ID,))
     conn.commit()
-    yield conn, user_uuid, log_id
-    cursor.execute("DELETE FROM notification_log WHERE id = %s;", (log_id,))
-    cursor.execute("DELETE FROM notification_template_stats WHERE template_id = %s;", (TEMPLATE_ID,))
-    conn.commit()
-    conn.close()
+    try:
+        yield conn, user_uuid, log_id
+    finally:
+        cursor.execute("DELETE FROM notification_log WHERE id = %s;", (log_id,))
+        cursor.execute("DELETE FROM notification_template_stats WHERE template_id = %s;", (TEMPLATE_ID,))
+        conn.commit()
+        conn.close()
+
+
+@pytest.fixture
+def push_log(test_username):
+    with _reminder_row(test_username, "push") as row:
+        yield row
+
+
+@pytest.fixture
+def email_log(test_username):
+    with _reminder_row(test_username, "email") as row:
+        yield row
 
 
 def _clicked_count(conn):
@@ -118,4 +133,28 @@ def test_another_account_cannot_count_a_click(push_log, other_test_username):
     conn, _, log_id = push_log
     other_uuid = database.get_db_connection(other_test_username).user_uuid
     assert notifications.mark_clicked(other_uuid, log_id) is False
+    assert _clicked_count(conn) == 0
+
+
+def test_email_link_counts_once_and_only_with_its_token(email_log, client):
+    conn, _, log_id = email_log
+    url = email_utils.notification_click_url(log_id)
+    path = url[url.index("/api/"):]
+
+    forged = client.get(f"/api/notifications/open?id={log_id}&token=forged")
+    assert forged.status_code == 303
+    assert _clicked_count(conn) == 0
+    # A valid token for another id does not carry over.
+    other = email_utils.notification_click_url(log_id + 1)
+    assert client.get(f"/api/notifications/open?id={log_id}&{other.split('&', 1)[1]}").status_code == 303
+    assert _clicked_count(conn) == 0
+
+    assert client.get(path).status_code == 303
+    assert client.get(path).status_code == 303
+    assert _clicked_count(conn) == 1
+
+
+def test_email_link_cannot_stamp_a_push_reminder(push_log):
+    conn, _, log_id = push_log
+    assert notifications.mark_email_clicked(log_id) is False
     assert _clicked_count(conn) == 0

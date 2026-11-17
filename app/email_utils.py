@@ -73,17 +73,31 @@ def verify_unsubscribe_token(email: str, token: str, purpose: str = "") -> bool:
 
 
 REMINDER_EMAILS_PURPOSE = "reminders"
+NOTIFICATION_CLICK_PURPOSE = "notification-click"
+
+
+def _email_link_base() -> str:
+    return "https://www.studiamo.cloud" if config.IS_CLOUD else (os.getenv("BASE_URL") or "https://studiamo.cloud").rstrip("/")
 
 
 def reminder_emails_off_url(recipient_email: str) -> str:
     """Returns the tokenized link that turns off reminder emails for this address, without
     signing in. Used in the footer and in the List-Unsubscribe header."""
-    base = "https://www.studiamo.cloud" if config.IS_CLOUD else (os.getenv("BASE_URL") or "https://studiamo.cloud").rstrip("/")
     return (
-        f"{base}/api/notifications/email-off"
+        f"{_email_link_base()}/api/notifications/email-off"
         f"?email={urllib.parse.quote(recipient_email)}"
         f"&token={generate_unsubscribe_token(recipient_email, REMINDER_EMAILS_PURPOSE)}"
     )
+
+
+def notification_click_url(log_id: int) -> str:
+    """Returns the button link for one sent reminder email. Opening it stamps clicked_at on
+    that notification_log row and redirects into the app, so clicks are counted without a
+    tracking pixel or a rewritten link. The token is bound to the id, so editing the number
+    in the link counts nothing."""
+    log_id = int(log_id)
+    token = generate_unsubscribe_token(str(log_id), NOTIFICATION_CLICK_PURPOSE)
+    return f"{_email_link_base()}/api/notifications/open?id={log_id}&token={token}"
 
 
 def unsubscribe_url(recipient_email: str) -> str:

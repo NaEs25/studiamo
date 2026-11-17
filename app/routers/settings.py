@@ -10,8 +10,8 @@ from typing import Optional
 from urllib.parse import quote as _urlquote
 
 import psycopg2.errors
-from fastapi import APIRouter, Form, HTTPException, Depends, Request
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi import APIRouter, Form, HTTPException, Depends, Query, Request
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from jinja2 import Environment, FileSystemLoader
 from starlette.background import BackgroundTask
 
@@ -685,6 +685,18 @@ def reminder_emails_off_one_click(email: str = "", token: str = ""):
     if not _reminder_emails_off(email, token):
         raise HTTPException(status_code=400, detail="Invalid link.")
     return {"status": "ok"}
+
+
+@router.get("/notifications/open")
+def notification_email_opened(log_id: int = Query(0, alias="id"), token: str = ""):
+    """Button link in reminder emails (email_utils.notification_click_url): counts the click,
+    then opens the app. A missing or invalid token still redirects but counts nothing. Mail
+    filters that fetch every link in a message can register a click nobody made."""
+    from app.email_utils import NOTIFICATION_CLICK_PURPOSE, verify_unsubscribe_token
+    from app.telegram_bot import notification_app_link
+    if log_id > 0 and verify_unsubscribe_token(str(log_id), token, NOTIFICATION_CLICK_PURPOSE):
+        notifications.mark_email_clicked(log_id)
+    return RedirectResponse(url=notification_app_link() if config.IS_CLOUD else "/app", status_code=303)
 
 
 @router.post("/user/timezone")

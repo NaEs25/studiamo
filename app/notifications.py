@@ -217,7 +217,7 @@ async def _deliver(username, profile, title, body, log_id=None) -> tuple[list[st
     tried and did not)."""
     from app.telegram_bot import notification_app_link, send_telegram_message
     from app.webpush_utils import send_user_web_push
-    from app.email_utils import send_notification_email
+    from app.email_utils import notification_click_url, send_notification_email
 
     app_link = notification_app_link(profile.get("base_url"))
     delivered = []
@@ -247,8 +247,9 @@ async def _deliver(username, profile, title, body, log_id=None) -> tuple[list[st
             logger.warning(f"Reminder Telegram message failed for {username}: {e}")
 
     if profile.get("notify_email") and profile.get("google_email"):
+        cta_url = notification_click_url(log_id) if log_id else app_link
         try:
-            if await asyncio.to_thread(send_notification_email, profile["google_email"], title, title, body, app_link,
+            if await asyncio.to_thread(send_notification_email, profile["google_email"], title, title, body, cta_url,
                                        "Open Studiamo", f"{app_link}#notifications"):
                 delivered.append("email")
             else:
@@ -360,7 +361,7 @@ async def run_tick(now=None):
 
 
 # ---------------------------------------------------------------------------------------------
-# Clicks (push only)
+# Clicks
 # ---------------------------------------------------------------------------------------------
 
 def mark_clicked(user_uuid, log_id: int) -> bool:
@@ -368,15 +369,27 @@ def mark_clicked(user_uuid, log_id: int) -> bool:
 
     Only the account the reminder was sent to can click it (user_uuid is part of the match),
     so a guessed id changes nothing. Returns whether a row was stamped."""
+    return _stamp_clicked("id = %s AND user_uuid = %s AND channels LIKE '%%push%%'",
+                          (int(log_id), str(user_uuid)), log_id)
+
+
+def mark_email_clicked(log_id: int) -> bool:
+    """Same for the button in a reminder email, which can be opened without being signed in.
+    The caller must have verified the link's token first: that token, not an account match,
+    is what keeps a guessed id from counting."""
+    return _stamp_clicked("id = %s AND channels LIKE '%%email%%'", (int(log_id),), log_id)
+
+
+def _stamp_clicked(match_sql: str, params: tuple, log_id) -> bool:
     conn = None
     try:
         conn = database.get_pooled_raw_connection()
         cursor = conn.cursor()
         cursor.execute(
-            """UPDATE notification_log SET clicked_at = NOW()
-               WHERE id = %s AND user_uuid = %s AND clicked_at IS NULL AND channels LIKE '%%push%%'
+            f"""UPDATE notification_log SET clicked_at = NOW()
+               WHERE {match_sql} AND clicked_at IS NULL
                RETURNING template_id;""",
-            (int(log_id), str(user_uuid)),
+            params,
         )
         row = cursor.fetchone()
         if row:
