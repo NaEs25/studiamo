@@ -26,6 +26,8 @@ def test_unknown_or_missing_zone_is_utc():
 @pytest.mark.parametrize("name, ok", [
     ("Europe/Berlin", True),
     ("UTC", True),
+    # Legacy alias some browsers still report; missing from Ubuntu's base tzdata.
+    ("Asia/Calcutta", True),
     ("Not/AZone", False),
     ("", False),
     (None, False),

@@ -13,6 +13,9 @@ edge-tts==7.2.8
 pywebpush==2.4.0
 httpx==0.28.1
 pytz==2026.3.post1
+# zoneinfo falls back to it for zones the OS data lacks: Ubuntu moved legacy names such as
+# Asia/Calcutta, which some browsers still report, into a separate tzdata-legacy package.
+tzdata==2026.6
 pypdf==6.19.0
 slowapi==0.1.9
 itsdangerous==2.2.0
