@@ -357,7 +357,7 @@ async def run_tick(now=None):
         except Exception as e:
             logger.warning(f"Pruning notification_log failed: {e}")
         await asyncio.to_thread(activity.prune_activity_days)
-        await asyncio.to_thread(plans.prune_ip_hashes)
+        await asyncio.to_thread(plans.prune_free_video_claims)
 
 
 # ---------------------------------------------------------------------------------------------

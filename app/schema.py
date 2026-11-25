@@ -701,7 +701,8 @@ TABLES_SQL = [
     -- The one AI generation an account without a plan may spend, ever. One row per account:
     -- the primary key is what makes claiming it atomic, a second claim cannot insert.
     -- video_id is the material the generation was spent on (NULL until the import row exists).
-    -- ip_hash is a salted hash, never the address; rows are pruned after the IP window.
+    -- ip_hash is no longer written: the limit is per account. Kept because schema changes here
+    -- are additive only; plans.prune_free_video_claims clears any old values.
     -- active is FALSE after a failed import gave the claim back; releases counts those, so the
     -- row (and its count) survives a release and a bad video cannot be retried forever.
     CREATE TABLE IF NOT EXISTS free_video_claims (
@@ -837,7 +838,7 @@ INDEXES_SQL = [
     # table when reading the batch after a cohort ends.
     "CREATE INDEX IF NOT EXISTS idx_tester_feedback_created ON tester_feedback(created_at DESC);",
     "CREATE INDEX IF NOT EXISTS idx_tester_feedback_user ON tester_feedback(user_uuid);",
-    # Counting claims per address hash inside the rolling window (see database.claim_free_video).
+    # Served the per-address count, which is gone; kept because schema changes here are additive.
     "CREATE INDEX IF NOT EXISTS idx_free_video_claims_ip ON free_video_claims(ip_hash, claimed_at) WHERE ip_hash IS NOT NULL;",
 ]
 

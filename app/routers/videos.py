@@ -8,7 +8,7 @@ import asyncio
 from contextlib import contextmanager
 from urllib.parse import urlparse
 
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, Request
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
 from fastapi.responses import FileResponse
 
 from app import config, database, storage, ai, youtube, local_days, plans
@@ -23,7 +23,6 @@ from app.dependencies import (
     compute_max_stages,
     get_user_timezone,
     require_account_access,
-    get_client_ip,
     build_concept_pool,
     select_stage_questions,
     STAGE_KEYS,
@@ -42,16 +41,15 @@ router = APIRouter(prefix="/api", tags=["Videos & Content"])
 
 
 @contextmanager
-def _free_generation(request: Request, username: str):
+def _free_generation(username: str):
     """For a request that starts an AI import: spends the account's one free generation first
-    when it has no plan, and refuses with 402 when it cannot (already used, address threshold
-    reached, no way to tell). The claim is tied to the material when the import is enqueued
+    when it has no plan, and refuses with 402 when it cannot (already used, or no way to tell). The claim is tied to the material when the import is enqueued
     (ImportQueueManager.enqueue_task); if the request ends without enqueuing one (a duplicate,
     a validation error) the claim is given back here. A no-op for accounts on a plan."""
     user_uuid = None
     if config.IS_CLOUD and plans.get_plan(username) == plans.PLAN_FREE:
         user_uuid = str(config.get_user_uuid_from_db(username))
-        result = plans.claim_free_video(user_uuid, plans.hash_client_ip(get_client_ip(request)))
+        result = plans.claim_free_video(user_uuid)
         if result != plans.CLAIM_OK:
             message = (
                 "Your free video has been used. Pick a plan to generate more."
@@ -91,7 +89,6 @@ def dismiss_import_task_route(task_id: str, username: str = Depends(require_acco
 
 @router.post("/videos")
 async def add_content(
-    request: Request,
     url: Optional[str] = Form(None),
     text_content: Optional[str] = Form(None),
     title: Optional[str] = Form(None),
@@ -105,7 +102,7 @@ async def add_content(
 
     Open to accounts without a plan, which may spend their one free generation here (see
     _free_generation); every AI call the import makes is checked again by the chokepoint."""
-    with _free_generation(request, username):
+    with _free_generation(username):
         return await _add_content(url, text_content, title, importance_rating, learning_goal_id, is_watchlist, file, username)
 
 
@@ -440,14 +437,13 @@ async def save_material(
 
 @router.post("/videos/{id}/generate")
 async def generate_saved_material(
-    request: Request,
     id: int,
     username: str = Depends(require_account_access)
 ):
     """Runs the normal import (summary, quiz, fact check) on a material that was saved without
     one. Goes through the same free-generation claim as a new import: an account without a plan
     can do this once, for one material, and is told so otherwise."""
-    with _free_generation(request, username):
+    with _free_generation(username):
         conn = database.get_db_connection(username)
         try:
             user_uuid = conn.user_uuid
@@ -937,12 +933,11 @@ def create_preview_video(
 
 @router.post("/videos/{id}/confirm_import")
 async def confirm_video_import(
-    request: Request,
     id: int,
     username: str = Depends(require_account_access)
 ):
     """Converts a 24h temporary preview material into a permanent video (is_temporary=0) and enqueues background processing for AI takeaways & quiz generation."""
-    with _free_generation(request, username):
+    with _free_generation(username):
         return await _confirm_video_import(id, username)
 
 

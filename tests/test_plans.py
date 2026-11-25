@@ -66,17 +66,6 @@ def test_self_hosted_is_never_metered(monkeypatch):
     assert plans.get_plan("someone") == plans.PLAN_PAID
 
 
-def test_ip_hash_needs_a_salt_and_an_address(monkeypatch):
-    monkeypatch.delenv("FREE_VIDEO_IP_SALT", raising=False)
-    assert plans.hash_client_ip("203.0.113.9") is None
-    monkeypatch.setenv("FREE_VIDEO_IP_SALT", "test-salt")
-    assert plans.hash_client_ip("") is None
-    assert plans.hash_client_ip(None) is None
-    first = plans.hash_client_ip("203.0.113.9")
-    assert first and first != "203.0.113.9" and first == plans.hash_client_ip(" 203.0.113.9 ")
-    assert first != plans.hash_client_ip("203.0.113.10")
-
-
 # --- the chokepoint -------------------------------------------------------------------------
 
 @pytest.fixture
@@ -122,27 +111,37 @@ def test_refused_ai_call_is_402_with_a_code_and_limits_stay_429():
 @pytest.fixture
 def claimant(monkeypatch):
     user_uuid = str(uuid.uuid4())
-    settings = {"free_video_ip_max": 1, "free_video_ip_window_days": 30, "free_video_max_releases": 1}
+    settings = {"free_video_max_releases": 1}
     monkeypatch.setattr(plans, "_setting_int", lambda key, default: settings.get(key, default))
     yield user_uuid, settings
     conn = plans._connect()
     try:
-        conn.cursor().execute("DELETE FROM free_video_claims WHERE user_uuid = %s OR ip_hash LIKE 'test-%%';", (user_uuid,))
+        conn.cursor().execute("DELETE FROM free_video_claims WHERE user_uuid = %s;", (user_uuid,))
     finally:
         plans.database.release_pooled_connection(conn)
 
 
-def test_claim_without_an_address_hash_is_unavailable(claimant):
-    user_uuid, _ = claimant
-    assert plans.claim_free_video(user_uuid, None) == plans.CLAIM_UNAVAILABLE
-    assert plans.get_free_video_state(user_uuid)["state"] == "available"
-
-
 def test_second_claim_for_one_account_is_refused(claimant):
     user_uuid, _ = claimant
-    assert plans.claim_free_video(user_uuid, "test-" + user_uuid[:8]) == plans.CLAIM_OK
-    assert plans.claim_free_video(user_uuid, "test-" + user_uuid[:8]) == plans.CLAIM_USED
+    assert plans.claim_free_video(user_uuid) == plans.CLAIM_OK
+    assert plans.claim_free_video(user_uuid) == plans.CLAIM_USED
     assert plans.get_free_video_state(user_uuid)["state"] == "used"
+
+
+def test_every_account_gets_its_own_free_generation(claimant):
+    # The limit is per account: nothing about the network is checked, so people who share an
+    # address (a campus, a mobile carrier) each get one.
+    user_uuid, _ = claimant
+    other = str(uuid.uuid4())
+    try:
+        assert plans.claim_free_video(user_uuid) == plans.CLAIM_OK
+        assert plans.claim_free_video(other) == plans.CLAIM_OK
+    finally:
+        conn = plans._connect()
+        try:
+            conn.cursor().execute("DELETE FROM free_video_claims WHERE user_uuid = %s;", (other,))
+        finally:
+            plans.database.release_pooled_connection(conn)
 
 
 def test_parallel_claims_for_one_account_have_exactly_one_winner(claimant):
@@ -152,7 +151,7 @@ def test_parallel_claims_for_one_account_have_exactly_one_winner(claimant):
 
     def attempt(n):
         barrier.wait()
-        results.append(plans.claim_free_video(user_uuid, f"test-{user_uuid[:6]}-{n}"))
+        results.append(plans.claim_free_video(user_uuid))
 
     threads = [threading.Thread(target=attempt, args=(n,)) for n in range(6)]
     [t.start() for t in threads]
@@ -160,24 +159,14 @@ def test_parallel_claims_for_one_account_have_exactly_one_winner(claimant):
     assert results.count(plans.CLAIM_OK) == 1
 
 
-def test_address_threshold_stops_a_second_account_from_the_same_address(claimant):
-    user_uuid, _ = claimant
-    other = str(uuid.uuid4())
-    address = "test-" + user_uuid[:8]
-    assert plans.claim_free_video(user_uuid, address) == plans.CLAIM_OK
-    assert plans.claim_free_video(other, address) == plans.CLAIM_IP_LIMIT
-    assert plans.get_free_video_state(other)["state"] == "available"
-
-
 def test_failed_import_gives_the_claim_back_once(claimant):
     user_uuid, _ = claimant
-    address = "test-" + user_uuid[:8]
-    assert plans.claim_free_video(user_uuid, address) == plans.CLAIM_OK
+    assert plans.claim_free_video(user_uuid) == plans.CLAIM_OK
     plans.attach_free_video(user_uuid, 4242)
     assert plans.release_free_video(user_uuid, 4242) is True
     assert plans.get_free_video_state(user_uuid)["state"] == "available"
-    # The same address checks out again for its own account on a second claim.
-    assert plans.claim_free_video(user_uuid, address) == plans.CLAIM_OK
+    # A released claim can be made again by its own account.
+    assert plans.claim_free_video(user_uuid) == plans.CLAIM_OK
     plans.attach_free_video(user_uuid, 4243)
     # The release cap is spent: the generation stays used.
     assert plans.release_free_video(user_uuid, 4243) is False
@@ -186,7 +175,7 @@ def test_failed_import_gives_the_claim_back_once(claimant):
 
 def test_release_only_touches_the_material_the_claim_is_on(claimant):
     user_uuid, _ = claimant
-    assert plans.claim_free_video(user_uuid, "test-" + user_uuid[:8]) == plans.CLAIM_OK
+    assert plans.claim_free_video(user_uuid) == plans.CLAIM_OK
     plans.attach_free_video(user_uuid, 1)
     assert plans.release_free_video(user_uuid, 2) is False
     assert plans.get_free_video_state(user_uuid)["state"] == "used"
@@ -194,14 +183,14 @@ def test_release_only_touches_the_material_the_claim_is_on(claimant):
 
 def test_unattached_claim_is_released_when_no_import_was_enqueued(claimant):
     user_uuid, _ = claimant
-    assert plans.claim_free_video(user_uuid, "test-" + user_uuid[:8]) == plans.CLAIM_OK
+    assert plans.claim_free_video(user_uuid) == plans.CLAIM_OK
     assert plans.release_unattached_claim(user_uuid) is True
     assert plans.get_free_video_state(user_uuid)["state"] == "available"
 
 
 def test_unattached_release_does_not_free_a_claim_that_is_on_a_material(claimant):
     user_uuid, _ = claimant
-    assert plans.claim_free_video(user_uuid, "test-" + user_uuid[:8]) == plans.CLAIM_OK
+    assert plans.claim_free_video(user_uuid) == plans.CLAIM_OK
     plans.attach_free_video(user_uuid, 7)
     assert plans.release_unattached_claim(user_uuid) is False
     assert plans.get_free_video_state(user_uuid)["state"] == "used"
@@ -212,7 +201,7 @@ def test_scope_opens_only_for_the_claimed_material(claimant, monkeypatch):
     monkeypatch.setattr(plans, "IS_CLOUD", True)
     monkeypatch.setattr(plans, "get_user_uuid_from_db", lambda username: user_uuid)
     monkeypatch.setattr(plans, "get_plan", lambda username: plans.PLAN_FREE)
-    assert plans.claim_free_video(user_uuid, "test-" + user_uuid[:8]) == plans.CLAIM_OK
+    assert plans.claim_free_video(user_uuid) == plans.CLAIM_OK
     plans.attach_free_video(user_uuid, 99)
     with plans.generation_scope("someone", 99) as opened:
         assert opened and plans.scope_allows("someone")
@@ -243,7 +232,7 @@ def test_paying_account_keeps_the_normal_limits_and_no_link_cap(monkeypatch):
 
 def test_a_failed_import_after_the_ai_ran_does_not_give_the_generation_back(claimant):
     user_uuid, _ = claimant
-    assert plans.claim_free_video(user_uuid, "test-" + user_uuid[:8]) == plans.CLAIM_OK
+    assert plans.claim_free_video(user_uuid) == plans.CLAIM_OK
     plans.attach_free_video(user_uuid, 31)
     conn = plans._connect()
     try:
@@ -261,8 +250,8 @@ def test_a_failed_import_after_the_ai_ran_does_not_give_the_generation_back(clai
 
 def test_a_claim_outlives_its_deleted_material(claimant):
     user_uuid, _ = claimant
-    assert plans.claim_free_video(user_uuid, "test-" + user_uuid[:8]) == plans.CLAIM_OK
+    assert plans.claim_free_video(user_uuid) == plans.CLAIM_OK
     plans.attach_free_video(user_uuid, 32)
     # Nothing removes a claim when its video row goes: the state stays used.
     assert plans.get_free_video_state(user_uuid)["state"] == "used"
-    assert plans.claim_free_video(user_uuid, "test-" + user_uuid[:8]) == plans.CLAIM_USED
+    assert plans.claim_free_video(user_uuid) == plans.CLAIM_USED

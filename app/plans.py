@@ -10,15 +10,13 @@ chokepoint (ai.enforce_usage_limits) refuses every other AI call on a free accou
 processes the claimed material opens generation_scope() around its AI calls to let those through.
 Anything that does not open a scope stays refused, which is the fail-closed direction.
 
-Thresholds live in app_settings with tight in-code defaults, so a key missing from one database
-blocks rather than permits. The address hash needs FREE_VIDEO_IP_SALT in the environment: without
-it no claim can be made, because an unsalted hash of an address is just the address.
+The limit is per account only: nothing about the visitor's network is checked or stored, so
+people sharing an address (a campus, a carrier) each get their own. Thresholds live in
+app_settings with tight in-code defaults, so a key missing from one database blocks rather than
+permits.
 """
 import contextvars
-import hashlib
-import hmac
 import logging
-import os
 from contextlib import contextmanager
 from typing import Optional
 
@@ -35,13 +33,10 @@ PLAN_TESTER = "tester"
 
 CLAIM_OK = "claimed"
 CLAIM_USED = "already_used"
-CLAIM_IP_LIMIT = "ip_limit"
 CLAIM_UNAVAILABLE = "unavailable"
 
-# Deliberately tight: one claim per address in the window and no releases beyond the first.
-# The real values are set in app_settings; these only apply where a key is missing.
-_FALLBACK_IP_MAX = 1
-_FALLBACK_IP_WINDOW_DAYS = 30
+# Deliberately tight: no releases beyond the first. The real value is set in app_settings; this
+# only applies where the key is missing.
 _FALLBACK_MAX_RELEASES = 1
 # Free-plan storage, in MB. Tight on purpose; the real limits are set in app_settings.
 _FALLBACK_FREE_QUOTA_MB = 25
@@ -97,52 +92,27 @@ def max_links(username: str) -> int:
     return _setting_int("free_max_links", _FALLBACK_FREE_MAX_LINKS)
 
 
-def hash_client_ip(ip: Optional[str]) -> Optional[str]:
-    """Salted hash of a visitor address, or None when no hash can be made (no salt configured,
-    or no address). Callers treat None as "no free generation", never as a match."""
-    salt = os.getenv("FREE_VIDEO_IP_SALT", "")
-    if not salt or not ip or not ip.strip():
-        return None
-    return hmac.new(salt.encode("utf-8"), ip.strip().encode("utf-8"), hashlib.sha256).hexdigest()
-
-
 def _connect():
     return database.get_pooled_raw_connection()
 
 
-def claim_free_video(user_uuid: str, ip_hash: Optional[str]) -> str:
+def claim_free_video(user_uuid: str) -> str:
     """Tries to spend the account's one free generation. Returns a CLAIM_* constant.
 
-    CLAIM_UNAVAILABLE covers every case where the answer is unknown (no address hash, database
-    error): the generation is not spent and nothing runs. The per-address count is checked
-    before the insert and is not locked against a second parallel claim from the same address,
-    which can overshoot the threshold by one. That is accepted: the threshold is a soft
-    brake on mass signups, while the one-per-account rule below is exact."""
-    if not ip_hash:
-        return CLAIM_UNAVAILABLE
-    max_per_ip = _setting_int("free_video_ip_max", _FALLBACK_IP_MAX)
-    window_days = _setting_int("free_video_ip_window_days", _FALLBACK_IP_WINDOW_DAYS)
+    CLAIM_UNAVAILABLE means the answer is unknown (a database error): the generation is not
+    spent and nothing runs."""
     max_releases = _setting_int("free_video_max_releases", _FALLBACK_MAX_RELEASES)
     conn = None
     try:
         conn = _connect()
         cur = conn.cursor(cursor_factory=RealDictCursor)
         cur.execute(
-            """SELECT COUNT(*) AS c FROM free_video_claims
-                WHERE ip_hash = %s AND user_uuid <> %s
-                  AND claimed_at > CURRENT_TIMESTAMP - make_interval(days => %s);""",
-            (ip_hash, user_uuid, window_days),
-        )
-        if (cur.fetchone() or {}).get("c", 0) >= max_per_ip:
-            return CLAIM_IP_LIMIT
-        cur.execute(
-            """INSERT INTO free_video_claims (user_uuid, ip_hash) VALUES (%s, %s)
+            """INSERT INTO free_video_claims (user_uuid) VALUES (%s)
                ON CONFLICT (user_uuid) DO UPDATE
-                  SET active = TRUE, video_id = NULL, ip_hash = EXCLUDED.ip_hash,
-                      claimed_at = CURRENT_TIMESTAMP
+                  SET active = TRUE, video_id = NULL, claimed_at = CURRENT_TIMESTAMP
                 WHERE free_video_claims.active = FALSE AND free_video_claims.releases <= %s
                RETURNING user_uuid;""",
-            (user_uuid, ip_hash, max_releases),
+            (user_uuid, max_releases),
         )
         return CLAIM_OK if cur.fetchone() else CLAIM_USED
     except Exception as e:
@@ -246,31 +216,21 @@ def get_free_video_state(user_uuid: str) -> dict:
     return {"state": "available" if row["releases"] <= max_releases else "used", "video_id": None}
 
 
-def prune_ip_hashes() -> int:
-    """Clears address hashes older than the window. The claim itself stays for a live account (it
-    is what marks the generation as spent); only the hash goes. Returns the number cleared."""
-    window_days = _setting_int("free_video_ip_window_days", _FALLBACK_IP_WINDOW_DAYS)
+def prune_free_video_claims() -> int:
+    """Removes what claims no longer need: address hashes written before the limit became per
+    account, and claims whose account is gone. Returns the number of claim rows deleted."""
     conn = None
     try:
         conn = _connect()
         cur = conn.cursor()
-        cur.execute(
-            """UPDATE free_video_claims SET ip_hash = NULL
-                WHERE ip_hash IS NOT NULL
-                  AND claimed_at < CURRENT_TIMESTAMP - make_interval(days => %s);""",
-            (window_days,),
-        )
-        cleared = cur.rowcount
-        # A claim kept from a deleted account (see database.delete_user_account) has nothing left
-        # to say once its address hash is gone.
+        cur.execute("UPDATE free_video_claims SET ip_hash = NULL WHERE ip_hash IS NOT NULL;")
         cur.execute(
             """DELETE FROM free_video_claims c
-                WHERE c.ip_hash IS NULL
-                  AND NOT EXISTS (SELECT 1 FROM user_profile p WHERE p.user_uuid = c.user_uuid);"""
+                WHERE NOT EXISTS (SELECT 1 FROM user_profile p WHERE p.user_uuid = c.user_uuid);"""
         )
-        return cleared
+        return cur.rowcount
     except Exception as e:
-        logger.warning(f"[plans] Address hash pruning failed: {e}")
+        logger.warning(f"[plans] Free generation claim pruning failed: {e}")
         return 0
     finally:
         if conn is not None:
@@ -282,9 +242,9 @@ _scope_user: contextvars.ContextVar = contextvars.ContextVar("free_generation_us
 
 
 def _reclaim_for_retry(user_uuid: str, video_id: int) -> bool:
-    """Re-opens a released claim for a retry of an import. The address was checked when the claim
-    was first made and releases are capped, so a retry needs no second address check. Only an
-    account that already has a (released) claim row can do this; one that never claimed cannot."""
+    """Re-opens a released claim for a retry of an import. Releases are capped, so this cannot
+    be repeated forever. Only an account that already has a (released) claim row can do this;
+    one that never claimed cannot."""
     max_releases = _setting_int("free_video_max_releases", _FALLBACK_MAX_RELEASES)
     conn = None
     try:

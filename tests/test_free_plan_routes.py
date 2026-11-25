@@ -44,7 +44,7 @@ def test_free_account_is_refused_ai_only_routes_with_a_plan_code(free_client, me
 
 
 def test_import_is_refused_when_the_free_video_is_used(free_client, monkeypatch):
-    monkeypatch.setattr(plans, "claim_free_video", lambda user_uuid, ip_hash: plans.CLAIM_USED)
+    monkeypatch.setattr(plans, "claim_free_video", lambda user_uuid: plans.CLAIM_USED)
     response = free_client.post("/api/videos", data={"url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"})
     assert response.status_code == 402
     detail = response.json()["detail"]
@@ -52,7 +52,7 @@ def test_import_is_refused_when_the_free_video_is_used(free_client, monkeypatch)
 
 
 def test_import_is_refused_when_no_claim_can_be_made(free_client, monkeypatch):
-    monkeypatch.setattr(plans, "claim_free_video", lambda user_uuid, ip_hash: plans.CLAIM_UNAVAILABLE)
+    monkeypatch.setattr(plans, "claim_free_video", lambda user_uuid: plans.CLAIM_UNAVAILABLE)
     response = free_client.post("/api/videos", data={"url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"})
     assert response.status_code == 402
     assert response.json()["detail"]["code"] == ai.PLAN_REQUIRED_CODE
